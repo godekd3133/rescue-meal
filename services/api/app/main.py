@@ -299,6 +299,7 @@ class MealPlanResponse(BaseModel):
     source: str
     title: str
     minutes: int
+    max_minutes: int = 30
     inventory_ids: list[str]
     ingredients: list[MealIngredientResponse]
     missing_ingredients: list[str]
@@ -2080,6 +2081,7 @@ def _build_meal_plan(request: MealPlanRequest) -> MealPlanResponse:
             source="recipe_fixture",
             title="재료를 조금 더 추가해 주세요",
             minutes=0,
+            max_minutes=request.max_minutes,
             inventory_ids=[],
             ingredients=[],
             missing_ingredients=[],
@@ -2098,6 +2100,7 @@ def _build_meal_plan(request: MealPlanRequest) -> MealPlanResponse:
         source=planned.source,
         title=planned.title,
         minutes=planned.minutes,
+        max_minutes=request.max_minutes,
         inventory_ids=list(planned.inventory_ids),
         ingredients=[
             MealIngredientResponse(

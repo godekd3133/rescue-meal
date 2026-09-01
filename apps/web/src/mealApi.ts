@@ -93,6 +93,7 @@ export type ApiMealPlan = {
   source: string;
   title: string;
   minutes: number;
+  max_minutes: number;
   inventory_ids: string[];
   ingredients: Array<{
     canonical_name: string;
@@ -401,17 +402,17 @@ export const mealApi = {
     });
   },
 
-  async previewMealPlan(inventoryIds: string[]) {
+  async previewMealPlan(inventoryIds: string[], maxMinutes = 30) {
     return request<ApiMealPlan>("/api/meal-plans/preview", {
       method: "POST",
-      body: JSON.stringify({ inventory_ids: inventoryIds, max_minutes: 30 }),
+      body: JSON.stringify({ inventory_ids: inventoryIds, max_minutes: maxMinutes }),
     });
   },
 
-  async saveMealPlan(inventoryIds: string[], planId?: string, snapshotHash?: string) {
+  async saveMealPlan(inventoryIds: string[], planId?: string, snapshotHash?: string, maxMinutes = 30) {
     return request<ApiMealPlan>("/api/meal-plans", {
       method: "POST",
-      body: JSON.stringify({ inventory_ids: inventoryIds, max_minutes: 30, ...(planId ? { plan_id: planId } : {}), ...(snapshotHash ? { snapshot_hash: snapshotHash } : {}) }),
+      body: JSON.stringify({ inventory_ids: inventoryIds, max_minutes: maxMinutes, ...(planId ? { plan_id: planId } : {}), ...(snapshotHash ? { snapshot_hash: snapshotHash } : {}) }),
     });
   },
 

@@ -20,8 +20,8 @@ Rescue Meal은 장을 본 뒤 식재료를 하나씩 입력하는 부담을 줄�
 
 ## 2. 현재 상태와 가정
 
-- 프로젝트 디렉터리: OneDrive 수업 폴더의 `rescue-meal`
-- Git 저장소: 아직 아님
+- 프로젝트 디렉터리: 로컬 수업 작업 폴더의 `rescue-meal`
+- GitHub: `godekd3133/rescue-meal`
 - 현재 소스: `apps/web` 모바일 프로토타입과 `services/api` FastAPI 인메모리 MVP 구현
 - 현재 문서: 제품 흐름·데이터 계약·OSS 카탈로그·검증 계획·영수증/라벨 spike·1차 구현 상태
 - 기본 팀 규모 가정: 3~5명
@@ -54,10 +54,11 @@ Rescue Meal은 장을 본 뒤 식재료를 하나씩 입력하는 부담을 줄�
 - local fixture 우선 상품 resolver 및 Open Food Facts feature-flagged adapter
 - receipt commit coordinator의 rollback·재시도·reconciliation transaction 경계
 - signed guest workspace token과 SQLite workspace isolation, auth-required 401 경계
+- 조리 가능 시간 10·20·30·45분 선택과 planner preview/save 요청 전달
 
 실제 PaddleOCR worker와 첨부 이미지 benchmark는 완료했지만, 운영용 품질 gate·annotation·모든 매장 template은 아직 검증 전입니다. ZXing Browser camera adapter·권한 실패 fallback·guest workspace isolation·email/password account register/login은 구현했고, PostgreSQL API projection의 tenant-aware connection/read/write·account/revoke adapter와 Grocy HTTP adapter도 추가했습니다. 다만 normalized domain table의 tenant mapping, live PostgreSQL/Grocy migration·stock readback, Grocy product ID mapping/outbox, GS1 camera path, 관할 출처가 승인된 운영용 rule snapshot은 아직 검증 전입니다. OAuth·계정 복구는 아직 없습니다. 세부 evidence는 [1차 구현 상태](build-status-2026-09-01.md), [OCR intake pipeline](ocr-pipeline.md), [PaddleOCR benchmark](../evidence/paddleocr-benchmark-2026-09-01.md), [barcode camera flow](barcode-camera.md), [guest workspace](auth-workspace.md), [PostgreSQL tenant contract](../evidence/postgres-tenant-contract-2026-09-01.md), [Grocy adapter contract](../evidence/grocy-adapter-contract-2026-09-01.md)를 기준으로 합니다.
 
-레시피 영역은 2026-09-01~02에 5개 fixture 기반 `preview → save → latest → 사용량 확인 → complete` vertical slice까지 구현했습니다. planner v2는 curated alias와 필요 단위·수량을 검증하고, 같은 재료의 여러 lot를 allocation으로 분배하며, 사용자가 완료 직전 lot별 사용량을 조정할 수 있습니다. 조리 완료 뒤에는 matched lot에만 `meal_plan_id`가 연결된 소비 event를 남깁니다. 미리보기는 저장하지 않고, 저장 버튼을 눌렀을 때만 SQLite/PostgreSQL API projection에 workspace별 계획을 남깁니다. 현재 30~50개 레시피·대체 단위 환산·3일 최적화는 다음 단계입니다. 세부 계약과 readback은 [재고 기반 레시피 플래너](recipe-planner.md)와 [planner v2·조리 완료 readback](../evidence/recipe-planner-completion-readback-2026-09-02.md)을 기준으로 합니다.
+레시피 영역은 2026-09-01~02에 5개 fixture 기반 `preview → 시간 선택 → save → latest → 사용량 확인 → complete` vertical slice까지 구현했습니다. planner v2는 curated alias와 필요 단위·수량을 검증하고, 같은 재료의 여러 lot를 allocation으로 분배하며, 사용자가 완료 직전 lot별 사용량을 조정할 수 있습니다. 조리 가능 시간은 10·20·30·45분 중 하나를 선택하고 `max_minutes`로 preview/save 요청에 전달하며, 최신 저장 계획을 복원할 때도 시간 제한을 비교합니다. 조리 완료 뒤에는 matched lot에만 `meal_plan_id`가 연결된 소비 event를 남깁니다. 미리보기는 저장하지 않고, 저장 버튼을 눌렀을 때만 SQLite/PostgreSQL API projection에 workspace별 계획을 남깁니다. 현재 30~50개 레시피·대체 단위 환산·3일 최적화는 다음 단계입니다. 세부 계약과 readback은 [재고 기반 레시피 플래너](recipe-planner.md)와 [planner v2·조리 완료 readback](../evidence/recipe-planner-completion-readback-2026-09-02.md)을 기준으로 합니다.
 
 ## 3. 범위
 

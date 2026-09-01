@@ -37,3 +37,14 @@ test("connected app loads the API-backed planner and saves the selected recipe",
   await expect(inventory.getByRole("button", { name: /닭가슴살 무항생제 닭가슴살 · 1\.5팩/ })).toBeVisible();
   await expect(page.locator(".toast")).toHaveText("식단을 완료하고 재고를 갱신했어요");
 });
+
+test("connected planner changes the recipe when the cooking time changes", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await page.getByRole("button", { name: /지금 있는 재료로 식단 만들기/ }).click();
+  const dialog = page.getByRole("dialog", { name: "오늘의 Rescue Meal" });
+
+  await dialog.getByRole("group", { name: "조리 가능 시간" }).getByRole("button", { name: "10분" }).click();
+  await expect(dialog.getByRole("heading", { name: "맛타리버섯 달걀 볶음" })).toBeVisible();
+  await expect(dialog.locator(".recipe-time")).toHaveText(/10분/);
+});

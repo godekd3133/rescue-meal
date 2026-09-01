@@ -397,6 +397,18 @@ def test_meal_plan_preview_is_side_effect_free_and_saved_plan_is_recoverable() -
     assert conflict.status_code == 409
 
 
+def test_meal_plan_preview_honors_user_cooking_time_limit() -> None:
+    response = client.post(
+        "/api/meal-plans/preview",
+        json={"inventory_ids": ["spinach-1", "tofu-1", "chicken-1", "mushroom-1", "egg-1"], "max_minutes": 10},
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["recipe_id"] == "mushroom-egg-stir-fry"
+    assert payload["minutes"] == 10
+    assert payload["max_minutes"] == 10
+
+
 def test_saved_meal_plan_completion_consumes_matched_lots_once() -> None:
     saved = client.post(
         "/api/meal-plans",

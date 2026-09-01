@@ -2040,6 +2040,39 @@
   padding-top: 4px;
 }
 
+.recipe-time-picker {
+  display: grid;
+  gap: 7px;
+}
+
+.recipe-time-picker > span {
+  color: var(--meal-muted);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.recipe-time-picker > div {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.recipe-time-picker button {
+  min-height: 31px;
+  border: 1px solid var(--meal-line);
+  border-radius: 9px;
+  background: rgba(255, 254, 250, 0.72);
+  color: var(--meal-muted);
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.recipe-time-picker button.recipe-time-active {
+  border-color: #aebeaa;
+  background: #dfeadc;
+  color: var(--meal-sage-dark);
+}
+
 .recipe-art {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

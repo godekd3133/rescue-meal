@@ -19,6 +19,8 @@ type ConsumptionRow = {
   step: number;
 };
 
+const MEAL_TIME_OPTIONS = [10, 20, 30, 45] as const;
+
 const FOOD_IMAGES = {
   spinach: "/assets/food/spinach.png",
   tofu: "/assets/food/tofu.png",
@@ -95,7 +97,7 @@ function initialConsumptionDraft(plan: ApiMealPlan, foods: MealFood[]) {
   return Object.fromEntries(consumptionRowsForPlan(plan, foods).map((row) => [row.foodId, row.defaultQuantity]));
 }
 
-function createDemoPlan(foods: MealFood[]): ApiMealPlan {
+function createDemoPlan(foods: MealFood[], maxMinutes = 30): ApiMealPlan {
   const demoIngredients = foods.slice(0, 3).map((food) => ({
     canonical_name: food.name,
     amount: 1,
@@ -117,6 +119,7 @@ function createDemoPlan(foods: MealFood[]): ApiMealPlan {
     source: "local_fixture",
     title: isSeedRecipe ? "시금치 두부 닭가슴살 덮밥" : "냉장고 재료 Rescue 볶음",
     minutes: 15,
+    max_minutes: maxMinutes,
     inventory_ids: foods.slice(0, 3).map((food) => food.id),
     ingredients: demoIngredients,
     missing_ingredients: [],
@@ -138,6 +141,7 @@ export default function MealPlanSheet({ foods, active = false, onSaved, onComple
   const [auditOpen, setAuditOpen] = useState(false);
   const [auditLoading, setAuditLoading] = useState(false);
   const [auditError, setAuditError] = useState("");
+  const [maxMinutes, setMaxMinutes] = useState(30);
   const [plan, setPlan] = useState<ApiMealPlan | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -166,7 +170,7 @@ export default function MealPlanSheet({ foods, active = false, onSaved, onComple
       };
     }
     if (!mealApi.isConfigured) {
-      const demoPlan = createDemoPlan(ingredients);
+      const demoPlan = createDemoPlan(ingredients, maxMinutes);
       setPlan(demoPlan);
       setConsumptionDraft(initialConsumptionDraft(demoPlan, ingredients));
       setLoading(false);
@@ -178,7 +182,7 @@ export default function MealPlanSheet({ foods, active = false, onSaved, onComple
     setLoading(true);
     const inventoryIds = ingredients.map((food) => food.id);
     void Promise.all([
-      mealApi.previewMealPlan(inventoryIds),
+      mealApi.previewMealPlan(inventoryIds, maxMinutes),
       mealApi.getLatestMealPlan().catch(() => null),
     ])
       .then(([response, latest]) => {
@@ -188,6 +192,7 @@ export default function MealPlanSheet({ foods, active = false, onSaved, onComple
           latest &&
           latest.recipe_id === response.recipe_id &&
           latest.planner_version === response.planner_version &&
+          latest.max_minutes === response.max_minutes &&
           latest.inventory_ids.length === response.inventory_ids.length &&
           latest.inventory_ids.every((id, index) => id === response.inventory_ids[index]),
         );
@@ -207,7 +212,7 @@ export default function MealPlanSheet({ foods, active = false, onSaved, onComple
     return () => {
       cancelled = true;
     };
-  }, [active, ingredientKey]);
+  }, [active, ingredientKey, maxMinutes]);
 
   const persistPlan = async () => {
     if (!ingredients.length || loading || saving || saved || !plan || plan.recipe_id === "no-match") return;
@@ -220,7 +225,7 @@ export default function MealPlanSheet({ foods, active = false, onSaved, onComple
       return;
     }
     try {
-      const response = await mealApi.saveMealPlan(plan.inventory_ids, plan.id, plan.snapshot_hash);
+      const response = await mealApi.saveMealPlan(plan.inventory_ids, plan.id, plan.snapshot_hash, plan.max_minutes);
       if (!response) throw new Error("meal-plan-response-missing");
       setPlan(response);
       setConsumptionDraft(initialConsumptionDraft(response, foods));
@@ -329,6 +334,7 @@ export default function MealPlanSheet({ foods, active = false, onSaved, onComple
   };
 
   return <div className="meal-sheet-content">
+    <div className="recipe-time-picker" role="group" aria-label="조리 가능 시간"><span>조리 가능 시간</span><div>{MEAL_TIME_OPTIONS.map((option) => <button className={maxMinutes === option ? "recipe-time-active" : ""} type="button" key={option} aria-pressed={maxMinutes === option} onClick={() => setMaxMinutes(option)}>{option}분</button>)}</div></div>
     {loading ? <div className="recipe-loading" role="status"><LightningBoltIcon width={18} height={18} /><span><strong>지금 있는 재료를 살펴보고 있어요</strong><small>먼저 먹을 순서와 조리 시간을 함께 계산합니다.</small></span></div> : null}
     {!loading && ingredients.length && plan ? <div className="recipe-art" aria-hidden="true">{planIngredients.slice(0, 3).map((ingredient) => <img src={imageForFoodName(ingredient.canonical_name)} alt="" key={ingredient.canonical_name} draggable={false} />)}</div> : null}
     {!loading && !ingredients.length ? <div className="recipe-empty-art"><LightningBoltIcon width={24} height={24} /></div> : null}
