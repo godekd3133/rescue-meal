@@ -55,6 +55,7 @@ Rescue Meal은 장을 본 뒤 식재료를 하나씩 입력하는 부담을 줄�
 - receipt commit coordinator의 rollback·재시도·reconciliation transaction 경계
 - signed guest workspace token과 SQLite workspace isolation, auth-required 401 경계
 - 조리 가능 시간 10·20·30·45분 선택과 planner preview/save 요청 전달
+- COOKRCP01 공개 레시피를 review draft와 source/license/revision으로 보존하는 importer 경계
 
 실제 PaddleOCR worker와 첨부 이미지 benchmark는 완료했지만, 운영용 품질 gate·annotation·모든 매장 template은 아직 검증 전입니다. ZXing Browser camera adapter·권한 실패 fallback·guest workspace isolation·email/password account register/login은 구현했고, PostgreSQL API projection의 tenant-aware connection/read/write·account/revoke adapter와 Grocy HTTP adapter도 추가했습니다. 다만 normalized domain table의 tenant mapping, live PostgreSQL/Grocy migration·stock readback, Grocy product ID mapping/outbox, GS1 camera path, 관할 출처가 승인된 운영용 rule snapshot은 아직 검증 전입니다. OAuth·계정 복구는 아직 없습니다. 세부 evidence는 [1차 구현 상태](build-status-2026-09-01.md), [OCR intake pipeline](ocr-pipeline.md), [PaddleOCR benchmark](../evidence/paddleocr-benchmark-2026-09-01.md), [barcode camera flow](barcode-camera.md), [guest workspace](auth-workspace.md), [PostgreSQL tenant contract](../evidence/postgres-tenant-contract-2026-09-01.md), [Grocy adapter contract](../evidence/grocy-adapter-contract-2026-09-01.md)를 기준으로 합니다.
 

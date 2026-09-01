@@ -43,6 +43,7 @@ from .pipeline.ocr import OcrRun, PaddleOcrEngine, RemoteOcrEngine
 from .pipeline.receipt_parser import ParsedReceipt, parse_receipt_text, parse_receipt_observations
 from .product_resolver import ProductLookupResult, resolve_product
 from .planner import PlannedRecipe, plan_recipe
+from .recipe_importer import COOKRCP_SERVICE_ID, COOKRCP_SOURCE_URL, CookRcpConfig
 
 
 StorageCode = Literal["ambient", "refrigerated", "frozen"]
@@ -156,6 +157,16 @@ class GrocyStatusResponse(BaseModel):
     configured: bool
     status: Literal["disabled", "ok", "unavailable"]
     version: str | None = None
+    detail: str
+
+
+class RecipeSourceStatusResponse(BaseModel):
+    provider: Literal["cookrcp01"] = "cookrcp01"
+    service_id: str = COOKRCP_SERVICE_ID
+    configured: bool
+    status: Literal["disabled", "ready"]
+    source_name: str
+    source_url: str = COOKRCP_SOURCE_URL
     detail: str
 
 
@@ -1529,6 +1540,25 @@ def grocy_status() -> GrocyStatusResponse:
         return GrocyStatusResponse(configured=True, status="ok", version=version, detail="Grocy system info readback이 성공했습니다.")
     except GrocyError:
         return GrocyStatusResponse(configured=True, status="unavailable", detail="Grocy 연결을 확인하지 못했습니다.")
+
+
+@app.get("/api/integrations/recipes/cookrcp/status", response_model=RecipeSourceStatusResponse)
+def cookrcp_status() -> RecipeSourceStatusResponse:
+    """Report importer configuration without making an external request."""
+    configured = CookRcpConfig.from_env() is not None
+    if not configured:
+        return RecipeSourceStatusResponse(
+            configured=False,
+            status="disabled",
+            source_name="식품안전나라 조리식품 레시피 DB",
+            detail="FOODSAFETY_COOKRCP_API_KEY가 없어 비활성화되어 있습니다.",
+        )
+    return RecipeSourceStatusResponse(
+        configured=True,
+        status="ready",
+        source_name="식품안전나라 조리식품 레시피 DB",
+        detail="API key가 설정되었습니다. 외부 레시피는 검토 draft로만 수집됩니다.",
+    )
 
 
 @app.post("/api/auth/guest", response_model=GuestSessionResponse)

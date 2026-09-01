@@ -45,6 +45,24 @@ def test_grocy_status_is_disabled_without_external_configuration() -> None:
     assert response.json()["status"] == "disabled"
 
 
+def test_cookrcp_status_is_safe_and_does_not_call_external_service(monkeypatch) -> None:
+    monkeypatch.delenv("FOODSAFETY_COOKRCP_API_KEY", raising=False)
+    disabled = client.get("/api/integrations/recipes/cookrcp/status")
+    assert disabled.status_code == 200
+    assert disabled.json()["configured"] is False
+    assert disabled.json()["status"] == "disabled"
+    assert "API key" not in disabled.json()["detail"]
+
+    monkeypatch.setenv("FOODSAFETY_COOKRCP_API_KEY", "test-only-key")
+    ready = client.get("/api/integrations/recipes/cookrcp/status")
+    assert ready.status_code == 200
+    payload = ready.json()
+    assert payload["configured"] is True
+    assert payload["status"] == "ready"
+    assert payload["service_id"] == "COOKRCP01"
+    assert "test-only-key" not in ready.text
+
+
 def test_guest_workspaces_isolate_inventory_from_demo_and_each_other() -> None:
     guest_one = _guest_headers()
     guest_two = _guest_headers()

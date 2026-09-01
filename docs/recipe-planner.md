@@ -57,6 +57,10 @@
 
 `planner_version`은 `recipe-planner-v2`, `source`는 `recipe_fixture`로 반환합니다. 나중에 식품안전나라 조리식품 API나 Grocy recipe에서 가져온 레시피도 동일한 canonical ingredient 계약으로 변환한 뒤 source와 수집 revision을 별도로 기록해야 합니다.
 
+## COOKRCP01 가져오기 경계
+
+`services/api/app/recipe_importer.py`는 선택적인 `FOODSAFETY_COOKRCP_API_KEY`가 있을 때 식품안전나라 `COOKRCP01` 레시피를 조회합니다. `GET /api/integrations/recipes/cookrcp/status`는 key의 존재 여부와 source URL만 반환하고 외부 요청을 하지 않습니다. 원문 재료·조리순서는 `CookRcpRecipeDraft`로 보존하고, 파싱되지 않은 재료도 `requires_review` 상태로 남깁니다. 공개 API 이용조건은 `public-api-terms-review-required`로 표시하며, 이 importer는 raw row를 현재 deterministic planner fixture로 자동 승격하지 않습니다. 사람이 재료 canonicalization·단위·출처·license를 확인한 뒤 별도 fixture revision으로 반영해야 합니다.
+
 ## 조리 가능 시간
 
 프론트는 `10·20·30·45분` 중 하나를 선택하고 `max_minutes`로 API에 전달합니다. planner는 해당 시간 이하의 recipe 후보를 먼저 사용하며, 후보가 하나도 없을 때만 전체 fixture에서 가장 적합한 후보를 선택합니다. 저장된 계획 response에도 `max_minutes`를 보존하고 snapshot hash 계산에 포함하므로, 30분 plan을 10분 화면에 잘못 복원하지 않습니다.
