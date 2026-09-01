@@ -1,0 +1,23 @@
+[project]
+name = "rescue-meal-ocr-worker"
+version = "0.1.0"
+description = "Dedicated Python 3.12 PaddleOCR worker for Rescue Meal"
+requires-python = ">=3.12,<3.14"
+dependencies = [
+  "fastapi>=0.116,<1",
+  "paddleocr==3.7.0",
+  "paddlepaddle==3.3.1",
+  "python-multipart>=0.0.20,<1",
+  "uvicorn[standard]>=0.35,<1",
+]
+
+[dependency-groups]
+dev = [
+  "httpx>=0.28,<1",
+  "pytest>=8.3,<9",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+pythonpath = ["."]
