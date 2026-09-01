@@ -1,0 +1,58 @@
+{
+  "schema_version": "priority-rule-snapshot-v1",
+  "purpose": "reference_priority",
+  "jurisdiction": "unresolved",
+  "status": "development_only",
+  "safety_disclaimer": "These windows are for deciding what to check first, not for proving that food is safe to eat.",
+  "rules": [
+    {
+      "rule_id": "priority.leafy-greens.v1",
+      "category": "잎채소",
+      "aliases": ["시금치", "상추", "깻잎", "샐러드", "채소"],
+      "days_by_storage": {"ambient": [1, 2], "refrigerated": [2, 4], "frozen": [7, 14]},
+      "source_ref": "rule-snapshot:local-reference/leafy-greens/v1"
+    },
+    {
+      "rule_id": "priority.tofu.v1",
+      "category": "두부·콩",
+      "aliases": ["두부", "콩"],
+      "days_by_storage": {"ambient": [0, 1], "refrigerated": [2, 4], "frozen": [7, 14]},
+      "source_ref": "rule-snapshot:local-reference/tofu/v1"
+    },
+    {
+      "rule_id": "priority.raw-chicken.v1",
+      "category": "생닭·육류",
+      "aliases": ["닭가슴살", "생닭", "닭고기", "돼지고기", "소고기"],
+      "days_by_storage": {"ambient": [0, 0], "refrigerated": [1, 2], "frozen": [14, 30]},
+      "source_ref": "rule-snapshot:local-reference/raw-protein/v1"
+    },
+    {
+      "rule_id": "priority.mushroom.v1",
+      "category": "버섯",
+      "aliases": ["버섯"],
+      "days_by_storage": {"ambient": [1, 2], "refrigerated": [2, 4], "frozen": [7, 14]},
+      "source_ref": "rule-snapshot:local-reference/mushroom/v1"
+    },
+    {
+      "rule_id": "priority.dairy.v1",
+      "category": "유제품",
+      "aliases": ["우유", "요거트", "치즈"],
+      "days_by_storage": {"ambient": [0, 0], "refrigerated": [2, 5], "frozen": [0, 0]},
+      "source_ref": "rule-snapshot:local-reference/dairy/v1"
+    },
+    {
+      "rule_id": "priority.egg.v1",
+      "category": "달걀",
+      "aliases": ["달걀", "계란"],
+      "days_by_storage": {"ambient": [2, 4], "refrigerated": [5, 10], "frozen": [0, 0]},
+      "source_ref": "rule-snapshot:local-reference/egg/v1"
+    },
+    {
+      "rule_id": "priority.fresh-produce.v1",
+      "category": "신선 농산물",
+      "aliases": ["토마토", "파프리카", "오이", "대파", "양파", "과일"],
+      "days_by_storage": {"ambient": [2, 5], "refrigerated": [3, 7], "frozen": [7, 14]},
+      "source_ref": "rule-snapshot:local-reference/fresh-produce/v1"
+    }
+  ]
+}
