@@ -59,7 +59,7 @@
 
 ## COOKRCP01 가져오기 경계
 
-`services/api/app/recipe_importer.py`는 선택적인 `FOODSAFETY_COOKRCP_API_KEY`가 있을 때 식품안전나라 `COOKRCP01` 레시피를 조회합니다. `GET /api/integrations/recipes/cookrcp/status`는 key의 존재 여부와 source URL만 반환하고 외부 요청을 하지 않습니다. 원문 재료·조리순서는 `CookRcpRecipeDraft`로 보존하고, 파싱되지 않은 재료도 `requires_review` 상태로 남깁니다. 공개 API 이용조건은 `public-api-terms-review-required`로 표시하며, 이 importer는 raw row를 현재 deterministic planner fixture로 자동 승격하지 않습니다. 사람이 재료 canonicalization·단위·출처·license를 확인한 뒤 별도 fixture revision으로 반영해야 합니다.
+`services/api/app/recipe_importer.py`는 선택적인 `FOODSAFETY_COOKRCP_API_KEY`가 있을 때 식품안전나라 `COOKRCP01` 레시피를 조회합니다. `GET /api/integrations/recipes/cookrcp/status`는 key의 존재 여부와 source URL만 반환하고 외부 요청을 하지 않습니다. 운영 수집은 [공개 레시피 importer 운영 경계](recipe-importer.md)의 CLI를 사용합니다. 원문 재료·조리순서는 `CookRcpRecipeDraft`로 보존하고, 파싱되지 않은 재료도 `requires_review` 상태로 남깁니다. 공개 API 이용조건은 `public-api-terms-review-required`로 표시하며, 이 importer는 raw row를 현재 deterministic planner fixture로 자동 승격하지 않습니다. 사람이 재료 canonicalization·단위·출처·license를 확인한 뒤 별도 fixture revision으로 반영해야 합니다.
 
 ## 조리 가능 시간
 

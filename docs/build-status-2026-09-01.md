@@ -19,6 +19,7 @@
 → 조리 순서·안전 메모 확인
 → 식단 저장
 → 저장 식단 최신 조회
+→ 공개 레시피 review draft 수집
 ```
 
 현재 구현은 “상용앱의 계약과 사용자 흐름을 먼저 검증하는 1차 vertical slice”입니다. OCR 모델, 실데이터베이스, Grocy 연동이 들어간 상용 운영판이라고 부를 단계는 아닙니다.
@@ -58,6 +59,7 @@
 - PostgreSQL API projection의 workspace 복합키·workspace filter·account/revoke table adapter
 - Grocy config·API key·system info status와 stock operation HTTP adapter (외부 write는 아직 비활성)
 - 선택적 COOKRCP01 공개 레시피 importer/status endpoint, 원문 review draft와 source/license/revision 보존
+- `services/api/scripts/import_cookrcp.py` 운영 CLI, bad row `rejected_rows` 격리, planner 자동 승격 차단
 - recipe fixture 5개 기반 planner v2의 exact/curated alias·단위·수량·여러 lot allocation·사용량 조정·조리시간·source metadata·snapshot/audit 검증과 `preview → save → latest → complete` workspace persistence
 - Python 3.12 PaddleOCR worker와 API remote OCR adapter
 - OCR 응답의 detection/recognition model version trace
@@ -142,6 +144,7 @@
 apps/web: npm run check:runtime  → Mobile runtime integrity check passed (28 protected files)
 apps/web: npm run build          → TypeScript + Vite build passed
 services/api: uv run pytest      → 79 passed, 3 warnings
+services/api: uv run python scripts/import_cookrcp.py --help → passed
 services/ocr-worker: uv run pytest → 1 passed
 apps/web: `tests/prototype.spec.ts` → 11 passed (app E2E)
 apps/web: `tests/connected-prototype.spec.ts` → 2 passed (API 연결 E2E)
@@ -202,6 +205,7 @@ OCR text endpoint에는 실제 샘플 구조를 축약한 fixture를 보내 상�
 commit coordinator fixture에서는 두 번째 line 처리 실패를 주입해 재고가 7개에서 변하지 않는지, `needs_reconciliation` transaction이 남는지, 원인 제거 후 재시도가 9개를 만들고 중복 재시도가 409인지 확인했습니다.
 
 사용자 첨부 영수증·라벨 원본의 macOS Vision 기준선과 bbox grouping 결과는 [Vision OCR parser benchmark](../evidence/vision-ocr-parser-benchmark-2026-09-01.md), 실제 PaddleOCR 결과는 [PaddleOCR benchmark](../evidence/paddleocr-benchmark-2026-09-01.md), 부분 lot의 HTTP parent/child readback은 [partial lot readback](../evidence/partial-lot-readback-2026-09-01.md), storage event history는 [storage history readback](../evidence/storage-history-readback-2026-09-01.md), 추정 날짜 확정 readback은 [date correction readback](../evidence/date-correction-readback-2026-09-01.md), guest workspace isolation과 account revoke는 [auth workspace readback](../evidence/auth-workspace-readback-2026-09-01.md), PostgreSQL tenant-aware projection contract는 [PostgreSQL tenant contract](../evidence/postgres-tenant-contract-2026-09-01.md), Grocy HTTP adapter는 [Grocy adapter contract](../evidence/grocy-adapter-contract-2026-09-01.md), PWA manifest·service worker는 [PWA build evidence](../evidence/pwa-build-2026-09-01.md), planner v2·조리 완료는 [planner v2 completion readback](../evidence/recipe-planner-completion-readback-2026-09-02.md), 바코드 camera adapter와 fallback 경계는 [barcode camera flow](barcode-camera.md), 연결 상태와 timeout은 [connection status](../evidence/connection-status-2026-09-01.md)에 기록했습니다.
+공개 레시피 source adapter·review draft·bad row 격리·CLI 결과는 [COOKRCP01 importer readback](../evidence/recipe-importer-readback-2026-09-02.md), 운영 경계와 승격 기준은 [공개 레시피 importer 운영 경계](recipe-importer.md)에 기록했습니다.
 
 ## 아직 실제 구현으로 주장하면 안 되는 것
 
