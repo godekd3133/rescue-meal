@@ -12,7 +12,7 @@
 ## 코드 수준 검증
 
 - fake psycopg connection으로 migration DDL, workspace filter, composite-key insert, account/revoke SQL을 실행 경로에 통과시켰습니다.
-- Contract snapshot 당시 API: `54 passed, 2 warnings`; 이후 레시피 preview/save/latest와 조리 완료·multi-lot·사용량 조정·단위 환산·audit 회귀를 포함한 현재 전체 API suite는 `70 passed, 3 warnings`입니다.
+- Contract snapshot 당시 API: `54 passed, 2 warnings`; 이후 레시피 preview/save/latest와 조리 완료·multi-lot·사용량 조정·단위 환산·audit·조리시간 회귀를 포함한 현재 전체 API suite는 `71 passed, 3 warnings`입니다.
 - schema static contract assertion: 통과
 - Compose config expansion: baseline 통과
 

@@ -109,6 +109,10 @@ function createDemoPlan(foods: MealFood[], maxMinutes = 30): ApiMealPlan {
   return {
     id: "demo-meal-plan",
     snapshot_hash: "demo-fixture-v1",
+    recipe_source_name: "Rescue Meal 팀 작성 레시피",
+    recipe_source_url: null,
+    recipe_license: "project-authored",
+    recipe_source_revision: "demo-v1",
     saved_at: null,
     completed_at: null,
     consumed_food_ids: [],
@@ -141,6 +145,10 @@ export default function MealPlanSheet({ foods, active = false, onSaved, onComple
   const [auditOpen, setAuditOpen] = useState(false);
   const [auditLoading, setAuditLoading] = useState(false);
   const [auditError, setAuditError] = useState("");
+  const [historyPlans, setHistoryPlans] = useState<ApiMealPlan[]>([]);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState("");
   const [maxMinutes, setMaxMinutes] = useState(30);
   const [plan, setPlan] = useState<ApiMealPlan | null>(null);
   const [loading, setLoading] = useState(false);
@@ -161,6 +169,9 @@ export default function MealPlanSheet({ foods, active = false, onSaved, onComple
     setAuditEvents([]);
     setAuditOpen(false);
     setAuditError("");
+    setHistoryPlans([]);
+    setHistoryOpen(false);
+    setHistoryError("");
     setShowDetails(false);
     if (!ingredients.length) {
       setPlan(null);
@@ -192,6 +203,7 @@ export default function MealPlanSheet({ foods, active = false, onSaved, onComple
           latest &&
           latest.recipe_id === response.recipe_id &&
           latest.planner_version === response.planner_version &&
+          latest.snapshot_hash === response.snapshot_hash &&
           latest.max_minutes === response.max_minutes &&
           latest.inventory_ids.length === response.inventory_ids.length &&
           latest.inventory_ids.every((id, index) => id === response.inventory_ids[index]),
@@ -234,6 +246,8 @@ export default function MealPlanSheet({ foods, active = false, onSaved, onComple
       setSkippedCount(0);
       setAuditEvents([]);
       setAuditOpen(false);
+      setHistoryPlans([]);
+      setHistoryOpen(false);
       onSaved();
     } catch {
       setError("식단을 저장하지 못했어요. 네트워크를 확인한 뒤 다시 시도해 주세요.");
@@ -285,6 +299,31 @@ export default function MealPlanSheet({ foods, active = false, onSaved, onComple
       setAuditError("식단 기록을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.");
     } finally {
       setAuditLoading(false);
+    }
+  };
+
+  const toggleHistory = async () => {
+    if (!plan || historyLoading) return;
+    if (historyOpen) {
+      setHistoryOpen(false);
+      return;
+    }
+    setHistoryOpen(true);
+    setHistoryError("");
+    setAuditOpen(false);
+    if (!mealApi.isConfigured) {
+      setHistoryPlans([plan]);
+      return;
+    }
+    setHistoryLoading(true);
+    try {
+      const plans = await mealApi.getMealPlanHistory(10);
+      if (!plans) throw new Error("meal-plan-history-missing");
+      setHistoryPlans(plans);
+    } catch {
+      setHistoryError("최근 식단 기록을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.");
+    } finally {
+      setHistoryLoading(false);
     }
   };
 
@@ -340,6 +379,7 @@ export default function MealPlanSheet({ foods, active = false, onSaved, onComple
     {!loading && !ingredients.length ? <div className="recipe-empty-art"><LightningBoltIcon width={24} height={24} /></div> : null}
     {!loading ? <div className="recipe-title-row"><div><span className="recipe-kicker">{plan?.source === "local_fixture" ? "DEMO FIXTURE" : plan?.planner_version ? "RESCUE PLANNER · V2" : "RESCUE MEAL"}</span><h3>{plan?.title ?? (ingredients.length ? "식단을 만들 수 없어요" : "재료를 먼저 추가해 주세요")}</h3></div>{hasRecipe ? <span className="recipe-time"><TimerIcon width={15} height={15} /> {plan?.minutes ?? 0}분</span> : null}</div> : null}
     {!loading ? <p className="recipe-description">{plan?.reason ?? (ingredients.length ? "현재 재료를 다시 확인해 주세요." : "영수증·바코드·직접 입력으로 식품을 추가하면 맞춤 식단을 만들 수 있어요.")}</p> : null}
+    {!loading && plan ? <p className="recipe-provenance">출처 · {plan.recipe_source_name ?? "출처 확인 필요"} · {plan.recipe_license ?? "license 확인 필요"} · {plan.recipe_source_revision ?? "revision 확인 필요"}</p> : null}
     {!loading && hasRecipe ? <div className="recipe-ingredients"><span>필요한 재료</span><div>{planIngredients.map((ingredient) => <span className={!ingredient.available ? "recipe-ingredient-missing" : ""} key={ingredient.canonical_name}><img src={imageForFoodName(ingredient.canonical_name)} alt="" draggable={false} />{ingredient.canonical_name}{ingredientStatus(ingredient)}</span>)}</div></div> : null}
     {plan?.missing_ingredients.length ? <div className="recipe-missing-callout" role="status"><InfoCircledIcon width={16} height={16} /><span><strong>부족한 재료 {plan.missing_ingredients.length}개</strong><small>{plan.missing_ingredients.join("·")}을 추가하면 더 정확히 만들 수 있어요.</small></span></div> : null}
     {error ? <div className="recipe-error" role="alert"><InfoCircledIcon width={16} height={16} />{error}</div> : null}
@@ -348,6 +388,8 @@ export default function MealPlanSheet({ foods, active = false, onSaved, onComple
     {saved ? <div className="saved-recipe"><CheckCircledIcon width={16} height={16} /> 오늘의 식단에 저장했어요.</div> : null}
     {saved ? <button className="recipe-audit-toggle" type="button" disabled={auditLoading} onClick={() => void toggleAudit()}>{auditLoading ? "기록 불러오는 중" : auditOpen ? "식단 기록 접기" : "식단 기록 보기"} <ArrowRightIcon width={14} height={14} /></button> : null}
     {auditOpen ? <div className="recipe-audit" aria-label="식단 기록"><div className="recipe-audit-heading"><span>식단 기록</span><small>{plan?.snapshot_hash ? `snapshot ${plan.snapshot_hash.slice(0, 10)}…` : "snapshot 없음"}</small></div>{auditError ? <div className="recipe-error" role="alert"><InfoCircledIcon width={16} height={16} />{auditError}</div> : auditEvents.length ? <div className="recipe-audit-list">{auditEvents.map((event) => <div className="recipe-audit-row" key={event.id}><span className={`recipe-audit-icon recipe-audit-${event.event_type}`}><CheckCircledIcon width={13} height={13} /></span><span><strong>{event.event_type === "saved" ? "식단 저장" : "조리 완료"}</strong><small>{new Date(event.occurred_at).toLocaleString("ko-KR", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}{event.consumed_allocations.length ? ` · ${event.consumed_allocations.map((allocation) => `${formatQuantity(allocation.quantity)}${allocation.unit ?? ""}`).join(" + ")} 사용` : ""}</small></span></div>)}</div> : <p className="history-empty">아직 기록이 없어요.</p>}</div> : null}
+    {plan ? <button className="recipe-history-toggle" type="button" disabled={historyLoading} onClick={() => void toggleHistory()}>{historyLoading ? "최근 식단 불러오는 중" : historyOpen ? "최근 식단 접기" : "최근 식단 보기"} <ArrowRightIcon width={14} height={14} /></button> : null}
+    {historyOpen ? <div className="recipe-history" aria-label="최근 식단"><div className="recipe-audit-heading"><span>최근 식단</span><small>최대 10개</small></div>{historyError ? <div className="recipe-error" role="alert"><InfoCircledIcon width={16} height={16} />{historyError}</div> : historyPlans.length ? <div className="recipe-history-list">{historyPlans.map((historyPlan) => { const timestamp = historyPlan.completed_at ?? historyPlan.saved_at; const used = historyPlan.consumed_allocations.map((allocation) => `${formatQuantity(allocation.quantity)}${allocation.unit ?? ""}`).join(" + "); return <div className="recipe-history-row" key={historyPlan.id}><span><strong>{historyPlan.title}</strong><small>{historyPlan.completed_at ? "조리 완료" : "저장됨"}{timestamp ? ` · ${new Date(timestamp).toLocaleString("ko-KR", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}` : ""}{used ? ` · ${used} 사용` : ""}</small></span><span className={historyPlan.completed_at ? "recipe-history-status recipe-history-status-done" : "recipe-history-status"}>{historyPlan.max_minutes}분</span></div>; })}</div> : <p className="history-empty">저장된 식단이 아직 없어요.</p>}</div> : null}
     {saved && !completed ? <div className="recipe-complete-actions"><div className="recipe-consumption-heading"><span>사용량 확인</span><small>실제로 사용한 만큼만 재고에서 차감해요.</small></div><div className="recipe-consumption-list">{consumptionRows.map((row) => { const currentQuantity = consumptionDraft[row.foodId] ?? 0; return <div className="recipe-consumption-row" key={row.foodId}><span><strong>{row.name}</strong><small>최대 {formatQuantity(row.maxQuantity)}{row.unit}</small></span><div className="recipe-consumption-stepper"><button type="button" aria-label={`${row.name} 사용량 줄이기`} disabled={completing || currentQuantity <= 0} onClick={() => adjustConsumption(row, -row.step)}>-</button><label className="recipe-consumption-input-wrap"><span className="sr-only">{row.name} 사용량</span><KeyboardInput className="recipe-consumption-input" type="number" inputMode="decimal" min={0} max={row.maxQuantity} step={row.step} value={formatQuantity(currentQuantity)} aria-label={`${row.name} 사용량`} onChange={(event) => setConsumptionValue(row, event.target.value)} onBlur={() => keyboard.hide()} disabled={completing || row.maxQuantity <= 0} /><em>{row.unit}</em></label><button type="button" aria-label={`${row.name} 사용량 늘리기`} disabled={completing || currentQuantity >= row.maxQuantity} onClick={() => adjustConsumption(row, row.step)}>+</button></div></div>; })}</div><button className="recipe-complete-button" type="button" disabled={completing} onPointerDown={(event) => { event.preventDefault(); void completePlan(); keyboard.hide(); }} onClick={(event) => { if (event.detail === 0) { void completePlan(); keyboard.hide(); } }}><CheckCircledIcon width={16} height={16} /> {completing ? "기록 중" : "조리 완료로 기록"}</button><small>확인하면 위 수량만큼 소비 기록을 남겨요.</small></div> : null}
     {completed ? <div className="recipe-completed" role="status"><CheckCircledIcon width={16} height={16} /><span><strong>조리 완료 기록을 남겼어요</strong><small>{skippedCount ? `처리 가능한 재료만 차감했고, ${skippedCount}개는 재고를 다시 확인해 주세요.` : "사용한 재료를 식품 목록에서 차감했습니다."}</small></span></div> : null}
   </div>;

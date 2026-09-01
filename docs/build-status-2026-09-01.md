@@ -38,7 +38,7 @@
 - 라벨 입력 sheet의 실제 표시 날짜 예시와 목록 반영
 - 바코드 숫자 입력과 상품 후보 조회 상태
 - 직접 입력 식품·수량·보관 위치 등록
-- Rescue Meal 식단 preview·보유/부족 재료·조리순서·안전 메모·실제 저장·snapshot/audit 조회·lot별 사용량 조정·조리 완료·부분 차감 상태
+- Rescue Meal 식단 preview·조리 가능 시간 선택·보유/부족 재료·조리순서·안전 메모·실제 저장·snapshot/audit 조회·lot별 사용량 조정·조리 완료·부분 차감 상태
 - 실제 raster 식품 이미지 7종: 시금치·두부·닭가슴살·버섯·달걀·우유·토마토
 - OCR optional adapter, 영수증 line parser, 라벨 날짜 의미 parser
 - 이미지 intake의 `needs_ocr_engine`·`failed`·`review_required` 상태
@@ -57,7 +57,7 @@
 - PostgreSQL DSN을 선택할 수 있는 projection repository 코드와 `rescue_api_*` schema
 - PostgreSQL API projection의 workspace 복합키·workspace filter·account/revoke table adapter
 - Grocy config·API key·system info status와 stock operation HTTP adapter (외부 write는 아직 비활성)
-- recipe fixture 5개 기반 planner v2의 exact/curated alias·단위·수량·여러 lot allocation·사용량 조정·snapshot/audit 검증과 `preview → save → latest → complete` workspace persistence
+- recipe fixture 5개 기반 planner v2의 exact/curated alias·단위·수량·여러 lot allocation·사용량 조정·조리시간·source metadata·snapshot/audit 검증과 `preview → save → latest → complete` workspace persistence
 - Python 3.12 PaddleOCR worker와 API remote OCR adapter
 - OCR 응답의 detection/recognition model version trace
 - Pillow 기반 해상도·밝기·대비·윤곽 image quality gate와 review warning
@@ -108,6 +108,7 @@
 - `POST /api/meal-plans`
 - `GET /api/meal-plans/latest`
 - `POST /api/meal-plans/{plan_id}/complete`
+- `GET /api/meal-plans/history`
 
 별도 OCR worker 위치: `services/ocr-worker`. Python 3.12 + PaddleOCR 3.7.0 + PaddlePaddle 3.3.1을 사용하며, API는 `RESCUE_MEAL_OCR_URL`로 worker를 선택합니다.
 
@@ -138,10 +139,10 @@
 ```text
 apps/web: npm run check:runtime  → Mobile runtime integrity check passed (28 protected files)
 apps/web: npm run build          → TypeScript + Vite build passed
-services/api: uv run pytest      → 70 passed, 3 warnings
+services/api: uv run pytest      → 71 passed, 3 warnings
 services/ocr-worker: uv run pytest → 1 passed
 apps/web: `tests/prototype.spec.ts` → 11 passed (app E2E)
-apps/web: `tests/connected-prototype.spec.ts` → 1 passed (API 연결 E2E)
+apps/web: `tests/connected-prototype.spec.ts` → 2 passed (API 연결 E2E)
 apps/web: `tests/mobile-runtime.spec.ts` → full suite 7 passed, keyboard transition 1 flaky; isolated line 100 rerun 1 passed
 apps/web: npm run test:sites     → 4 passed
 infra: docker compose config     → syntax/config expansion passed
@@ -151,7 +152,7 @@ PaddleOCR: 프론트 파일 선택 → review 10 lines → 동일 draft commit �
 quality gate: 실제 receipt/produce label → pass → PaddleOCR → review_required
 ```
 
-현재 production build의 초기 client chunk는 `504.07KB`이고 Vite의 `500KB` advisory warning이 표시됩니다. 카메라 scanner `437.90KB`, meal planner `13.52KB`, storage history `2.02KB`, date assertion editor `1.73KB`, account sheet `4.76KB`, connection status `0.45KB`는 lazy chunk로 분리되어 초기 화면에서 사용 시점에 로드됩니다. manifest·service worker도 production 정적 산출물에 포함됩니다. build 실패는 아니지만, 운영 bundle budget을 엄격히 적용할 때는 다음 성능 작업에서 main chunk를 추가로 줄여야 합니다.
+현재 production build의 초기 client chunk는 `504.16KB`이고 Vite의 `500KB` advisory warning이 표시됩니다. 카메라 scanner `437.90KB`, meal planner `16.24KB`, storage history `2.02KB`, date assertion editor `1.73KB`, account sheet `4.76KB`, connection status `0.45KB`는 lazy chunk로 분리되어 초기 화면에서 사용 시점에 로드됩니다. manifest·service worker도 production 정적 산출물에 포함됩니다. build 실패는 아니지만, 운영 bundle budget을 엄격히 적용할 때는 다음 성능 작업에서 main chunk를 추가로 줄여야 합니다.
 
 테스트 실행 시 FastAPI/Starlette의 `httpx` 관련 deprecation warning 2개가 표시됩니다. 앱 고유 E2E·API·Sites 검증에는 실패가 없습니다. 템플릿 모바일 runtime은 전체 8개 중 7개가 통과했고 `keyboard and its attached footer dismiss on the same transition`이 전체 순회에서 간헐 실패했으며, 동일 테스트 단독 재실행은 통과했습니다. 해당 템플릿 파일은 보호 범위라 임의 수정하지 않았습니다.
 
@@ -187,6 +188,7 @@ Codex in-app Browser의 실제 `http://127.0.0.1:4173/` 화면에서 다음을 �
 - API에서 `consumed_allocations`에 lot별 사용량·단위를 저장하고 `kg↔g` metric conversion fixture를 통과
 - API에서 snapshot hash 충돌·save/complete audit event를 확인
 - connected E2E에서 `식단 기록 보기`로 저장 audit과 snapshot hash를 화면에 표시하는 것을 확인
+- connected E2E에서 완료 후 `최근 식단 보기`로 이전 plan의 조리 완료 상태를 다시 표시하는 것을 확인
 - production build의 `manifest.webmanifest`·`sw.js` 생성과 Sites packaging 파일 확인
 - 앱 E2E 11개: 홈 상세 저장·계정 sheet·영수증 review·라벨 확인 반영·바코드 후보 조회·카메라 실패 fallback·추정 날짜 확정·부분 lot 이동·부분 폐기 확인·보관 필터·demo 레시피 저장/완료
 - 연결 모드 E2E 1개: 실제 API dashboard·preview·조리순서·save·latest 복원·complete·CORS 경계
@@ -220,7 +222,7 @@ commit coordinator fixture에서는 두 번째 line 처리 실패를 주입해 �
 4. 현재 ZXing Browser camera adapter를 실기기와 GS1 DataMatrix fixture에 연결하고 GS1 Syntax Engine·Python parser 결과를 대조한다.
 5. MFDS I1250·Open Food Facts·검토된 rule snapshot을 rule retriever에 연결하고 현재 inference provider의 개발용 rule을 교체한다.
 6. 현재 commit coordinator를 Grocy adapter에 연결하고 product ID mapping·outbox·부분 실패·재시도·외부 readback을 검증한다.
-7. 현재 5개 recipe fixture의 alias/수량/multi-lot 매칭을 원출처·canonical ingredient·lot snapshot이 있는 30~50개로 확장하고, 이후 OR-Tools Rescue Planner를 연결한다.
+7. 현재 5개 recipe fixture의 alias/수량/multi-lot/조리시간 매칭을 원출처·canonical ingredient·lot snapshot이 있는 30~50개로 확장하고, 이후 OR-Tools Rescue Planner를 연결한다.
 8. OAuth·계정 복구·upload retention, 삭제, observability, 알림, 모바일 PWA 운영 검증을 추가한다.
 
 각 단계에서도 실제 표시 날짜와 AI 소비 우선순위를 분리하는 현재 계약을 유지해야 합니다.

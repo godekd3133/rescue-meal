@@ -352,6 +352,9 @@ def test_meal_plan_preview_is_side_effect_free_and_saved_plan_is_recoverable() -
     preview_payload = preview.json()
     assert preview_payload["saved_at"] is None
     assert len(preview_payload["snapshot_hash"]) == 64
+    assert preview_payload["recipe_source_name"] == "Rescue Meal 팀 작성 레시피"
+    assert preview_payload["recipe_license"] == "project-authored"
+    assert preview_payload["recipe_source_revision"] == "recipes-v1"
     assert client.get("/api/meal-plans/latest").json() is None
 
     saved = client.post(
@@ -385,6 +388,9 @@ def test_meal_plan_preview_is_side_effect_free_and_saved_plan_is_recoverable() -
     assert len(events.json()) == 1
     assert events.json()[0]["event_type"] == "saved"
     assert events.json()[0]["snapshot_hash"] == preview_payload["snapshot_hash"]
+    history = client.get("/api/meal-plans/history?limit=1")
+    assert history.status_code == 200
+    assert [item["id"] for item in history.json()] == [saved_payload["id"]]
 
     conflict = client.post(
         "/api/meal-plans",
@@ -407,6 +413,31 @@ def test_meal_plan_preview_honors_user_cooking_time_limit() -> None:
     assert payload["recipe_id"] == "mushroom-egg-stir-fry"
     assert payload["minutes"] == 10
     assert payload["max_minutes"] == 10
+
+
+def test_meal_plan_history_returns_saved_plans_in_recent_order_and_omits_preview() -> None:
+    first = client.post(
+        "/api/meal-plans",
+        json={"inventory_ids": ["spinach-1", "tofu-1", "chicken-1"], "plan_id": "meal-history-1"},
+    )
+    second = client.post(
+        "/api/meal-plans",
+        json={"inventory_ids": ["mushroom-1", "egg-1"], "max_minutes": 10, "plan_id": "meal-history-2"},
+    )
+    preview = client.post("/api/meal-plans/preview", json={"inventory_ids": ["spinach-1"]})
+    assert first.status_code == 200
+    assert second.status_code == 200
+    assert preview.status_code == 200
+
+    history = client.get("/api/meal-plans/history?limit=10")
+    assert history.status_code == 200
+    assert [item["id"] for item in history.json()] == ["meal-history-2", "meal-history-1"]
+    assert history.json()[0]["max_minutes"] == 10
+    assert preview.json()["id"] not in {item["id"] for item in history.json()}
+
+    limited = client.get("/api/meal-plans/history?limit=1")
+    assert limited.status_code == 200
+    assert [item["id"] for item in limited.json()] == ["meal-history-2"]
 
 
 def test_saved_meal_plan_completion_consumes_matched_lots_once() -> None:

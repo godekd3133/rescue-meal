@@ -20,6 +20,8 @@ planner v2의 curated alias·단위·수량 검증과 저장 식단의 조리 �
 - 생성된 `consumed` event에 `meal_plan_id`를 기록
 - 같은 재료의 여러 lot를 필요량까지 합산하고 `allocations`로 소비량을 분배
 - 저장된 `saved`·`completed` audit event를 프론트 `식단 기록 보기`에서 조회
+- 완료 후 현재 재고와 무관하게 `최근 식단 보기`에서 이전 plan을 재조회
+- `10·20·30·45분` 조리 시간 선택에 따른 recipe 후보 변경
 - 저장 시 snapshot hash와 `saved`·`completed` audit event를 기록
 - 저장 후 lot별 `사용량 확인` 조절기로 실제 사용량을 줄여 전송
 - planner allocation을 초과한 사용량 요청은 `422`로 거부
@@ -127,9 +129,9 @@ GET /api/meal-plans/<plan id>/events → [saved, completed]
 ## 자동 검증
 
 ```text
-services/api: uv run pytest                         → 70 passed, 3 warnings
+services/api: uv run pytest                         → 71 passed, 3 warnings
 apps/web prototype E2E: 11 tests                    → 11 passed
-apps/web connected planner E2E                      → 1 passed
+apps/web connected planner E2E                      → 2 passed
 apps/web mobile runtime: full 8 tests               → 7 passed; keyboard transition 1 flaky, isolated rerun 1 passed
 apps/web npm run build                              → passed
 apps/web npm run test:sites                         → 4 passed
@@ -137,7 +139,8 @@ apps/web npm run check:runtime                      → protected files 28개 �
 infra: docker compose config                        → passed
 ```
 
-production build는 초기 client chunk `504.07KB`로 Vite `500KB` advisory warning이 남아 있습니다. `MealPlanSheet` lazy chunk는 `13.52KB`입니다. 이 warning은 build 실패가 아니며, 다음 bundle budget 작업 대상입니다.
+production build는 초기 client chunk `504.16KB`로 Vite `500KB` advisory warning이 남아 있습니다. `MealPlanSheet` lazy chunk는 `15.83KB`입니다. 이 warning은 build 실패가 아니며, 다음 bundle budget 작업 대상입니다.
+
 
 ## 아직 남은 상용화 작업
 

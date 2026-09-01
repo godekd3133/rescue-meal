@@ -362,6 +362,11 @@ base event date
   "recipe_id": "spinach-tofu-chicken-bowl",
   "planner_version": "recipe-planner-v2",
   "source": "recipe_fixture",
+  "recipe_source_name": "Rescue Meal 팀 작성 레시피",
+  "recipe_source_url": null,
+  "recipe_license": "project-authored",
+  "recipe_source_revision": "recipes-v1",
+  "max_minutes": 30,
   "completed_at": null,
   "consumed_food_ids": [],
   "completed_skipped_ingredients": [],
@@ -389,4 +394,4 @@ base event date
 }
 ```
 
-`POST /api/meal-plans/preview`는 `saved_at: null`인 계획을 계산만 하고 저장소를 변경하지 않습니다. `POST /api/meal-plans`는 계산 결과를 현재 workspace에 저장하고 `saved_at`과 `snapshot_hash`를 채우며 `saved` audit event를 추가합니다. `GET /api/meal-plans/latest`는 현재 workspace의 마지막 저장 계획을 반환하고, `GET /api/meal-plans/{plan_id}/events`는 계획의 저장·완료 audit을 반환합니다. 보유하지 않거나 필요량이 부족한 재료는 `missing_ingredients`와 `available: false`로 분리하며 서버가 임의로 StockLot을 생성하지 않습니다. 사용자가 `POST /api/meal-plans/{plan_id}/complete`에 선택적 `consumptions`를 보내면 각 lot의 planner allocation을 넘지 않는 범위에서 입력한 양만 검증·차감합니다. 결과는 `consumed_allocations`, `completed_at`, `consumed_food_ids`에 기록하고 `completed` audit event를 추가합니다. 완료 시점에 제외된 재료명은 `completed_skipped_ingredients`에 저장하고, 프론트는 전체 차감과 구분된 안내를 표시합니다. 조리 완료 확인 없이 소비 차감하지 않습니다.
+`POST /api/meal-plans/preview`는 `saved_at: null`인 계획을 계산만 하고 저장소를 변경하지 않습니다. `POST /api/meal-plans`는 계산 결과를 현재 workspace에 저장하고 `saved_at`과 `snapshot_hash`를 채우며 `saved` audit event를 추가합니다. `GET /api/meal-plans/latest`는 현재 workspace의 마지막 저장 계획을 반환하고, `GET /api/meal-plans/history`는 최근 저장 식단 목록을 반환하며, `GET /api/meal-plans/{plan_id}/events`는 계획의 저장·완료 audit을 반환합니다. 보유하지 않거나 필요량이 부족한 재료는 `missing_ingredients`와 `available: false`로 분리하며 서버가 임의로 StockLot을 생성하지 않습니다. 사용자가 `POST /api/meal-plans/{plan_id}/complete`에 선택적 `consumptions`를 보내면 각 lot의 planner allocation을 넘지 않는 범위에서 입력한 양만 검증·차감합니다. 결과는 `consumed_allocations`, `completed_at`, `consumed_food_ids`에 기록하고 `completed` audit event를 추가합니다. 완료 시점에 제외된 재료명은 `completed_skipped_ingredients`에 저장하고, 프론트는 전체 차감과 구분된 안내를 표시합니다. 조리 완료 확인 없이 소비 차감하지 않습니다.

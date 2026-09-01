@@ -83,6 +83,10 @@ export type ApiStorageEvent = {
 export type ApiMealPlan = {
   id: string;
   snapshot_hash: string;
+  recipe_source_name?: string;
+  recipe_source_url?: string | null;
+  recipe_license?: string;
+  recipe_source_revision?: string;
   saved_at: string | null;
   completed_at: string | null;
   consumed_food_ids: string[];
@@ -418,6 +422,10 @@ export const mealApi = {
 
   async getLatestMealPlan() {
     return request<ApiMealPlan | null>("/api/meal-plans/latest");
+  },
+
+  async getMealPlanHistory(limit = 10) {
+    return request<ApiMealPlan[]>(`/api/meal-plans/history?limit=${limit}`);
   },
 
   async getMealPlanEvents(planId: string) {

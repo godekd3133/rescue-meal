@@ -223,6 +223,7 @@ VITE_API_BASE_URL=http://127.0.0.1:8000 npm run dev -- --host 127.0.0.1 --port 4
 - `GET /api/meal-plans/latest` — 현재 workspace의 마지막 저장 식단
 - `POST /api/meal-plans/{plan_id}/complete` — 사용자 확인 후 matched lot 소비 기록 및 식단 완료 처리
 - `GET /api/meal-plans/{plan_id}/events` — 식단 snapshot 저장·완료 audit event 조회
+- `GET /api/meal-plans/history` — 현재 workspace의 최근 저장 식단 목록
 
 기본 API 저장소는 검증용 in-memory이며, `RESCUE_MEAL_SQLITE_PATH`를 지정하면 local durable repository로 전환되고, `RESCUE_MEAL_DATABASE_URL`을 지정하면 PostgreSQL projection repository를 선택합니다. PostgreSQL의 정규화된 domain-table read/write mapping과 Grocy 연동은 아직 production 검증 전입니다. 상세 구현 상태와 검증 결과는 [1차 구현 상태](docs/build-status-2026-09-01.md)에 기록했습니다.
 

@@ -73,7 +73,7 @@ GROCY: disabled (외부 URL/key 미설정)
 ## 자동 검증
 
 ```text
-services/api: uv run pytest                         → 70 passed, 3 warnings
+services/api: uv run pytest                         → 71 passed, 3 warnings
 apps/web prototype E2E: 11 tests                    → 11 passed
 apps/web connected planner E2E                      → 1 passed
 apps/web npm run build                              → passed

@@ -27,7 +27,7 @@
 | planner | `services/api/app/planner.py` | fixture 로드, exact/curated alias match, 단위·수량 검증, 점수·부족 재료 계산 |
 | API response | `services/api/app/main.py` | preview/save/latest/complete endpoint와 workspace persistence |
 | 프론트 API adapter | `apps/web/src/mealApi.ts` | preview/save/latest 요청과 `ApiMealPlan` 타입 |
-| 모바일 UI | `apps/web/src/MealPlanSheet.tsx` | 최대 20개 현재 lot preview·재료·조리순서·부족 재료·저장·조리 완료 상태 표시 |
+| 모바일 UI | `apps/web/src/MealPlanSheet.tsx` | 최대 20개 현재 lot preview·조리시간 선택·재료·조리순서·부족 재료·저장·조리 완료 상태 표시 |
 | 저장 projection | SQLite `meal_plans`·`meal_plan_events`, PostgreSQL `rescue_api_meal_plans`·`rescue_api_meal_plan_events` | workspace별 계획 snapshot과 save/complete audit |
 
 ## 레시피 fixture 계약
@@ -56,6 +56,10 @@
 - 닭가슴살 토마토 팬구이 — 20분
 
 `planner_version`은 `recipe-planner-v2`, `source`는 `recipe_fixture`로 반환합니다. 나중에 식품안전나라 조리식품 API나 Grocy recipe에서 가져온 레시피도 동일한 canonical ingredient 계약으로 변환한 뒤 source와 수집 revision을 별도로 기록해야 합니다.
+
+## 조리 가능 시간
+
+프론트는 `10·20·30·45분` 중 하나를 선택하고 `max_minutes`로 API에 전달합니다. planner는 해당 시간 이하의 recipe 후보를 먼저 사용하며, 후보가 하나도 없을 때만 전체 fixture에서 가장 적합한 후보를 선택합니다. 저장된 계획 response에도 `max_minutes`를 보존하고 snapshot hash 계산에 포함하므로, 30분 plan을 10분 화면에 잘못 복원하지 않습니다.
 
 ## 매칭 규칙
 
@@ -124,6 +128,10 @@ Authorization: Bearer <workspace-token>
 
 저장된 계획이 없으면 `200`과 JSON `null`을 반환하고, 있으면 가장 최근 `saved_at`의 계획을 반환합니다. 프론트는 재진입 시 현재 preview와 `recipe_id`·planner version·inventory ID 순서를 비교해 같은 기준이면 “저장됨” 상태와 저장 payload를 복원합니다.
 
+### 최근 식단
+
+`GET /api/meal-plans/history?limit=10`은 현재 workspace의 저장된 계획을 최근 저장순으로 반환합니다. 현재 재고가 바뀌어 최신 preview와 일치하지 않는 완료 식단도 이 목록에서 확인할 수 있습니다. 프론트의 `최근 식단 보기`는 이 endpoint를 사용하며, 각 항목의 저장/완료 상태·조리시간·실제 사용량을 보여줍니다.
+
 ### 응답 핵심 필드
 
 ```json
@@ -138,6 +146,11 @@ Authorization: Bearer <workspace-token>
   "recipe_id": "spinach-tofu-chicken-bowl",
   "planner_version": "recipe-planner-v2",
   "source": "recipe_fixture",
+  "recipe_source_name": "Rescue Meal 팀 작성 레시피",
+  "recipe_source_url": null,
+  "recipe_license": "project-authored",
+  "recipe_source_revision": "recipes-v1",
+  "max_minutes": 30,
   "inventory_ids": ["spinach-1", "tofu-1", "chicken-1"],
   "ingredients": [
     {

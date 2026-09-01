@@ -10,7 +10,7 @@ import sqlite3
 from threading import RLock
 from typing import Literal
 
-from fastapi import FastAPI, File, HTTPException, Request, UploadFile, status
+from fastapi import FastAPI, File, HTTPException, Query, Request, UploadFile, status
 from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
@@ -308,6 +308,10 @@ class MealPlanResponse(BaseModel):
     reason: str
     steps: list[str]
     safety_note: str
+    recipe_source_name: str = "unknown"
+    recipe_source_url: str | None = None
+    recipe_license: str = "unknown"
+    recipe_source_revision: str = "unknown"
 
 
 class MealPlanSkippedIngredientResponse(BaseModel):
@@ -2125,6 +2129,10 @@ def _build_meal_plan(request: MealPlanRequest) -> MealPlanResponse:
         reason=planned.reason,
         steps=list(planned.steps),
         safety_note=planned.safety_note,
+        recipe_source_name=planned.source_name,
+        recipe_source_url=planned.source_url,
+        recipe_license=planned.license,
+        recipe_source_revision=planned.source_revision,
     )
 
 
@@ -2191,6 +2199,16 @@ def create_meal_plan(request: MealPlanRequest) -> MealPlanResponse:
 def get_latest_meal_plan() -> MealPlanResponse | None:
     saved_plans = [plan for plan in store.meal_plans.values() if plan.saved_at is not None]
     return max(saved_plans, key=lambda plan: plan.saved_at or datetime.min.replace(tzinfo=timezone.utc), default=None)
+
+
+@app.get("/api/meal-plans/history", response_model=list[MealPlanResponse])
+def list_meal_plan_history(limit: int = Query(default=20, ge=1, le=50)) -> list[MealPlanResponse]:
+    saved_plans = [plan for plan in store.meal_plans.values() if plan.saved_at is not None]
+    return sorted(
+        saved_plans,
+        key=lambda plan: plan.saved_at or datetime.min.replace(tzinfo=timezone.utc),
+        reverse=True,
+    )[:limit]
 
 
 @app.get("/api/meal-plans/{plan_id}/events", response_model=list[MealPlanAuditEventResponse])
