@@ -7,7 +7,7 @@
 - 단계: 1차 vertical slice 구현 및 검증
 - 구현: 선택한 모바일 콘셉트 기반 프론트엔드 + FastAPI API + Python 3.12 PaddleOCR worker
 - GitHub: [godekd3133/rescue-meal](https://github.com/godekd3133/rescue-meal)
-- 현재 구현된 것: 홈 Rescue Queue, 식품 상세·보관 이벤트, 부분 lot 이동·개봉·먹은 기록·폐기 확인, 영수증 검토·반영, 이미지 품질 gate, 실제 이미지 OCR worker, 라벨 날짜 후보, 바코드 후보 조회, 직접 입력, 재고 기반 레시피 미리보기·조리순서·식단 저장/재조회·snapshot/audit·사용량 조정·조리 완료 차감, guest workspace 인증·SQLite 격리, PWA shell·API 동기화 경로
+- 현재 구현된 것: 홈 Rescue Queue, 식품 상세·보관 이벤트, 부분 lot 이동·개봉·먹은 기록·폐기 확인, 영수증 검토·반영, 이미지 품질 gate, 실제 이미지 OCR worker, 라벨 날짜 후보, 바코드 후보 조회, 직접 입력, 재고 기반 레시피 미리보기·조리순서·식단 저장/재조회·snapshot/audit·사용량 조정·조리 완료 차감, guest workspace 인증·SQLite 격리, PWA shell·API 동기화 경로, 선택적 COOKRCP01 review-draft importer와 운영 CLI
 - 현재 문서가 정의하는 것: MVP 범위, 안전 경계, 데이터 출처, OSS 역할, 검증 방법, API 계약
 - 현재 문서가 증명하지 않는 것: 운영 환경의 OCR 정확도, 한국 상품 조회율, 식품 안전, 실제 폐기량 감소, 실기기·운영 런타임 안정성
 
@@ -163,6 +163,7 @@ Grocy를 기준 재고 시스템으로 재현하고, Rescue Meal은 영수증 in
 - [Grocy adapter contract evidence](evidence/grocy-adapter-contract-2026-09-01.md)
 - [재고 기반 레시피 플래너](docs/recipe-planner.md)
 - [공개 레시피 importer 운영 경계](docs/recipe-importer.md)
+- [공개 레시피 importer readback](evidence/recipe-importer-readback-2026-09-02.md)
 - [레시피 플래너 readback](evidence/recipe-planner-readback-2026-09-01.md)
 - [planner v2·조리 완료 readback](evidence/recipe-planner-completion-readback-2026-09-02.md)
 

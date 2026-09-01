@@ -22,7 +22,7 @@
 | 개발 영역 | 무엇을 결정·구현했는가 | 주요 경로 | 확인 자료 |
 | --- | --- | --- | --- |
 | 제품·안전 | 등록 비용을 낮추고, 날짜 provenance와 보관 이력을 분리하는 제품 약속 | `README.md`, `docs/product-brief.md`, `docs/data-contract.md` | `docs/feasibility-validation-plan.md` |
-| 아키텍처·OSS | Grocy, Open Food Facts, ZXing, GS1, PaddleOCR, OR-Tools 등의 역할과 통합 경계 | `docs/architecture-decisions.md`, `docs/oss-*.md` | 각 문서의 라이선스·검증 경계 |
+| 아키텍처·OSS | Grocy, Open Food Facts, ZXing, GS1, PaddleOCR, COOKRCP01, OR-Tools 등의 역할과 통합 경계 | `docs/architecture-decisions.md`, `docs/oss-*.md`, `docs/recipe-importer.md` | 각 문서의 라이선스·검증 경계 |
 | 데이터·인프라 | recipe/priority fixture, workspace-aware PostgreSQL projection, Docker Compose 실행 기반 | `data/fixtures/`, `infra/` | `evidence/postgres-tenant-contract-2026-09-01.md` |
 | API 도메인 | 식품·lot·보관 이벤트·영수증 draft/commit·barcode·auth·recipe plan API | `services/api/app/`, `services/api/tests/` | API pytest, 각 readback 문서 |
 | OCR intake | 이미지 품질 gate, PaddleOCR worker, 영수증·라벨 parser, 실패 시 확정 입력 차단 | `services/api/app/pipeline/`, `services/ocr-worker/`, `docs/ocr-pipeline.md` | Vision/PaddleOCR benchmark |
@@ -91,6 +91,7 @@
 - 재고 기반 recipe preview, 조리 가능 시간 선택, 저장, latest/history 조회, lot allocation, 사용량 조정, 조리 완료 소비 event
 - iPhone/Pixel 모바일 prototype, API 연결 모드, PWA shell과 offline 경계
 - 선택적 COOKRCP01 공개 레시피 review draft와 source/license/revision provenance
+- `services/api/scripts/import_cookrcp.py` stdout JSON review import와 `rejected_rows` bad-row 격리
 
 ## 5. 증거를 해석하는 방법
 

@@ -33,7 +33,7 @@ FoodKeeper는 실행 라이브러리가 아니라 공개 데이터 후보입니�
 | Ollama | JSON Schema structured output 재현 | AI normalization·explanation 후보 | 구조 준수는 사실성 증거가 아님 |
 | DVC | dataset·pipeline·experiment versioning | receipt/label fixture와 정답 버전 관리 | Git 저장소 초기화 후 채택 |
 | MLflow/Ragas | AI trace·RAG metric 재현 | 모델·prompt·retrieval 품질 비교 | 사용자 서비스 runtime에 직접 넣지 않음 |
-| 식품안전나라 `COOKRCP01` | 한국 조리 레시피 조회 | recipe fixture·재료 canonicalization | API 인증키·재료 mapping 필요 |
+| 식품안전나라 `COOKRCP01` | 한국 조리 레시피 조회 | `recipe_importer` review draft·source/license/revision 보존·recipe fixture 후보 | API 인증키·이용조건·재료 mapping·실제 호출량 필요 |
 | USDA FoodData Central | 영양 데이터 조회 | 영양정보 enrichment | 한국 소비기한·보관 안전 출처 아님 |
 | PaddleOCR | 한국어 OCR·KIE 예제 재현 | 영수증 라인·라벨 날짜·중량 추출 | 곡면·반사·감열지 정확도 |
 | invoice2data | 템플릿 기반 invoice line 추출 | 국내 매장 2~3개 영수증 템플릿 | 종이 영수증 다양성, 유지보수 비용 |
@@ -127,6 +127,7 @@ image/PDF
 - OR-Tools: https://developers.google.com/optimization
 - ntfy: https://docs.ntfy.sh/
 - 식품의약품안전처 소비기한 안내: https://www.mfds.go.kr/brd/m_580/view.do?seq=81
+- 식품안전나라 COOKRCP01: https://www.foodsafetykorea.go.kr/api/openApiInfo.do?menu_grp=MENU_GRP31&menu_no=661&show_cnt=10&start_idx=1&svc_no=COOKRCP01
 
 ## 7. 원본 재현과 검증 층
 
