@@ -1,0 +1,11 @@
+{
+  "name": "Rescue Meal",
+  "short_name": "Rescue Meal",
+  "lang": "ko-KR",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f7f5ef",
+  "theme_color": "#52634a",
+  "description": "영수증·라벨·바코드로 식료품을 기록하고 먼저 사용할 재료를 알려주는 생활 도구입니다."
+}
