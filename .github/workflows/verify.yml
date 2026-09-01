@@ -1,0 +1,77 @@
+name: Verify Rescue Meal
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  web:
+    name: Web runtime, build, and Sites worker
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Install web dependencies
+        run: npm ci --prefer-offline --no-audit --no-fund
+
+      - name: Check protected mobile runtime
+        run: npm run check:runtime
+
+      - name: Build production client and worker
+        run: npm run build
+
+      - name: Test Sites worker output
+        run: npm run test:sites
+
+  api:
+    name: FastAPI tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/api
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up uv and Python
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: latest
+          python-version: "3.12"
+
+      - name: Install API dependencies
+        run: uv sync --frozen
+
+      - name: Run API tests
+        run: uv run pytest
+
+  source:
+    name: Python source compilation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Compile API and OCR worker sources
+        run: python -m compileall -q services/api/app services/ocr-worker/app
