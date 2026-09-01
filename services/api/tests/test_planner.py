@@ -12,6 +12,9 @@ def test_planner_prefers_a_full_match_and_preserves_inventory_ids() -> None:
     assert planned.missing_ingredients == ()
     assert planned.inventory_ids == ("spinach-1", "tofu-1", "chicken-1")
     assert planned.planner_version == "recipe-planner-v2"
+    assert planned.source_name == "Rescue Meal 팀 작성 레시피"
+    assert planned.license == "project-authored"
+    assert planned.source_revision == "recipes-v1"
 
 
 def test_planner_exposes_missing_ingredient_instead_of_inventing_stock() -> None:
@@ -101,3 +104,4 @@ def test_recipe_fixture_has_source_order_and_required_steps() -> None:
     assert specs[0].id == "spinach-tofu-chicken-bowl"
     assert all(recipe.ingredients and recipe.steps and recipe.safety_note for recipe in specs)
     assert all(ingredient.aliases for recipe in specs for ingredient in recipe.ingredients)
+    assert all(recipe.source_name and recipe.license and recipe.source_revision for recipe in specs)

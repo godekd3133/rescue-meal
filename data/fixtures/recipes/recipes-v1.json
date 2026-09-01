@@ -9,7 +9,8 @@
       {"canonical_name": "닭가슴살", "aliases": ["무항생제 닭가슴살"], "amount": 1, "unit": "팩"}
     ],
     "steps": ["두부와 닭가슴살의 상태와 날짜를 확인합니다.", "단단한 재료부터 팬에 익힙니다.", "마지막에 시금치를 넣고 밥 위에 올립니다."],
-    "safety_note": "날짜와 상태가 이상하면 조리하지 말고 포장지 안내와 폐기 여부를 확인하세요."
+    "safety_note": "날짜와 상태가 이상하면 조리하지 말고 포장지 안내와 폐기 여부를 확인하세요.",
+    "provenance": {"source_name": "Rescue Meal 팀 작성 레시피", "source_url": null, "license": "project-authored", "revision": "recipes-v1"}
   },
   {
     "id": "mushroom-egg-stir-fry",
@@ -20,7 +21,8 @@
       {"canonical_name": "동물복지 달걀", "aliases": ["계란", "동물복지 계란"], "amount": 2, "unit": "개"}
     ],
     "steps": ["버섯의 상태를 확인하고 먹기 좋은 크기로 나눕니다.", "버섯을 먼저 볶고 달걀을 넣습니다.", "충분히 익혀 바로 먹습니다."],
-    "safety_note": "신선식품은 냄새·색·포장 상태를 확인하고 이상하면 먹지 마세요."
+    "safety_note": "신선식품은 냄새·색·포장 상태를 확인하고 이상하면 먹지 마세요.",
+    "provenance": {"source_name": "Rescue Meal 팀 작성 레시피", "source_url": null, "license": "project-authored", "revision": "recipes-v1"}
   },
   {
     "id": "tomato-egg-pan",
@@ -31,7 +33,8 @@
       {"canonical_name": "동물복지 달걀", "aliases": ["계란", "동물복지 계란"], "amount": 2, "unit": "개"}
     ],
     "steps": ["토마토와 달걀의 표시 날짜·상태를 확인합니다.", "토마토를 익힌 뒤 달걀을 넣습니다.", "달걀이 완전히 익으면 불을 끕니다."],
-    "safety_note": "달걀은 충분히 익혀 먹고, 상태가 이상하면 날짜와 관계없이 먹지 마세요."
+    "safety_note": "달걀은 충분히 익혀 먹고, 상태가 이상하면 날짜와 관계없이 먹지 마세요.",
+    "provenance": {"source_name": "Rescue Meal 팀 작성 레시피", "source_url": null, "license": "project-authored", "revision": "recipes-v1"}
   },
   {
     "id": "spinach-mushroom-tofu-soup",
@@ -43,7 +46,8 @@
       {"canonical_name": "국산콩 두부", "aliases": ["풀무원 국산콩 두부", "두부"], "amount": 1, "unit": "모"}
     ],
     "steps": ["세 재료의 상태와 표시 날짜를 먼저 확인합니다.", "물에 두부와 버섯을 넣고 끓입니다.", "마지막에 시금치를 넣고 충분히 가열합니다."],
-    "safety_note": "조리 전 재료 상태를 확인하고 이상하면 사용하지 마세요."
+    "safety_note": "조리 전 재료 상태를 확인하고 이상하면 사용하지 마세요.",
+    "provenance": {"source_name": "Rescue Meal 팀 작성 레시피", "source_url": null, "license": "project-authored", "revision": "recipes-v1"}
   },
   {
     "id": "chicken-tomato-skillet",
@@ -54,6 +58,7 @@
       {"canonical_name": "대추방울토마토", "aliases": ["방울토마토", "토마토"], "amount": 1, "unit": "팩"}
     ],
     "steps": ["닭가슴살과 토마토의 상태를 확인합니다.", "닭가슴살을 먼저 완전히 익힙니다.", "토마토를 넣고 함께 가열해 바로 먹습니다."],
-    "safety_note": "닭가슴살은 속까지 충분히 익히고, 상태가 이상하면 사용하지 마세요."
+    "safety_note": "닭가슴살은 속까지 충분히 익히고, 상태가 이상하면 사용하지 마세요.",
+    "provenance": {"source_name": "Rescue Meal 팀 작성 레시피", "source_url": null, "license": "project-authored", "revision": "recipes-v1"}
   }
 ]

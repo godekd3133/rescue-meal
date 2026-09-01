@@ -38,6 +38,10 @@ class RecipeSpec:
     ingredients: tuple[RecipeIngredient, ...]
     steps: tuple[str, ...]
     safety_note: str
+    source_name: str = "Rescue Meal 팀 작성 레시피"
+    source_url: str | None = None
+    license: str = "project-authored"
+    source_revision: str = "recipes-v1"
 
 
 @dataclass(frozen=True)
@@ -78,6 +82,10 @@ class PlannedRecipe:
     safety_note: str
     source: str
     planner_version: str
+    source_name: str
+    source_url: str | None
+    license: str
+    source_revision: str
 
 
 RECIPE_FIXTURE_PATH = Path(__file__).resolve().parents[3] / "data" / "fixtures" / "recipes" / "recipes-v1.json"
@@ -156,6 +164,10 @@ def load_recipe_specs(path: Path = RECIPE_FIXTURE_PATH) -> tuple[RecipeSpec, ...
             ),
             steps=tuple(item["steps"]),
             safety_note=item["safety_note"],
+            source_name=item.get("provenance", {}).get("source_name", "Rescue Meal 팀 작성 레시피"),
+            source_url=item.get("provenance", {}).get("source_url"),
+            license=item.get("provenance", {}).get("license", "unknown"),
+            source_revision=item.get("provenance", {}).get("revision", "unknown"),
         )
         for item in raw_specs
     )
@@ -268,4 +280,8 @@ def plan_recipe(foods: list[FoodLike], max_minutes: int, *, specs: tuple[RecipeS
         safety_note=recipe.safety_note,
         source="recipe_fixture",
         planner_version=PLANNER_VERSION,
+        source_name=recipe.source_name,
+        source_url=recipe.source_url,
+        license=recipe.license,
+        source_revision=recipe.source_revision,
     )

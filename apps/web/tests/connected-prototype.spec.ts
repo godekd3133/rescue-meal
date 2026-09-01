@@ -9,6 +9,7 @@ test("connected app loads the API-backed planner and saves the selected recipe",
   await page.getByRole("button", { name: /지금 있는 재료로 식단 만들기/ }).click();
   const dialog = page.getByRole("dialog", { name: "오늘의 Rescue Meal" });
   await expect(dialog.getByRole("heading", { name: "시금치 두부 닭가슴살 덮밥" })).toBeVisible();
+  await expect(dialog.getByText(/Rescue Meal 팀 작성 레시피/)).toBeVisible();
   await expect(dialog.getByText("필요한 재료")).toBeVisible();
   await expect(dialog.getByText("부족한 재료")).toHaveCount(0);
 
@@ -36,6 +37,12 @@ test("connected app loads the API-backed planner and saves the selected recipe",
   await expect(inventory.getByRole("heading", { name: "내 식품 목록 5" })).toBeVisible();
   await expect(inventory.getByRole("button", { name: /닭가슴살 무항생제 닭가슴살 · 1\.5팩/ })).toBeVisible();
   await expect(page.locator(".toast")).toHaveText("식단을 완료하고 재고를 갱신했어요");
+
+  await page.getByRole("button", { name: /지금 있는 재료로 식단 만들기/ }).click();
+  const currentMealDialog = page.getByRole("dialog", { name: "오늘의 Rescue Meal" });
+  await currentMealDialog.getByRole("button", { name: "최근 식단 보기" }).click();
+  await expect(currentMealDialog.locator(".recipe-history")).toContainText("시금치 두부 닭가슴살 덮밥");
+  await expect(currentMealDialog.locator(".recipe-history")).toContainText("조리 완료");
 });
 
 test("connected planner changes the recipe when the cooking time changes", async ({ page }) => {

@@ -2040,6 +2040,14 @@
   padding-top: 4px;
 }
 
+.recipe-provenance {
+  margin: -6px 0 0;
+  color: var(--meal-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 8px;
+  line-height: 1.4;
+}
+
 .recipe-time-picker {
   display: grid;
   gap: 7px;
@@ -2414,6 +2422,84 @@
 .recipe-audit-row small {
   color: var(--meal-muted);
   font-size: 9px;
+}
+
+.recipe-history-toggle {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  border: 0;
+  background: transparent;
+  color: var(--meal-muted);
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.recipe-history-toggle:hover {
+  color: var(--meal-sage-dark);
+}
+
+.recipe-history {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--meal-line);
+  border-radius: 11px;
+  background: rgba(255, 254, 250, 0.72);
+}
+
+.recipe-history-list {
+  display: grid;
+  gap: 7px;
+}
+
+.recipe-history-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 9px;
+  border-radius: 9px;
+  background: rgba(237, 243, 233, 0.56);
+}
+
+.recipe-history-row > span:first-child {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.recipe-history-row strong {
+  overflow: hidden;
+  color: var(--meal-ink);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recipe-history-row small {
+  overflow: hidden;
+  color: var(--meal-muted);
+  font-size: 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recipe-history-status {
+  flex: 0 0 auto;
+  padding: 4px 6px;
+  border-radius: 999px;
+  background: #f0f2e9;
+  color: var(--meal-muted);
+  font-size: 8px;
+  font-weight: 800;
+}
+
+.recipe-history-status-done {
+  background: var(--meal-coral-soft);
+  color: #ad6d5c;
 }
 
 .recipe-complete-actions {
