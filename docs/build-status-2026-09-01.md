@@ -57,6 +57,7 @@
 - PostgreSQL DSN을 선택할 수 있는 projection repository 코드와 `rescue_api_*` schema
 - PostgreSQL API projection의 workspace 복합키·workspace filter·account/revoke table adapter
 - Grocy config·API key·system info status와 stock operation HTTP adapter (외부 write는 아직 비활성)
+- 선택적 COOKRCP01 공개 레시피 importer/status endpoint, 원문 review draft와 source/license/revision 보존
 - recipe fixture 5개 기반 planner v2의 exact/curated alias·단위·수량·여러 lot allocation·사용량 조정·조리시간·source metadata·snapshot/audit 검증과 `preview → save → latest → complete` workspace persistence
 - Python 3.12 PaddleOCR worker와 API remote OCR adapter
 - OCR 응답의 detection/recognition model version trace
@@ -86,6 +87,7 @@
 - `GET /api/auth/me`
 - `POST /api/auth/logout`
 - `GET /api/integrations/grocy/status`
+- `GET /api/integrations/recipes/cookrcp/status`
 - `GET /api/dashboard`
 - `GET /api/products/by-barcode/{barcode}`
 - `GET /api/products/resolve/{barcode}`
@@ -139,11 +141,11 @@
 ```text
 apps/web: npm run check:runtime  → Mobile runtime integrity check passed (28 protected files)
 apps/web: npm run build          → TypeScript + Vite build passed
-services/api: uv run pytest      → 71 passed, 3 warnings
+services/api: uv run pytest      → 79 passed, 3 warnings
 services/ocr-worker: uv run pytest → 1 passed
 apps/web: `tests/prototype.spec.ts` → 11 passed (app E2E)
 apps/web: `tests/connected-prototype.spec.ts` → 2 passed (API 연결 E2E)
-apps/web: `tests/mobile-runtime.spec.ts` → full suite 7 passed, keyboard transition 1 flaky; isolated line 100 rerun 1 passed
+apps/web: `tests/mobile-runtime.spec.ts` → 8 passed
 apps/web: npm run test:sites     → 4 passed
 infra: docker compose config     → syntax/config expansion passed
 sqlite: HTTP create → restart → readback → persisted
@@ -154,7 +156,7 @@ quality gate: 실제 receipt/produce label → pass → PaddleOCR → review_req
 
 현재 production build의 초기 client chunk는 `504.16KB`이고 Vite의 `500KB` advisory warning이 표시됩니다. 카메라 scanner `437.90KB`, meal planner `16.24KB`, storage history `2.02KB`, date assertion editor `1.73KB`, account sheet `4.76KB`, connection status `0.45KB`는 lazy chunk로 분리되어 초기 화면에서 사용 시점에 로드됩니다. manifest·service worker도 production 정적 산출물에 포함됩니다. build 실패는 아니지만, 운영 bundle budget을 엄격히 적용할 때는 다음 성능 작업에서 main chunk를 추가로 줄여야 합니다.
 
-테스트 실행 시 FastAPI/Starlette의 `httpx` 관련 deprecation warning 2개가 표시됩니다. 앱 고유 E2E·API·Sites 검증에는 실패가 없습니다. 템플릿 모바일 runtime은 전체 8개 중 7개가 통과했고 `keyboard and its attached footer dismiss on the same transition`이 전체 순회에서 간헐 실패했으며, 동일 테스트 단독 재실행은 통과했습니다. 해당 템플릿 파일은 보호 범위라 임의 수정하지 않았습니다.
+테스트 실행 시 FastAPI/Starlette의 `httpx` 관련 deprecation warning 2개가 표시됩니다. demo/prototype E2E 11개, 연결 E2E 2개, mobile runtime 8개, API, Sites 검증은 통과했습니다. protected runtime 파일은 이번 작업에서 수정하지 않았습니다.
 
 ### 브라우저
 
@@ -191,7 +193,7 @@ Codex in-app Browser의 실제 `http://127.0.0.1:4173/` 화면에서 다음을 �
 - connected E2E에서 완료 후 `최근 식단 보기`로 이전 plan의 조리 완료 상태를 다시 표시하는 것을 확인
 - production build의 `manifest.webmanifest`·`sw.js` 생성과 Sites packaging 파일 확인
 - 앱 E2E 11개: 홈 상세 저장·계정 sheet·영수증 review·라벨 확인 반영·바코드 후보 조회·카메라 실패 fallback·추정 날짜 확정·부분 lot 이동·부분 폐기 확인·보관 필터·demo 레시피 저장/완료
-- 연결 모드 E2E 1개: 실제 API dashboard·preview·조리순서·save·latest 복원·complete·CORS 경계
+- 연결 모드 E2E 2개: 실제 API dashboard·preview·조리순서·save·latest 복원·complete·최근 식단·조리시간·CORS 경계
 
 프론트 연결 모드에서는 `VITE_API_BASE_URL=http://127.0.0.1:8000`을 사용했고, 현재 열린 preview API는 `storage: sqlite-local`로 실행 중입니다. Uvicorn 로그에서 dashboard, storage event, receipt draft/commit, manual food 요청을 확인했습니다.
 

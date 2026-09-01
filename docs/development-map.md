@@ -61,11 +61,23 @@
 8. `docs(runtime): document API, OCR, and mobile contracts`
    - auth workspace, barcode, date assertion, Grocy adapter, OCR intake, recipe planner, PWA, 디자인 QA의 코드 계약과 사용 방법을 연결합니다.
 
-9. `test(evidence): record implementation and validation readbacks`
+9. `feat(planner): let users choose cooking time limits`
+   - 10·20·30·45분 선택을 planner preview/save 계약과 연결하고, 저장 계획을 복원할 때도 `max_minutes`를 비교합니다.
+
+10. `feat(planner): show recent meal plan history`
+   - 현재 재고가 바뀐 뒤에도 저장·완료된 최근 식단을 workspace history endpoint와 모바일 UI에서 다시 확인합니다.
+
+11. `feat(api): add COOKRCP01 review-draft importer`
+   - 선택적 API key로 공개 레시피를 조회하되 raw ingredient를 자동 확정하지 않고 review draft와 출처·이용조건·revision을 보존합니다.
+
+12. `test(evidence): record implementation and validation readbacks`
    - 코드 테스트만으로 대체할 수 없는 이미지 OCR, 브라우저 readback, build 결과, 인증 격리, lot event, planner complete 결과를 날짜별 evidence로 보존합니다.
 
-10. `docs(repo): make the development and verification map discoverable`
+13. `docs(repo): make the development and verification map discoverable`
    - 이 문서와 자동 검증 workflow로 새 개발자가 제품 의도, 코드 위치, 검증 claim, 남은 위험을 한 경로로 읽을 수 있게 합니다.
+
+14. `test(repo): record publication preflight`
+   - 게시 직전의 runtime/build/API/OCR/E2E/Compose 결과와 환경 함정을 한 문서로 고정합니다.
 
 ## 4. 현재 구현 claim
 
@@ -76,8 +88,9 @@
 - 바코드 후보, 직접 입력, 날짜 후보와 사용자 date assertion 수정
 - 보관 위치 이동, 개봉, 소비, 폐기 및 부분 lot 이력
 - guest workspace와 email/password account workspace, token revoke 경계
-- 재고 기반 recipe preview, 저장, latest 조회, lot allocation, 사용량 조정, 조리 완료 소비 event
+- 재고 기반 recipe preview, 조리 가능 시간 선택, 저장, latest/history 조회, lot allocation, 사용량 조정, 조리 완료 소비 event
 - iPhone/Pixel 모바일 prototype, API 연결 모드, PWA shell과 offline 경계
+- 선택적 COOKRCP01 공개 레시피 review draft와 source/license/revision provenance
 
 ## 5. 증거를 해석하는 방법
 
@@ -92,7 +105,7 @@
 | Docker/PostgreSQL/Grocy | 구성 파일과 adapter contract | 현재 환경에서의 live startup/readback |
 | 제품 안전 | 안전 문구와 금지된 자동 판정 경계 | 식품이 안전하다는 판정, 폐기량 개선 |
 
-현재 evidence에 기록된 Docker daemon 부재, 운영 PostgreSQL/Grocy readback 미실행, 실제 기기·운영 OCR·OAuth/계정 복구 미검증은 다음 개발 작업의 입력입니다.
+현재 evidence에 기록된 Docker daemon 부재, 운영 PostgreSQL/Grocy readback 미실행, 실제 기기·운영 OCR·OAuth/계정 복구 미검증은 다음 개발 작업의 입력입니다. 게시 직전 검증 수치는 [publication preflight](../evidence/repository-publication-preflight-2026-09-02.md)에서 확인합니다.
 
 ## 6. 저장소에 포함하지 않는 로컬 산출물
 

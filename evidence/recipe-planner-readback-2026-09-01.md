@@ -73,9 +73,9 @@ GROCY: disabled (외부 URL/key 미설정)
 ## 자동 검증
 
 ```text
-services/api: uv run pytest                         → 71 passed, 3 warnings
+services/api: uv run pytest                         → 79 passed, 3 warnings
 apps/web prototype E2E: 11 tests                    → 11 passed
-apps/web connected planner E2E                      → 1 passed
+apps/web connected planner E2E                      → 2 passed
 apps/web npm run build                              → passed
 apps/web npm run test:sites                         → 4 passed
 apps/web npm run check:runtime                      → protected files 28개 무결성 통과

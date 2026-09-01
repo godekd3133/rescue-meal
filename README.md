@@ -145,6 +145,7 @@ Grocy를 기준 재고 시스템으로 재현하고, Rescue Meal은 영수증 in
 - [OCR intake pipeline](docs/ocr-pipeline.md)
 - [디자인 QA](docs/design-qa.md)
 - [환경 Preflight](evidence/environment-preflight-2026-09-01.md)
+- [Repository publication preflight](evidence/repository-publication-preflight-2026-09-02.md)
 - [실제 첨부 이미지 OCR benchmark](evidence/vision-ocr-parser-benchmark-2026-09-01.md)
 - [실제 PaddleOCR benchmark](evidence/paddleocr-benchmark-2026-09-01.md)
 - [부분 lot parent/child readback](evidence/partial-lot-readback-2026-09-01.md)
@@ -161,6 +162,7 @@ Grocy를 기준 재고 시스템으로 재현하고, Rescue Meal은 영수증 in
 - [Grocy REST adapter](docs/grocy-adapter.md)
 - [Grocy adapter contract evidence](evidence/grocy-adapter-contract-2026-09-01.md)
 - [재고 기반 레시피 플래너](docs/recipe-planner.md)
+- [공개 레시피 importer 운영 경계](docs/recipe-importer.md)
 - [레시피 플래너 readback](evidence/recipe-planner-readback-2026-09-01.md)
 - [planner v2·조리 완료 readback](evidence/recipe-planner-completion-readback-2026-09-02.md)
 
@@ -203,6 +205,7 @@ VITE_API_BASE_URL=http://127.0.0.1:8000 npm run dev -- --host 127.0.0.1 --port 4
 - `GET /health`, `POST /api/auth/guest`, `GET /api/dashboard`
 - `POST /api/auth/register`, `POST /api/auth/login`, `GET /api/auth/me`, `POST /api/auth/logout` — account workspace 연결·profile·token revoke
 - `GET /api/integrations/grocy/status` — 설정된 Grocy system info readback, 기본 disabled
+- `GET /api/integrations/recipes/cookrcp/status` — 식품안전나라 COOKRCP01 importer 설정 상태만 확인, 외부 호출 없음
 - `GET /api/products/by-barcode/{barcode}` — 현재는 fixture 상품 후보만 제공
 - `GET /api/products/resolve/{barcode}` — local fixture 우선, 외부 lookup flag 시 Open Food Facts 보조 후보
 - `POST /api/barcodes/parse` — 일반 GTIN·가변중량·GS1 날짜 AI 분기
