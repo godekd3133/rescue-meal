@@ -126,5 +126,7 @@ restore.sh → 복구 DB를 가리키는 두 번째 API 컨테이너 기동 → 
   baseline을 재측정해 `RESCUE_MEAL_PERF_SMOKE_MAX_P95_MS`를 조정합니다.
 - `infra/dr-drill.sh`: backup.sh→restore.sh→복구 DB 기반 API 기동까지 이어지는
   재해복구 드릴. 실행 결과는 `evidence/dr-drill-readback-*.md`에 남깁니다.
+- 실제 운영 환경에서 닫아야 하는 외부 acceptance gate의 전체 목록과 순서는
+  [`release-readiness.md`](release-readiness.md)를 따릅니다.
 - `evidence/container-smoke-readback-2026-09-11.md` 및 최신 readback 문서에
   실행 결과를 남깁니다.
