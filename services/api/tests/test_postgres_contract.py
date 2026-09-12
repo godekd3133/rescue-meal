@@ -16,6 +16,7 @@ from app.main import (
     ReceiptDraftResponse,
     ReceiptLineDraft,
     StorageEventResponse,
+    WorkspaceExportAuditEvent,
     WorkspaceStoreRouter,
     _FoodRecord,
     _inventory_search_text,
@@ -346,6 +347,14 @@ def test_postgres_projection_migration_declares_workspace_composite_keys() -> No
     assert "ci-custom-location-history-1" in workflow_text
     assert "history_delete_status" in workflow_text
     assert "storage_location_in_use" in workflow_text
+    export_audit_migration = migration.with_name("026_export_audit.sql")
+    export_audit_sql = export_audit_migration.read_text()
+    assert "rescue_api_export_audit_events" in export_audit_sql
+    assert "actor_id text" in export_audit_sql
+    assert "actor_role text" in export_audit_sql
+    assert "request_id text" in export_audit_sql
+    assert "rescue_api_export_audit_events_workspace_time_idx" in export_audit_sql
+    assert "026_export_audit.sql" in workflow_text
     assert "npm run test:workspace-sync" in workflow_text
     assert "npm run test:service-worker" in workflow_text
     assert "npm run test:release-manifest" in workflow_text
@@ -1173,6 +1182,32 @@ def test_postgres_auth_repository_uses_persistent_account_and_revoke_tables() ->
     assert repository.is_token_revoked("token-example") is True
 
 
+def test_postgres_store_persists_export_audit_in_a_workspace_scoped_table() -> None:
+    connection = FakeConnection()
+    repository = PostgresStore("postgresql://test", workspace_id="account-one", seed=False, connection=connection)
+    event = WorkspaceExportAuditEvent(
+        id="export-audit-1",
+        actor_id="account-1",
+        actor_role="user",
+        request_id="export-request-1",
+        schema_version="rescue-meal-export-v1",
+        exported_at=datetime(2026, 9, 12, 12, 30, tzinfo=timezone.utc),
+    )
+
+    repository.record_export_audit_event(event)
+
+    query, params = next(
+        (query, params)
+        for query, params in connection.queries
+        if "INSERT INTO rescue_api_export_audit_events" in query
+    )
+    assert "ON CONFLICT (workspace_id, id) DO NOTHING" in query
+    assert params[0] == "account-one"
+    assert params[1] == "export-audit-1"
+    assert params[2:6] == ("account-1", "user", "export-request-1", "rescue-meal-export-v1")
+    assert repository.export_audit_events == [event]
+
+
 def test_postgres_auth_repository_can_leave_schema_creation_to_the_migration_runner() -> None:
     connection = FakeConnection()
 
@@ -1288,6 +1323,7 @@ def test_postgres_readiness_covers_every_compatibility_projection_used_by_worksp
         "rescue_api_notification_worker_heartbeats",
         "rescue_api_grocy_location_mappings",
         "rescue_api_storage_locations",
+        "rescue_api_export_audit_events",
         "rescue_api_grocy_outbox",
         "rescue_api_grocy_worker_leases",
         "rescue_api_grocy_worker_heartbeats",

@@ -25,6 +25,7 @@ from app.main import (
     ReceiptDraftResponse,
     ReceiptLineDraft,
     SqliteStore,
+    WorkspaceExportAuditEvent,
     WorkspaceStoreRouter,
     _ReceiptRecord,
 )
@@ -44,6 +45,31 @@ def test_sqlite_store_survives_repository_reconstruction(tmp_path: Path) -> None
     assert second.foods["tofu-1"].response.storage_type == "frozen"
     assert second.foods["tofu-1"].response.date_assertion.value is None
     assert second.foods["tofu-1"].response.estimated_use_first_window is not None
+
+
+def test_sqlite_store_persists_export_actor_and_time_audit_across_reconstruction(tmp_path: Path) -> None:
+    database_path = tmp_path / "export-audit.db"
+    event = WorkspaceExportAuditEvent(
+        id="export-audit-1",
+        actor_id="guest",
+        actor_role="guest",
+        request_id="export-request-1",
+        schema_version="rescue-meal-export-v1",
+        exported_at=datetime(2026, 9, 12, 12, 30, tzinfo=timezone.utc),
+    )
+
+    first = SqliteStore(str(database_path), seed=False)
+    first.record_export_audit_event(event)
+    first.close()
+
+    second = SqliteStore(str(database_path), seed=False)
+    assert second.list_export_audit_events() == [event]
+    second.reset()
+    second.close()
+
+    third = SqliteStore(str(database_path), seed=False)
+    assert third.list_export_audit_events() == []
+    third.close()
 
 
 def test_sqlite_store_persists_opened_at_across_repository_reconstruction(tmp_path: Path) -> None:

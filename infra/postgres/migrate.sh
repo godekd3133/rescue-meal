@@ -68,7 +68,7 @@ if [ "$APPLY" -eq 1 ]; then
   exec uv run --project "$SCRIPT_DIR/../../services/api" --no-dev python "$SCRIPT_DIR/migrate.py"
 fi
 
-printf '%s\n' "Rescue Meal PostgreSQL migrations (ordered, 001→025)"
+printf '%s\n' "Rescue Meal PostgreSQL migrations (ordered, 001→026)"
 printf '%s\n' "Migration directory: $SCRIPT_DIR"
 
 for migration in \
@@ -96,7 +96,8 @@ for migration in \
   022_receipt_review_metadata.sql \
   023_manual_food_idempotency.sql \
   024_recipe_catalog_revision.sql \
-  025_storage_locations.sql
+  025_storage_locations.sql \
+  026_export_audit.sql
 do
   path="$SCRIPT_DIR/$migration"
   if [ ! -f "$path" ]; then

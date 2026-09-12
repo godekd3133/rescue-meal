@@ -242,7 +242,7 @@ request도 `recipe_review_legacy_token_disabled` typed 503으로 차단합니다
 운영 acceptance입니다.
 
 따라서 기존 항목 중 `001→023`을 언급한 것은 당시 readback의 historical scope이며,
-현재 schema/readiness baseline은 `001→025`입니다. 최신 schema gate 증거는
+현재 schema/readiness baseline은 `001→026`입니다. 최신 schema gate 증거는
 [PostgreSQL schema gate current readback](../evidence/postgres-schema-gate-readback-2026-09-08.md)입니다.
 
 2026-09-08 현재 API-backed background worker runner도 공통 loop로 정리했습니다.
@@ -271,9 +271,9 @@ API **447 passed**, connected E2E **76 passed**와 planner 저장 후 닫기·�
 대신 증명하지 않습니다
 ([durable read snapshot readback](../evidence/durable-read-snapshot-readback-2026-09-08.md)).
 
-현재 schema baseline override: 이 문서의 historical readback 문단에 남아 있는 `001→023`
-표기는 당시 evidence 범위입니다. 2026-09-08 현재 readiness와 migration runner의
-authoritative baseline은 `001→025_storage_locations.sql`입니다.
+현재 schema baseline override: 이 문서의 historical readback 문단에 남아 있는 `001→023`·`001→025`
+표기는 당시 evidence 범위입니다. 2026-09-12 현재 readiness와 migration runner의
+authoritative baseline은 `001→026_export_audit.sql`입니다.
 
 2026-09-08 retryable operation identity도 `OperationLedger` Module로 집중했습니다.
 receipt·manual food·shopping receive·storage event의 key normalization, digest, canonical

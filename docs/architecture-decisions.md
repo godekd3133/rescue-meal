@@ -2755,3 +2755,31 @@ human-checked
   export UI flow를 확인했다.
 - 경계: 대규모 export streaming/압축, durable actor/time audit, external gateway abuse control,
   PostgreSQL replica/WAL/backup retention, production rate-limit tuning은 별도 acceptance다.
+
+## ADR-143 — workspace export 생성은 별도 actor/time audit row를 남긴다
+
+- 상태: `accepted`
+- 문제: export rate limit은 반복 호출을 제한했지만, 성공적으로 생성된 민감한 workspace
+  snapshot을 누가 언제 요청했는지 durable하게 확인할 수 없었다. export JSON에 actor 정보를
+  넣으면 다운로드 파일의 portability와 개인정보 경계가 불필요하게 넓어진다.
+- 결정: export snapshot 생성이 성공한 뒤 `WorkspaceExportAuditEvent`를 별도 append-only
+  저장소에 기록한다. row에는 검증된 account subject 또는 `guest` actor ID, auth role, 안전한
+  request ID, `rescue-meal-export-v1` schema version, UTC export 시각만 저장한다. Authorization
+  header·access token·client IP·snapshot payload는 저장하지 않는다. audit event는
+  `WorkspaceExportResponse`에 포함하지 않는다.
+- 저장소: InMemory/SQLite/PostgreSQL adapter가 같은 model/method contract를 사용한다.
+  PostgreSQL은 `026_export_audit.sql`의 `(workspace_id, id)` key와
+  `rescue_api_export_audit_events_workspace_time_idx`를 사용하며, audit insert는 workspace
+  revision을 변경하지 않는 별도 commit으로 처리한다. reset/purge는 같은 workspace의 audit
+  row를 함께 지운다.
+- 실패 계약: audit persist가 실패하면 export body를 반환하거나 frontend Blob/download를
+  만들지 않고 `account_export_audit_persistence_unavailable` typed `503`과 `Retry-After: 1`을
+  반환한다. rate-limit `429`는 snapshot과 audit row 모두 생성하지 않는다.
+- 이유: export는 read path이지만 보안상 생성 이력을 남겨야 한다. 별도 audit table은 revision
+  guard와 사용자 download schema를 오염시키지 않고, actor correlation을 access log의
+  route-template 경계와 결합할 수 있다.
+- 검증: export actor/time API success/failure **2 passed**, SQLite restart/reset **1 passed**,
+  PostgreSQL migration/readiness contract와 기존 export privacy/rate-limit 테스트를 통과했다.
+- 경계: audit 운영 조회 권한·보존기간·알림, 대규모 export streaming/압축, external gateway
+  abuse control, PostgreSQL replica/WAL/backup retention과 production rate-limit tuning은
+  별도 acceptance다.

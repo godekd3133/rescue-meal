@@ -23,6 +23,7 @@ from app.main import (
     ReceiptCommitRequest,
     SqliteStore,
     StorageLocationCreateRequest,
+    WorkspaceExportAuditEvent,
     WORKSPACE_CONFLICT_HEADER,
     WORKSPACE_REVISION_REQUEST_HEADER,
     WORKSPACE_REVISION_RESPONSE_HEADER,
@@ -552,6 +553,38 @@ def test_workspace_export_rate_limit_returns_typed_retry_without_echoing_identit
     assert blocked.headers["x-ratelimit-remaining"] == "0"
     assert "demo" not in blocked.text
     assert "export-first" not in blocked.text
+
+
+def test_workspace_export_records_server_side_actor_and_time_audit() -> None:
+    exported = client.get("/api/account/export", headers={"X-Request-ID": "export-audit-request"})
+
+    assert exported.status_code == 200
+    events = store.list_export_audit_events()
+    assert len(events) == 1
+    event = events[0]
+    assert event.actor_id == "guest"
+    assert event.actor_role == "guest"
+    assert event.request_id == "export-audit-request"
+    assert event.schema_version == "rescue-meal-export-v1"
+    assert event.exported_at.isoformat().replace("+00:00", "Z") == exported.json()["exported_at"].replace("+00:00", "Z")
+    assert "export_audit_events" not in exported.text
+
+
+def test_workspace_export_does_not_return_snapshot_when_audit_persistence_fails(monkeypatch) -> None:
+    def fail(_event: WorkspaceExportAuditEvent) -> None:
+        raise RuntimeError("private export audit failure")
+
+    monkeypatch.setattr(store, "record_export_audit_event", fail)
+
+    response = client.get("/api/account/export")
+
+    assert response.status_code == 503
+    detail = response.json()["detail"]
+    assert detail["code"] == "account_export_audit_persistence_unavailable"
+    assert detail["retryable"] is True
+    assert detail["action"] == "retry_later"
+    assert "private export audit failure" not in response.text
+    assert "inventory" not in response.text
 
 
 def test_readiness_and_request_id_contract() -> None:

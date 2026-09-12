@@ -1290,6 +1290,25 @@ class ManualFoodOperationRecord(BaseModel):
     occurred_at: datetime
 
 
+class WorkspaceExportAuditEvent(BaseModel):
+    """Server-side audit record for a generated workspace export.
+
+    This record is deliberately not part of the user-facing export payload:
+    it identifies who requested a sensitive snapshot and correlates the
+    request without copying credentials, IP addresses, or the snapshot itself
+    into the downloaded file.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    actor_id: str = Field(min_length=1, max_length=96)
+    actor_role: Literal["guest", "user", "recipe_admin"]
+    request_id: str = Field(min_length=1, max_length=96)
+    schema_version: Literal["rescue-meal-export-v1"] = "rescue-meal-export-v1"
+    exported_at: datetime
+
+
 class ShoppingListItemUpdateRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -1633,6 +1652,7 @@ _ATOMIC_STORE_STATE_FIELDS = frozenset({
     "grocy_worker_leases",
     "grocy_worker_heartbeats",
     "storage_locations",
+    "export_audit_events",
 })
 
 
@@ -1758,6 +1778,7 @@ class InMemoryStore:
         self.grocy_worker_leases: dict[str, GrocyWorkerLeaseRecord] = {}
         self.grocy_worker_heartbeats: dict[str, GrocyWorkerHeartbeatRecord] = {}
         self.storage_locations: dict[str, StorageLocationResponse] = {}
+        self.export_audit_events: list[WorkspaceExportAuditEvent] = []
         self.reset()
 
     def reset(self) -> None:
@@ -1794,6 +1815,7 @@ class InMemoryStore:
         self.grocy_worker_leases.clear()
         self.grocy_worker_heartbeats.clear()
         self.storage_locations.clear()
+        self.export_audit_events.clear()
         if self._seed_enabled:
             for food in _seed_foods():
                 self.foods[food.id] = _FoodRecord(food)
@@ -2748,6 +2770,23 @@ class InMemoryStore:
                 ],
             )
 
+    def record_export_audit_event(self, event: WorkspaceExportAuditEvent, *, persist: bool = True) -> None:
+        del persist
+        with self._lock:
+            if any(existing.id == event.id for existing in self.export_audit_events):
+                return
+            self.export_audit_events.append(event.model_copy(deep=True))
+
+    def list_export_audit_events(self, *, limit: int = 100) -> list[WorkspaceExportAuditEvent]:
+        bounded_limit = max(1, min(int(limit), 1000))
+        with self._lock:
+            events = sorted(
+                (event.model_copy(deep=True) for event in self.export_audit_events),
+                key=lambda item: (item.exported_at, item.id),
+                reverse=True,
+            )
+        return events[:bounded_limit]
+
     def list_product_provenance_audit_events_for_export(self) -> list[ProductProvenanceAuditEvent]:
         with self._lock:
             return [
@@ -2824,6 +2863,7 @@ class SqliteStore(_AtomicStoreStateMixin, InMemoryStore):
         self.grocy_worker_leases = {}
         self.grocy_worker_heartbeats = {}
         self.storage_locations = {}
+        self.export_audit_events = []
         self._workspace_revision = 0
         self._initialize_schema()
         self._workspace_revision = self._read_workspace_revision()
@@ -2986,6 +3026,17 @@ class SqliteStore(_AtomicStoreStateMixin, InMemoryStore):
                 id TEXT PRIMARY KEY,
                 payload TEXT NOT NULL
             );
+            CREATE TABLE IF NOT EXISTS export_audit_events (
+                id TEXT PRIMARY KEY,
+                actor_id TEXT NOT NULL,
+                actor_role TEXT NOT NULL,
+                request_id TEXT NOT NULL,
+                schema_version TEXT NOT NULL,
+                exported_at TEXT NOT NULL,
+                payload TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS export_audit_events_time_idx
+                ON export_audit_events (exported_at DESC, id DESC);
             CREATE TABLE IF NOT EXISTS workspace_metadata (
                 id TEXT PRIMARY KEY CHECK (id = 'workspace'),
                 revision INTEGER NOT NULL DEFAULT 0
@@ -3009,7 +3060,7 @@ class SqliteStore(_AtomicStoreStateMixin, InMemoryStore):
                 self._load_all()
 
     def _has_rows(self) -> bool:
-        for table_name in ("foods", "receipts", "storage_events", "commit_transactions", "meal_plans", "multi_day_meal_plans", "shopping_list", "shopping_receive_operations", "manual_food_operations", "meal_preferences", "meal_plan_events", "recipe_drafts", "recipe_review_events", "grocy_mappings", "grocy_mapping_audit_events", "product_provenance_audit_events", "product_info_audit_events", "product_aliases", "product_enrichment_jobs", "product_enrichment_worker_leases", "product_enrichment_worker_heartbeats", "notification_read_states", "notification_preferences", "push_subscriptions", "notification_deliveries", "notification_worker_leases", "notification_worker_heartbeats", "grocy_location_mappings", "grocy_outbox", "storage_locations"):
+        for table_name in ("foods", "receipts", "storage_events", "commit_transactions", "meal_plans", "multi_day_meal_plans", "shopping_list", "shopping_receive_operations", "manual_food_operations", "meal_preferences", "meal_plan_events", "recipe_drafts", "recipe_review_events", "grocy_mappings", "grocy_mapping_audit_events", "product_provenance_audit_events", "product_info_audit_events", "product_aliases", "product_enrichment_jobs", "product_enrichment_worker_leases", "product_enrichment_worker_heartbeats", "notification_read_states", "notification_preferences", "push_subscriptions", "notification_deliveries", "notification_worker_leases", "notification_worker_heartbeats", "grocy_location_mappings", "grocy_outbox", "storage_locations", "export_audit_events"):
             row = self._connection.execute(f"SELECT COUNT(*) AS count FROM {table_name}").fetchone()
             if row and row["count"]:
                 return True
@@ -3052,6 +3103,7 @@ class SqliteStore(_AtomicStoreStateMixin, InMemoryStore):
             self.grocy_worker_leases = {}
             self.grocy_worker_heartbeats = {}
             self.storage_locations = {}
+            self.export_audit_events = []
             for row in self._connection.execute("SELECT id, payload FROM foods"):
                 self.foods[row["id"]] = _FoodRecord(FoodResponse.model_validate(json.loads(row["payload"])))
             for row in self._connection.execute("SELECT id, payload, committed FROM receipts"):
@@ -3135,6 +3187,8 @@ class SqliteStore(_AtomicStoreStateMixin, InMemoryStore):
                 self.grocy_worker_heartbeats[row["worker_id"]] = GrocyWorkerHeartbeatRecord.model_validate(json.loads(row["payload"]))
             for row in self._connection.execute("SELECT id, payload FROM storage_locations"):
                 self.storage_locations[row["id"]] = StorageLocationResponse.model_validate(json.loads(row["payload"]))
+            for row in self._connection.execute("SELECT id, payload FROM export_audit_events ORDER BY exported_at DESC, id DESC"):
+                self.export_audit_events.append(WorkspaceExportAuditEvent.model_validate(json.loads(row["payload"])))
 
     def _persist_all(self) -> None:
         with self._lock:
@@ -3316,6 +3370,47 @@ class SqliteStore(_AtomicStoreStateMixin, InMemoryStore):
     def close(self) -> None:
         with self._lock:
             self._connection.close()
+
+    def record_export_audit_event(self, event: WorkspaceExportAuditEvent, *, persist: bool = True) -> None:
+        with self._lock:
+            if any(existing.id == event.id for existing in self.export_audit_events):
+                return
+            if persist:
+                try:
+                    self._connection.execute(
+                        """
+                        INSERT OR IGNORE INTO export_audit_events
+                            (id, actor_id, actor_role, request_id, schema_version, exported_at, payload)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                        """,
+                        (
+                            event.id,
+                            event.actor_id,
+                            event.actor_role,
+                            event.request_id,
+                            event.schema_version,
+                            event.exported_at.isoformat(),
+                            json.dumps(event.model_dump(mode="json"), ensure_ascii=False),
+                        ),
+                    )
+                    self._connection.commit()
+                except Exception:
+                    self._connection.rollback()
+                    raise
+            self.export_audit_events.append(event.model_copy(deep=True))
+
+    def list_export_audit_events(self, *, limit: int = 100) -> list[WorkspaceExportAuditEvent]:
+        bounded_limit = max(1, min(int(limit), 1000))
+        with self._lock:
+            rows = self._connection.execute(
+                "SELECT id, payload FROM export_audit_events ORDER BY exported_at DESC, id DESC LIMIT ?",
+                (bounded_limit,),
+            ).fetchall()
+            self.export_audit_events = [
+                WorkspaceExportAuditEvent.model_validate(json.loads(row["payload"]))
+                for row in rows
+            ]
+            return [event.model_copy(deep=True) for event in self.export_audit_events]
 
     def record_grocy_mapping_audit_event(self, event: GrocyProductMappingAuditEvent, *, persist: bool = True) -> None:
         with self._lock:
@@ -3638,6 +3733,7 @@ class SqliteStore(_AtomicStoreStateMixin, InMemoryStore):
             self._connection.execute("DELETE FROM notification_read_states")
             self._connection.execute("DELETE FROM grocy_worker_leases")
             self._connection.execute("DELETE FROM grocy_worker_heartbeats")
+            self._connection.execute("DELETE FROM export_audit_events")
             self._connection.commit()
         self._persist_all()
 
@@ -3764,6 +3860,7 @@ class PostgresStore(_AtomicStoreStateMixin, InMemoryStore):
         self.grocy_worker_leases = {}
         self.grocy_worker_heartbeats = {}
         self.storage_locations = {}
+        self.export_audit_events = []
         self._normalized_inventory = NormalizedInventoryAdapter(workspace_id) if inventory_mode == "normalized" else None
         self._workspace_revision = 0
         if initialize_schema:
@@ -4025,6 +4122,19 @@ class PostgresStore(_AtomicStoreStateMixin, InMemoryStore):
                             updated_at timestamptz NOT NULL DEFAULT now(),
                             PRIMARY KEY (workspace_id, id)
                         );
+                        CREATE TABLE IF NOT EXISTS rescue_api_export_audit_events (
+                            workspace_id text NOT NULL DEFAULT 'demo',
+                            id text NOT NULL,
+                            actor_id text NOT NULL,
+                            actor_role text NOT NULL,
+                            request_id text NOT NULL,
+                            schema_version text NOT NULL,
+                            exported_at timestamptz NOT NULL,
+                            payload jsonb NOT NULL,
+                            PRIMARY KEY (workspace_id, id)
+                        );
+                        CREATE INDEX IF NOT EXISTS rescue_api_export_audit_events_workspace_time_idx
+                            ON rescue_api_export_audit_events (workspace_id, exported_at DESC, id DESC);
                         CREATE TABLE IF NOT EXISTS rescue_api_grocy_outbox (
                             workspace_id text NOT NULL DEFAULT 'demo',
                             id text NOT NULL,
@@ -4166,6 +4276,7 @@ class PostgresStore(_AtomicStoreStateMixin, InMemoryStore):
                     "rescue_api_grocy_mapping_audit_events",
                     "rescue_api_product_provenance_audit_events",
                     "rescue_api_product_info_audit_events",
+                    "rescue_api_export_audit_events",
                     "rescue_api_product_aliases",
                     "rescue_api_product_enrichment_jobs",
                     "rescue_api_product_enrichment_worker_leases",
@@ -4220,6 +4331,7 @@ class PostgresStore(_AtomicStoreStateMixin, InMemoryStore):
             self.grocy_worker_leases = {}
             self.grocy_worker_heartbeats = {}
             self.storage_locations = {}
+            self.export_audit_events = []
             with _postgres_read_cursor(self._connection) as cursor:
                 cursor.execute("SELECT id, payload FROM rescue_api_foods WHERE workspace_id = %s", (self.workspace_id,))
                 for food_id, payload in cursor.fetchall():
@@ -4302,6 +4414,11 @@ class PostgresStore(_AtomicStoreStateMixin, InMemoryStore):
                 cursor.execute("SELECT id, payload FROM rescue_api_product_info_audit_events WHERE workspace_id = %s ORDER BY occurred_at DESC, id DESC", (self.workspace_id,))
                 self.product_info_audit_events = [
                     FoodProductInfoAuditEvent.model_validate(_json_payload(payload))
+                    for _, payload in cursor.fetchall()
+                ]
+                cursor.execute("SELECT id, payload FROM rescue_api_export_audit_events WHERE workspace_id = %s ORDER BY exported_at DESC, id DESC", (self.workspace_id,))
+                self.export_audit_events = [
+                    WorkspaceExportAuditEvent.model_validate(_json_payload(payload))
                     for _, payload in cursor.fetchall()
                 ]
                 cursor.execute("SELECT raw_name_key, payload FROM rescue_api_product_aliases WHERE workspace_id = %s", (self.workspace_id,))
@@ -5102,6 +5219,53 @@ class PostgresStore(_AtomicStoreStateMixin, InMemoryStore):
                 reverse=True,
             )
 
+    def record_export_audit_event(self, event: WorkspaceExportAuditEvent, *, persist: bool = True) -> None:
+        from psycopg.types.json import Jsonb
+
+        with self._lock:
+            if any(existing.id == event.id for existing in self.export_audit_events):
+                return
+            try:
+                if persist:
+                    with self._connection.cursor() as cursor:
+                        cursor.execute(
+                            """
+                            INSERT INTO rescue_api_export_audit_events
+                                (workspace_id, id, actor_id, actor_role, request_id, schema_version, exported_at, payload)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                            ON CONFLICT (workspace_id, id) DO NOTHING
+                            """,
+                            (
+                                self.workspace_id,
+                                event.id,
+                                event.actor_id,
+                                event.actor_role,
+                                event.request_id,
+                                event.schema_version,
+                                event.exported_at,
+                                Jsonb(event.model_dump(mode="json")),
+                            ),
+                        )
+                    self._connection.commit()
+            except Exception:
+                self._connection.rollback()
+                raise
+            self.export_audit_events.append(event.model_copy(deep=True))
+
+    def list_export_audit_events(self, *, limit: int = 100) -> list[WorkspaceExportAuditEvent]:
+        bounded_limit = max(1, min(int(limit), 1000))
+        with self._lock:
+            with _postgres_read_cursor(self._connection) as cursor:
+                cursor.execute(
+                    "SELECT id, payload FROM rescue_api_export_audit_events WHERE workspace_id = %s ORDER BY exported_at DESC, id DESC LIMIT %s",
+                    (self.workspace_id, bounded_limit),
+                )
+                self.export_audit_events = [
+                    WorkspaceExportAuditEvent.model_validate(_json_payload(payload))
+                    for _, payload in cursor.fetchall()
+                ]
+            return [event.model_copy(deep=True) for event in self.export_audit_events]
+
     def reset(self) -> None:
         InMemoryStore.reset(self)
         with self._lock:
@@ -5109,6 +5273,7 @@ class PostgresStore(_AtomicStoreStateMixin, InMemoryStore):
                 cursor.execute("DELETE FROM rescue_api_grocy_mapping_audit_events WHERE workspace_id = %s", (self.workspace_id,))
                 cursor.execute("DELETE FROM rescue_api_product_provenance_audit_events WHERE workspace_id = %s", (self.workspace_id,))
                 cursor.execute("DELETE FROM rescue_api_product_info_audit_events WHERE workspace_id = %s", (self.workspace_id,))
+                cursor.execute("DELETE FROM rescue_api_export_audit_events WHERE workspace_id = %s", (self.workspace_id,))
                 cursor.execute("DELETE FROM rescue_api_notification_read_states WHERE workspace_id = %s", (self.workspace_id,))
                 cursor.execute("DELETE FROM rescue_api_notification_preferences WHERE workspace_id = %s", (self.workspace_id,))
                 cursor.execute("DELETE FROM rescue_api_push_subscriptions WHERE workspace_id = %s", (self.workspace_id,))
@@ -9225,7 +9390,31 @@ def update_product_info(food_id: str, request: ProductInfoUpdateRequest) -> Food
 @app.get("/api/account/export", response_model=WorkspaceExportResponse)
 def export_workspace_data(http_request: Request) -> WorkspaceExportResponse:
     _enforce_export_rate_limit(http_request)
-    return store.export_workspace_data(current_workspace_id())
+    export = store.export_workspace_data(current_workspace_id())
+    auth_context = current_auth_context()
+    try:
+        store.record_export_audit_event(
+            WorkspaceExportAuditEvent(
+                id=f"export-audit-{secrets.token_hex(16)}",
+                actor_id=auth_context.subject_id or "guest",
+                actor_role=auth_context.role,
+                request_id=get_request_id(),
+                schema_version=export.schema_version,
+                exported_at=export.exported_at,
+            )
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={
+                "code": "account_export_audit_persistence_unavailable",
+                "detail": "데이터 내보내기 감사 기록을 저장하지 못했습니다. 파일을 만들지 않고 기존 workspace를 유지했어요.",
+                "retryable": True,
+                "action": "retry_later",
+            },
+            headers={"Retry-After": "1"},
+        ) from exc
+    return export
 
 
 _GUEST_TRANSFER_FIELDS = (

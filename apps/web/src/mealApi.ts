@@ -842,6 +842,10 @@ export function isMealApiExportRateLimitError(error: unknown): error is MealApiE
   return error instanceof MealApiError && error.code === "account_export_rate_limited";
 }
 
+export function isMealApiExportAuditPersistenceError(error: unknown): error is MealApiError {
+  return error instanceof MealApiError && error.code === "account_export_audit_persistence_unavailable";
+}
+
 export function isMealApiConflictError(error: unknown): error is MealApiError {
   return error instanceof MealApiError && error.status === 409;
 }

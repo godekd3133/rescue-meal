@@ -1516,3 +1516,26 @@ server push ordering·managed PostgreSQL failover·VoiceOver/TalkBack은 별도 
   (5.0m)**를 확인했습니다. 앞선 date-retry/server lifecycle failure는 historical run으로
   분리했으며, streaming/compression·actor audit·운영 gateway는 별도 acceptance입니다
   ([export rate-limit readback](../evidence/export-rate-limit-readback-2026-09-12.md)).
+
+## 2026-09-12 workspace export actor/time audit and guest preview single-flight
+
+- 성공적으로 생성된 workspace export마다 `WorkspaceExportAuditEvent`를 별도 append-only
+  저장소에 기록합니다. actor ID/role, 검증된 request ID, schema version, UTC 시각만 저장하고
+  Authorization/token/IP/export payload와 audit event 자체는 다운로드 JSON에서 제외합니다.
+  audit insert는 workspace revision을 올리지 않으며 reset/purge 때 해당 workspace row를
+  삭제합니다. audit 저장 실패는 `account_export_audit_persistence_unavailable` typed `503`,
+  `Retry-After: 1`로 snapshot/Blob 전에 종료합니다.
+- PostgreSQL source/migration/readiness 계약은 additive `026_export_audit.sql`로 확장했습니다.
+  API actor audit **2 passed**, SQLite persist/reconstruct/reset **1 passed**, PostgreSQL adapter
+  query contract **1 passed**, AccountSheet connected audit failure **1 passed**, migration dry-run
+  `001→026`을 확인했습니다. 동시 container smoke가 migration rows **26**을 확인했지만, live
+  managed PostgreSQL의 export-audit row readback은 아직 claim하지 않습니다.
+- 회원가입 직후 guest-transfer preview가 submit handler와 `authMe` effect에서 중복 실행되던
+  producer race도 single-flight ref로 닫았습니다. focused regression **1 passed**와 fresh full
+  connected **109/109 passed (4.8m)**를 확인했습니다.
+- 현재 전체 수치는 API **512 passed / 8 warnings**, fixture/mobile **39 passed + 3 skipped**,
+  native **14 passed**, TypeScript/Vite **760 modules**, protected runtime **28**, Sites **4**,
+  service-worker **5**, workspace-sync **9**, release manifest **2**입니다. 운영 audit 조회·보존·
+  알림, large-workspace streaming/compression, external gateway, managed PostgreSQL
+  replica/WAL/failover, provider/device/signed release는 별도 acceptance입니다
+  ([export audit readback](../evidence/export-audit-readback-2026-09-12.md), [guest preview readback](../evidence/guest-transfer-preview-single-flight-readback-2026-09-12.md)).

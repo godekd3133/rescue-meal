@@ -98,3 +98,27 @@ The same responsive layer raises `food-subline`, `food-meta-line`, and
 capture keeps queue rows at `50px`, the meal CTA at `y=509.031..551.031`, the
 reserved nav at `y=628..706`, and document/body width at `320px`; focused home
 regression passed **1**.
+
+## Latest current-source continuation — export actor/time audit and guest preview single-flight — 2026-09-12
+
+- Workspace export now records successful generation in a separate `WorkspaceExportAuditEvent`.
+  The row contains verified actor ID/role, safe request ID, `rescue-meal-export-v1`, and UTC export
+  time only. It excludes Authorization/token/IP/payload, is not returned in the export JSON, and its
+  insert does not advance workspace revision. Reset/purge removes the workspace-scoped audit row.
+- A forced audit persistence failure returns `account_export_audit_persistence_unavailable` typed
+  `503` with `Retry-After: 1`; API response and frontend Blob/download are both absent. API actor
+  success/failure **2 passed**, SQLite reconstruction/reset **1 passed**, PostgreSQL adapter SQL
+  contract **1 passed**, and AccountSheet connected failure **1 passed**.
+- A pre-existing guest registration failure was traced to duplicate guest preview producers: the
+  registration submit handler and `authMe` effect could issue the same preview concurrently. The
+  registration-scoped single-flight ref now suppresses the effect while submit owns the preview.
+  Focused regression after the fix **1 passed**; fresh full connected **109/109 passed (4.8m)**.
+- Current source lanes: API **512 passed / 8 warnings**, fixture/mobile **39 passed + 3 skipped**,
+  native **14 passed**, TypeScript/Vite **760 modules**, protected runtime **28**, Sites **4**,
+  service-worker **5**, workspace-sync **9**, release manifest **2**, `git diff --check`, Python
+  compileall, shell syntax, and no-plain-503 static scan all passed. Migration dry-run is
+  **001→026**; the earlier disposable live PostgreSQL evidence remains **001→025**, so live 026
+  export-audit readback is not claimed.
+
+Readbacks: [export audit](export-audit-readback-2026-09-12.md), [guest transfer preview
+single-flight](guest-transfer-preview-single-flight-readback-2026-09-12.md).

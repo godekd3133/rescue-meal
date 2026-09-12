@@ -55,8 +55,8 @@ test("release manifest records revision-safe inputs without secrets or workspace
     assert.ok(manifest.inputs["apps/web/package-lock.json"].sha256);
     assert.ok(manifest.inputs["services/api/uv.lock"].sha256);
     assert.ok(manifest.inputs["infra/postgres/migrate.sh"].sha256);
-    assert.match(manifest.migrations.baseline, /^infra\/postgres\/025_/);
-    assert.ok(manifest.migrations.files.length >= 25);
+    assert.match(manifest.migrations.baseline, /^infra\/postgres\/026_/);
+    assert.ok(manifest.migrations.files.length >= 26);
     assert.equal(raw.includes("access_token"), false);
     assert.equal(raw.includes("workspace_id"), false);
   } finally {

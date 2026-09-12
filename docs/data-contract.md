@@ -1746,3 +1746,20 @@ typed envelope로 확장합니다. `/api/account/delete`나 meal-plan 같은 dom
 retry payload·rollback semantics를 이 운영 error에 자동 적용하지 않습니다. recipe importer,
 legacy review token, auth endpoint의 별도 configuration error는 각 domain contract를 유지하며
 이 목록의 blanket replacement를 주장하지 않습니다.
+
+### Workspace export actor/time audit
+
+`GET /api/account/export`가 성공적으로 workspace snapshot을 생성하면 별도 서버 저장소에
+`WorkspaceExportAuditEvent`를 append합니다. `actor_id`는 검증된 account subject 또는
+`guest`이고 `actor_role`은 auth context에서 가져오며, request correlation에는 검증된
+request ID와 export schema version·UTC 시각을 사용합니다. Authorization header·access token·IP·
+snapshot payload는 audit row에 저장하지 않고, 이 event도 사용자에게 내려가는
+`WorkspaceExportResponse`에 넣지 않습니다.
+
+SQLite와 PostgreSQL은 각각 `export_audit_events`/`rescue_api_export_audit_events`에
+workspace-scoped row를 저장하고, PostgreSQL schema authority는 additive migration
+`026_export_audit.sql`입니다. audit insert는 read export가 다른 device의 workspace revision을
+올리지 않도록 별도 commit으로 처리합니다. audit persistence가 실패하면 export JSON을
+반환하지 않고 `account_export_audit_persistence_unavailable` typed `503`을 반환합니다.
+reset/purge는 해당 workspace audit row도 삭제하며, rate-limited `429`는 body와 audit row를
+생성하지 않습니다.

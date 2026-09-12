@@ -10,6 +10,7 @@ import {
   isMealApiGuestTransferPersistenceError,
   isMealApiAccountDeletionPersistenceError,
   isMealApiAuthError,
+  isMealApiExportAuditPersistenceError,
   isMealApiExportRateLimitError,
   isMealApiStorageLocationPersistenceError,
   isMealApiWorkspaceConflictError,
@@ -795,6 +796,8 @@ function WorkspaceDataExportPanel({ workspaceSync }: { workspaceSync: WorkspaceS
         ? MEAL_API_WORKSPACE_CONFLICT_MESSAGE
         : isMealApiExportRateLimitError(reason)
           ? "데이터 내보내기 요청이 많아요. 잠시 후 다시 시도해 주세요."
+        : isMealApiExportAuditPersistenceError(reason)
+          ? "데이터 내보내기 감사 기록을 저장하지 못했어요. 파일을 만들지 않고 잠시 후 다시 시도해 주세요."
         : "workspace 데이터를 내보내지 못했어요. 잠시 후 다시 시도해 주세요.");
     } finally {
       setBusy(false);
@@ -1645,6 +1648,7 @@ export default function AccountSheet({
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [pendingGuestTransfer, setPendingGuestTransfer] = useState<{ session: ApiAuthSession; preview: ApiGuestTransferPreview | null; guestAccessToken: string; message: string } | null>(null);
+  const guestTransferPreviewInFlightRef = useRef(false);
   const [passwordResetToken] = useState(() => initialPasswordResetToken?.trim() || (typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("reset_token")?.trim() ?? "" : ""));
   const [externalRefreshNonce, setExternalRefreshNonce] = useState(0);
   const panelRefreshNonce = externalRefreshNonce + refreshNonce;
@@ -1689,7 +1693,7 @@ export default function AccountSheet({
   }, [workspaceSync, workspaceTransport]);
 
   useEffect(() => {
-    if (passwordResetToken || authMe?.mode !== "account" || pendingGuestTransfer) return;
+    if (passwordResetToken || authMe?.mode !== "account" || pendingGuestTransfer || guestTransferPreviewInFlightRef.current) return;
     const storedTransfer = readStoredGuestTransfer();
     if (!storedTransfer || storedTransfer.target_workspace_id !== authMe.workspace_id) return;
     const session = storedAccountSession(authMe);
@@ -1734,12 +1738,15 @@ export default function AccountSheet({
       setAuthMe({ mode: "account", user_id: session.user_id, email: session.email, workspace_id: session.workspace_id, role: session.role });
       if (mode === "register" && guestAccessToken) {
         storeGuestTransfer(guestAccessToken, session.workspace_id);
+        guestTransferPreviewInFlightRef.current = true;
         let preview: ApiGuestTransferPreview;
         try {
           preview = await mealApi.previewGuestTransfer(session, guestAccessToken);
         } catch {
           setPendingGuestTransfer({ session, preview: null, guestAccessToken, message: "네트워크를 확인한 뒤 다시 시도하거나 계정만 먼저 사용할 수 있어요." });
           return;
+        } finally {
+          guestTransferPreviewInFlightRef.current = false;
         }
       const hasGuestRecords = hasGuestTransferRecords(preview);
         if (preview?.status === "ready" && hasGuestRecords) {

@@ -2,9 +2,10 @@
 
 ## Scope
 
-This readback covers the sensitive `GET /api/account/export` snapshot boundary. The endpoint still
-returns the existing `rescue-meal-export-v1` JSON schema on success. This change adds request limiting
-and failure classification; it does not implement streaming/compression or an actor/time audit ledger.
+This readback covers the sensitive `GET /api/account/export` snapshot boundary and the rate-limit
+slice specifically. The endpoint still returns the existing `rescue-meal-export-v1` JSON schema on
+success. Actor/time audit was implemented as a follow-up slice; its current evidence is in
+[export audit readback](export-audit-readback-2026-09-12.md).
 
 ## Root cause and red loop
 
@@ -74,6 +75,6 @@ connected lane are now green; the earlier one-failure observation remains histor
 
 ## Remaining acceptance boundary
 
-Large workspace streaming/compression, durable export actor/time audit, external gateway abuse control,
+Large workspace streaming/compression, audit operational query/retention policy, external gateway abuse control,
 PostgreSQL replica/WAL/backup retention alignment, and production-specific rate-limit tuning remain
 separate acceptance gates.

@@ -34,6 +34,7 @@ MIGRATION_BASELINE_NAMES = (
     "023_manual_food_idempotency.sql",
     "024_recipe_catalog_revision.sql",
     "025_storage_locations.sql",
+    "026_export_audit.sql",
 )
 
 
@@ -82,6 +83,7 @@ _BASE_TABLES = (
     "rescue_api_notification_worker_heartbeats",
     "rescue_api_grocy_location_mappings",
     "rescue_api_storage_locations",
+    "rescue_api_export_audit_events",
     "rescue_api_grocy_outbox",
     "rescue_api_grocy_worker_leases",
     "rescue_api_grocy_worker_heartbeats",
@@ -142,6 +144,16 @@ _REQUIRED_COLUMNS = {
     "rescue_api_notification_worker_heartbeats": {"workspace_id", "worker_id", "payload"},
     "rescue_api_grocy_location_mappings": {"workspace_id", "storage_type", "payload"},
     "rescue_api_storage_locations": {"workspace_id", "id", "payload"},
+    "rescue_api_export_audit_events": {
+        "workspace_id",
+        "id",
+        "actor_id",
+        "actor_role",
+        "request_id",
+        "schema_version",
+        "exported_at",
+        "payload",
+    },
     "rescue_api_grocy_outbox": {"workspace_id", "id", "payload"},
     "rescue_api_grocy_worker_leases": {"workspace_id", "lease_key", "worker_id", "expires_at"},
     "rescue_api_grocy_worker_heartbeats": {"workspace_id", "worker_id", "payload"},
@@ -237,6 +249,9 @@ _REQUIRED_INDEXES = {
     },
     "rescue_api_storage_locations": {
         "rescue_api_storage_locations_workspace_name_idx",
+    },
+    "rescue_api_export_audit_events": {
+        "rescue_api_export_audit_events_workspace_time_idx",
     },
     "rescue_inventory_lots": {
         "rescue_inventory_lots_storage_location_idx",

@@ -1,6 +1,6 @@
 # Workspace 데이터 export 계약
 
-기준일: 2026-09-05
+기준일: 2026-09-12
 
 ## 목표
 
@@ -105,10 +105,29 @@ SQLite/PostgreSQL 환경에서는 기존 database-backed rate limiter가 bucket�
 in-memory fixture에서는 process-local limiter를 사용합니다. AccountSheet는 이 typed error를
 다운로드 성공으로 처리하지 않고 “잠시 후 다시 시도” 오류로 표시합니다.
 
+## Export 요청 감사
+
+성공적으로 생성된 export마다 서버 측 `WorkspaceExportAuditEvent`를 별도 append-only 저장소에
+기록합니다. 이벤트에는 `actor_id`(account subject 또는 `guest`), `actor_role`, 검증된
+`X-Request-ID` 값, `rescue-meal-export-v1` schema version, export 시각만 들어갑니다. 원본
+Authorization header·access token·client IP·export payload는 저장하지 않습니다.
+
+이 감사 metadata는 다운로드 JSON에 포함하지 않습니다. 따라서 사용자가 받은 파일에 다른
+사용자의 actor 정보가 섞이지 않으며, 직접 JSON 응답 정책도 유지됩니다. 감사 저장 실패 시
+snapshot을 반환하거나 Blob/download를 만들지 않고 `account_export_audit_persistence_unavailable`
+typed `503`(`retryable=true`, `action=retry_later`, `Retry-After: 1`)로 종료합니다.
+
+InMemory/SQLite/PostgreSQL adapter가 같은 모델을 사용하고, PostgreSQL은 migration
+`026_export_audit.sql`의 `rescue_api_export_audit_events` workspace key와 시간 index를
+사용합니다. 감사 insert는 workspace revision을 증가시키지 않으므로 export가 다른 기기의
+미완료 mutation을 stale 상태로 만들지 않습니다. workspace reset/purge에서는 감사 행도
+함께 삭제됩니다. rate-limited `429`는 export body를 생성하지 않으며 감사 event도 만들지
+않습니다.
+
 ## 운영 전 남은 작업
 
 - 큰 workspace의 streaming/압축
-- export 요청 actor·시각 감사와 download link가 아닌 직접 응답 정책 검토
+- export actor/time 감사의 운영 조회·보존기간·알림 정책
 - export 파일의 브라우저/OS backup 개인정보 안내
 - PostgreSQL replica/WAL/backup에서 export와 deletion 정책을 일치시키는 운영 검증
 - 스키마 version migration과 향후 import 기능의 명시적 분리

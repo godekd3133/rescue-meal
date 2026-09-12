@@ -298,7 +298,8 @@ jobs:
           grep -q 'Already applied 023_manual_food_idempotency.sql' /tmp/rescue-meal-migration-rerun.log
           grep -q 'Already applied 024_recipe_catalog_revision.sql' /tmp/rescue-meal-migration-rerun.log
           grep -q 'Already applied 025_storage_locations.sql' /tmp/rescue-meal-migration-rerun.log
-          test "$(psql --no-psqlrc --no-password --tuples-only --no-align --dbname "$RESCUE_MEAL_DATABASE_URL" --command 'SELECT COUNT(*) FROM rescue_schema_migrations;')" = 25
+          grep -q 'Already applied 026_export_audit.sql' /tmp/rescue-meal-migration-rerun.log
+          test "$(psql --no-psqlrc --no-password --tuples-only --no-align --dbname "$RESCUE_MEAL_DATABASE_URL" --command 'SELECT COUNT(*) FROM rescue_schema_migrations;')" = 26
 
       - name: Verify authentication helper retention
         env:

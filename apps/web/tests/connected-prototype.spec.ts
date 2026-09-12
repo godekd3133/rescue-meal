@@ -3924,6 +3924,35 @@ test("account settings explains an export rate limit without creating a download
   await expect(panel.getByRole("status")).toHaveCount(0);
 });
 
+test("account settings explains export audit persistence failure without creating a download", async ({ page }) => {
+  await page.route("**/api/account/export", async (route) => {
+    await route.fulfill({
+      status: 503,
+      contentType: "application/json",
+      headers: { "Retry-After": "1" },
+      body: JSON.stringify({
+        detail: {
+          code: "account_export_audit_persistence_unavailable",
+          detail: "데이터 내보내기 감사 기록을 저장하지 못했습니다.",
+          retryable: true,
+          action: "retry_later",
+        },
+      }),
+    });
+  });
+
+  await page.goto("/");
+  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await page.locator(".connection-pill").click();
+  const dialog = page.getByRole("dialog", { name: "내 계정" });
+  const panel = dialog.getByRole("region", { name: "내 데이터 내보내기" });
+  await panel.getByRole("button", { name: "내 데이터 JSON 다운로드" }).click();
+
+  await expect(panel.getByRole("alert")).toContainText("감사 기록을 저장하지 못했어요");
+  await expect(panel.getByRole("alert")).toContainText("파일을 만들지 않고");
+  await expect(panel.getByRole("status")).toHaveCount(0);
+});
+
 test("account settings changes the password and explains session rotation", async ({ page }) => {
   let changePayload: Record<string, unknown> | null = null;
   await page.route("**/api/auth/me", async (route) => {

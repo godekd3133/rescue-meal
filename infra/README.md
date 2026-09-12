@@ -7,7 +7,7 @@ repository root so the versioned recipe catalog is packaged into the image,
 while the OCR image keeps its own `services/ocr-worker` context. The
 `migrate` service
 is the schema authority: it runs the checked-in `postgres/migrate.py` runner
-against the database and applies `001→025` before the API is allowed to start.
+against the database and applies `001→026` before the API is allowed to start.
 The database container owns only the PostgreSQL data volume; its entrypoint
 is not used as a second migration authority.
 
@@ -38,7 +38,7 @@ running any cleanup. An ext4 journal or block `I/O error` followed by a
 read-only remount means the Docker VM is not a safe target for `docker system
 prune`, volume deletion, or reset. Preserve required Docker data, recover a
 writable VM with the host operator's approved Docker Desktop procedure, and
-then repeat the bounded daemon ping, Compose health, migration `001→025`, and
+then repeat the bounded daemon ping, Compose health, migration `001→026`, and
 `/ready` read/write smoke. The Rescue Meal local verification mirror is not a
 replacement for that live gate. A current diagnostic readback is in
 [`evidence/docker-daemon-readiness-readback-2026-09-09.md`](../evidence/docker-daemon-readiness-readback-2026-09-09.md).
@@ -124,7 +124,7 @@ sh infra/container-smoke.sh
 ```
 
 The command builds the API, migration, and OCR worker images from the
-repository root, applies migrations `001→025`, waits for PostgreSQL/OCR/API
+repository root, applies migrations `001→026`, waits for PostgreSQL/OCR/API
 health and readiness, authenticates a guest workspace, performs one normalized
 inventory write, and verifies same-key idempotent replay. It uses a PID-scoped
 project by default and refuses to reuse an existing project container, volume,
@@ -271,6 +271,14 @@ location such as `김치냉장고`; this lets the API validate temperature class
 without turning a user label into a new safety rule. Existing volumes require
 the explicit ordered migration runner; the API does not create this production
 table on a request path.
+
+Migration `026_export_audit.sql` adds the workspace-scoped server-side audit row
+for successful export generation. It stores only actor ID/role, a validated
+request ID, schema version, and UTC export time; it does not store credentials,
+client IP, or the export payload. The audit insert is separate from workspace
+revision writes so a read-only export does not invalidate another device's
+mutation draft. Existing volumes require the explicit ordered migration runner;
+the API does not create this production table on a request path.
 
 PostgreSQL projection writes use a workspace revision row to reject stale
 full-snapshot flushes. On a revision conflict the API reloads the workspace
