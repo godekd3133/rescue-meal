@@ -1,0 +1,16 @@
+.git
+.github
+**/.DS_Store
+**/.pytest_cache
+**/__pycache__
+**/.venv
+**/node_modules
+apps
+docs
+evidence
+work
+data/*
+!data/fixtures/
+!data/fixtures/recipes/
+!data/fixtures/recipes/recipes-v1.json
+services/ocr-worker
