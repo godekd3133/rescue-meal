@@ -109,7 +109,7 @@ CREATE TABLE IF NOT EXISTS date_assertions (
     stock_lot_id uuid NOT NULL REFERENCES stock_lots(id) ON DELETE CASCADE,
     date_kind text NOT NULL CHECK (date_kind IN ('production_date', 'packaging_date', 'sell_by', 'best_before', 'use_by', 'user_reminder', 'estimated_use_first', 'unknown')),
     date_value date,
-    date_source text NOT NULL CHECK (date_source IN ('gs1_ai_11', 'gs1_ai_13', 'gs1_ai_15', 'gs1_ai_16', 'gs1_ai_17', 'label_ocr', 'receipt_ocr', 'user_input', 'category_rule', 'unknown')),
+    date_source text NOT NULL CHECK (date_source IN ('gs1', 'gs1_ai_11', 'gs1_ai_13', 'gs1_ai_15', 'gs1_ai_16', 'gs1_ai_17', 'label_ocr', 'receipt_ocr', 'user_input', 'category_rule', 'unknown')),
     source_reference text,
     applicable_storage_type text CHECK (applicable_storage_type IS NULL OR applicable_storage_type IN ('ambient', 'refrigerated', 'frozen', 'custom')),
     storage_condition_text text,
@@ -206,6 +206,7 @@ CREATE TABLE IF NOT EXISTS rescue_api_foods (
     workspace_id text NOT NULL DEFAULT 'demo',
     id text NOT NULL,
     payload jsonb NOT NULL,
+    search_text text NOT NULL DEFAULT '',
     updated_at timestamptz NOT NULL DEFAULT now(),
     PRIMARY KEY (workspace_id, id)
 );
@@ -258,6 +259,144 @@ CREATE TABLE IF NOT EXISTS rescue_api_meal_plan_events (
     PRIMARY KEY (workspace_id, id)
 );
 
+CREATE TABLE IF NOT EXISTS rescue_api_recipe_drafts (
+    workspace_id text NOT NULL DEFAULT 'demo',
+    id text NOT NULL,
+    payload jsonb NOT NULL,
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    PRIMARY KEY (workspace_id, id)
+);
+
+CREATE TABLE IF NOT EXISTS rescue_api_recipe_review_events (
+    workspace_id text NOT NULL DEFAULT 'demo',
+    id text NOT NULL,
+    payload jsonb NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    PRIMARY KEY (workspace_id, id)
+);
+
+CREATE TABLE IF NOT EXISTS rescue_api_grocy_mappings (
+    workspace_id text NOT NULL DEFAULT 'demo',
+    canonical_name text NOT NULL,
+    payload jsonb NOT NULL,
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    PRIMARY KEY (workspace_id, canonical_name)
+);
+
+CREATE TABLE IF NOT EXISTS rescue_api_grocy_mapping_audit_events (
+    workspace_id text NOT NULL DEFAULT 'demo',
+    id text NOT NULL,
+    canonical_name text NOT NULL,
+    payload jsonb NOT NULL,
+    occurred_at timestamptz NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    PRIMARY KEY (workspace_id, id)
+);
+
+CREATE INDEX IF NOT EXISTS rescue_api_grocy_mapping_audit_events_name_time_idx
+    ON rescue_api_grocy_mapping_audit_events (workspace_id, canonical_name, occurred_at DESC);
+
+CREATE TABLE IF NOT EXISTS rescue_api_notification_read_states (
+    workspace_id text NOT NULL DEFAULT 'demo',
+    notification_id text NOT NULL,
+    read_at timestamptz NOT NULL,
+    PRIMARY KEY (workspace_id, notification_id)
+);
+
+CREATE TABLE IF NOT EXISTS rescue_api_notification_preferences (
+    workspace_id text NOT NULL DEFAULT 'demo',
+    id text NOT NULL DEFAULT 'workspace',
+    payload jsonb NOT NULL,
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    PRIMARY KEY (workspace_id, id)
+);
+
+CREATE TABLE IF NOT EXISTS rescue_api_push_subscriptions (
+    workspace_id text NOT NULL DEFAULT 'demo',
+    endpoint_hash text NOT NULL,
+    payload jsonb NOT NULL,
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    PRIMARY KEY (workspace_id, endpoint_hash)
+);
+
+CREATE TABLE IF NOT EXISTS rescue_api_notification_deliveries (
+    workspace_id text NOT NULL DEFAULT 'demo',
+    id text NOT NULL,
+    payload jsonb NOT NULL,
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    PRIMARY KEY (workspace_id, id)
+);
+
+CREATE TABLE IF NOT EXISTS rescue_api_notification_worker_leases (
+    workspace_id text NOT NULL DEFAULT 'demo',
+    lease_key text NOT NULL,
+    worker_id text NOT NULL,
+    acquired_at timestamptz NOT NULL,
+    expires_at timestamptz NOT NULL,
+    PRIMARY KEY (workspace_id, lease_key)
+);
+
+CREATE TABLE IF NOT EXISTS rescue_api_notification_worker_heartbeats (
+    workspace_id text NOT NULL DEFAULT 'demo',
+    worker_id text NOT NULL,
+    payload jsonb NOT NULL,
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    PRIMARY KEY (workspace_id, worker_id)
+);
+
+CREATE TABLE IF NOT EXISTS rescue_api_grocy_location_mappings (
+    workspace_id text NOT NULL DEFAULT 'demo',
+    storage_type text NOT NULL,
+    payload jsonb NOT NULL,
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    PRIMARY KEY (workspace_id, storage_type)
+);
+
+CREATE TABLE IF NOT EXISTS rescue_api_grocy_outbox (
+    workspace_id text NOT NULL DEFAULT 'demo',
+    id text NOT NULL,
+    payload jsonb NOT NULL,
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    PRIMARY KEY (workspace_id, id)
+);
+
+CREATE TABLE IF NOT EXISTS rescue_api_grocy_worker_leases (
+    workspace_id text NOT NULL DEFAULT 'demo',
+    lease_key text NOT NULL,
+    worker_id text NOT NULL,
+    acquired_at timestamptz NOT NULL,
+    expires_at timestamptz NOT NULL,
+    PRIMARY KEY (workspace_id, lease_key)
+);
+
+CREATE TABLE IF NOT EXISTS rescue_api_grocy_worker_heartbeats (
+    workspace_id text NOT NULL DEFAULT 'demo',
+    worker_id text NOT NULL,
+    payload jsonb NOT NULL,
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    PRIMARY KEY (workspace_id, worker_id)
+);
+
+CREATE TABLE IF NOT EXISTS rescue_api_workspace_revisions (
+    workspace_id text PRIMARY KEY,
+    revision bigint NOT NULL DEFAULT 0,
+    updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- Recipe catalog is shared across user inventory workspaces. User-specific
+-- food, meal-plan, and receipt projections remain workspace-scoped above.
+CREATE TABLE IF NOT EXISTS rescue_recipe_catalog_drafts (
+    id text PRIMARY KEY,
+    payload jsonb NOT NULL,
+    updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS rescue_recipe_catalog_review_events (
+    id text PRIMARY KEY,
+    payload jsonb NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT now()
+);
+
 -- Upgrade installations created by the original single-workspace projection.
 -- Existing rows are assigned to the demo workspace before the primary keys
 -- are widened, so a second workspace can safely use the same logical IDs.
@@ -268,6 +407,12 @@ ALTER TABLE rescue_api_storage_events ADD COLUMN IF NOT EXISTS workspace_id text
 ALTER TABLE rescue_api_commit_transactions ADD COLUMN IF NOT EXISTS workspace_id text NOT NULL DEFAULT 'demo';
 ALTER TABLE rescue_api_meal_plans ADD COLUMN IF NOT EXISTS workspace_id text NOT NULL DEFAULT 'demo';
 ALTER TABLE rescue_api_meal_plan_events ADD COLUMN IF NOT EXISTS workspace_id text NOT NULL DEFAULT 'demo';
+ALTER TABLE rescue_api_recipe_drafts ADD COLUMN IF NOT EXISTS workspace_id text NOT NULL DEFAULT 'demo';
+ALTER TABLE rescue_api_recipe_review_events ADD COLUMN IF NOT EXISTS workspace_id text NOT NULL DEFAULT 'demo';
+ALTER TABLE rescue_api_grocy_mappings ADD COLUMN IF NOT EXISTS workspace_id text NOT NULL DEFAULT 'demo';
+ALTER TABLE rescue_api_grocy_mapping_audit_events ADD COLUMN IF NOT EXISTS workspace_id text NOT NULL DEFAULT 'demo';
+ALTER TABLE rescue_api_grocy_location_mappings ADD COLUMN IF NOT EXISTS workspace_id text NOT NULL DEFAULT 'demo';
+ALTER TABLE rescue_api_grocy_outbox ADD COLUMN IF NOT EXISTS workspace_id text NOT NULL DEFAULT 'demo';
 
 ALTER TABLE rescue_api_foods DROP CONSTRAINT IF EXISTS rescue_api_foods_pkey;
 ALTER TABLE rescue_api_receipts DROP CONSTRAINT IF EXISTS rescue_api_receipts_pkey;
@@ -276,6 +421,11 @@ ALTER TABLE rescue_api_storage_events DROP CONSTRAINT IF EXISTS rescue_api_stora
 ALTER TABLE rescue_api_commit_transactions DROP CONSTRAINT IF EXISTS rescue_api_commit_transactions_pkey;
 ALTER TABLE rescue_api_meal_plans DROP CONSTRAINT IF EXISTS rescue_api_meal_plans_pkey;
 ALTER TABLE rescue_api_meal_plan_events DROP CONSTRAINT IF EXISTS rescue_api_meal_plan_events_pkey;
+ALTER TABLE rescue_api_recipe_drafts DROP CONSTRAINT IF EXISTS rescue_api_recipe_drafts_pkey;
+ALTER TABLE rescue_api_recipe_review_events DROP CONSTRAINT IF EXISTS rescue_api_recipe_review_events_pkey;
+ALTER TABLE rescue_api_grocy_mappings DROP CONSTRAINT IF EXISTS rescue_api_grocy_mappings_pkey;
+ALTER TABLE rescue_api_grocy_location_mappings DROP CONSTRAINT IF EXISTS rescue_api_grocy_location_mappings_pkey;
+ALTER TABLE rescue_api_grocy_outbox DROP CONSTRAINT IF EXISTS rescue_api_grocy_outbox_pkey;
 
 ALTER TABLE rescue_api_foods ADD CONSTRAINT rescue_api_foods_pkey PRIMARY KEY (workspace_id, id);
 ALTER TABLE rescue_api_receipts ADD CONSTRAINT rescue_api_receipts_pkey PRIMARY KEY (workspace_id, id);
@@ -284,18 +434,52 @@ ALTER TABLE rescue_api_storage_events ADD CONSTRAINT rescue_api_storage_events_p
 ALTER TABLE rescue_api_commit_transactions ADD CONSTRAINT rescue_api_commit_transactions_pkey PRIMARY KEY (workspace_id, id);
 ALTER TABLE rescue_api_meal_plans ADD CONSTRAINT rescue_api_meal_plans_pkey PRIMARY KEY (workspace_id, id);
 ALTER TABLE rescue_api_meal_plan_events ADD CONSTRAINT rescue_api_meal_plan_events_pkey PRIMARY KEY (workspace_id, id);
+ALTER TABLE rescue_api_recipe_drafts ADD CONSTRAINT rescue_api_recipe_drafts_pkey PRIMARY KEY (workspace_id, id);
+ALTER TABLE rescue_api_recipe_review_events ADD CONSTRAINT rescue_api_recipe_review_events_pkey PRIMARY KEY (workspace_id, id);
+ALTER TABLE rescue_api_grocy_mappings ADD CONSTRAINT rescue_api_grocy_mappings_pkey PRIMARY KEY (workspace_id, canonical_name);
+ALTER TABLE rescue_api_grocy_location_mappings ADD CONSTRAINT rescue_api_grocy_location_mappings_pkey PRIMARY KEY (workspace_id, storage_type);
+ALTER TABLE rescue_api_grocy_outbox ADD CONSTRAINT rescue_api_grocy_outbox_pkey PRIMARY KEY (workspace_id, id);
 
 CREATE TABLE IF NOT EXISTS rescue_auth_accounts (
     id text PRIMARY KEY,
     email text NOT NULL UNIQUE,
     password_hash text NOT NULL,
     workspace_id text NOT NULL UNIQUE,
-    created_at timestamptz NOT NULL
+    created_at timestamptz NOT NULL,
+    role text NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'recipe_admin')),
+    session_version integer NOT NULL DEFAULT 0 CHECK (session_version >= 0),
+    status text NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'deleting')),
+    deletion_started_at timestamptz
 );
+
+ALTER TABLE rescue_auth_accounts ADD COLUMN IF NOT EXISTS role text NOT NULL DEFAULT 'user';
+ALTER TABLE rescue_auth_accounts ADD COLUMN IF NOT EXISTS session_version integer NOT NULL DEFAULT 0;
+ALTER TABLE rescue_auth_accounts ADD COLUMN IF NOT EXISTS status text NOT NULL DEFAULT 'active';
+ALTER TABLE rescue_auth_accounts ADD COLUMN IF NOT EXISTS deletion_started_at timestamptz;
 
 CREATE TABLE IF NOT EXISTS rescue_auth_revoked_tokens (
     token_hash text PRIMARY KEY,
     revoked_at timestamptz NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS rescue_auth_password_reset_tokens (
+    token_hash text PRIMARY KEY,
+    account_id text NOT NULL REFERENCES rescue_auth_accounts(id) ON DELETE CASCADE,
+    session_version integer NOT NULL CHECK (session_version >= 0),
+    expires_at timestamptz NOT NULL,
+    created_at timestamptz NOT NULL,
+    used_at timestamptz
+);
+
+CREATE INDEX IF NOT EXISTS rescue_auth_password_reset_account_idx
+    ON rescue_auth_password_reset_tokens (account_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS rescue_auth_rate_limit_events (
+    bucket_key text NOT NULL,
+    occurred_at double precision NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS rescue_auth_rate_limit_events_bucket_time_idx
+    ON rescue_auth_rate_limit_events (bucket_key, occurred_at);
 
 COMMIT;
