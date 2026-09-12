@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" role="img" aria-labelledby="title">
+  <title id="title">Rescue Meal</title>
+  <rect width="192" height="192" rx="48" fill="#52634a"/>
+  <path d="M50 117c25 17 57 17 92 0-4 24-20 39-46 39s-42-15-46-39Z" fill="#f7f5ef"/>
+  <path d="M67 92c8-31 29-47 57-51-1 27-14 46-39 58-7 3-13 1-18-7Z" fill="#b9d2ad"/>
+  <path d="M67 92c17-11 32-27 45-48" fill="none" stroke="#52634a" stroke-linecap="round" stroke-width="6"/>
+  <circle cx="145" cy="49" r="12" fill="#e88f79"/>
+</svg>

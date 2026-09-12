@@ -5,7 +5,23 @@
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#f7f5ef",
-  "theme_color": "#52634a",
-  "description": "영수증·라벨·바코드로 식료품을 기록하고 먼저 사용할 재료를 알려주는 생활 도구입니다."
+  "display_override": ["window-controls-overlay", "standalone"],
+  "orientation": "portrait-primary",
+  "background_color": "#071512",
+  "theme_color": "#071512",
+  "description": "영수증·라벨·바코드로 식료품을 기록하고 먼저 사용할 재료를 알려주는 생활 도구입니다.",
+  "icons": [
+    {
+      "src": "/icons/rescue-meal-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/rescue-meal-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
 }

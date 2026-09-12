@@ -69,3 +69,10 @@ When any text-entry control loses focus, dismiss the simulated keyboard. If the 
 - Fixed phone chrome should not animate with pushed screens. Screen content can animate; the status bar, camera cutout, and preview chrome should stay put.
 - Keep the keyboard below the home indicator/safe area layer in z-index, and above ordinary app UI while visible.
 - Keep the home indicator as the topmost safe-area layer in the z-index above everything else in the prototype.
+
+## Current product visual direction
+
+- The selected direction is **Emerald Atelier**: deep forest background, warm ivory type, pistachio primary action, coral review/safety state, amber pending state, and slate-blue supporting metadata.
+- The source of truth for app-owned visual language is the selected mobile concept plus the workspace-local hero asset `public/assets/food/rescue-hero-background-v1.webp` and transparent priority cutouts under `public/assets/food/*-cutout-v1.png`. Use real food raster assets and the existing icon library; do not replace visible imagery with CSS or text approximations.
+- The product-wide visual system applies consistently to Home, intake/review, food detail, meal plan, shopping list, notifications, guidance, account, and recipe-review sheets. Preserve the existing safety copy and state semantics while improving hierarchy, spacing, touch targets, and recovery affordances.
+- Food detail is responsive to the live phone viewport: tall iPhone sheets keep the primary and destructive actions above the home-indicator boundary, while `max-width: 360px` tightens only repeated supporting-card rhythm. Preserve the 44px action hit boxes and keep destructive actions visually secondary.

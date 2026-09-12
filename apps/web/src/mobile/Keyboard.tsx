@@ -14,6 +14,8 @@ import { motion } from "motion/react";
 import { mobileAssets } from "./assets";
 import { useMobileDevice } from "./Device";
 
+const shouldSimulateKeyboard = ((import.meta.env.VITE_APP_SHELL as string | undefined)?.trim().toLowerCase() ?? "") !== "native";
+
 type KeyboardContextValue = {
   visible: boolean;
   height: number;
@@ -40,7 +42,7 @@ export function KeyboardProvider({ children }: PropsWithChildren) {
   const [dragOffset, setRawDragOffset] = useState(0);
   const [isDragging, setDragging] = useState(false);
   const [focusedElement, setFocusedElement] = useState<HTMLElement | null>(null);
-  const fullHeight = device.geometry.keyboard.height;
+  const fullHeight = shouldSimulateKeyboard ? device.geometry.keyboard.height : 0;
   const setDragOffset = (offset: number) => {
     setRawDragOffset(Math.max(0, Math.min(fullHeight, offset)));
   };
@@ -60,7 +62,7 @@ export function KeyboardProvider({ children }: PropsWithChildren) {
         setRawDragOffset(0);
         setDragging(false);
         setFocusedElement(element ?? null);
-        setVisible(true);
+        setVisible(shouldSimulateKeyboard);
       },
       hide: () => {
         focusedElement?.blur();

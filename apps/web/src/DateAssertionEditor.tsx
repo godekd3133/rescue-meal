@@ -2,9 +2,10 @@ import { useState } from "react";
 import { CalendarIcon, CheckIcon } from "@radix-ui/react-icons";
 import { KeyboardInput, useKeyboard } from "./mobile";
 
-export type DateConfirmationKind = "use_by" | "best_before" | "user_reminder";
+export type DateConfirmationKind = "sell_by" | "use_by" | "best_before" | "user_reminder";
 
 const options: Array<[DateConfirmationKind, string]> = [
+  ["sell_by", "유통기한"],
   ["use_by", "소비기한"],
   ["best_before", "품질유지기한"],
   ["user_reminder", "내 알림일"],
