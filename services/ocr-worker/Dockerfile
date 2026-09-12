@@ -22,5 +22,17 @@ RUN pip install --no-cache-dir uv \
 
 COPY app ./app
 
+# Run the worker as a dedicated non-root user. The virtualenv is fully
+# resolved at build time, so the runtime entrypoint uses it directly instead
+# of re-validating through `uv run` on every container start. The PaddleX
+# model cache lives in the user's home so the named volume can attach there.
+ENV PADDLE_PDX_CACHE_HOME=/home/rescue/.paddlex
+RUN groupadd --system --gid 10001 rescue \
+    && useradd --system --uid 10001 --gid rescue --create-home rescue \
+    && mkdir -p /home/rescue/.paddlex \
+    && chown -R rescue:rescue /app /home/rescue
+
+USER rescue
+
 EXPOSE 8002
-CMD ["uv", "run", "--no-dev", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8002"]
+CMD ["/app/.venv/bin/uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8002"]

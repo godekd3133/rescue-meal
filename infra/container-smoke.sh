@@ -140,8 +140,11 @@ printf '%s' "$ocr_ready" | jq -e '
   .available == true
 ' > /dev/null
 
+expected_migrations=$(find "$SCRIPT_DIRECTORY/postgres" -maxdepth 1 -name '[0-9][0-9][0-9]_*.sql' | wc -l | tr -d ' ')
 migration_rows=$(compose exec -T db psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Atc 'SELECT count(*) FROM rescue_schema_migrations;')
-test "$migration_rows" = 25
+# The ledger must cover every checked-in migration file. Deriving the count
+# keeps the smoke aligned when a new additive migration lands.
+test "$migration_rows" = "$expected_migrations"
 
 base="http://127.0.0.1:${API_PORT}"
 guest_payload=$(curl --fail --silent --show-error --request POST "$base/api/auth/guest")

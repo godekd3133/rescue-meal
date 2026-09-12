@@ -1234,3 +1234,20 @@ The same narrow-width pass raises home queue secondary metadata from `7px` to
 `8px`. Fresh `320×740` capture confirms `50px` queue rows, unchanged CTA/nav
 geometry (`y=509.031..551.031` and `y=628..706`), and document/body width
 `320px`; focused home **1 passed** and the full native lane remains **14 passed**.
+
+## Current self-review — 2026-09-12 container hardening/operations runbook
+
+운영 컨테이너를 uid `10001` 비root·`no-new-privileges`·json-file 로그
+`10m×3` rotation·서비스별 memory limit 경계로 고정하고, 시작 시 `uv run`
+재검증을 제거해 build-time venv 바이너리를 직접 실행하도록 정리했습니다.
+migration ledger smoke 검증은 checked-in `NNN_*.sql` 수를 기대값으로 사용해
+additive migration 추가 시 깨지지 않습니다. 배포·롤백·백업/복구·스케일링·장애
+분류 절차는 `docs/operations-runbook.md`에 묶었습니다.
+
+Compose `config --quiet`(기본·worker profile), 전체 container smoke
+(`migration_rows: 26`, `/ready` ×2, guest write `7 -> 8`, idempotent replay
+`201`)를 통과하고 실행 중 `uid=10001`·`no-new-privileges`·`mem=1g`·
+`log=json-file/10m`을 실제 컨테이너에서 확인했습니다. read-only rootfs·
+seccomp·image digest pinning·orchestrator 리소스 필드·signed deployment는
+별도 운영 gate이므로 총점은 **88/100**을 유지합니다
+([container hardening readback](evidence/container-hardening-readback-2026-09-12.md)).

@@ -1,9 +1,25 @@
 name: rescue-meal
 
+x-default-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+    mode: non-blocking
+
+x-default-security: &default-security "no-new-privileges:true"
+
 services:
   db:
     image: pgvector/pgvector:pg16
     restart: unless-stopped
+    logging: *default-logging
+    security_opt:
+      - *default-security
+    deploy:
+      resources:
+        limits:
+          memory: ${RESCUE_MEAL_DB_MEMORY_LIMIT:-2g}
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-rescue_meal}
       POSTGRES_USER: ${POSTGRES_USER:-rescue_meal}
@@ -23,7 +39,10 @@ services:
       context: ..
       dockerfile: services/api/Dockerfile
     restart: "no"
-    command: ["uv", "run", "--no-dev", "python", "/migrations/migrate.py"]
+    logging: *default-logging
+    security_opt:
+      - *default-security
+    command: ["/app/.venv/bin/python", "/migrations/migrate.py"]
     environment:
       RESCUE_MEAL_DATABASE_URL: postgresql://${POSTGRES_USER:-rescue_meal}:${POSTGRES_PASSWORD:-change-me-in-local-env}@db:5432/${POSTGRES_DB:-rescue_meal}
     volumes:
@@ -40,6 +59,13 @@ services:
     build:
       context: ../services/ocr-worker
     restart: unless-stopped
+    logging: *default-logging
+    security_opt:
+      - *default-security
+    deploy:
+      resources:
+        limits:
+          memory: ${RESCUE_MEAL_OCR_MEMORY_LIMIT:-4g}
     environment:
       PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK: "True"
       # PaddleOCR is CPU-bound in the default image. Keep one inference per
@@ -49,7 +75,7 @@ services:
     ports:
       - "${OCR_WORKER_PORT:-8002}:8002"
     volumes:
-      - rescue_meal_paddlex_cache:/root/.paddlex
+      - rescue_meal_paddlex_cache:/home/rescue/.paddlex
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8002/ready').read()"]
       interval: 15s
@@ -62,6 +88,13 @@ services:
       context: ..
       dockerfile: services/api/Dockerfile
     restart: unless-stopped
+    logging: *default-logging
+    security_opt:
+      - *default-security
+    deploy:
+      resources:
+        limits:
+          memory: ${RESCUE_MEAL_API_MEMORY_LIMIT:-1g}
     environment:
       RESCUE_MEAL_ENVIRONMENT: ${RESCUE_MEAL_ENVIRONMENT:-local}
       RESCUE_MEAL_DATABASE_URL: postgresql://${POSTGRES_USER:-rescue_meal}:${POSTGRES_PASSWORD:-change-me-in-local-env}@db:5432/${POSTGRES_DB:-rescue_meal}
@@ -165,7 +198,14 @@ services:
       context: ..
       dockerfile: services/api/Dockerfile
     restart: unless-stopped
-    command: ["uv", "run", "--no-dev", "python", "scripts/run_grocy_worker.py"]
+    logging: *default-logging
+    security_opt:
+      - *default-security
+    deploy:
+      resources:
+        limits:
+          memory: ${RESCUE_MEAL_WORKER_MEMORY_LIMIT:-512m}
+    command: ["/app/.venv/bin/python", "scripts/run_grocy_worker.py"]
     environment:
       RESCUE_MEAL_API_BASE_URL: http://api:8000
       RESCUE_MEAL_GROCY_WORKER_TOKEN: ${RESCUE_MEAL_GROCY_WORKER_TOKEN:-}
@@ -185,7 +225,14 @@ services:
       context: ..
       dockerfile: services/api/Dockerfile
     restart: unless-stopped
-    command: ["uv", "run", "--no-dev", "python", "scripts/run_notification_worker.py"]
+    logging: *default-logging
+    security_opt:
+      - *default-security
+    deploy:
+      resources:
+        limits:
+          memory: ${RESCUE_MEAL_WORKER_MEMORY_LIMIT:-512m}
+    command: ["/app/.venv/bin/python", "scripts/run_notification_worker.py"]
     environment:
       RESCUE_MEAL_API_BASE_URL: http://api:8000
       RESCUE_MEAL_NOTIFICATION_WORKER_TOKEN: ${RESCUE_MEAL_NOTIFICATION_WORKER_TOKEN:-}
@@ -205,7 +252,14 @@ services:
       context: ..
       dockerfile: services/api/Dockerfile
     restart: unless-stopped
-    command: ["uv", "run", "--no-dev", "python", "scripts/run_product_enrichment_worker.py"]
+    logging: *default-logging
+    security_opt:
+      - *default-security
+    deploy:
+      resources:
+        limits:
+          memory: ${RESCUE_MEAL_WORKER_MEMORY_LIMIT:-512m}
+    command: ["/app/.venv/bin/python", "scripts/run_product_enrichment_worker.py"]
     environment:
       RESCUE_MEAL_API_BASE_URL: http://api:8000
       RESCUE_MEAL_PRODUCT_ENRICHMENT_WORKER_TOKEN: ${RESCUE_MEAL_PRODUCT_ENRICHMENT_WORKER_TOKEN:-}

@@ -56,10 +56,10 @@ Rescue Meal은 영수증·바코드·포장 라벨로 식료품 기록을 줄이
 - `data/fixtures/labels/`에는 원본 이미지를 저장하지 않고, 제공 라벨 구조를 비식별화한 ambiguous-date·no-date fixture를 둡니다. `(포장)년·월·일`과 `유효년·월·일`이 좌표 없이 인접하면 `unknown`으로 보류하고, 날짜 없는 상품은 일반 barcode/storage hint만 유지하며 소비기한을 만들지 않습니다.
 - connected E2E는 공유 persistent SQLite를 사용하지 않고 disposable database와 명시적 CORS origin을 사용해야 합니다. Grocy retry 등 mobile button 검증은 `force:true` 좌표 click이 아니라 semantic click/actionability로 실행하며, 상세 진단은 connected E2E readback에 기록합니다.
 - 기본 `npm run test:runtime`은 fixture-only Playwright lane으로 `connected-prototype.spec.ts`를 수집하지 않습니다. connected API/browser 검증은 `playwright.connected.config.ts`와 `npm run test:connected`에서만 실행해 두 lane의 서버 계약을 섞지 않습니다.
-- 현재 PostgreSQL schema baseline은 additive migration `025_storage_locations.sql`까지입니다. normalized receipt는 `template_id`·`template_confidence`·`merchant_name`을 compatibility JSON과 함께 저장·복원하고, 수동 식품 create/correction command는 key digest·payload fingerprint replay ledger를 함께 저장하며, shared recipe catalog는 별도 revision fence를 사용하고, workspace-scoped 사용자 정의 보관 위치는 canonical `storage_type`과 별도로 normalized lot/event reference에 보존합니다. 기존 volume은 `infra/postgres/migrate.sh --apply`를 명시적으로 실행해야 합니다.
+- 현재 PostgreSQL schema baseline은 additive migration `026_export_audit.sql`까지입니다. normalized receipt는 `template_id`·`template_confidence`·`merchant_name`을 compatibility JSON과 함께 저장·복원하고, 수동 식품 create/correction command는 key digest·payload fingerprint replay ledger를 함께 저장하며, shared recipe catalog는 별도 revision fence를 사용하고, workspace-scoped 사용자 정의 보관 위치는 canonical `storage_type`과 별도로 normalized lot/event reference에 보존하며, workspace export 성공 요청은 actor/time audit를 별도 append-only row에 보존합니다. 기존 volume은 `infra/postgres/migrate.sh --apply`를 명시적으로 실행해야 합니다.
 - 재고 검색은 canonical `storage_type` 필터와 별도로 사용자 정의 `storage_location_id` bounded filter를 지원하며, connected home의 위치 picker와 서버 검색 결과는 같은 location ID를 사용합니다. 위치가 삭제되면 열린 필터는 전체 목록으로 복귀하고, demo/오프라인에서는 이미 받은 dashboard snapshot에서 같은 조건으로 필터링합니다.
 - meal plan save는 preview `plan_id`, multi-day save는 `bundle_id`, completion은 plan ID와 `completed_at`을 identity로 사용합니다. plan/bundle lock과 PostgreSQL revision winner replay로 동일 save를 수렴시키고, completion race는 `completed + already_completed` 및 단일 consumed audit/event 결과로 검증합니다.
-- `postgres-live`는 현재 fresh schema migration `001→025`까지 적용·재실행 skip을 확인하고, 사용자 정의 보관 위치의 create/assignment/readback과 receipt draft metadata/draft race·meal-plan save/complete race·manual food two-process replay/correction race smoke를 함께 실행합니다. GitHub Actions 실제 성공 전에는 CI pass로 승격하지 않습니다.
+- `postgres-live`는 현재 fresh schema migration `001→026`까지 적용·재실행 skip을 확인하고, 사용자 정의 보관 위치의 create/assignment/readback과 export audit row의 workspace/actor/time persistence, receipt draft metadata/draft race·meal-plan save/complete race·manual food two-process replay/correction race smoke를 함께 실행합니다. GitHub Actions 실제 성공 전에는 CI pass로 승격하지 않습니다.
 - `apps/web`의 `npm run test:connected`는 disposable SQLite API launcher와 Vite를 함께 기동하고 종료 시 임시 DB를 삭제해 connected E2E를 재현합니다. 실제 사용자 persistent DB를 테스트 대상으로 사용하지 않습니다.
 - CI `ocr-worker`는 Python 3.12 worker unit와 `linux/amd64` Docker image build를 수행하고, `postgres-live`는 disposable `pgvector/pg16` service에서 001→025 migration apply와 normalized `/ready`·dashboard·사용자 정의 보관 위치 assignment/readback·inventory write/search·상품 후보 provenance·상품 프로필 correction·날짜 보관조건 persistence·receipt commit idempotency field/restart·두 API process replay/conflict·custom backup/빈 DB restore·두 connection stale overwrite guard·account auth restart/password rotation/delete smoke·operation pool exhaustion/persistence/shutdown smoke·manual food replay/correction race를 수행하도록 구성되어 있습니다. 실제 GitHub Actions 성공 전에는 CI pass로 승격하지 않습니다.
 - PostgreSQL workspace store는 request·Grocy/notification/product-enrichment worker lease로 snapshot 수명을 보호하고, 유휴 durable workspace만 `RESCUE_MEAL_WORKSPACE_STORE_CACHE_SIZE`(기본 16, 1~256) LRU cache에서 닫습니다. physical workspace operation은 `PostgresOperationPool`의 `RESCUE_MEAL_POSTGRES_POOL_*` bounded checkout을 사용하며, `PooledConnectionProxy`가 full-snapshot cursor부터 commit/rollback까지 같은 connection을 유지합니다. FastAPI lifespan은 router/pool·auth·Grocy resource를 명시적으로 닫습니다. pool은 process별 workspace operation 상한이고 shared product/recipe/auth owner를 통합하지 않습니다. production preflight는 `RESCUE_MEAL_POSTGRES_PROCESS_COUNT`·`RESCUE_MEAL_POSTGRES_RESERVED_CONNECTIONS`·실제 `RESCUE_MEAL_POSTGRES_MAX_CONNECTIONS`를 요구하고 `process × (2 base/auth + pool max) + reserved <= max_connections`를 검사하지만, managed PostgreSQL failover와 network partition은 별도 운영 gate입니다.
@@ -67,7 +67,7 @@ Rescue Meal은 영수증·바코드·포장 라벨로 식료품 기록을 줄이
 - CI `connected-e2e`는 disposable SQLite API launcher·Vite·Chromium으로 `connected-prototype.spec.ts`를 실행하도록 구성되어 있습니다. 실제 GitHub Actions 성공 전에는 CI connected pass로 승격하지 않습니다.
 - 알림은 workspace별 `lead_days`·IANA `timezone`·앱 내 표시·조용한 시간·push 의향으로 저장하며, 앱 날짜 경계·planner 날짜·Web Push quiet hours에 같은 사용자 timezone을 적용합니다. 현재 재고의 표시 날짜·추정 우선순위·포장지 보관조건 불일치(`storage_mismatch`)·Grocy 확인 필요를 별도 알림으로 파생하고, custom location이 있으면 불일치 문구에도 실제 위치 이름을 표시합니다. 기본 timezone은 `Asia/Seoul`이고, 프론트는 브라우저의 현재 기기 timezone을 자동 저장하지 않은 채 사용자가 선택할 수 있는 draft action으로 제안합니다. 저장 시각은 UTC이고 API image는 explicit `tzdata` runtime dependency로 IANA timezone DB를 보장합니다. Web Push endpoint는 서버 내부에만 보관하고 UI/API summary에는 fingerprint만 노출합니다. VAPID delivery worker가 없으면 실제 발송을 주장하지 않습니다.
 - notification delivery는 unread notification×subscription outbox와 explicit workspace worker lease/heartbeat로 처리합니다. VAPID/pywebpush 설정·`push_enabled`·subscription이 모두 있을 때만 전송하며, quiet hours·bounded retry·dead-letter·404/410 정리를 적용합니다. local preview는 VAPID가 없으면 disabled heartbeat만 기록합니다.
-- workspace export는 재고·구매 summary·보관 event·식단·알림 설정만 제공하고 password/token/OCR 원문·파일명·push endpoint는 제외합니다. export는 읽기 전용이며 import/법적 portability 완전 충족과 혼동하지 않습니다.
+- workspace export는 재고·구매 summary·보관 event·식단·알림 설정만 제공하고 password/token/OCR 원문·파일명·push endpoint는 제외합니다. 성공 요청의 actor·role·safe request ID·UTC 시각은 `WorkspaceExportAuditEvent`로 별도 저장하며 export JSON에는 넣지 않습니다. audit persistence failure는 snapshot/Blob 없이 typed `503`으로 닫고, audit insert는 workspace revision을 올리지 않습니다. export는 읽기 전용이며 import/법적 portability 완전 충족과 혼동하지 않습니다.
 - account password change는 `session_version`을 증가시키고 기존 account token을 즉시 무효화한 뒤 새 token을 발급합니다. legacy 6-part token은 version 0으로만 호환합니다.
 - account password reset은 generic request 응답을 사용해 계정 존재 여부를 노출하지 않습니다. 30분 one-time token의 원문은 설정된 메일 provider에 transient delivery하고 저장소에는 hash만 보관하며, 완료 시 password와 `session_version`을 동시에 교체하고 새 session을 발급합니다. provider가 없으면 메일을 보내지 않습니다.
 - account 삭제는 현재 비밀번호와 정확한 `DELETE` 확인 문구를 요구한 뒤 auth row를 durable `deleting`으로 고정하고 account workspace purge와 credential/reset token 삭제를 수행합니다. 중간 실패는 `503`으로 남고 같은 session의 삭제 요청으로 재시도할 수 있으며, 일반 account/workspace 요청은 `423 account_deletion_in_progress`로 차단됩니다. 성공 후 기존 stateless token은 `401`이며, shared recipe catalog와 guest source는 자동 삭제하지 않습니다. auth DB·workspace DB·backup/WAL의 distributed deletion은 운영 정책으로 남깁니다.
@@ -561,3 +561,21 @@ Readback: [export rate-limit](evidence/export-rate-limit-readback-2026-09-12.md)
   signed production acceptance remain separate.
 
 Readback: [food detail compact first-fold](evidence/food-detail-first-fold-compact-readback-2026-09-12.md).
+
+## 2026-09-12 container hardening (non-root/limits/log rotation)
+
+- API·OCR worker 컨테이너가 uid `10001(rescue)` 비root로 실행됩니다. entrypoint는
+  build-time에 완성된 `/app/.venv` 바이너리를 직접 사용하고, PaddleX 캐시는
+  `PADDLE_PDX_CACHE_HOME=/home/rescue/.paddlex`의 named volume에 보관합니다.
+- 모든 Compose 서비스에 `no-new-privileges`, json-file 로그 `10m×3`
+  non-blocking rotation, `RESCUE_MEAL_*_MEMORY_LIMIT` 기반 memory limit을
+  적용했습니다(기본 db 2g·api 1g·ocr 4g·worker 512m).
+- `container-smoke.sh`의 migration 검증은 고정 카운트 대신 `infra/postgres/NNN_*.sql`
+  파일 수를 기대값으로 사용합니다.
+- Compose `config --quiet`(기본·3개 worker profile)와 전체 container smoke를
+  통과했습니다: migration ledger `26`, api/ocr `/ready`, guest write `7 -> 8`,
+  idempotency replay `201`. read-only rootfs·seccomp·digest pinning·orchestrator
+  limit은 별도 운영 gate입니다.
+
+Readback: [container hardening](evidence/container-hardening-readback-2026-09-12.md).
+운영 절차: [operations runbook](docs/operations-runbook.md).
