@@ -1293,3 +1293,13 @@ provider 열화·notification dead letter/침묵)을 정의합니다. 두 파일
 실행·Prometheus scrape·alert 발화·첫 CVE triage는 별도 acceptance이므로
 총점은 **88/100**을 유지합니다
 ([security/monitoring baseline readback](evidence/security-monitoring-baseline-readback-2026-09-13.md)).
+
+## Current self-review — 2026-09-13 disaster-recovery drill
+
+백업 스크립트 존재와 복구 가능성은 다릅니다. `infra/dr-drill.sh`가 disposable
+스택에서 시드→백업→빈 DB 복구→복구 DB 기반 API 기동→원본 토큰으로
+`food_count` 9→9 readback까지 증명했고, `.github/workflows/dr-drill.yml`이
+주간 회귀 감시를 추가합니다. 운영 DB 백업 주기·offsite/WAL·retention·
+managed failover RPO/RTO·실제 cutover 리허설은 여전히 외부 acceptance이므로
+총점은 **88/100**을 유지합니다
+([dr drill readback](evidence/dr-drill-readback-2026-09-13.md)).

@@ -613,3 +613,17 @@ single-flight](evidence/guest-transfer-preview-single-flight-readback-2026-09-12
   p99·지속 부하·OCR 동시 추론 지연·reverse proxy 오버헤드는 별도 범위입니다.
 
 Readback: [perf baseline](evidence/perf-baseline-readback-2026-09-13.md).
+
+## 2026-09-13 disaster-recovery drill
+
+- `infra/dr-drill.sh`가 백업의 실제 복구 가능성을 disposable 스택에서
+  end-to-end로 증명합니다: API write path로 시드 → `backup.sh` archive 생성 →
+  빈 `rescue_meal_restored` DB에 `restore.sh` 적용 → 복구 DB를 가리키는 두
+  번째 API 컨테이너 기동 → 원본 게스트 토큰으로 `food_count` 9→9 일치 확인.
+- 인증 레코드·migration ledger가 덤프에 포함되어 복구 DB가
+  `rescue-meal-ready`로 승인되고 기존 토큰이 유효한 점까지 함께 검증됩니다.
+  `.github/workflows/dr-drill.yml`이 주간 스케줄로 같은 드릴을 돌려
+  backup/restore 회귀를 표면화합니다. 운영 DB의 주기·offsite·WAL·retention과
+  실제 cutover 리허설은 별도 acceptance입니다.
+
+Readback: [dr drill](evidence/dr-drill-readback-2026-09-13.md).
