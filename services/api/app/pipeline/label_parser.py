@@ -26,6 +26,7 @@ class ParsedLabel:
     barcode: str | None
     date_candidates: list[LabelDateCandidate]
     storage_hint: StorageHint
+    storage_condition_text: str | None
     warnings: list[str]
     requires_review: bool
 
@@ -36,10 +37,12 @@ class ParsedLabel:
 
 
 _DATE_RE = re.compile(
-    r"(?<!\d)(?P<year>19\d{2}|20\d{2})\s*[./-년]\s*(?P<month>\d{1,2})\s*[./-월]\s*(?P<day>\d{1,2})\s*일?"
-    r"|(?<!\d)(?P<compact>20\d{6})(?!\d)"
+    r"(?<!\d)(?P<year>19\d{2}|20\d{2})\s*[./년-]\s*(?P<month>\d{1,2})\s*[./월-]\s*(?P<day>\d{1,2})\s*일?"
+    r"|(?<![A-Za-z0-9])(?P<compact>20\d{6})(?![A-Za-z0-9])"
 )
 _BARCODE_RE = re.compile(r"(?<!\d)(?:\d[ \t-]?){8,14}(?!\d)")
+_DATE_CONTEXT_RADIUS = 128
+_SPLIT_WEIGHT_CODE_RE = re.compile(r'''["“”']?\d(?:[\s-]?\d){9,12}["“”']?''')
 
 
 def parse_label_text(text: str) -> ParsedLabel:
@@ -51,7 +54,14 @@ def parse_label_text(text: str) -> ParsedLabel:
         if value is None:
             continue
         context = text[max(0, match.start() - 32) : min(len(text), match.end() + 32)]
-        kind, confidence = _classify_date_context(context)
+        # OCR engines commonly return each detected text box as a separate
+        # line. Keep the short context in the response, but classify against a
+        # wider internal window so a heading such as `(포장)년·월·일` is not
+        # lost when the value appears a few observations below it.
+        classification_context = text[
+            max(0, match.start() - _DATE_CONTEXT_RADIUS) : min(len(text), match.end() + _DATE_CONTEXT_RADIUS)
+        ]
+        kind, confidence = _classify_date_context(classification_context)
         # Even an explicit “소비기한” label is still an OCR candidate until
         # the user confirms the crop/value. Semantic certainty is not the same
         # as visual recognition certainty.
@@ -59,7 +69,9 @@ def parse_label_text(text: str) -> ParsedLabel:
 
     product_name = _find_product_name(lines)
     barcode = _find_barcode(text, candidates)
+    restricted_barcode = _has_restricted_barcode_candidate(text)
     storage_hint = _storage_hint(text)
+    storage_condition_text = _storage_condition_text(text, storage_hint)
     trusted_date = next((candidate for candidate in candidates if candidate.kind in {"use_by", "sell_by", "best_before"}), None)
     if candidates and trusted_date is None:
         warnings.append("날짜 숫자는 보이지만 소비기한 의미가 확인되지 않았습니다.")
@@ -67,9 +79,21 @@ def parse_label_text(text: str) -> ParsedLabel:
         warnings.append("소비기한·유통기한 숫자를 찾지 못했습니다. 다른 면이나 뚜껑을 촬영해 주세요.")
     if barcode and barcode.startswith("2"):
         barcode = None
-    if _has_restricted_barcode_candidate(text):
+    if restricted_barcode:
+        # A variable-weight/store code must never become a product lookup key,
+        # even if OCR split its leading `2` into one observation and emitted
+        # the remaining digits as a normal-looking 10–13 digit line.
+        barcode = None
         warnings.append("첫 숫자가 2인 바코드는 가변중량 또는 매장용 코드일 수 있어 글로벌 GTIN으로 확정하지 않습니다.")
-    return ParsedLabel(product_name, barcode, candidates, storage_hint, warnings, bool(warnings) or len(candidates) != 1)
+    return ParsedLabel(
+        product_name,
+        barcode,
+        candidates,
+        storage_hint,
+        storage_condition_text,
+        warnings,
+        bool(warnings) or len(candidates) != 1 or any(candidate.requires_review for candidate in candidates),
+    )
 
 
 def _classify_date_context(context: str) -> tuple[LabelDateKind, float]:
@@ -137,13 +161,23 @@ def _find_barcode(text: str, candidates: list[LabelDateCandidate]) -> str | None
 
 
 def _has_restricted_barcode_candidate(text: str) -> bool:
-    for line in text.splitlines():
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    for index, line in enumerate(lines):
         compact = re.sub(r"[\s-]", "", line)
         if re.search(r"(?<!\d)2\d{8,14}(?!\d)", compact):
             return True
         groups = re.findall(r"\d+", line)
         if len(groups) >= 3 and groups[0] == "2" and 8 <= len("".join(groups)) <= 14:
             return True
+        if compact == "2":
+            # In a real OCR result the next observation may be a quoted,
+            # unspaced payload (`2` / `"3084901023003`) rather than one line
+            # matching the normal barcode regex. Ten to thirteen following
+            # digits are enough to identify this shape while avoiding dates
+            # such as `2017.06.28`.
+            for following_line in lines[index + 1 : index + 3]:
+                if _SPLIT_WEIGHT_CODE_RE.fullmatch(following_line):
+                    return True
     return False
 
 
@@ -155,3 +189,14 @@ def _storage_hint(text: str) -> StorageHint:
     if "실온" in text:
         return "ambient"
     return "unknown"
+
+
+def _storage_condition_text(text: str, storage_hint: StorageHint) -> str | None:
+    if storage_hint == "unknown":
+        return None
+    normalized_hint = {"ambient": "실온", "refrigerated": "냉장", "frozen": "냉동"}[storage_hint]
+    for line in text.splitlines():
+        normalized_line = re.sub(r"\s+", " ", line).strip()
+        if normalized_hint in normalized_line and ("보관" in normalized_line or "℃" in normalized_line or "도" in normalized_line):
+            return normalized_line[:160]
+    return f"포장지에 {normalized_hint} 보관 표시"

@@ -43,8 +43,14 @@ def parse_barcode(raw_scan: str) -> ParsedBarcode:
     if not raw:
         return ParsedBarcode(raw, "unknown", None, None, [], ["바코드 값이 비어 있습니다."], True)
 
+    if raw.startswith(("https://id.gs1.org/", "http://id.gs1.org/")):
+        return _parse_gs1_digital_link(raw)
+
     if "(" in raw:
         return _parse_parenthesized_gs1(raw)
+
+    if raw.startswith("]d2") or "\x1d" in raw:
+        return _parse_gs1_element_string(raw)
 
     compact = re.sub(r"[\s-]", "", raw)
     if compact.isdigit() and 8 <= len(compact) <= 14:
@@ -65,7 +71,52 @@ def parse_barcode(raw_scan: str) -> ParsedBarcode:
 
 def _parse_parenthesized_gs1(raw: str) -> ParsedBarcode:
     fields = {match.group(1): match.group(2).strip() for match in re.finditer(r"\((\d{2,4})\)([^()]+)", raw)}
+    return _build_gs1_result(raw, fields)
+
+
+def _parse_gs1_element_string(raw: str) -> ParsedBarcode:
+    encoded = raw[3:] if raw.startswith("]d2") else raw
+    fields: dict[str, str] = {}
     warnings: list[str] = []
+    fixed_lengths = {"01": 14, "11": 6, "13": 6, "15": 6, "16": 6, "17": 6}
+    known_ais = tuple((*fixed_lengths.keys(), "10"))
+    cursor = 0
+    while cursor < len(encoded):
+        if encoded[cursor] == "\x1d":
+            cursor += 1
+            continue
+        ai = next((candidate for candidate in known_ais if encoded.startswith(candidate, cursor)), None)
+        if ai is None:
+            warnings.append("GS1 element string에서 지원하지 않는 AI를 만났습니다.")
+            break
+        cursor += len(ai)
+        if ai in fixed_lengths:
+            end = cursor + fixed_lengths[ai]
+            if end > len(encoded):
+                warnings.append(f"GS1 AI {ai} 값의 길이가 부족합니다.")
+                break
+            fields[ai] = encoded[cursor:end].strip()
+            cursor = end
+            continue
+        end = encoded.find("\x1d", cursor)
+        if end == -1:
+            end = len(encoded)
+        fields[ai] = encoded[cursor:end].strip()
+        cursor = end
+    return _build_gs1_result(raw, fields, warnings)
+
+
+def _parse_gs1_digital_link(raw: str) -> ParsedBarcode:
+    fields = {
+        match.group(1): match.group(2).strip()
+        for match in re.finditer(r"/(01|10|11|13|15|16|17)/([^/?#]+)", raw)
+    }
+    warnings = [] if fields else ["GS1 Digital Link에서 상품 식별 field를 찾지 못했습니다."]
+    return _build_gs1_result(raw, fields, warnings)
+
+
+def _build_gs1_result(raw: str, fields: dict[str, str], initial_warnings: list[str] | None = None) -> ParsedBarcode:
+    warnings: list[str] = list(initial_warnings or [])
     assertions: list[BarcodeDateAssertion] = []
     for ai, kind in _DATE_AI.items():
         value = fields.get(ai)

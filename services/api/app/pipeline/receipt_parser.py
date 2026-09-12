@@ -1,14 +1,16 @@
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime
 from typing import Literal
 
+from ..barcode import parse_barcode
 from .ocr import OcrObservation
 
 
 ReceiptKind = Literal["grocery_receipt", "retail_beverage_receipt", "restaurant_receipt", "unknown"]
+ReceiptTemplateId = Literal["grocery-mart-v1", "retail-beverage-v1", "restaurant-card-v1", "grocery-generic-v1", "generic-v1"]
 ParsedLineType = Literal["product", "discount", "refund", "subtotal", "payment", "unknown"]
 
 _ITEM_NUMBER_RE = r"^\s*\d{3}(?=\s|[가-힣A-Za-z]|$)"
@@ -26,6 +28,13 @@ class ParsedReceiptLine:
     canonical_name: str | None
     match_confidence: float
     review_reason: str | None
+    # Original observation indexes are metadata for the review surface only.
+    # OCR text is intentionally not copied into the public response here.
+    observation_indices: tuple[int, ...] = ()
+    # A receipt usually contains a product identifier, not a package date.
+    # Only a normal GTIN is retained; restricted-circulation/store codes stay
+    # unset so they cannot be mistaken for a product barcode.
+    barcode: str | None = None
 
 
 @dataclass(frozen=True)
@@ -34,11 +43,16 @@ class ParsedReceipt:
     purchased_at: datetime | None
     lines: list[ParsedReceiptLine]
     warnings: list[str]
+    template_id: ReceiptTemplateId = "generic-v1"
+    template_confidence: float = 0.0
+    merchant_name: str | None = None
 
 
 def parse_receipt_text(text: str) -> ParsedReceipt:
     raw_lines = [line.strip() for line in text.splitlines() if line.strip()]
     kind = classify_receipt(raw_lines)
+    template_id, template_confidence = detect_receipt_template(raw_lines)
+    merchant_name = extract_merchant_name(raw_lines)
     purchased_at = _find_purchased_at(raw_lines)
     parsed_lines: list[ParsedReceiptLine] = []
     warnings: list[str] = []
@@ -49,10 +63,14 @@ def parse_receipt_text(text: str) -> ParsedReceipt:
         line_type = _classify_line_type(line)
         if line_type == "product" and re.match(r"^\d{1,3}\b", line):
             combined = line
-            if index + 1 < len(raw_lines) and _looks_like_amount_row(raw_lines[index + 1]):
-                combined = f"{line} {raw_lines[index + 1]}"
-                index += 1
-            parsed_lines.append(_parse_product_line(combined))
+            amount_index = _next_amount_row_index(raw_lines, index)
+            barcode = _first_gtin_from_rows(
+                raw_lines[index + 1:amount_index] if amount_index is not None else raw_lines[index + 1:index + 3]
+            )
+            if amount_index is not None:
+                combined = f"{line} {raw_lines[amount_index]}"
+                index = amount_index
+            parsed_lines.append(replace(_parse_product_line(combined), barcode=barcode))
         elif line_type != "unknown":
             parsed_lines.append(_parse_non_product_line(line, line_type))
         index += 1
@@ -61,19 +79,24 @@ def parse_receipt_text(text: str) -> ParsedReceipt:
         warnings.append("식당 영수증은 식료품 재고로 자동 입고하지 않습니다.")
     if not parsed_lines:
         warnings.append("상품 라인을 찾지 못했습니다.")
-    return ParsedReceipt(kind, purchased_at, parsed_lines, warnings)
+    return ParsedReceipt(kind, purchased_at, parsed_lines, warnings, template_id, template_confidence, merchant_name)
 
 
 def parse_receipt_observations(observations: list[OcrObservation]) -> ParsedReceipt:
     # Bounding-box aware ordering is intentionally kept deterministic. The
     # first implementation accepts OCR text rows; a later layout adapter can
     # replace this without changing the parser contract.
-    ordered = sorted(
-        observations,
+    ordered_pairs = sorted(
+        enumerate(observations),
         # Vision coordinates use a bottom-left origin, so larger y values are
         # visually higher on the receipt. Read rows from top to bottom.
-        key=lambda item: (-(item.bbox[1] if item.bbox and len(item.bbox) > 1 else 0), item.bbox[0] if item.bbox else 0),
+        key=lambda indexed: (
+            -(indexed[1].bbox[1] if indexed[1].bbox and len(indexed[1].bbox) > 1 else 0),
+            indexed[1].bbox[0] if indexed[1].bbox else 0,
+        ),
     )
+    ordered = [item for _, item in ordered_pairs]
+    ordered_original_indices = [original_index for original_index, _ in ordered_pairs]
     item_anchors = [index for index, item in enumerate(ordered) if _is_item_anchor(item)]
     if not item_anchors:
         return parse_receipt_text("\n".join(item.text for item in ordered))
@@ -83,17 +106,20 @@ def parse_receipt_observations(observations: list[OcrObservation]) -> ParsedRece
         end = item_anchors[anchor_index + 1] if anchor_index + 1 < len(item_anchors) else len(ordered)
         start = _pull_adjacent_name_observations(ordered, start, item_anchors[anchor_index - 1] if anchor_index else 0)
         segment = ordered[start:end]
-        product_observations: list[OcrObservation] = []
-        for item in segment:
+        product_observation_pairs: list[tuple[int, OcrObservation]] = []
+        for segment_index, item in enumerate(segment, start=start):
             line_type = _classify_line_type(item.text)
             if line_type in {"discount", "refund", "subtotal", "payment"}:
                 parsed_lines.append(_parse_non_product_line(item.text, line_type))
             else:
-                product_observations.append(item)
-        parsed_lines.append(_parse_product_observation_group(product_observations))
+                product_observation_pairs.append((ordered_original_indices[segment_index], item))
+        product_line = _parse_product_observation_group([item for _, item in product_observation_pairs])
+        parsed_lines.append(replace(product_line, observation_indices=tuple(index for index, _ in product_observation_pairs)))
 
     full_text = "\n".join(item.text for item in ordered)
-    return ParsedReceipt(classify_receipt(full_text.splitlines()), _find_purchased_at(full_text.splitlines()), parsed_lines, _receipt_warnings(full_text, parsed_lines))
+    full_lines = full_text.splitlines()
+    template_id, template_confidence = detect_receipt_template(full_lines)
+    return ParsedReceipt(classify_receipt(full_lines), _find_purchased_at(full_lines), parsed_lines, _receipt_warnings(full_text, parsed_lines), template_id, template_confidence, extract_merchant_name(full_lines))
 
 
 def _pull_adjacent_name_observations(ordered: list[OcrObservation], start: int, previous_anchor: int) -> int:
@@ -128,13 +154,48 @@ def _is_item_anchor(observation: OcrObservation) -> bool:
 
 def classify_receipt(lines: list[str]) -> ReceiptKind:
     full_text = " ".join(lines)
+    normalized_text = full_text.lower()
     if any(token in full_text for token in ("테이블", "주문담당", "식당", "카드전표", "메뉴명")):
         return "restaurant_receipt"
-    if any(token in full_text for token in ("주류", "맥주", "소주", "음료", "와인", "조니워커", "하이네켄", "삿포로", "아사히", "칭타오", "500ml")):
+    if any(token in normalized_text for token in ("주류", "맥주", "소주", "음료", "와인", "조니워커", "하이네켄", "삿포로", "아사히", "칭타오", "500ml")):
         return "retail_beverage_receipt"
     if any(token in full_text for token in ("상품명", "판매일", "계산대", "수량", "영수증")):
         return "grocery_receipt"
     return "unknown"
+
+
+def detect_receipt_template(lines: list[str]) -> tuple[ReceiptTemplateId, float]:
+    """Select a conservative parser profile from safe header/type signals."""
+
+    full_text = " ".join(lines)
+    kind = classify_receipt(lines)
+    if kind == "restaurant_receipt":
+        return "restaurant-card-v1", 0.98
+    if kind == "retail_beverage_receipt":
+        return "retail-beverage-v1", 0.94
+    if kind == "grocery_receipt":
+        if re.search(r"마트|식자재|계산대|판매일", full_text):
+            return "grocery-mart-v1", 0.9
+        return "grocery-generic-v1", 0.78
+    return "generic-v1", 0.35
+
+
+def extract_merchant_name(lines: list[str]) -> str | None:
+    """Return only a high-confidence business-name header candidate."""
+
+    product_index = next(
+        (index for index, line in enumerate(lines) if _classify_line_type(line) == "product"),
+        len(lines),
+    )
+    for line in lines[:product_index]:
+        candidate = re.sub(r"^\s*(?:\(주\)|주식회사)\s*", "", line).strip(" :")
+        if not candidate or len(candidate) > 80:
+            continue
+        if re.search(r"주소|대표자|사업자|전화|TEL|판매일|계산대|상품명|영수증|합계|금액", candidate, re.IGNORECASE):
+            continue
+        if re.search(r"(?:마트|식자재|편의점|슈퍼|시장|백화점|농협|이마트|홈플러스|롯데마트|GS25|CU|세븐일레븐)$", candidate, re.IGNORECASE):
+            return candidate
+    return None
 
 
 def _classify_line_type(line: str) -> ParsedLineType:
@@ -174,7 +235,7 @@ def _parse_product_line(line: str) -> ParsedReceiptLine:
     canonical = _normalize_product_name(name)
     confidence = 0.9 if unit_price is not None and total_price is not None else 0.58
     reason = None if confidence >= 0.8 else "금액 행 또는 수량이 완전히 연결되지 않았습니다."
-    return ParsedReceiptLine(name, quantity, "개", unit_price, total_price, "product", canonical, confidence, reason)
+    return ParsedReceiptLine(name, quantity, _unit_from_name(name), unit_price, total_price, "product", canonical, confidence, reason)
 
 
 def _parse_product_observation_group(observations: list[OcrObservation]) -> ParsedReceiptLine:
@@ -216,9 +277,10 @@ def _parse_product_observation_group(observations: list[OcrObservation]) -> Pars
     unit = _unit_from_name(raw_segment)
     unit_price = unit_candidates[-1] if unit_candidates else None
     total_price = total_candidates[-1] if total_candidates else None
+    barcode = _first_gtin_from_rows([item.text for item in observations])
     confidence = 0.94 if unit_price is not None and total_price is not None and quantity_candidates else 0.72 if unit_price is not None and total_price is not None else 0.56
     reason = None if confidence >= 0.8 else "OCR observation에서 수량 또는 금액 일부가 확인되지 않았습니다."
-    return ParsedReceiptLine(name, quantity, unit, unit_price, total_price, "product", _normalize_product_name(name), confidence, reason)
+    return ParsedReceiptLine(name, quantity, unit, unit_price, total_price, "product", _normalize_product_name(name), confidence, reason, barcode=barcode)
 
 
 def _amount_values(text: str) -> list[int]:
@@ -247,7 +309,7 @@ def _clean_observation_name(text: str) -> str:
 
 
 def _quantity_from_name(name: str) -> float:
-    match = re.search(r"(?:\(|\s)(\d+(?:\.\d+)?)\s*(?:개|팩|입|구|병|캔)\b", name)
+    match = re.search(r"(?:\(|\s)(\d+(?:\.\d+)?)\s*(?:개|팩|입|구|병|캔|박스|봉|단|모|통|줄)\b", name)
     return float(match.group(1)) if match else 1.0
 
 
@@ -255,7 +317,10 @@ def _unit_from_name(name: str) -> str:
     # Weight/volume (g, kg, ml, L) describes the package, not the purchased
     # count. Keep the API quantity unit count-based until a dedicated weight
     # field is populated from the receipt/label parser.
-    match = re.search(r"(?:\d+(?:\.\d+)?)\s*(개|팩|입|구|병|캔)\b", name)
+    parenthesized_unit = re.search(r"\((개|팩|입|구|병|캔|박스|봉|단|모|통|줄)\)", name)
+    if parenthesized_unit:
+        return parenthesized_unit.group(1)
+    match = re.search(r"(?:\d+(?:\.\d+)?)\s*(개|팩|입|구|병|캔|박스|봉|단|모|통|줄)\b", name)
     return match.group(1) if match else "개"
 
 
@@ -280,6 +345,44 @@ def _parse_non_product_line(line: str, line_type: ParsedLineType) -> ParsedRecei
 def _looks_like_amount_row(line: str) -> bool:
     tokens = re.findall(r"-?\d[\d,]*", line)
     return len(tokens) >= 2 and not re.match(r"^\d{1,3}\s+\D", line)
+
+
+def _next_amount_row_index(lines: list[str], product_index: int) -> int | None:
+    """Find the amount row after optional barcode/store-code-only rows."""
+
+    candidate = product_index + 1
+    skipped_code_rows = 0
+    while candidate < len(lines) and skipped_code_rows < 2 and _is_code_only_row(lines[candidate]):
+        skipped_code_rows += 1
+        candidate += 1
+    return candidate if candidate < len(lines) and _looks_like_amount_row(lines[candidate]) else None
+
+
+def _is_code_only_row(line: str) -> bool:
+    # A spaced amount row such as "750 1 750" must not become a code after
+    # whitespace removal. Be conservative: only a single contiguous numeric
+    # token is treated as a barcode/store-code continuation.
+    tokens = line.strip().split()
+    return len(tokens) == 1 and re.fullmatch(r"\d{6,14}", tokens[0]) is not None
+
+
+def _first_gtin_from_rows(rows: list[str]) -> str | None:
+    """Return the first normal GTIN in receipt continuation rows.
+
+    Receipt OCR often emits a barcode or store SKU on its own row. The
+    parser may skip both kinds of rows to reach the amount row, but only a
+    barcode parser-confirmed GTIN is safe to expose as a product identifier.
+    In particular, codes beginning with ``2`` remain restricted-circulation
+    candidates and are deliberately not promoted to a GTIN.
+    """
+
+    for row in rows:
+        if not _is_code_only_row(row):
+            continue
+        parsed = parse_barcode(row)
+        if parsed.barcode_type == "gtin" and parsed.gtin:
+            return parsed.gtin
+    return None
 
 
 def _find_purchased_at(lines: list[str]) -> datetime | None:

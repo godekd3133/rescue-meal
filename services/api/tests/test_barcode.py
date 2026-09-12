@@ -30,3 +30,22 @@ def test_gs1_ai_17_becomes_a_use_by_candidate_with_source() -> None:
     assert result.date_assertions[0].kind == "use_by"
     assert result.date_assertions[0].value == date(2026, 9, 2)
     assert result.date_assertions[0].ai == "gs1_ai_17"
+
+
+def test_gs1_element_string_with_symbology_identifier_parses_lot_and_date() -> None:
+    result = parse_barcode("]d2010880111416752317260902\x1d10LOT-7")
+
+    assert result.barcode_type == "gs1_data_carrier"
+    assert result.gtin == "08801114167523"
+    assert result.lot == "LOT-7"
+    assert result.date_assertions[0].kind == "use_by"
+    assert result.date_assertions[0].value == date(2026, 9, 2)
+
+
+def test_gs1_digital_link_parses_date_path() -> None:
+    result = parse_barcode("https://id.gs1.org/01/08801114167523/17/260902/10/LOT-7")
+
+    assert result.barcode_type == "gs1_data_carrier"
+    assert result.gtin == "08801114167523"
+    assert result.lot == "LOT-7"
+    assert result.date_assertions[0].ai == "gs1_ai_17"
