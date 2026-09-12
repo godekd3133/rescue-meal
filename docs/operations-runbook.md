@@ -78,6 +78,12 @@ RESCUE_MEAL_DATABASE_URL=postgresql://... sh infra/postgres/restore.sh \
 백업 주기·offsite 보관·WAL archiving·retention 정책은 managed DB 선택과 함께
 정하는 별도 운영 acceptance입니다.
 
+`infra/dr-drill.sh`는 백업이 실제로 시스템을 되살리는지 disposable 스택에서
+end-to-end로 증명합니다: API로 인벤토리를 쓰고 → backup.sh → 빈 DB에
+restore.sh → 복구 DB를 가리키는 두 번째 API 컨테이너 기동 → 원본 게스트
+토큰으로 동일 `food_count`를 읽는지 확인합니다. 배포 대상 백업 절차를
+바꿀 때마다 같은 드릴을 다시 돌려 복구 가능성을 유지합니다.
+
 ## 스케일링 한도
 
 - API process 수는 `RESCUE_MEAL_POSTGRES_PROCESS_COUNT`로 선언해 연결 예산을
@@ -118,5 +124,7 @@ RESCUE_MEAL_DATABASE_URL=postgresql://... sh infra/postgres/restore.sh \
 - `infra/perf-smoke.sh`: 같은 스택에서 dashboard read·normalized write의
   지연 분포와 동시성 수렴을 측정합니다. 배포 대상이 바뀌면 같은 스크립트로
   baseline을 재측정해 `RESCUE_MEAL_PERF_SMOKE_MAX_P95_MS`를 조정합니다.
+- `infra/dr-drill.sh`: backup.sh→restore.sh→복구 DB 기반 API 기동까지 이어지는
+  재해복구 드릴. 실행 결과는 `evidence/dr-drill-readback-*.md`에 남깁니다.
 - `evidence/container-smoke-readback-2026-09-11.md` 및 최신 readback 문서에
   실행 결과를 남깁니다.

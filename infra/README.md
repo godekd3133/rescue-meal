@@ -114,6 +114,20 @@ target database and traffic cutover owner. These scripts do not encrypt,
 upload, expire, or delete backup objects; those controls belong to the
 secret-manager/object-storage and legal-retention policy.
 
+## Disaster-recovery drill
+
+`infra/dr-drill.sh` proves the backup can actually rebuild a working system
+against a disposable Compose stack: it writes inventory through the API,
+creates a backup with `postgres/backup.sh`, restores it into a freshly
+provisioned empty database with `postgres/restore.sh`, boots a second API
+container against the restored database, and verifies `/ready` plus the
+original guest token reading back the same dashboard `food_count`. It uses a
+PID-scoped project and removes only its own resources on exit.
+
+```bash
+sh infra/dr-drill.sh
+```
+
 ## Production-shaped container smoke
 
 Run the disposable Compose packaging and API/OCR read-write gate with one
