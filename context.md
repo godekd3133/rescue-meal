@@ -61,7 +61,7 @@ Rescue Meal은 영수증·바코드·포장 라벨로 식료품 기록을 줄이
 - meal plan save는 preview `plan_id`, multi-day save는 `bundle_id`, completion은 plan ID와 `completed_at`을 identity로 사용합니다. plan/bundle lock과 PostgreSQL revision winner replay로 동일 save를 수렴시키고, completion race는 `completed + already_completed` 및 단일 consumed audit/event 결과로 검증합니다.
 - `postgres-live`는 현재 fresh schema migration `001→026`까지 적용·재실행 skip을 확인하고, 사용자 정의 보관 위치의 create/assignment/readback과 export audit row의 workspace/actor/time persistence, receipt draft metadata/draft race·meal-plan save/complete race·manual food two-process replay/correction race smoke를 함께 실행합니다. GitHub Actions 실제 성공 전에는 CI pass로 승격하지 않습니다.
 - `apps/web`의 `npm run test:connected`는 disposable SQLite API launcher와 Vite를 함께 기동하고 종료 시 임시 DB를 삭제해 connected E2E를 재현합니다. 실제 사용자 persistent DB를 테스트 대상으로 사용하지 않습니다.
-- CI `ocr-worker`는 Python 3.12 worker unit와 `linux/amd64` Docker image build를 수행하고, `postgres-live`는 disposable `pgvector/pg16` service에서 001→025 migration apply와 normalized `/ready`·dashboard·사용자 정의 보관 위치 assignment/readback·inventory write/search·상품 후보 provenance·상품 프로필 correction·날짜 보관조건 persistence·receipt commit idempotency field/restart·두 API process replay/conflict·custom backup/빈 DB restore·두 connection stale overwrite guard·account auth restart/password rotation/delete smoke·operation pool exhaustion/persistence/shutdown smoke·manual food replay/correction race를 수행하도록 구성되어 있습니다. 실제 GitHub Actions 성공 전에는 CI pass로 승격하지 않습니다.
+- CI `ocr-worker`는 Python 3.12 worker unit와 `linux/amd64` Docker image build를 수행하고, `postgres-live`는 disposable `pgvector/pg16` service에서 001→026 migration apply와 normalized `/ready`·dashboard·사용자 정의 보관 위치 assignment/readback·workspace export actor/time audit persistence·inventory write/search·상품 후보 provenance·상품 프로필 correction·날짜 보관조건 persistence·receipt commit idempotency field/restart·두 API process replay/conflict·custom backup/빈 DB restore·두 connection stale overwrite guard·account auth restart/password rotation/delete smoke·operation pool exhaustion/persistence/shutdown smoke·manual food replay/correction race를 수행하도록 구성되어 있습니다. 실제 GitHub Actions 성공 전에는 CI pass로 승격하지 않습니다.
 - PostgreSQL workspace store는 request·Grocy/notification/product-enrichment worker lease로 snapshot 수명을 보호하고, 유휴 durable workspace만 `RESCUE_MEAL_WORKSPACE_STORE_CACHE_SIZE`(기본 16, 1~256) LRU cache에서 닫습니다. physical workspace operation은 `PostgresOperationPool`의 `RESCUE_MEAL_POSTGRES_POOL_*` bounded checkout을 사용하며, `PooledConnectionProxy`가 full-snapshot cursor부터 commit/rollback까지 같은 connection을 유지합니다. FastAPI lifespan은 router/pool·auth·Grocy resource를 명시적으로 닫습니다. pool은 process별 workspace operation 상한이고 shared product/recipe/auth owner를 통합하지 않습니다. production preflight는 `RESCUE_MEAL_POSTGRES_PROCESS_COUNT`·`RESCUE_MEAL_POSTGRES_RESERVED_CONNECTIONS`·실제 `RESCUE_MEAL_POSTGRES_MAX_CONNECTIONS`를 요구하고 `process × (2 base/auth + pool max) + reserved <= max_connections`를 검사하지만, managed PostgreSQL failover와 network partition은 별도 운영 gate입니다.
 - PostgreSQL migration은 Docker init SQL에만 의존하지 않습니다. `infra/postgres/migrate.sh --apply`가 `rescue_schema_migrations`에 migration 이름·SHA-256·적용 시각을 기록하고, 같은 checksum은 skip하며 변경된 파일은 실행 전에 drift로 중단합니다. 새 변경은 기존 migration 수정이 아니라 additive migration으로 추가하고, ledger가 없는 기존 volume은 backup·DSN 검토 후 명시적으로 bootstrap합니다.
 - CI `connected-e2e`는 disposable SQLite API launcher·Vite·Chromium으로 `connected-prototype.spec.ts`를 실행하도록 구성되어 있습니다. 실제 GitHub Actions 성공 전에는 CI connected pass로 승격하지 않습니다.
@@ -124,7 +124,7 @@ Rescue Meal은 영수증·바코드·포장 라벨로 식료품 기록을 줄이
 
 ## 2026-09-08 current overrides
 
-- The current PostgreSQL schema baseline is additive migration `001→025`; older `023` and `024` references in historical readback bullets describe the state at the time of those records. `024_recipe_catalog_revision.sql` is required for the shared catalog optimistic fence, and `025_storage_locations.sql` is required for workspace-scoped custom locations and normalized lot/event location references; both are checked by readiness before production API startup.
+- The current PostgreSQL schema baseline is additive migration `001→026`; older `023`, `024`, and `025` references in historical readback bullets describe the state at the time of those records. `024_recipe_catalog_revision.sql` is required for the shared catalog optimistic fence, `025_storage_locations.sql` is required for workspace-scoped custom locations and normalized lot/event location references, and `026_export_audit.sql` is required for workspace export actor/time audit; all are checked by readiness before production API startup.
 
 ## 2026-09-09 current environment override
 
@@ -140,7 +140,7 @@ Rescue Meal은 영수증·바코드·포장 라벨로 식료품 기록을 줄이
 
 ## 2026-09-09 release provenance override
 
-- `apps/web/scripts/create-release-manifest.mjs`가 source head/branch/dirty state, deployment mode, dependency lock·mobile runtime lock·migration SHA-256, compiled Sites artifact size/hash를 `rescue-meal-release-manifest-v1`로 materialize합니다. token·provider key·password·OCR source bytes·workspace data는 포함하지 않으며, 필수 input과 `--require-artifacts` compiled output 누락은 fail-closed로 중단합니다. local mirror manifest test **1 passed**, migration baseline **25 files**, artifact records **4**, `contains_secrets=false`를 확인했고, web CI는 `/tmp` manifest를 `actions/upload-artifact@v4`로 보존하도록 연결했습니다. 실제 GitHub Actions artifact retention·signed provenance·release promotion은 별도 acceptance입니다 ([release provenance manifest readback](evidence/release-provenance-manifest-readback-2026-09-09.md)).
+- `apps/web/scripts/create-release-manifest.mjs`가 source head/branch/dirty state, deployment mode, dependency lock·mobile runtime lock·migration SHA-256, compiled Sites artifact size/hash를 `rescue-meal-release-manifest-v1`로 materialize합니다. token·provider key·password·OCR source bytes·workspace data는 포함하지 않으며, 필수 input과 `--require-artifacts` compiled output 누락은 fail-closed로 중단합니다. local mirror manifest test **1 passed**, current migration baseline **26 files**, artifact records **4**, `contains_secrets=false`를 확인했고, web CI는 `/tmp` manifest를 `actions/upload-artifact@v4`로 보존하도록 연결했습니다. 실제 GitHub Actions artifact retention·signed provenance·release promotion은 별도 acceptance입니다 ([release provenance manifest readback](evidence/release-provenance-manifest-readback-2026-09-09.md)).
 
 ## 2026-09-09 planner cross-device override
 
@@ -579,3 +579,37 @@ Readback: [food detail compact first-fold](evidence/food-detail-first-fold-compa
 
 Readback: [container hardening](evidence/container-hardening-readback-2026-09-12.md).
 운영 절차: [operations runbook](docs/operations-runbook.md).
+
+## 2026-09-12 export actor/time audit and guest preview single-flight override
+
+- Workspace export now records successful generation in a separate `WorkspaceExportAuditEvent`
+  with verified actor ID/role, safe request ID, schema version, and UTC time. It excludes
+  Authorization/token/IP/payload, stays out of the downloaded JSON, does not increment workspace
+  revision, and is removed by workspace reset/purge. Audit failure returns a typed
+  `account_export_audit_persistence_unavailable` `503` before any export body/Blob is produced.
+- The PostgreSQL source baseline is now additive migration `001→026`; `026_export_audit.sql` and
+  readiness/adapter contracts are present. Migration dry-run, container migration count, and fake
+  adapter SQL passed, but the export-audit row itself is not claimed as a managed-production
+  readback. Export operational query authorization, retention/alert policy, streaming/compression,
+  replica/WAL/backup alignment, and production gateway tuning remain separate gates.
+- Full current verification is API **512 passed / 8 warnings**, connected **109/109 passed (4.8m)**,
+  fixture/mobile **39 passed + 3 skipped**, native **14 passed**, TypeScript/Vite **760 modules**,
+  protected runtime **28**, Sites **4**, service-worker **5**, workspace-sync **9**, release manifest
+  **2**. A pre-existing guest-transfer full-lane failure was traced to duplicate preview producers;
+  the registration single-flight guard passed its focused regression and the clean full lane.
+
+Readbacks: [export audit](evidence/export-audit-readback-2026-09-12.md), [guest transfer preview
+single-flight](evidence/guest-transfer-preview-single-flight-readback-2026-09-12.md).
+
+## 2026-09-13 perf baseline smoke
+
+- `infra/perf-smoke.sh`가 disposable production-shaped 스택에서 dashboard read·
+  normalized write의 첫 측정 baseline을 기록합니다. 측정기는
+  `services/api/scripts/perf_smoke.py`(stdlib 전용)이며 published host port 경로의
+  지연 분포·오류율·`food_count` 정합성을 fail-closed로 검증합니다.
+- 첫 측정: sequential read p50 15.3ms/p95 28ms, concurrent read(4w) p95 204ms,
+  concurrent write(4w) p95 209ms, same-key 동시 replay 8건 모두 `201`로 단일
+  mutation 수렴, 오류 0. 운영 SLO가 아니라 배포 대상별 재측정용 참조값이며,
+  p99·지속 부하·OCR 동시 추론 지연·reverse proxy 오버헤드는 별도 범위입니다.
+
+Readback: [perf baseline](evidence/perf-baseline-readback-2026-09-13.md).

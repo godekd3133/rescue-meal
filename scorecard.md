@@ -1251,3 +1251,33 @@ Compose `config --quiet`(기본·worker profile), 전체 container smoke
 seccomp·image digest pinning·orchestrator 리소스 필드·signed deployment는
 별도 운영 gate이므로 총점은 **88/100**을 유지합니다
 ([container hardening readback](evidence/container-hardening-readback-2026-09-12.md)).
+
+## Current self-review — 2026-09-12 workspace export actor/time audit
+
+Export success now records a server-side `WorkspaceExportAuditEvent` containing only verified
+actor/role, safe request ID, schema version, and UTC generation time. The event is excluded from the
+downloaded workspace JSON, does not advance the workspace revision, and is removed by reset/purge.
+Audit persistence failure returns `account_export_audit_persistence_unavailable` typed `503` before
+any snapshot is returned or frontend Blob/download is created. SQLite persistence/reconstruction and
+the PostgreSQL workspace-scoped SQL/readiness contract are covered; live export-audit behavior on a
+managed PostgreSQL instance remains unverified.
+
+The adjacent guest-registration preview race was also fixed at the producer boundary: the explicit
+registration preview and the `authMe` effect can no longer issue duplicate previews concurrently.
+Current verification is API **512 passed / 8 warnings**, connected **109/109 passed (4.8m)**,
+fixture/mobile **39 passed + 3 skipped**, native **14 passed**, build **760 modules**, protected
+runtime **28**, Sites/service-worker/workspace-sync/release manifest **4/5/9/2 passed**. Total score
+remains **88/100** because audit operations/retention, large export streaming/compression, managed
+PostgreSQL export audit readback/failover, external providers, physical device accessibility, and
+signed production promotion remain separate acceptance gates ([export audit readback](evidence/export-audit-readback-2026-09-12.md), [guest preview readback](evidence/guest-transfer-preview-single-flight-readback-2026-09-12.md)).
+
+## Current self-review — 2026-09-13 perf baseline smoke
+
+`infra/perf-smoke.sh`와 stdlib 전용 측정기 `services/api/scripts/perf_smoke.py`로
+disposable production-shaped 스택의 첫 performance baseline을 확보했습니다.
+순차 read 120·동시 read 100·동시 write 24·same-key 동시 replay 8에서 오류 0,
+read p50 15.3ms/p95 204ms(동시), write p95 209ms, 같은 key 동시 요청이 단일
+mutation으로 수렴하고 `food_count`가 정확히 반영됐습니다. 단일 호스트 참조값이며
+운영 SLO·p99·지속 부하·OCR 동시 추론·reverse proxy 오버헤드는 별도
+acceptance이므로 총점은 **88/100**을 유지합니다
+([perf baseline readback](evidence/perf-baseline-readback-2026-09-13.md)).

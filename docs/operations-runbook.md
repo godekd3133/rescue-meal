@@ -111,5 +111,8 @@ RESCUE_MEAL_DATABASE_URL=postgresql://... sh infra/postgres/restore.sh \
 
 - `infra/container-smoke.sh`: disposable Compose 스택으로 migration ledger·
   `/ready`·게스트 인증·normalized inventory write·idempotency replay를 검증.
+- `infra/perf-smoke.sh`: 같은 스택에서 dashboard read·normalized write의
+  지연 분포와 동시성 수렴을 측정합니다. 배포 대상이 바뀌면 같은 스크립트로
+  baseline을 재측정해 `RESCUE_MEAL_PERF_SMOKE_MAX_P95_MS`를 조정합니다.
 - `evidence/container-smoke-readback-2026-09-11.md` 및 최신 readback 문서에
   실행 결과를 남깁니다.
