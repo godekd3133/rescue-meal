@@ -1,0 +1,32 @@
+{
+  "baseUrl": "http://127.0.0.1:4173/",
+  "viewport": {
+    "width": 393,
+    "height": 852
+  },
+  "browserViewport": {
+    "width": 1399,
+    "height": 1200
+  },
+  "deviceScaleFactor": 1,
+  "sourceState": "demo fixture home with seven foods",
+  "capturedStates": [
+    "01-home",
+    "02-receipt-intake",
+    "03-meal-plan",
+    "04-food-detail",
+    "05-account",
+    "06-notifications"
+  ],
+  "primaryInteractions": [
+    "open receipt intake",
+    "open meal plan",
+    "open food detail",
+    "open account",
+    "open notifications",
+    "dismiss each sheet with Escape"
+  ],
+  "consoleErrors": [],
+  "pageErrors": [],
+  "comparisonImage": "comparison-home-source-vs-implementation.png"
+}

@@ -130,9 +130,9 @@ GET /api/meal-plans/<plan id>/events → [saved, completed]
 ## 자동 검증
 
 ```text
-services/api: uv run pytest                         → 79 passed, 3 warnings
+services/api: uv run pytest                         → 130 passed, 5 warnings
 apps/web prototype E2E: 11 tests                    → 11 passed
-apps/web connected planner E2E                      → 2 passed
+apps/web connected planner/review E2E                → 5 passed
 apps/web mobile runtime: full 8 tests               → 8 passed
 apps/web npm run build                              → passed
 apps/web npm run test:sites                         → 4 passed
@@ -140,7 +140,7 @@ apps/web npm run check:runtime                      → protected files 28개 �
 infra: docker compose config                        → passed
 ```
 
-production build는 초기 client chunk `504.16KB`로 Vite `500KB` advisory warning이 남아 있습니다. `MealPlanSheet` lazy chunk는 `16.24KB`입니다. 이 warning은 build 실패가 아니며, 다음 bundle budget 작업 대상입니다.
+production build는 초기 client chunk `505.96KB`로 Vite `500KB` advisory warning이 남아 있습니다. `MealPlanSheet` lazy chunk는 `16.24KB`, `RecipeReviewPanel` lazy chunk는 `10.22KB`, `AccountSheet` lazy chunk는 `4.83KB`입니다. 이 warning은 build 실패가 아니며, 다음 bundle budget 작업 대상입니다.
 
 
 ## 아직 남은 상용화 작업

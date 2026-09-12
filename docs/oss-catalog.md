@@ -1,6 +1,6 @@
 # Rescue Meal OSS·공공 데이터 카탈로그
 
-기준일: 2026-09-01
+기준일: 2026-09-03
 
 이 문서는 MealRescue에 도움이 될 수 있는 오픈소스와 공개 데이터 후보를 분류합니다. 이름이 목록에 있다는 것은 채택·설치·성능 검증이 끝났다는 뜻이 아닙니다.
 
@@ -21,10 +21,10 @@
 
 ```text
 OCR 상품명
-→ 제품명 후보 검색
-→ 품목유형·제조사·용량으로 후보 재정렬
+→ /api/products/resolve-name/{product_name}
+→ 제품명·품목유형·제조사 후보 확인
 → 사용자가 제품 확인
-→ 제품 기준 보관·기간 참고값 저장
+→ 제품 기준 보관·기간 참고값을 review 문맥으로 저장
 ```
 
 주의:
@@ -34,18 +34,26 @@ OCR 상품명
 - `제조일로부터 12개월` 같은 기간 표현은 제조일이 없으면 날짜로 계산할 수 없습니다.
 - API 인증키와 이용신청이 필요합니다.
 - 실제 API 호출 제한과 현재 데이터 범위는 사용신청 후 다시 확인해야 합니다.
+- 현재 구현은 제품명 review endpoint와 receipt draft용 비동기 enrichment job·worker contract·review polling까지 연결되어 있습니다. 실제 MFDS key 호출과 최신 coverage benchmark는 운영 gate로 남아 있습니다.
 
 출처: [식품(첨가물)품목제조보고 Open API](https://www.foodsafetykorea.go.kr/api/openApiInfo.do?menu_grp=MENU_GRP31&menu_no=656&show_cnt=10&start_idx=1&svc_no=I1250&svc_type_cd=API_TYPE06)
 
 ### 식품안전나라 바코드연계제품정보 — `C005`
 
-바코드, 제품명, 식품유형, 제조사명, 소비기한 필드를 함께 제공하는 API 후보입니다.
+바코드, 제품명, 식품유형, 제조사명, 소비기한 필드를 함께 제공하는 한국 공공 API입니다. MealRescue에는 opt-in `MfdsC005Resolver`로 연결해 제품 후보와 `POG_DAYCNT` 참고 문구를 반환합니다.
 
 하지만 공식 안내에 따르면 대한상공회의소 유통물류진흥원 정보가 2018년 이후 최신화 중단된 상태입니다. 따라서 최신 상품의 primary source로 사용하지 않고, 다음 용도로만 둡니다.
 
 - 오래된 상품 fixture 확인
-- 바코드·제품명 mapping 구조 연구
+- 바코드·제품명 mapping 후보
+- 제품 기준 소비기한·보관 문구의 참고값
 - I1250 또는 라벨 OCR 결과와의 비교
+
+구현 경계:
+
+- `source_freshness=legacy`를 붙이고 최신 상품의 primary source로 승격하지 않습니다.
+- `POG_DAYCNT`는 개별 팩에 인쇄된 날짜가 아니므로 `DateAssertion`으로 만들지 않습니다.
+- 응답은 바코드·제품명·제조사·식품유형·제품 기준 기간 문구·명시적 보관 힌트만 후보로 보존합니다.
 
 출처: [바코드연계제품정보 C005](https://foodsafetykorea.go.kr/api/openApiInfo.do?svc_no=C005)
 
@@ -69,7 +77,29 @@ COOKRCP01 레시피
 
 ## 2. 문서·영수증·라벨 처리
 
-### Docling — 1차 실험 후보
+### pypdf — 전자 영수증 text-layer 경로에 채택
+
+pypdf는 Python file-like stream에서 PDF를 읽고 페이지별 텍스트를 추출할 수 있는
+오픈소스 라이브러리입니다. [pypdf PdfReader API](https://pypdf.readthedocs.io/en/stable/modules/PdfReader.html)
+
+MealRescue에서는 먼저 전자 영수증처럼 PDF 안에 텍스트가 포함된 입력에만 사용합니다.
+추출 text는 기존 receipt parser의 review draft로 연결하지만, pypdf text position을
+이미지 bbox처럼 취급하지 않습니다. 이미지로만 된 PDF는 pypdfium2 bounded render
+경로로 넘기고, 암호화 PDF나 renderer quota 초과는 자동 상품 추정 없이 명시적으로
+중단합니다.
+
+### pypdfium2 — scan PDF bounded render 경로에 채택
+
+pypdfium2는 PDFium 기반으로 bytes/stream에서 PDF를 열고 페이지를
+`render(scale=...)`한 뒤 PIL 이미지로 변환할 수 있는 렌더링 adapter입니다.
+[pypdfium2 공식 저장소](https://github.com/pypdfium2-team/pypdfium2)
+
+MealRescue에서는 최대 3쪽·scale 2로만 렌더링해 이미지 전용 PDF를 기존
+PaddleOCR adapter에 전달합니다. pypdfium2 자체와 PDFium의 배포 라이선스 및
+번들 dependency license는 실제 배포 artifact에서 다시 확인해야 합니다.
+렌더링된 page-local bbox는 원본 multi-page PDF overlay로 승격하지 않습니다.
+
+### Docling — PDF layout 고도화 후보
 
 Docling은 PDF·Office·이미지 등을 구조화된 Markdown·JSON으로 변환하고, PDF layout·table·reading order·OCR을 다루는 오픈소스 문서 처리 도구입니다. [Docling 공식 사이트](https://docling.org/)
 
@@ -178,7 +208,7 @@ MealRescue가 이미 PostgreSQL을 사용한다면 다음을 한 DB에서 처리
 
 ## 5. 로컬 AI와 구조화된 출력
 
-### Ollama Structured Outputs — 채택 후보
+### Ollama Structured Outputs — optional provider contract 구현
 
 Ollama는 JSON Schema를 이용해 모델 응답 구조를 제한하는 기능을 제공합니다. [Ollama Structured Outputs](https://docs.ollama.com/capabilities/structured-outputs)
 
@@ -189,6 +219,14 @@ MealRescue에서의 용도:
 - 날짜 필드명 분류
 - recipe ingredient canonicalization 후보
 - `requires_user_confirmation` 생성
+
+현재 구현은 이 후보를 무조건적인 자동 판정기로 사용하지 않습니다. `rules`가
+기본 provider이고, `RESCUE_MEAL_INFERENCE_PROVIDER=ollama`일 때만 규칙 미매칭
+priority 요청을 Ollama `/api/chat`으로 보냅니다. Pydantic schema 재검증·bounded
+timeout·response size 제한·abstain·review-only response를 적용하며, printed
+date/consumption date/safe-to-eat는 모델 schema에 넣지 않습니다. 실제 모델을
+운영에 켜기 전에는 식품 category별 annotation benchmark와 source review가
+필요합니다.
 
 필수 경계:
 
@@ -267,6 +305,8 @@ FoodData Central API는 식품·브랜드 식품의 영양 데이터를 애플�
 ```text
 Grocy
 PaddleOCR
+pypdf (text-layer electronic receipt)
+pypdfium2 (bounded scan-PDF render)
 ZXing Browser
 GS1 Barcode Syntax Engine
 식품안전나라 I1250 공공 API
@@ -317,4 +357,3 @@ Qdrant와 pgvector의 동시 사용
 - 학습·평가 데이터 재배포 가능 여부
 
 공공 API가 공개되어 있다는 사실과 개별 제품의 소비기한을 보장한다는 사실은 다릅니다. 외부 데이터가 반환한 제품 기준 기간도 `source_reference`와 `retrieved_at`을 보존하고, 실제 포장 날짜와 분리합니다.
-

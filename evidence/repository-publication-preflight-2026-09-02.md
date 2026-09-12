@@ -1,5 +1,7 @@
 # Repository publication preflight — 2026-09-02
 
+> 이 문서는 notification center·InventoryRepository vertical slice를 추가하기 전의 publication snapshot입니다. 최신 전체 수치와 현재 범위는 [build status](../docs/build-status-2026-09-01.md)와 [inventory authority readback](inventory-authority-readback-2026-09-02.md), [notification readback](notification-readback-2026-09-02.md)을 기준으로 합니다.
+
 ## 목적
 
 GitHub `godekd3133/rescue-meal`에 `main`을 게시하기 직전에 현재 코드·문서·fixture·검증 경계를 다시 확인한 결과입니다. 로컬 DB와 실행 cache는 삭제하거나 이동하지 않았으며, Git ignore 규칙으로 원격 source set에서 제외했습니다.
@@ -50,4 +52,4 @@ GitHub `godekd3133/rescue-meal`에 `main`을 게시하기 직전에 현재 코�
 
 1. CI에서도 Playwright에 프로젝트 전용 포트와 API CORS origin을 명시해 다른 로컬 서버 재사용을 방지합니다.
 2. Docker daemon이 준비되면 Compose startup, PostgreSQL migration, workspace A/B readback, pgvector extension을 확인합니다.
-3. 실제 기기·운영 OCR·Grocy stock readback·OAuth/계정 복구는 별도 acceptance lane으로 닫습니다.
+3. 실제 기기·운영 OCR·Grocy stock readback·OAuth·실제 password-reset email delivery는 별도 acceptance lane으로 닫습니다.

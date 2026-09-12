@@ -15,6 +15,12 @@ PaddleOCR worker health
 
 이 결과는 현재 Mac arm64 환경에서의 기준선입니다. 모든 한국 마트 영수증에 대한 정확도나 자동 입고 안전성을 증명하지 않습니다.
 
+> 이 문서는 2026-09-01의 historical baseline이며 당시 detection model은
+> `PP-OCRv5_server_det`였습니다. 2026-09-05 현재 worker는 실제 사진 처리 시 메모리
+> 경계를 확인한 뒤 `PP-OCRv5_mobile_det`으로 변경되었습니다. 최신 runtime/readback은
+> [OCR worker readiness readback](ocr-worker-readiness-readback-2026-09-05.md)을
+> 기준으로 합니다.
+
 ## 실행 환경
 
 - Python: 3.12.2 arm64
