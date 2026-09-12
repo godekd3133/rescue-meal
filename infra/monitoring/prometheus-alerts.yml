@@ -1,0 +1,127 @@
+# Rescue Meal Prometheus alert rules.
+#
+# Rules only use the low-cardinality metrics documented in
+# docs/observability.md: rescue_meal_http_requests_total,
+# rescue_meal_http_request_duration_seconds, rescue_meal_http_requests_in_flight,
+# rescue_meal_product_* and rescue_meal_notification_worker_*. No user data,
+# workspace ID, token, or OCR payload can appear in alert labels because the
+# source metrics do not carry them.
+#
+# Validate with: promtool check rules infra/monitoring/prometheus-alerts.yml
+
+groups:
+  - name: rescue-meal-api
+    rules:
+      - alert: RescueMealAPIDown
+        expr: up{job="rescue-meal-api"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: Rescue Meal API target is down
+          description: Prometheus cannot scrape /api/internal/metrics for 2 minutes.
+
+      - alert: RescueMealAPIHigh5xxRate
+        expr: |
+          sum(rate(rescue_meal_http_requests_total{status=~"5.."}[5m]))
+            / sum(rate(rescue_meal_http_requests_total[5m])) > 0.05
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: API 5xx ratio above 5% for 10 minutes
+          description: More than 5% of API requests are failing with server errors.
+
+      - alert: RescueMealAPIElevated5xxRate
+        expr: |
+          sum(rate(rescue_meal_http_requests_total{status=~"5.."}[15m]))
+            / sum(rate(rescue_meal_http_requests_total[15m])) > 0.01
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: API 5xx ratio above 1% for 15 minutes
+          description: Sustained elevated server-error ratio; check typed 503/429 envelopes before treating as an outage.
+
+      - alert: RescueMealAPISlowP95
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(rescue_meal_http_request_duration_seconds_bucket[10m])) by (le)
+          ) > 2
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: API p95 latency above 2s for 15 minutes
+          description: Request-duration histogram p95 exceeds the local perf baseline by an order of magnitude.
+
+      - alert: RescueMealInFlightSaturated
+        expr: rescue_meal_http_requests_in_flight > 48
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: API in-flight requests approaching pool waiting bound
+          description: In-flight requests exceed 48 sustained; the default bounded waiting room is 64 per process.
+
+  - name: rescue-meal-integrations
+    rules:
+      - alert: RescueMealProductProviderDegraded
+        expr: |
+          sum(increase(rescue_meal_product_provider_results{status="unavailable"}[30m])) by (provider)
+            / sum(increase(rescue_meal_product_provider_calls[30m])) by (provider) > 0.5
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: Over half of {{ $labels.provider }} calls unavailable for 30 minutes
+          description: External product provider is mostly failing; cache and single-flight still shield the request path.
+
+      - alert: RescueMealProductProviderRateLimited
+        expr: sum(increase(rescue_meal_product_provider_rate_limited[15m])) > 0
+        for: 15m
+        labels:
+          severity: info
+        annotations:
+          summary: Product provider calls are being rate limited
+          description: The bounded provider rate limiter is denying calls; review quota and cache TTLs.
+
+      - alert: RescueMealSingleFlightTimeouts
+        expr: sum(increase(rescue_meal_product_single_flight_events{outcome="timeout"}[15m])) > 0
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: Product lookup single-flight waits are timing out
+          description: Callers waited past the single-flight wait bound; provider latency or a stuck lease is likely.
+
+  - name: rescue-meal-notifications
+    rules:
+      - alert: RescueMealNotificationWorkerSilent
+        expr: absent(rescue_meal_notification_worker_ticks_total)
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: Notification worker metrics absent for 15 minutes
+          description: The notifications profile is expected to report worker ticks; silence means the worker is down or unscrapeable.
+
+      - alert: RescueMealNotificationDeadLetter
+        expr: increase(rescue_meal_notification_worker_dead_lettered_total[1h]) > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Push deliveries moved to dead letter in the last hour
+          description: A notification exhausted bounded retries; affected users will not receive that delivery.
+
+      - alert: RescueMealNotificationRetryStorm
+        expr: |
+          sum(increase(rescue_meal_notification_worker_retried_total[30m]))
+            / sum(increase(rescue_meal_notification_worker_processed_total[30m])) > 0.5
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: Over half of push deliveries are being retried
+          description: Provider acceptance is degraded; check VAPID configuration and provider reachability.

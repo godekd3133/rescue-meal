@@ -1281,3 +1281,15 @@ mutation으로 수렴하고 `food_count`가 정확히 반영됐습니다. 단일
 운영 SLO·p99·지속 부하·OCR 동시 추론·reverse proxy 오버헤드는 별도
 acceptance이므로 총점은 **88/100**을 유지합니다
 ([perf baseline readback](evidence/perf-baseline-readback-2026-09-13.md)).
+
+## Current self-review — 2026-09-13 security scan/monitoring baseline
+
+Trivy filesystem·이미지 취약점 스캔을 `.github/workflows/security-scan.yml`로
+추가해 CRITICAL/HIGH(unfixed 제외)에서 fail하고 SARIF를 Security 탭에 올리며,
+주간 스케줄로 신규 CVE를 표면화합니다. `infra/monitoring/prometheus-alerts.yml`은
+문서화된 low-cardinality metric만 쓰는 11개 규칙(API down·5xx·p95·in-flight·
+provider 열화·notification dead letter/침묵)을 정의합니다. 두 파일의 YAML과
+모든 metric 이름을 소스 `prometheus_text()`와 대조해 확인했지만, 실제 Actions
+실행·Prometheus scrape·alert 발화·첫 CVE triage는 별도 acceptance이므로
+총점은 **88/100**을 유지합니다
+([security/monitoring baseline readback](evidence/security-monitoring-baseline-readback-2026-09-13.md)).

@@ -96,6 +96,10 @@ RESCUE_MEAL_DATABASE_URL=postgresql://... sh infra/postgres/restore.sh \
 - Metrics: `GET /api/internal/metrics` (Bearer `RESCUE_MEAL_OBSERVABILITY_TOKEN`).
   low-cardinality counter/histogram만 노출되고 workspace·token·OCR 원문은
   label에 들어가지 않습니다. 자세한 scrape 계약은 `observability.md`.
+- Alert rules: `infra/monitoring/prometheus-alerts.yml`은 API down·5xx 비율·
+  p95 지연·in-flight 포화·외부 provider 열화·notification worker 침묵/dead
+  letter를 실제 metric 이름으로 정의합니다. `promtool check rules`로 검증하고,
+  임계값은 `perf-smoke` baseline과 배포 대상 관측치로 조정합니다.
 - Client error telemetry: `POST /api/client-errors`는 제한된 field만 받고
   secure mode에서 IP bucket rate limit을 적용합니다. 외부 collector 연결은
   `security-baseline.md`의 운영 요구사항을 따릅니다.
