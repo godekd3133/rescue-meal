@@ -2,7 +2,7 @@
 # aarch64. Keep the worker image's target explicit so `docker build .` on an
 # Apple Silicon host does not resolve an unusable ARM virtualenv by accident.
 ARG OCR_WORKER_PLATFORM=linux/amd64
-FROM --platform=${OCR_WORKER_PLATFORM} python:3.12-slim
+FROM --platform=${OCR_WORKER_PLATFORM} python:3.14-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
