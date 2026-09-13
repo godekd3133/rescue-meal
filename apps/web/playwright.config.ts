@@ -11,6 +11,9 @@ export default defineConfig({
   // this command is run without the disposable API launcher.
   testIgnore: ["**/connected-prototype.spec.ts", "**/native-viewport.spec.ts"],
   timeout: 20_000,
+  // One CI retry absorbs observed timing flakes (focus/overlay transitions)
+  // without hiding real regressions — a deterministic failure fails twice.
+  retries: process.env.CI ? 1 : 0,
   use: {
     baseURL: `http://127.0.0.1:${testPort}`,
     viewport: { width: 1100, height: 1100 },

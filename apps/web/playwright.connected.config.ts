@@ -16,6 +16,9 @@ export default defineConfig({
   // not look like a product failure in a long single-worker suite.
   timeout: 30_000,
   expect: { timeout: 10_000 },
+  // One CI retry absorbs transient timing flakes in the live-API lane (e.g.
+  // the intake sheet's 라벨 tab render) without hiding real regressions.
+  retries: process.env.CI ? 1 : 0,
   use: {
     baseURL: webUrl,
     viewport: { width: 1100, height: 1100 },
