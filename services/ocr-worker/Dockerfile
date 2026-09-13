@@ -8,7 +8,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy \
-    PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK=True
+    PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK=True \
+    UV_NO_CACHE=1
 
 WORKDIR /app
 
@@ -20,8 +21,16 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 COPY pyproject.toml uv.lock ./
+# Runtime needs only the venv: drop pip/setuptools (fixable CVE surface) and
+# uv's caches once dependencies are installed.
 RUN pip install --no-cache-dir uv \
-    && uv sync --frozen --no-dev
+    && uv sync --frozen --no-dev \
+    && pip uninstall -y pip setuptools \
+    && rm -rf /usr/local/lib/python3.12/site-packages/pip* \
+       /usr/local/lib/python3.12/site-packages/setuptools* \
+       /usr/local/lib/python3.12/site-packages/pkg_resources \
+       /usr/local/lib/python3.12/site-packages/_distutils_hack \
+       /tmp/uv-*
 
 COPY app ./app
 
