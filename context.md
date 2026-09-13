@@ -664,3 +664,13 @@ Readback: [image remediation](evidence/image-vuln-remediation-readback-2026-09-1
   호환 업데이트입니다.
 
 Readback: [ci green](evidence/ci-green-readback-2026-09-13.md).
+
+### Known CI flakes (2026-09-13)
+
+- `mobile-runtime.spec.ts` keyboard/footer drag: footer drag 후 keyboard
+  `data-visible` 해제가 CI runner에서 5초 안에 안 끝난 flake 1건
+  (`0f8a7ff`). docs-only 커밋이라 제품 회귀 아님. 재발하면 drag→dismiss
+  대기 계약을 확인할 것.
+- postgres-live smoke의 `Lifecycle close left PostgreSQL connections or
+  idle transactions`: 전체 검증 통과 후 종료 시점의 pool drain 타이밍에
+  의한 flake 1건 (`0f8a7ff`). 재발하면 종료 grace/retry를 검토할 것.

@@ -45,4 +45,8 @@ conversion (`403ac71`).
   github-actions bumps are ignored in `.github/dependabot.yml`.
 - Remaining open dependabot PRs are legitimate semver-compatible updates.
 - DR drill workflow dispatched manually (run 34758743419) — first CI
-  execution of `infra/dr-drill.sh`.
+  execution of `infra/dr-drill.sh`, result success.
+- Docs commit `0f8a7ff` surfaced two flakes (docs-only diff vs green
+  `403ac71`), both green on rerun: keyboard/footer drag timing in
+  `mobile-runtime.spec.ts`, and the postgres-live `Lifecycle close` pool-drain
+  check. Recorded in context.md for recurrence tracking.
