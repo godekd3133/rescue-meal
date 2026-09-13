@@ -727,3 +727,7 @@ Readback: [ci green](evidence/ci-green-readback-2026-09-13.md).
   실패 시 `test-results/` artifact 업로드(14일) — 이전 flake가
   error-context 없어 원인 미확정이었던 갭 해소. OCR worker job에도
   `--cov-fail-under=70` 추가(baseline 75%).
+- 커버리지 게이트를 line→branch coverage로 강화: API `--cov-branch
+  --cov-fail-under=77`(측정 81%), OCR `--cov-fail-under=65`(측정 71%).
+  partial branch(한쪽 분기만 실행된 if)까지 잡아냄. native-viewport
+  lane에도 같은 CI retry 추가. `d663080` CI 통과 확인.
