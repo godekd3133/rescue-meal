@@ -92,6 +92,15 @@ jobs:
       - name: Test service worker contract
         run: npm run test:service-worker
 
+      - name: Upload Playwright failure context
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-test-results-${{ github.run_id }}
+          path: apps/web/test-results/
+          if-no-files-found: ignore
+          retention-days: 14
+
   connected-e2e:
     name: Connected browser E2E
     runs-on: ubuntu-latest
@@ -124,6 +133,15 @@ jobs:
 
       - name: Run connected E2E with disposable API workspace
         run: npm run test:connected
+
+      - name: Upload Playwright failure context
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: connected-e2e-test-results-${{ github.run_id }}
+          path: apps/web/test-results/
+          if-no-files-found: ignore
+          retention-days: 14
 
   api:
     name: FastAPI tests
