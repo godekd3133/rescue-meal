@@ -703,3 +703,21 @@ Readback: [ci green](evidence/ci-green-readback-2026-09-13.md).
 - `.github/workflows/perf-smoke.yml` 추가 — `infra/perf-smoke.sh`를 주간
   화요일 실행해 latency/throughput/idempotency baseline 회귀를 표면화.
   dr-drill과 같은 패턴 (workflow_dispatch 가능).
+
+## 2026-09-14 품질 게이트 3종 (a11y·bundle·coverage)
+
+- `apps/web/tests/accessibility.spec.ts`: axe-core로 홈/식품 상세/계정·
+  알림/영수증 검토 4개 화면 감사. `.device-screen` 스코프. Radix 시트
+  오픈의 `aria-hidden`→포커스 이동 과도기를 피하려고 `openSheet()`가
+  `.bottom-sheet` 안 포커스 안착을 폴링 + 250ms settle. 기존
+  `test:runtime` step이 자동 포함 — 별도 CI wiring 불필요.
+- `apps/web/scripts/check-bundle-size.mjs` + `npm run check:bundle`:
+  production `dist/client/assets` 예산 (entry 420KB·chunk 500KB·JS 총
+  1500KB·CSS 260KB, baseline 대비 ~15–25% headroom). Verify web job에
+  "Check bundle size budget" step 추가.
+- API job: `pytest-cov` 추가, `--cov=app --cov-fail-under=80`
+  (측정 baseline 84%).
+- CI(run 34770919629) 전체 초록. Connected E2E flake 1건 관측:
+  `connected label review keeps an ambiguous date and storage
+  unconfirmed` — intake 시트 오픈 후 `라벨` 탭 미등장으로 click 타임아웃
+  (30s). rerun 통과. 재발 시 시트 오픈 트리거 경로 조사할 것.

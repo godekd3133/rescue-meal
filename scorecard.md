@@ -1329,3 +1329,21 @@ trivy-action 태그·SARIF severity 게이팅·upload category 중복, CP-SAT
 managed DB 백업·실 배포 타겟·실기기·외부 provider 등 잔여 외부 게이트는
 그대로이므로 총점은 **88/100**을 유지합니다
 ([ci green readback](evidence/ci-green-readback-2026-09-13.md)).
+
+## Current self-review — 2026-09-14 accessibility·bundle·coverage quality gates
+
+자동 접근성 감사·번들 크기 예산·커버리지 하한 세 게이트를 추가했습니다.
+`accessibility.spec.ts`가 홈·식품 상세·계정/알림·영수증 검토 4개 화면을
+axe로 감사하고(기존 `test:runtime` lane이 CI에서 자동 포함), Radix가 시트
+오픈 시 `aria-hidden`을 먼저 적용하고 포커스를 옮기는 과도기 프레임은
+포커스 안착 폴링+settle로 걸러 flake와 실버그를 구분합니다. 로컬 전체
+suite 43 passed. `check:bundle`은 production build 뒤 entry 420KB/
+chunk 500KB/JS 총 1500KB/CSS 260KB 예산을 검증하고(현 baseline 대비
+15–25% headroom), API job은 `--cov=app --cov-fail-under=80`으로 측정된
+84% baseline 아래 4% 하한을 둡니다.
+
+CI(run 34770919629)에서 새 게이트들이 실제로 동작함을 확인했고, Connected
+E2E의 `라벨` 탭 클릭 타임아웃 1건은 rerun으로 통과해 flake로 기록합니다.
+실기기 VoiceOver/TalkBack·branch coverage·OCR worker coverage는 잔여
+acceptance이므로 총점은 **88/100**을 유지합니다
+([quality gates readback](evidence/quality-gates-readback-2026-09-14.md)).
