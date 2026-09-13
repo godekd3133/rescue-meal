@@ -1,4 +1,4 @@
-FROM python:3.12-slim
+FROM python:3.14-slim
 
 # Apply Debian security updates: the pinned base tag can lag behind patched
 # packages, and the weekly image scan fails on fixable CRITICAL/HIGH findings.
