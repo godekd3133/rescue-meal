@@ -13623,3 +13623,29 @@ html {
     font-size: 0.5rem;
   }
 }
+
+/* User-defined storage locations can be much longer than the fixture labels.
+   Keep the queue metadata row single-line and let both labels yield space
+   without changing the compact card height or document width. */
+.app-shell-preview .food-meta-line,
+.app-shell-native .food-meta-line {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.app-shell-preview .storage-pill,
+.app-shell-native .storage-pill {
+  min-width: 0;
+  max-width: 46%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-shell-preview .date-source,
+.app-shell-native .date-source {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

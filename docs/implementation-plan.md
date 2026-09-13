@@ -569,3 +569,4 @@ Rescue Queue / Meal Plan / ntfy
 ```
 
 각 단계에는 source version, model version, rule version, input hash, output hash가 연결되어야 합니다. 실제 음식물 폐기량 감소나 장기 사용률은 별도 연구 범위이며, 학기 프로젝트의 로컬 테스트 결과만으로 주장하지 않습니다.
+| W9.134 | Queue metadata long-label safety | synthetic native `320×740` queue state with a long custom storage location and date provenance reproduced the unbounded storage-pill risk; app-owned `.food-meta-line`, `.storage-pill`, and `.date-source` now enforce single-line ellipsis while preserving metadata geometry `x=62..244`, document/body width `320px`, native **14 passed**, and build **760 modules**; physical font rasterization/localized extreme strings remain separate acceptance |

@@ -460,4 +460,12 @@ The selected Emerald Atelier direction now has separate preview-simulator and na
 
 Readback: `evidence/food-detail-first-fold-compact-readback-2026-09-12.md`.
 
+## Current queue metadata long-label pass — 2026-09-13
+
+- A synthetic `320×740` native state with `우리집 김치 전용 냉장고 왼쪽 선반` and `사용자가 포장지에서 확인한 날짜` reproduced the previously unbounded storage pill risk.
+- The app-owned queue metadata now keeps the storage pill and date provenance on one line with ellipsis: storage `x=62..145.719`, date `x=151.719..244`, metadata `x=62..244`; document/body width remain `320px`.
+- Native full suite **14 passed**, build **760 modules**, protected runtime **28**, and `git diff --check` passed. This is a geometry regression readback; physical font rasterization and localized extreme strings remain separate gates.
+
+Readback: current CSS at `apps/web/src/prototype.css:13627` and current native geometry probe.
+
 final result: passed

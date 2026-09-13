@@ -122,3 +122,11 @@ regression passed **1**.
 
 Readbacks: [export audit](export-audit-readback-2026-09-12.md), [guest transfer preview
 single-flight](guest-transfer-preview-single-flight-readback-2026-09-12.md).
+
+## Latest UI continuation — queue metadata long-label safety — 2026-09-13
+
+- A synthetic native `320×740` queue state with a long user storage location and date provenance reproduced the risk of an unbounded storage pill overlapping the date source.
+- `apps/web/src/prototype.css` now bounds `.food-meta-line`, `.storage-pill`, and `.date-source` with single-line ellipsis. Current geometry is storage `x=62..145.719`, date `x=151.719..244`, metadata `x=62..244`, document/body width `320px`.
+- Native full suite **14 passed**, build **760 Vite modules**, protected runtime **28**, and `git diff --check` passed. Physical localized font rasterization and extreme string acceptance remain separate.
+
+Readback: [design QA](../design-qa.md#current-queue-metadata-long-label-pass-2026-09-13).
