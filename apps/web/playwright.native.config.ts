@@ -7,6 +7,8 @@ export default defineConfig({
   testDir: "./tests",
   testMatch: "native-viewport.spec.ts",
   timeout: 20_000,
+  // Same CI-only retry policy as the fixture/connected lanes.
+  retries: process.env.CI ? 1 : 0,
   use: {
     baseURL,
     viewport: { width: 320, height: 740 },
