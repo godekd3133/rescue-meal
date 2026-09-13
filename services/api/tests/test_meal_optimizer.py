@@ -25,10 +25,13 @@ def test_cp_sat_selects_distinct_plans_without_exceeding_lot_capacity() -> None:
     assert result.engine == "or-tools-cp-sat"
     assert len(result.plans) == 3
     assert len({plan.recipe_id for plan in result.plans}) == 3
-    day_two_mushroom = next(
-        ingredient for ingredient in result.plans[1].ingredients if ingredient.canonical_name == "맛타리버섯"
-    )
-    assert day_two_mushroom.available_quantity == 1.0
+    mushroom_availability = [
+        ingredient.available_quantity
+        for plan in result.plans
+        for ingredient in plan.ingredients
+        if ingredient.canonical_name == "맛타리버섯"
+    ]
+    assert mushroom_availability == [2.0, 1.0]
 
     capacities = {food.id: food.quantity for food in _seed_foods()}
     usage: dict[str, float] = {}

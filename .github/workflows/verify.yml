@@ -419,11 +419,11 @@ jobs:
             | jq --exit-status '(. | length == 2) and (.[0].action == "removed") and (.[0].after == null)'
 
           curl --fail --silent --show-error --header "$auth_header" \
-            "http://127.0.0.1:8000/api/inventory/search?q=CI%20%ED%85%8C%EC%8A%A4%ED%8A%B8&storage_location_id=$storage_location_id&offset=0&limit=10" \
-            | jq --exit-status --arg storage_location_id "$storage_location_id" '(.total == 1) and (.items[0].canonical_name == "CI 테스트 식품") and (.items[0].storage_location_id == $storage_location_id) and (.storage_location_id == $storage_location_id) and (.has_more == false)'
+            "http://127.0.0.1:8000/api/inventory/search?q=%EC%82%AC%EC%9A%A9%EC%9E%90&storage_location_id=$storage_location_id&offset=0&limit=10" \
+            | jq --exit-status --arg storage_location_id "$storage_location_id" '(.total == 1) and (.items[0].canonical_name == "CI 사용자 확인 식품") and (.items[0].storage_location_id == $storage_location_id) and (.storage_location_id == $storage_location_id) and (.has_more == false)'
 
           curl --fail --silent --show-error --header "$auth_header" http://127.0.0.1:8000/api/dashboard > /tmp/rescue-meal-live-dashboard-after.json
-          jq --exit-status --arg storage_location_id "$storage_location_id" '(.food_count == 8) and ((.storage_locations | map(select(.id == $storage_location_id and .name == "CI 냉장 선반")) | length) == 1) and ((.inventory | map(select(.canonical_name == "CI 테스트 식품" and .storage_location_id == $storage_location_id and .product_provenance.source == "local_fixture")) | length) == 1)' /tmp/rescue-meal-live-dashboard-after.json
+          jq --exit-status --arg storage_location_id "$storage_location_id" '(.food_count == 8) and ((.storage_locations | map(select(.id == $storage_location_id and .name == "CI 냉장 선반")) | length) == 1) and ((.inventory | map(select(.canonical_name == "CI 사용자 확인 식품" and .storage_location_id == $storage_location_id and .product_provenance == null)) | length) == 1)' /tmp/rescue-meal-live-dashboard-after.json
 
           backup_file=/tmp/rescue-meal-live-backup.dump
           RESCUE_MEAL_DATABASE_URL=postgresql://rescue_meal:ci-postgres-password@127.0.0.1:5432/rescue_meal \
