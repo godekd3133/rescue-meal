@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 import os
 import sys
+import time
 from uuid import uuid4
 
 SERVICE_ROOT = Path(__file__).resolve().parents[1]
@@ -103,7 +104,14 @@ def main() -> int:
             router.purge_workspace(workspace_id)
         router.close()
         auth_repository.close()
+        # Server-side backends disappear asynchronously after sockets close, and
+        # a previously killed API process can leave rows briefly. Poll a short
+        # drain window instead of asserting zero on the first snapshot.
+        drain_deadline = time.monotonic() + 15
         remaining_connections, idle_in_transaction = _connection_snapshot(inspector)
+        while (remaining_connections != 0 or idle_in_transaction) and time.monotonic() < drain_deadline:
+            time.sleep(0.25)
+            remaining_connections, idle_in_transaction = _connection_snapshot(inspector)
         if remaining_connections != 0 or idle_in_transaction:
             print("Lifecycle close left PostgreSQL connections or idle transactions.")
             return 1
