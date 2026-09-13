@@ -22,11 +22,23 @@ updates:
     directory: /services/api
     schedule:
       interval: weekly
+    # Base image major bumps must be deliberate: they are bounded by each
+    # service's requires-python contract and the frozen uv.lock toolchain.
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: docker
     directory: /services/ocr-worker
     schedule:
       interval: weekly
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+    # Action majors need migration review, not an always-red weekly PR.
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]

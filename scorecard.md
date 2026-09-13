@@ -1303,3 +1303,14 @@ provider 열화·notification dead letter/침묵)을 정의합니다. 두 파일
 managed failover RPO/RTO·실제 cutover 리허설은 여전히 외부 acceptance이므로
 총점은 **88/100**을 유지합니다
 ([dr drill readback](evidence/dr-drill-readback-2026-09-13.md)).
+
+## Current self-review — 2026-09-13 image vulnerability remediation
+
+보안 스캔 workflow의 image-scan job을 로컬에서 재현해 실제 CVE를 찾아
+수정했습니다. `python:3.12-slim` 최신 태그조차 패치 전 debian 13.6 패키지를
+포함해 API 이미지에서 fix 가능 CRITICAL 3 + HIGH 9(perl-base·gzip·
+libpcre2·libsqlite3)가 나왔고, 두 Dockerfile에 `apt-get upgrade` 보안
+레이어를 추가해 api/ocr-worker 이미지 모두 **0건**으로 정리했습니다.
+lockfile 스캔은 0건. 단 Actions runner가 계정 quota로 프로비저닝되지 않아
+CI에서의 실제 스캔 통과는 미검증이며 총점은 **88/100**을 유지합니다
+([image remediation readback](evidence/image-vuln-remediation-readback-2026-09-13.md)).

@@ -627,3 +627,15 @@ Readback: [perf baseline](evidence/perf-baseline-readback-2026-09-13.md).
   실제 cutover 리허설은 별도 acceptance입니다.
 
 Readback: [dr drill](evidence/dr-drill-readback-2026-09-13.md).
+
+## 2026-09-13 image vulnerability remediation + CI blocker
+
+- `python:3.12-slim` 베이스가 패치 전 debian 패키지를 포함해 API 이미지에서
+  fix 가능 CRITICAL 3 + HIGH 9를 trivy 로컬 스캔으로 발견, 두 Dockerfile에
+  `apt-get upgrade` 레이어를 추가해 두 이미지 모두 0건으로 정리했습니다.
+- push 후 모든 Actions run이 runner 미할당으로 즉시 실패했습니다(전 워크플로우,
+  dependabot PR 포함, rerun 동일). 계정 Actions quota/결제 수준 문제로 추정 —
+  마지막 성공 run은 9/1입니다. private repo의 9월 사용량이 macOS 분 10배 과금
+  포함 2,000분 초과로 보이며 계정 소유자 확인이 필요합니다.
+
+Readback: [image remediation](evidence/image-vuln-remediation-readback-2026-09-13.md).

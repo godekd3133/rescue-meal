@@ -1,5 +1,11 @@
 FROM python:3.12-slim
 
+# Apply Debian security updates: the pinned base tag can lag behind patched
+# packages, and the weekly image scan fails on fixable CRITICAL/HIGH findings.
+RUN apt-get update \
+    && apt-get upgrade -y --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/*
+
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     UV_COMPILE_BYTECODE=1 \
