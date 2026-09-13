@@ -721,3 +721,9 @@ Readback: [ci green](evidence/ci-green-readback-2026-09-13.md).
   `connected label review keeps an ambiguous date and storage
   unconfirmed` — intake 시트 오픈 후 `라벨` 탭 미등장으로 click 타임아웃
   (30s). rerun 통과. 재발 시 시트 오픈 트리거 경로 조사할 것.
+- 후속 하드닝(같은 날): Playwright 양 lane에 CI 전용 `retries: 1` 추가 —
+  관측된 timing flake(라벨 탭 render, keyboard/footer drag)를 흡수하되
+  결정적 실패는 retry도 실패해 여전히 표면화. web/connected-e2e job에
+  실패 시 `test-results/` artifact 업로드(14일) — 이전 flake가
+  error-context 없어 원인 미확정이었던 갭 해소. OCR worker job에도
+  `--cov-fail-under=70` 추가(baseline 75%).
