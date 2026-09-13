@@ -674,3 +674,21 @@ Readback: [ci green](evidence/ci-green-readback-2026-09-13.md).
 - postgres-live smoke의 `Lifecycle close left PostgreSQL connections or
   idle transactions`: 전체 검증 통과 후 종료 시점의 pool drain 타이밍에
   의한 flake 1건 (`0f8a7ff`). 재발하면 종료 grace/retry를 검토할 것.
+
+## 2026-09-13 dependabot queue 정리 + playwright/react 호환 수정
+
+- `@dependabot rebase`로 8개 PR을 수정된 워크플로우로 재검증. 3개의 실제
+  문제를 찾아 수정했습니다:
+  - **PR #8** (playwright 1.63): `sheet-overlay` 클릭이 (8,8)에서
+    `<html>`에 가로채여 타임아웃 — 폰 스크린 라운드 코너 클립 안쪽 좌표를
+    가리키던 것. 오버레이 중앙·1/4 지점 클릭으로 수정해 push.
+  - **PR #10** (react 19.3): react만 올리고 react-dom 19.2.7 유지 → 앱
+    mount 실패로 suite 9분 행잉. react-dom/@types도 19.3.0으로 합쳐 push,
+    PR #12는 흡수로 닫음. 최종 조합 로컬 전체 spec 39 passed.
+  - **lifecycle drain flake**: `postgres_connection_lifecycle_smoke.py`가
+    close 직후 `pg_stat_activity`를 즉시 0으로 assert — killed API의
+    backend·pool 소켓 해제는 비동기라 레이스. 15초 drain 윈도우로 수정,
+    로컬 PG로 통과 확인.
+- **전부 머지 완료**: #5, #6, #7, #8, #9, #10, #11 squash-merge. #12는
+  #10에 흡수로 close. 열린 PR 0개. main `d8559f4` 기준 Verify/Security
+  초록, 최종 조합(react 19.3 + playwright 1.63 + pytest 9) 로컬 검증 완료.
