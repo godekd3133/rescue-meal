@@ -639,3 +639,28 @@ Readback: [dr drill](evidence/dr-drill-readback-2026-09-13.md).
   포함 2,000분 초과로 보이며 계정 소유자 확인이 필요합니다.
 
 Readback: [image remediation](evidence/image-vuln-remediation-readback-2026-09-13.md).
+
+## 2026-09-13 public 전환 + 첫 full-green CI
+
+- Repository를 public으로 전환해 private-repo Actions runner 미할당
+  블로커를 해소했습니다. 전체 git 이력 사전 secret 스캔은 깨끗했습니다.
+- main `403ac71`에서 **Verify·Security scan 전부 success** — public 전환
+  이후 노출된 실패를 순차 수정했습니다:
+  - trivy-action 존재하지 않는 태그 → `v0.36.0`
+  - sarif 모드가 `TRIVY_SEVERITY`를 해제해 MEDIUM fixable에도 fail →
+    `limit-severities-for-sarif: "true"` + Dockerfile의 pip·setuptools·
+    uv 캐시 제거로 이미지 전 severity 0건
+  - upload-sarif가 job당 tool/category 1회 제한 → `category: api-image`/
+    `ocr-worker-image` 부여
+  - `test_cp_sat_...` `StopIteration`: CP-SAT이 arm64/x86_64에서 같은
+    최적 recipe set을 day에 다르게 배정 → `plans[1]` 고정 대신 mushroom
+    lot 소진 시퀀스 `[2.0, 1.0]`를 전 plan에서 assert
+  - live PG smoke가 product-info PATCH(rename이 display_name까지 덮어씀)
+    이후 구 이름 검색을 기대하는 자기모순 → 신 이름 검색·assertion으로 수정
+- DR drill workflow를 `workflow_dispatch`로 첫 CI 실행해 **success** —
+  backup/restore 회귀 감시가 실제로 동작함을 확인했습니다.
+- dependabot: 계약 위반 python 3.14 PR(#3/#4)은 닫았고, actions major
+  bump(#1/#2)는 ignore 규칙으로 자동 정리됐습니다. 남은 PR은 정상 semver
+  호환 업데이트입니다.
+
+Readback: [ci green](evidence/ci-green-readback-2026-09-13.md).

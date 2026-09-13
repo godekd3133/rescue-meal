@@ -1314,3 +1314,18 @@ libpcre2·libsqlite3)가 나왔고, 두 Dockerfile에 `apt-get upgrade` 보안
 lockfile 스캔은 0건. 단 Actions runner가 계정 quota로 프로비저닝되지 않아
 CI에서의 실제 스캔 통과는 미검증이며 총점은 **88/100**을 유지합니다
 ([image remediation readback](evidence/image-vuln-remediation-readback-2026-09-13.md)).
+
+## Current self-review — 2026-09-13 public 전환 + 첫 full-green CI
+
+Repository public 전환으로 private-repo Actions runner 미할당 블로커를
+해소했고, 노출된 실패들을 수정해 main `403ac71`에서 **Verify·Security
+scan·DR drill(수동 dispatch) 전부 success**를 확인했습니다. 수정 내용:
+trivy-action 태그·SARIF severity 게이팅·upload category 중복, CP-SAT
+플랫폼별 최적해 day 배정 차이를 견디지 못하던 테스트, product-info rename
+후 구 이름을 기대하던 live smoke. Dockerfile은 pip·setuptools·uv 캐시까지
+제거해 이미지 전 severity 0건입니다.
+
+이전에 별도 acceptance로 남겼던 "실제 Actions 실행"은 이번에 검증됐으나,
+managed DB 백업·실 배포 타겟·실기기·외부 provider 등 잔여 외부 게이트는
+그대로이므로 총점은 **88/100**을 유지합니다
+([ci green readback](evidence/ci-green-readback-2026-09-13.md)).
