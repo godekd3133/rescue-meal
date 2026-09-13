@@ -692,3 +692,14 @@ Readback: [ci green](evidence/ci-green-readback-2026-09-13.md).
 - **전부 머지 완료**: #5, #6, #7, #8, #9, #10, #11 squash-merge. #12는
   #10에 흡수로 close. 열린 PR 0개. main `d8559f4` 기준 Verify/Security
   초록, 최종 조합(react 19.3 + playwright 1.63 + pytest 9) 로컬 검증 완료.
+
+## 2026-09-14 보안 기능 + perf 회귀 감시
+
+- Public repo에 GitHub secret scanning + push protection을 활성화했습니다
+  (둘 다 disabled였음 — repo setting 변경, 코드 변경 없음).
+- `.github/dependabot.yml`에 `react` 그룹 추가 — react·react-dom·
+  @types/react·@types/react-dom을 항상 한 PR로 묶어 split bump 재발 차단
+  (어제 #10/#12 불일치 회귀의 예방책). dev 그룹은 @types/react*를 제외.
+- `.github/workflows/perf-smoke.yml` 추가 — `infra/perf-smoke.sh`를 주간
+  화요일 실행해 latency/throughput/idempotency baseline 회귀를 표면화.
+  dr-drill과 같은 패턴 (workflow_dispatch 가능).
