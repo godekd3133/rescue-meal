@@ -54,7 +54,7 @@ jobs:
         run: npm run release:manifest -- --output /tmp/rescue-meal-release-manifest.json --require-artifacts
 
       - name: Upload release manifest
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: rescue-meal-release-manifest-${{ github.run_id }}
           path: /tmp/rescue-meal-release-manifest.json
