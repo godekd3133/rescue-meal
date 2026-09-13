@@ -45,6 +45,9 @@ jobs:
           VITE_APP_VERSION: ci-production
         run: npm run build
 
+      - name: Check bundle size budget
+        run: npm run check:bundle
+
       - name: Test release manifest contract
         run: npm run test:release-manifest
 
@@ -141,8 +144,8 @@ jobs:
       - name: Install API dependencies
         run: uv sync --frozen
 
-      - name: Run API tests
-        run: uv run pytest
+      - name: Run API tests with coverage floor
+        run: uv run pytest --cov=app --cov-fail-under=80
 
       - name: Run production configuration preflight fixture
         env:
