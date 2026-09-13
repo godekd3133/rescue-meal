@@ -100,9 +100,11 @@ jobs:
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: trivy-api.sarif
+          category: api-image
 
       - name: Upload OCR worker scan results
         if: always()
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: trivy-ocr.sarif
+          category: ocr-worker-image
