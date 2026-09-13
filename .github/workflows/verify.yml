@@ -247,8 +247,8 @@ jobs:
       - name: Install OCR worker dependencies
         run: uv sync --frozen
 
-      - name: Run OCR worker tests
-        run: uv run pytest
+      - name: Run OCR worker tests with coverage floor
+        run: uv run pytest --cov=app --cov-fail-under=70
 
       - name: Build amd64 OCR worker image
         working-directory: .
