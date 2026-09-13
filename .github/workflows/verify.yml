@@ -18,7 +18,7 @@ jobs:
         working-directory: apps/web
     steps:
       - name: Check out source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -98,7 +98,7 @@ jobs:
         working-directory: apps/web
     steps:
       - name: Check out source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -130,7 +130,7 @@ jobs:
         working-directory: services/api
     steps:
       - name: Check out source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up uv and Python
         uses: astral-sh/setup-uv@v6
@@ -215,7 +215,7 @@ jobs:
         working-directory: services/ocr-worker
     steps:
       - name: Check out source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up uv and Python
         uses: astral-sh/setup-uv@v6
@@ -239,7 +239,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Check out source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Run disposable Compose boot and read-write smoke
         run: sh infra/container-smoke.sh
@@ -266,7 +266,7 @@ jobs:
         working-directory: services/api
     steps:
       - name: Check out source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up uv and Python
         uses: astral-sh/setup-uv@v6
@@ -586,7 +586,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -601,7 +601,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Validate default Compose configuration
         run: docker compose -f infra/docker-compose.yml config --quiet
