@@ -8,6 +8,19 @@ updates:
     groups:
       development-dependencies:
         dependency-type: development
+        # react's type packages must ship in the react group so the runtime
+        # and typings never drift to mismatched versions again.
+        exclude-patterns:
+          - "@types/react*"
+      react:
+        # react and react-dom are version-locked: a split bump (#10 alone)
+        # crashed the app on mount because react-dom 19.2.7 cannot pair with
+        # react 19.3.0.
+        patterns:
+          - "react"
+          - "react-dom"
+          - "@types/react"
+          - "@types/react-dom"
   - package-ecosystem: uv
     directory: /services/api
     schedule:
