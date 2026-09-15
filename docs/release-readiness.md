@@ -23,11 +23,13 @@ guard, `backup.sh`/`restore.sh`(custom format, mode 600, host/Docker client),
 ## B. 배포·네트워크 (Production readiness)
 
 로컬 준비 완료: non-root 컨테이너, resource/logging 한도, `/health`·`/ready`,
-`container-smoke.sh`, `perf-smoke.sh` baseline, production preflight.
+`container-smoke.sh`, `perf-smoke.sh` baseline, production preflight,
+**ghcr.io 이미지 publish**(`rescue-meal-api`·`rescue-meal-ocr-worker`,
+`main`+sha 태그, public pull 가능 — 2026-09-15 CI 검증).
 
 | Gate | 남은 acceptance | 완료 증거 |
 | --- | --- | --- |
-| 실제 배포 타겟 | 호스팅 선택(VM/K8s/managed compose), 이미지 레지스트리, 배포 파이프라인 | 배포된 스택의 `/ready` readback |
+| 실제 배포 타겟 | 호스팅 선택(VM/K8s/managed compose)과 배포 파이프라인 — 레지스트리는 준비됨 | 배포된 스택의 `/ready` readback |
 | TLS·도메인 | 인증서 발급·갱신, HTTPS 강제, 도메인 연결 | TLS 점검 결과 |
 | Reverse proxy | idle timeout·request size·response reset 동작이 503 envelope 계약과 양립하는지 확인 | proxy 통과 장애주입 readback |
 | CORS·Sites CDN | `RESCUE_MEAL_CORS_ORIGINS` 운영 도메인으로 고정, Sites worker 배포·cache invalidation | 실 도메인 연결 확인 |

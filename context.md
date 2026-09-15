@@ -731,3 +731,16 @@ Readback: [ci green](evidence/ci-green-readback-2026-09-13.md).
   --cov-fail-under=77`(측정 81%), OCR `--cov-fail-under=65`(측정 71%).
   partial branch(한쪽 분기만 실행된 if)까지 잡아냄. native-viewport
   lane에도 같은 CI retry 추가. `d663080` CI 통과 확인.
+
+## 2026-09-15 배포 준비: ghcr publish + CodeQL
+
+- `.github/workflows/publish-images.yml`: main push 시 api·ocr-worker
+  이미지를 ghcr.io로 build+push (`:main` + `:<sha>` 태그). API는 repo-root
+  context(`data/fixtures/recipes` 포함). `provenance: false`로 trivy가
+  attestation 경유 base layer를 스캔하던 이슈 예방. 첫 run success —
+  packages API로 두 이미지 public·태그 확인. 배포 타겟 결정 전 마지막
+  선행 조건(레지스트리) 해소.
+- `.github/workflows/codeql.yml`: JS/TS + Python SAST, push/PR/주간.
+  첫 run success (1m35s).
+- 밤사이 schedule된 DR drill·Security scan 자동 실행 전부 success —
+  주간 감시 루프가 실제로 돌고 있음을 확인.
