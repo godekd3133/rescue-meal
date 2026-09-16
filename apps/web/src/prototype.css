@@ -99,7 +99,7 @@
   border-radius: 11px;
   background: var(--meal-sage-dark);
   color: #f7f5ef;
-  font: 800 20px/1 Georgia, serif;
+  font: 800 20px/1 "Avenir Next", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
 }
 
 .runtime-configuration-kicker {
@@ -118,7 +118,7 @@
 
 .runtime-configuration-screen h1 em {
   color: var(--meal-sage-dark);
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: "Avenir Next", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
   font-weight: 500;
 }
 
@@ -218,7 +218,7 @@
   border-radius: 12px 12px 12px 4px;
   background: var(--meal-coral);
   color: #fff8f3;
-  font: 800 20px/1 Georgia, serif;
+  font: 800 20px/1 "Avenir Next", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
   box-shadow: 0 8px 18px rgba(183, 104, 83, 0.16);
 }
 
@@ -238,7 +238,7 @@
 
 .runtime-error-screen h1 em {
   color: var(--meal-sage-dark);
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: "Avenir Next", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
   font-weight: 500;
 }
 
@@ -939,7 +939,7 @@
   border-radius: 9px 9px 9px 3px;
   background: var(--meal-sage-dark);
   color: #fffdf7;
-  font: 800 18px/1 Georgia, serif;
+  font: 800 18px/1 "Avenir Next", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
   transform: rotate(-8deg);
 }
 
@@ -996,7 +996,7 @@
 
 .greeting-block h1 em {
   color: var(--meal-sage-dark);
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: "Avenir Next", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
   font-size: 1.06em;
   font-weight: 500;
   letter-spacing: -0.08em;
@@ -8871,7 +8871,7 @@
 .guidance-number {
   padding-top: 2px;
   color: var(--meal-sage);
-  font: 800 10px/1 Georgia, serif;
+  font: 800 10px/1 "Avenir Next", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
 }
 
 .guidance-row > span:nth-child(2) {
@@ -9014,7 +9014,7 @@
 .meal-home {
   isolation: isolate;
   overflow: hidden;
-  background-color: var(--atelier-deep);
+  background-color: var(--atelier-on-accent);
   background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0, rgba(255, 255, 255, 0.96) 355px, #f2f4f6 610px);
 }
 
@@ -9071,14 +9071,14 @@
   height: 25px;
   border-radius: 9px 9px 9px 3px;
   background: var(--atelier-pistachio);
-  color: var(--atelier-deep);
+  color: var(--atelier-on-accent);
   box-shadow: 0 8px 22px rgba(49, 130, 246, 0.18);
   font-size: 17px;
 }
 
 .brand-name {
   color: var(--atelier-ink);
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: "Avenir Next", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
   font-size: 25px;
   font-weight: 600;
   letter-spacing: -0.062em;
@@ -9141,7 +9141,7 @@
 
 .greeting-block h1 em {
   color: var(--atelier-ink);
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: "Avenir Next", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
   font-size: 1.08em;
   font-style: normal;
   font-weight: 500;
@@ -9200,10 +9200,8 @@
   padding: 21px 18px;
   border-color: rgba(2, 32, 71, 0.132);
   border-radius: 20px;
-  background:
-    linear-gradient(125deg, rgba(255, 255, 255, 0.94), rgba(255, 255, 255, 0.96)),
-    url("/assets/food/rescue-hero-background-v1.webp") right bottom / 220% auto no-repeat;
-  box-shadow: 0 18px 38px rgba(2, 32, 71, 0.1134), inset 0 1px rgba(2, 32, 71, 0.044);
+  background: var(--atelier-surface);
+  box-shadow: 0 14px 34px rgba(2, 32, 71, 0.08);
 }
 
 .rescue-status-card::after {
@@ -9385,11 +9383,11 @@
   place-items: center;
   border-right: 1px solid rgba(255, 255, 255, 0.24);
   border-radius: 0;
-  color: var(--atelier-deep);
+  color: var(--atelier-on-accent);
 }
 
 .meal-plan-button strong {
-  color: var(--atelier-deep);
+  color: var(--atelier-on-accent);
   font-size: 15px;
   letter-spacing: -0.06em;
 }
@@ -9549,10 +9547,10 @@
   --sheet-surface-raised: #ffffff;
   --sheet-border: rgba(2, 32, 71, 0.11);
   --sheet-border-strong: rgba(2, 32, 71, 0.187);
-  border-top: 1px solid var(--sheet-border-strong);
-  border-radius: 27px 27px 0 0;
-  background: linear-gradient(180deg, #ffffff 0%, #f2f4f6 28%);
-  box-shadow: 0 -22px 56px rgba(2, 32, 71, 0.2);
+  border-top: 1px solid var(--sheet-border);
+  border-radius: 24px 24px 0 0;
+  background: #ffffff;
+  box-shadow: 0 -12px 44px rgba(2, 32, 71, 0.16);
 }
 
 .sheet-handle {
@@ -9570,7 +9568,7 @@
 
 .sheet-title {
   color: var(--atelier-ink);
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: "Avenir Next", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
   font-size: 21px;
   font-weight: 600;
   letter-spacing: -0.06em;
@@ -9624,7 +9622,7 @@
 .bottom-sheet .account-tab-active,
 .bottom-sheet .recipe-review-filter-bar button[aria-pressed="true"] {
   background: var(--atelier-pistachio);
-  color: var(--atelier-deep);
+  color: var(--atelier-on-accent);
   box-shadow: 0 5px 12px rgba(49, 130, 246, 0.144);
 }
 
@@ -9637,7 +9635,7 @@
   border: 1px solid var(--atelier-pistachio);
   border-radius: 13px;
   background: linear-gradient(135deg, #3182f6, #64a1f8);
-  color: var(--atelier-deep);
+  color: var(--atelier-on-accent);
   font-size: 12px;
   font-weight: 820;
   box-shadow: 0 10px 22px rgba(49, 130, 246, 0.135);
@@ -9934,7 +9932,7 @@
 
 .bottom-sheet .scanner-frame {
   border-color: rgba(49, 130, 246, 0.68);
-  box-shadow: 0 0 0 999px rgba(255, 255, 255, 0.44);
+  box-shadow: 0 0 0 999px rgba(15, 23, 42, 0.42);
 }
 
 .bottom-sheet .camera-capture-guide {
@@ -11534,6 +11532,7 @@
   --atelier-soft: #333d4b;
   --atelier-muted: #6b7684;
   --atelier-dim: #8b95a1;
+  --atelier-on-accent: #ffffff;
   --atelier-surface: #ffffff;
   --atelier-surface-raised: #ffffff;
   --atelier-border: rgba(2, 32, 71, 0.09);
@@ -11602,15 +11601,15 @@
   height: 24px;
   border-radius: 8px 8px 8px 3px;
   background: var(--atelier-pistachio);
-  color: var(--atelier-deep);
-  font: 800 17px/1 Georgia, "Times New Roman", serif;
+  color: var(--atelier-on-accent);
+  font: 800 17px/1 "Avenir Next", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
   transform: none;
   box-shadow: 0 5px 12px rgba(49, 130, 246, 0.13);
 }
 
 .brand-name {
   color: var(--atelier-ink);
-  font: 600 16px/1 Georgia, "Times New Roman", serif;
+  font: 600 16px/1 "Avenir Next", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
   letter-spacing: -0.035em;
 }
 
@@ -11671,7 +11670,7 @@
 }
 
 .notification-dot {
-  border-color: var(--atelier-deep);
+  border-color: var(--atelier-on-accent);
   background: var(--atelier-coral);
 }
 
@@ -11686,7 +11685,7 @@
 .install-prompt-icon,
 .update-prompt-icon {
   background: var(--atelier-pistachio);
-  color: var(--atelier-deep);
+  color: var(--atelier-on-accent);
 }
 
 .install-prompt-copy strong,
@@ -11799,7 +11798,7 @@
 
 .greeting-block h1 em {
   color: var(--atelier-pistachio);
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: "Avenir Next", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
   font-size: 1.06em;
   font-weight: 500;
 }
@@ -12079,7 +12078,7 @@
   padding: 0 16px;
   border-radius: 15px;
   background: var(--atelier-pistachio);
-  color: var(--atelier-deep);
+  color: var(--atelier-on-accent);
   box-shadow: 0 14px 25px rgba(49, 130, 246, 0.162);
 }
 
@@ -12089,7 +12088,7 @@
 
 .meal-plan-icon {
   background: transparent;
-  color: var(--atelier-deep);
+  color: var(--atelier-on-accent);
 }
 
 .meal-plan-button strong {
@@ -12103,7 +12102,7 @@
 }
 
 .meal-plan-button > svg {
-  color: var(--atelier-deep);
+  color: var(--atelier-on-accent);
   opacity: 0.78;
 }
 
@@ -12313,7 +12312,7 @@
   min-height: 78px;
   padding: 10px 16px 8px;
   border-top: 1px solid var(--atelier-border);
-  background: var(--atelier-deep);
+  background: var(--atelier-surface);
   color: var(--atelier-muted);
 }
 
@@ -12361,8 +12360,8 @@
 /* Dark, shared sheet language. Each feature sheet keeps its own anatomy and
    state; these rules only unify the surface, controls, and hierarchy. */
 .bottom-sheet {
-  border-top: 1px solid var(--atelier-border-strong);
-  background: var(--atelier-deep);
+  border-top: 1px solid var(--atelier-border);
+  background: var(--atelier-surface);
   color: var(--atelier-ink);
   box-shadow: 0 -18px 48px rgba(2, 32, 71, 0.1764);
 }
@@ -12378,7 +12377,7 @@
 
 .sheet-title {
   color: var(--atelier-ink);
-  font: 650 20px/1.1 Georgia, "Times New Roman", serif;
+  font: 650 20px/1.1 "Avenir Next", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
   letter-spacing: -0.055em;
 }
 
@@ -12405,14 +12404,14 @@
 .bottom-sheet .mode-tab-active,
 .bottom-sheet .account-tab-active {
   background: var(--atelier-pistachio);
-  color: var(--atelier-deep);
+  color: var(--atelier-on-accent);
   box-shadow: none;
 }
 
 .bottom-sheet .primary-sheet-button {
   border-color: var(--atelier-pistachio);
   background: var(--atelier-pistachio);
-  color: var(--atelier-deep);
+  color: var(--atelier-on-accent);
   box-shadow: 0 10px 22px rgba(49, 130, 246, 0.144);
 }
 
@@ -12650,7 +12649,7 @@
 .bottom-sheet .shopping-sheet-check {
   border-color: var(--atelier-border-strong);
   background: transparent;
-  color: var(--atelier-deep);
+  color: var(--atelier-on-accent);
 }
 
 .bottom-sheet .receipt-line-toggle[aria-checked="true"],
@@ -12783,7 +12782,7 @@
 .runtime-configuration-mark,
 .runtime-error-mark {
   background: var(--atelier-pistachio);
-  color: var(--atelier-deep);
+  color: var(--atelier-on-accent);
   box-shadow: 0 8px 18px rgba(49, 130, 246, 0.162);
 }
 
@@ -12830,7 +12829,7 @@
 .runtime-error-reload {
   border-color: var(--atelier-pistachio);
   background: var(--atelier-pistachio);
-  color: var(--atelier-deep);
+  color: var(--atelier-on-accent);
   box-shadow: 0 10px 22px rgba(49, 130, 246, 0.144);
 }
 
@@ -12980,10 +12979,8 @@
 }
 
 .app-shell-preview .rescue-status-card {
-  background:
-    linear-gradient(125deg, rgba(255, 255, 255, 0.94), rgba(255, 255, 255, 0.96)),
-    url("/assets/food/rescue-hero-background-v1.webp") right bottom / 220% auto no-repeat;
-  box-shadow: 0 18px 38px rgba(2, 32, 71, 0.1134), inset 0 1px rgba(2, 32, 71, 0.044);
+  background: var(--atelier-surface);
+  box-shadow: 0 14px 34px rgba(2, 32, 71, 0.08);
 }
 
 .app-shell-preview .trust-card {
@@ -13056,9 +13053,7 @@
 .app-shell-native .rescue-status-card {
   min-height: 180px;
   padding: 14px 15px;
-  background:
-    linear-gradient(125deg, rgba(255, 255, 255, 0.94), rgba(255, 255, 255, 0.96)),
-    url("/assets/food/rescue-hero-background-v1.webp") right bottom / 220% auto no-repeat;
+  background: var(--atelier-surface);
 }
 
 .app-shell-native .rescue-status-main > strong {
@@ -13648,4 +13643,388 @@ html {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* -------------------------------------------------------------------------
+   Rescue Meal theme modes / selected “오늘의 한 가지” direction
+
+   The light mode is the selected cobalt treatment. Dark mode keeps the same
+   information hierarchy and semantic status colors, but changes the surface
+   contrast and primary-action treatment for evening use. This layer is kept
+   after the existing product pass so the pre-existing visual WIP remains
+   intact and the mode switch owns the final rendered state.
+   ------------------------------------------------------------------------- */
+
+html[data-rescue-theme="light"] .app-screen,
+html[data-rescue-theme="light"] .app-screen .mobile-scroll-content {
+  background: #f2f4f6 !important;
+}
+
+html[data-rescue-theme="dark"] .app-screen,
+html[data-rescue-theme="dark"] .app-screen .mobile-scroll-content {
+  background: #101419 !important;
+}
+
+html[data-rescue-theme="light"] .meal-home,
+html[data-rescue-theme="light"] .bottom-sheet,
+html[data-rescue-theme="light"] .app-bottom-nav {
+  --atelier-deep: #f2f4f6;
+  --atelier-ink: #191f28;
+  --atelier-soft: #333d4b;
+  --atelier-muted: #6b7684;
+  --atelier-dim: #8b95a1;
+  --atelier-surface: #ffffff;
+  --atelier-surface-raised: #ffffff;
+  --atelier-border: rgba(2, 32, 71, 0.09);
+  --atelier-border-strong: rgba(2, 32, 71, 0.16);
+  --atelier-pistachio: #3182f6;
+  --atelier-pistachio-deep: #1b64da;
+  --atelier-coral: #f04452;
+  --atelier-amber: #ff9200;
+  --atelier-blue: #5e7fa0;
+  --atelier-shadow: 0 16px 40px rgba(2, 32, 71, 0.1);
+  --meal-ink: var(--atelier-ink);
+  --meal-muted: var(--atelier-muted);
+  --meal-soft: var(--atelier-dim);
+  --meal-sage: var(--atelier-pistachio-deep);
+  --meal-sage-dark: var(--atelier-pistachio);
+  --meal-cream: var(--atelier-deep);
+  --meal-white: var(--atelier-surface);
+  --meal-line: var(--atelier-border);
+  --meal-coral: var(--atelier-coral);
+  --meal-coral-soft: rgba(240, 68, 82, 0.08);
+  --meal-blue-soft: rgba(49, 130, 246, 0.09);
+  --meal-shadow: var(--atelier-shadow);
+  color-scheme: light;
+}
+
+html[data-rescue-theme="dark"] .meal-home,
+html[data-rescue-theme="dark"] .bottom-sheet,
+html[data-rescue-theme="dark"] .app-bottom-nav {
+  --atelier-deep: #101419;
+  --atelier-ink: #f5f3ee;
+  --atelier-soft: #d6dee9;
+  --atelier-muted: #aab6c5;
+  --atelier-dim: #8291a5;
+  --atelier-surface: #1b222b;
+  --atelier-surface-raised: #232c36;
+  --atelier-border: rgba(203, 220, 236, 0.16);
+  --atelier-border-strong: rgba(203, 220, 236, 0.3);
+  --atelier-pistachio: #6f8dff;
+  --atelier-pistachio-deep: #9aafff;
+  --atelier-coral: #ff806f;
+  --atelier-amber: #f2c15a;
+  --atelier-blue: #9bb5d5;
+  --atelier-shadow: 0 16px 40px rgba(0, 0, 0, 0.34);
+  --meal-ink: var(--atelier-ink);
+  --meal-muted: var(--atelier-muted);
+  --meal-soft: var(--atelier-dim);
+  --meal-sage: var(--atelier-pistachio-deep);
+  --meal-sage-dark: var(--atelier-pistachio);
+  --meal-cream: var(--atelier-deep);
+  --meal-white: var(--atelier-surface);
+  --meal-line: var(--atelier-border);
+  --meal-coral: var(--atelier-coral);
+  --meal-coral-soft: rgba(255, 128, 111, 0.15);
+  --meal-blue-soft: rgba(155, 181, 213, 0.16);
+  --meal-shadow: var(--atelier-shadow);
+  color-scheme: dark;
+}
+
+html[data-rescue-theme="light"] .meal-home {
+  background-color: #f2f4f6;
+  background-image: linear-gradient(180deg, rgba(242, 244, 246, 0.04) 0, rgba(242, 244, 246, 0.82) 350px, #f2f4f6 610px);
+}
+
+html[data-rescue-theme="light"] .meal-home::before {
+  background-image: linear-gradient(180deg, rgba(242, 244, 246, 0.02) 0%, rgba(242, 244, 246, 0.28) 48%, #f2f4f6 100%), url("/assets/food/rescue-hero-background-v1.webp");
+  opacity: 0.7;
+}
+
+html[data-rescue-theme="light"] .meal-home::after {
+  background: linear-gradient(90deg, rgba(242, 244, 246, 0.88), rgba(242, 244, 246, 0.08) 74%);
+}
+
+html[data-rescue-theme="dark"] .meal-home {
+  background-color: #101419;
+  background-image: linear-gradient(180deg, rgba(16, 20, 25, 0.04) 0, rgba(16, 20, 25, 0.9) 355px, #101419 610px);
+}
+
+html[data-rescue-theme="dark"] .meal-home::before {
+  background-image: linear-gradient(180deg, rgba(16, 20, 25, 0.04) 0%, rgba(16, 20, 25, 0.18) 48%, #101419 100%), url("/assets/food/rescue-hero-background-v1.webp");
+  opacity: 0.9;
+}
+
+html[data-rescue-theme="dark"] .meal-home::after {
+  background: linear-gradient(90deg, rgba(16, 20, 25, 0.72), rgba(16, 20, 25, 0.06) 74%);
+}
+
+html[data-rescue-theme="light"] .meal-home .connection-pill {
+  border-color: rgba(2, 32, 71, 0.1);
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--atelier-muted);
+}
+
+html[data-rescue-theme="light"] .meal-home .connection-connected {
+  border-color: rgba(49, 130, 246, 0.2);
+  background: rgba(49, 130, 246, 0.1);
+  color: var(--atelier-pistachio-deep);
+}
+
+html[data-rescue-theme="light"] .meal-home .connection-offline,
+html[data-rescue-theme="light"] .meal-home .connection-auth_required {
+  border-color: rgba(240, 68, 82, 0.24);
+  background: rgba(240, 68, 82, 0.08);
+  color: #c93442;
+}
+
+html[data-rescue-theme="dark"] .meal-home .connection-pill {
+  border-color: var(--atelier-border);
+  background: rgba(27, 34, 43, 0.92);
+  color: var(--atelier-muted);
+}
+
+html[data-rescue-theme="dark"] .meal-home .connection-connected {
+  border-color: rgba(111, 141, 255, 0.3);
+  background: rgba(111, 141, 255, 0.15);
+  color: #b6c5ff;
+}
+
+html[data-rescue-theme="dark"] .meal-home .connection-offline,
+html[data-rescue-theme="dark"] .meal-home .connection-auth_required {
+  border-color: rgba(255, 128, 111, 0.34);
+  background: rgba(255, 128, 111, 0.12);
+  color: #ffb3a6;
+}
+
+html[data-rescue-theme="light"] .meal-home .icon-button,
+html[data-rescue-theme="light"] .meal-home .notification-button {
+  border-color: rgba(2, 32, 71, 0.1);
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--atelier-pistachio-deep);
+  box-shadow: 0 8px 18px rgba(2, 32, 71, 0.08);
+}
+
+html[data-rescue-theme="light"] .meal-home .notification-button {
+  background: rgba(255, 255, 255, 0.74);
+}
+
+html[data-rescue-theme="dark"] .meal-home .icon-button,
+html[data-rescue-theme="dark"] .meal-home .notification-button {
+  border-color: var(--atelier-border);
+  background: rgba(27, 34, 43, 0.88);
+  color: var(--atelier-pistachio);
+  box-shadow: none;
+}
+
+html[data-rescue-theme="dark"] .meal-home .notification-button {
+  background: rgba(27, 34, 43, 0.68);
+}
+
+html[data-rescue-theme="light"] .meal-home .theme-toggle-button[aria-pressed="true"] {
+  border-color: rgba(49, 130, 246, 0.24);
+  background: rgba(49, 130, 246, 0.12);
+  color: var(--atelier-pistachio-deep);
+}
+
+html[data-rescue-theme="dark"] .meal-home .theme-toggle-button[aria-pressed="true"] {
+  border-color: rgba(111, 141, 255, 0.42);
+  background: rgba(111, 141, 255, 0.18);
+  color: #b6c5ff;
+}
+
+html[data-rescue-theme="light"] .meal-home .greeting-block h1 {
+  text-shadow: none;
+}
+
+html[data-rescue-theme="dark"] .meal-home .greeting-block h1 {
+  text-shadow: 0 4px 22px rgba(0, 0, 0, 0.28);
+}
+
+html[data-rescue-theme="light"] .meal-home .rescue-status-card {
+  border-color: rgba(49, 130, 246, 0.13);
+  background: #eef6ff;
+  box-shadow: 0 16px 34px rgba(2, 32, 71, 0.09);
+}
+
+html[data-rescue-theme="dark"] .meal-home .rescue-status-card {
+  border-color: rgba(111, 141, 255, 0.22);
+  background: #1b2737;
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.3);
+}
+
+html[data-rescue-theme="light"] .meal-home .priority-card:hover,
+html[data-rescue-theme="light"] .meal-home .priority-card-accent,
+html[data-rescue-theme="light"] .meal-home .priority-card-accent:hover {
+  background: rgba(49, 130, 246, 0.045);
+}
+
+html[data-rescue-theme="dark"] .meal-home .priority-card:hover,
+html[data-rescue-theme="dark"] .meal-home .priority-card-accent,
+html[data-rescue-theme="dark"] .meal-home .priority-card-accent:hover {
+  background: rgba(111, 141, 255, 0.08);
+}
+
+html[data-rescue-theme="light"] .meal-home .storage-fridge {
+  border-color: rgba(49, 130, 246, 0.18);
+  background: rgba(49, 130, 246, 0.1);
+  color: var(--atelier-pistachio-deep);
+}
+
+html[data-rescue-theme="dark"] .meal-home .storage-fridge {
+  border-color: rgba(111, 141, 255, 0.22);
+  background: rgba(111, 141, 255, 0.16);
+  color: #b6c5ff;
+}
+
+html[data-rescue-theme="light"] .meal-home .meal-plan-button,
+html[data-rescue-theme="light"] .bottom-sheet .primary-sheet-button,
+html[data-rescue-theme="light"] .bottom-sheet .manual-submit,
+html[data-rescue-theme="light"] .bottom-sheet .shopping-sheet-manual-submit,
+html[data-rescue-theme="light"] .bottom-sheet .recipe-multi-day-save,
+html[data-rescue-theme="light"] .bottom-sheet .recipe-complete-button {
+  border-color: #3182f6;
+  background: #3182f6;
+  color: #ffffff;
+  box-shadow: 0 12px 24px rgba(49, 130, 246, 0.2);
+}
+
+html[data-rescue-theme="light"] .meal-home .meal-plan-button:hover,
+html[data-rescue-theme="light"] .bottom-sheet .primary-sheet-button:hover,
+html[data-rescue-theme="light"] .bottom-sheet .manual-submit:hover,
+html[data-rescue-theme="light"] .bottom-sheet .shopping-sheet-manual-submit:hover,
+html[data-rescue-theme="light"] .bottom-sheet .recipe-multi-day-save:hover,
+html[data-rescue-theme="light"] .bottom-sheet .recipe-complete-button:hover {
+  background: #1b64da;
+}
+
+html[data-rescue-theme="light"] .meal-home .meal-plan-button small,
+html[data-rescue-theme="light"] .meal-home .meal-plan-button > svg,
+html[data-rescue-theme="light"] .meal-home .meal-plan-icon {
+  color: rgba(255, 255, 255, 0.86);
+}
+
+html[data-rescue-theme="dark"] .meal-home .meal-plan-button,
+html[data-rescue-theme="dark"] .bottom-sheet .primary-sheet-button,
+html[data-rescue-theme="dark"] .bottom-sheet .manual-submit,
+html[data-rescue-theme="dark"] .bottom-sheet .shopping-sheet-manual-submit,
+html[data-rescue-theme="dark"] .bottom-sheet .recipe-multi-day-save,
+html[data-rescue-theme="dark"] .bottom-sheet .recipe-complete-button {
+  border-color: #6f8dff;
+  background: #6f8dff;
+  color: #101419;
+  box-shadow: 0 12px 24px rgba(111, 141, 255, 0.22);
+}
+
+html[data-rescue-theme="dark"] .meal-home .meal-plan-button:hover,
+html[data-rescue-theme="dark"] .bottom-sheet .primary-sheet-button:hover,
+html[data-rescue-theme="dark"] .bottom-sheet .manual-submit:hover,
+html[data-rescue-theme="dark"] .bottom-sheet .shopping-sheet-manual-submit:hover,
+html[data-rescue-theme="dark"] .bottom-sheet .recipe-multi-day-save:hover,
+html[data-rescue-theme="dark"] .bottom-sheet .recipe-complete-button:hover {
+  background: #8fa6ff;
+}
+
+html[data-rescue-theme="dark"] .meal-home .meal-plan-button small,
+html[data-rescue-theme="dark"] .meal-home .meal-plan-button > svg,
+html[data-rescue-theme="dark"] .meal-home .meal-plan-icon {
+  color: rgba(16, 20, 25, 0.78);
+}
+
+html[data-rescue-theme="light"] .meal-home .trust-card {
+  border-color: rgba(2, 32, 71, 0.1);
+  background: #ffffff;
+  color: var(--atelier-muted);
+}
+
+html[data-rescue-theme="light"] .meal-home .trust-card strong,
+html[data-rescue-theme="light"] .meal-home .trust-card small {
+  color: var(--atelier-muted);
+}
+
+html[data-rescue-theme="light"] .meal-home .trust-icon {
+  background: rgba(49, 130, 246, 0.1);
+  color: var(--atelier-pistachio-deep);
+}
+
+html[data-rescue-theme="dark"] .meal-home .trust-card {
+  border-color: rgba(255, 128, 111, 0.25);
+  background: rgba(255, 128, 111, 0.1);
+  color: #d8b0a8;
+}
+
+html[data-rescue-theme="dark"] .meal-home .trust-card strong {
+  color: var(--atelier-ink);
+}
+
+html[data-rescue-theme="dark"] .meal-home .trust-card small {
+  color: #c59d95;
+}
+
+html[data-rescue-theme="dark"] .meal-home .trust-icon {
+  background: rgba(255, 128, 111, 0.15);
+  color: var(--atelier-coral);
+}
+
+html[data-rescue-theme="light"] .bottom-sheet {
+  --sheet-surface: #ffffff;
+  --sheet-surface-raised: #ffffff;
+  --sheet-border: rgba(2, 32, 71, 0.11);
+  --sheet-border-strong: rgba(2, 32, 71, 0.19);
+  background: #f2f4f6;
+  box-shadow: 0 -22px 56px rgba(2, 32, 71, 0.2);
+}
+
+html[data-rescue-theme="dark"] .bottom-sheet {
+  --sheet-surface: #1b222b;
+  --sheet-surface-raised: #232c36;
+  --sheet-border: rgba(203, 220, 236, 0.16);
+  --sheet-border-strong: rgba(203, 220, 236, 0.3);
+  background: #101419;
+  box-shadow: 0 -22px 56px rgba(0, 0, 0, 0.42);
+}
+
+html[data-rescue-theme="light"] .bottom-sheet .sheet-handle {
+  background: rgba(2, 32, 71, 0.2);
+}
+
+html[data-rescue-theme="dark"] .bottom-sheet .sheet-handle {
+  background: rgba(245, 243, 238, 0.36);
+}
+
+html[data-rescue-theme="light"] .bottom-sheet .mode-tab-active,
+html[data-rescue-theme="light"] .bottom-sheet .account-tab-active,
+html[data-rescue-theme="light"] .bottom-sheet .recipe-review-filter-bar button[aria-pressed="true"] {
+  color: #ffffff;
+}
+
+html[data-rescue-theme="dark"] .bottom-sheet .mode-tab-active,
+html[data-rescue-theme="dark"] .bottom-sheet .account-tab-active,
+html[data-rescue-theme="dark"] .bottom-sheet .recipe-review-filter-bar button[aria-pressed="true"] {
+  color: #101419;
+}
+
+html[data-rescue-theme="dark"] .bottom-sheet .app-input,
+html[data-rescue-theme="dark"] .bottom-sheet .date-input,
+html[data-rescue-theme="dark"] .bottom-sheet input:not([type="file"]),
+html[data-rescue-theme="dark"] .bottom-sheet textarea,
+html[data-rescue-theme="dark"] .bottom-sheet select,
+html[data-rescue-theme="dark"] .bottom-sheet .notification-timezone-select {
+  background: var(--atelier-surface) !important;
+  color: var(--atelier-ink);
+}
+
+html[data-rescue-theme="dark"] .bottom-sheet .camera-capture-viewfinder,
+html[data-rescue-theme="dark"] .bottom-sheet .scanner-frame,
+html[data-rescue-theme="dark"] .bottom-sheet .receipt-source-preview-frame,
+html[data-rescue-theme="dark"] .bottom-sheet .label-source-preview-frame,
+html[data-rescue-theme="dark"] .bottom-sheet .scanner-preview {
+  background: #121a22;
+}
+
+html[data-rescue-theme="dark"] .toast {
+  border-color: var(--atelier-border-strong);
+  background: rgba(27, 34, 43, 0.98);
+  color: var(--atelier-ink);
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.35);
 }

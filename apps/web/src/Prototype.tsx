@@ -16,9 +16,11 @@ import {
   InfoCircledIcon,
   LightningBoltIcon,
   MagnifyingGlassIcon,
+  MoonIcon,
   PlusIcon,
   ReaderIcon,
   SewingPinIcon,
+  SunIcon,
   UploadIcon,
 } from "@radix-ui/react-icons";
 import { KeyboardInput, useKeyboard } from "./mobile/Keyboard";
@@ -46,6 +48,7 @@ export type ProductProvenance = {
 };
 type SheetName = "add" | "detail" | "meal" | "shopping" | "guidance" | "account" | "notifications" | "recipe-review" | "receipt-queue" | null;
 type ConnectionState = "fixture" | "checking" | "connected" | "offline" | "auth_required";
+type ThemeMode = "light" | "dark";
 type InventorySearchStatus = "idle" | "loading" | "ready" | "error";
 type ShoppingListStatus = "idle" | "loading" | "ready" | "error";
 type ToastAction = {
@@ -338,6 +341,7 @@ const RECEIPT_LINES: ReceiptLine[] = [
 ];
 
 const STORAGE_OPTIONS: StorageType[] = ["냉장", "냉동", "실온"];
+const THEME_STORAGE_KEY = "rescue-meal.theme";
 const BarcodeScanner = lazy(() => import("./BarcodeScanner"));
 const loadBottomSheet = () => import("./mobile/BottomSheet").then(({ BottomSheet }) => ({ default: BottomSheet }));
 const LazyBottomSheet = lazy(loadBottomSheet);
@@ -474,6 +478,20 @@ function formatTodayEyebrow(value: Date) {
   const month = parts.find((part) => part.type === "month")?.value ?? "";
   const day = parts.find((part) => part.type === "day")?.value ?? "";
   return `${weekday}, ${month} ${day}`;
+}
+
+function getInitialTheme(): ThemeMode {
+  if (typeof window === "undefined") return "light";
+
+  try {
+    const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
+    if (stored === "dark" || stored === "light") return stored;
+  } catch {
+    // Theme preference is optional. Keep the selected light design when
+    // storage is unavailable instead of blocking the home screen.
+  }
+
+  return "light";
 }
 
 function mealPlanHint(priorityFoods: FoodItem[], foodCount: number) {
@@ -656,6 +674,21 @@ function useViewportHeight() {
 function PrototypeContent() {
   const keyboard = useKeyboard();
   const viewportHeight = useViewportHeight();
+  const [themeMode, setThemeMode] = useState<ThemeMode>(getInitialTheme);
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+
+    document.documentElement.dataset.rescueTheme = themeMode;
+    document.documentElement.style.colorScheme = themeMode;
+
+    try {
+      window.localStorage.setItem(THEME_STORAGE_KEY, themeMode);
+    } catch {
+      // A private browsing policy may reject localStorage. The in-memory
+      // toggle remains functional for this session.
+    }
+  }, [themeMode]);
 
   useEffect(() => {
     // Keep the initial bundle lazy, but warm the primary intake path in the
@@ -788,6 +821,10 @@ function PrototypeContent() {
       sheetRestoreFocusRef.current = activeElement instanceof HTMLElement ? activeElement : null;
     }
     setSheet(next);
+  };
+
+  const toggleTheme = () => {
+    setThemeMode((current) => current === "light" ? "dark" : "light");
   };
 
   useEffect(() => {
@@ -2698,7 +2735,7 @@ function PrototypeContent() {
   return (
     <MotionConfig reducedMotion="user">
     <>
-      <MobileScroll className="app-screen">
+      <MobileScroll className={`app-screen rescue-theme-${themeMode}`}>
         <main className="screen-content meal-home" aria-label="Rescue Meal 홈">
           <header className="app-header">
             <div className="brand-lockup" aria-label="Rescue Meal">
@@ -2707,6 +2744,17 @@ function PrototypeContent() {
             </div>
             <div className="header-actions">
               <Suspense fallback={null}><ConnectionStatus state={connectionState} hasCachedData={Boolean(dashboardStaleAt)} onOpenAccount={() => changeSheet("account")} /></Suspense>
+              <button
+                className="icon-button theme-toggle-button"
+                type="button"
+                data-testid="theme-toggle"
+                aria-label={themeMode === "light" ? "다크모드로 전환" : "라이트모드로 전환"}
+                aria-pressed={themeMode === "dark"}
+                title={themeMode === "light" ? "다크모드로 전환" : "라이트모드로 전환"}
+                onClick={toggleTheme}
+              >
+                {themeMode === "light" ? <MoonIcon width={18} height={18} /> : <SunIcon width={18} height={18} />}
+              </button>
               <button className="icon-button scan-button" type="button" onClick={() => openAdd("receipt")} aria-label="식품 스캔 열기">
                 <CameraIcon width={18} height={18} />
               </button>
@@ -2776,11 +2824,11 @@ function PrototypeContent() {
           </div>
 
           <section className="priority-section" aria-labelledby="priority-title">
-            <div className="rescue-status-card" aria-label={`먼저 확인할 재료 ${priorityFoods.length}개`}>
+            <div className="rescue-status-card" aria-label={`오늘 먼저 확인할 식품 ${priorityFoods.length}개`}>
               <div className="rescue-status-main">
-                <span className="rescue-status-kicker">먼저 확인할 재료</span>
+                <span className="rescue-status-kicker">오늘 먼저 확인할 식품</span>
                 <strong>{priorityFoods.length}<small>개</small></strong>
-                <span className="rescue-status-description">지금 확인하고, 더 맛있는 오늘을 만들어보세요.</span>
+                <span className="rescue-status-description">지금 확인하고, 오늘 먹을 재료를 준비해요.</span>
               </div>
               <div className="rescue-status-legend" aria-label="식품 상태 안내">
                 <span><i className="status-dot status-dot-warning" /><b>확인 필요</b><em>{priorityNeedsReviewCount}</em></span>
@@ -2791,7 +2839,7 @@ function PrototypeContent() {
             <div className="section-heading">
               <div>
                 <p className="section-kicker">RESCUE QUEUE · TODAY</p>
-                <h2 id="priority-title" aria-label={`오늘 먼저 먹기 ${priorityFoods.length}`}><span aria-hidden="true">지금 확인이 필요한 재료</span><span aria-hidden="true">{priorityFoods.length}</span></h2>
+                <h2 id="priority-title" aria-label={`오늘 먼저 확인할 식품 ${priorityFoods.length}`}><span aria-hidden="true">오늘 먼저 확인할 식품</span><span aria-hidden="true">{priorityFoods.length}</span></h2>
               </div>
               <button className="text-button" type="button" onClick={() => setStorageFilter("전체")}>전체 보기 <ChevronRightIcon width={14} height={14} /></button>
             </div>
@@ -2837,7 +2885,7 @@ function PrototypeContent() {
 
             <button className="meal-plan-button" type="button" onClick={() => foods.length ? openMealPlan() : openAdd("receipt")}>
               <span className="meal-plan-icon"><LightningBoltIcon width={17} height={17} /></span>
-              <span><strong>{foods.length ? "지금 있는 재료로 식단 만들기" : "첫 식품을 추가하고 시작하기"}</strong><small>{currentMealPlanHint}</small></span>
+              <span><strong>{foods.length ? "확인하고 오늘 식단 만들기" : "첫 식품을 추가하고 시작하기"}</strong><small>{currentMealPlanHint}</small></span>
               <ArrowRightIcon width={18} height={18} />
             </button>
 
