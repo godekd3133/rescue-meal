@@ -1,0 +1,110 @@
+name: Security scan
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Weekly baseline so newly disclosed CVEs surface even without pushes.
+    - cron: "17 3 * * 1"
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  fs-scan:
+    name: Dependency and filesystem vulnerability scan
+    runs-on: [self-hosted, personal-mac]
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Scan repository filesystem
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: "1"
+          format: sarif
+          output: trivy-fs.sarif
+          # Without this the action unsets TRIVY_SEVERITY for SARIF output and
+          # the exit code fires on any fixable finding, including MEDIUM.
+          limitSeveritiesForSarif: "true"
+        env:
+          TRIVY_DB_REPOSITORY: public.ecr.aws/aquasecurity/trivy-db
+
+      - name: Upload filesystem scan results
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-fs.sarif
+
+  image-scan:
+    name: Container image vulnerability scan
+    runs-on: [self-hosted, personal-mac]
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build API image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: services/api/Dockerfile
+          load: true
+          tags: rescue-meal-api:scan
+
+      - name: Build OCR worker image
+        uses: docker/build-push-action@v6
+        with:
+          context: services/ocr-worker
+          file: services/ocr-worker/Dockerfile
+          load: true
+          tags: rescue-meal-ocr-worker:scan
+
+      - name: Scan API image
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: rescue-meal-api:scan
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: "1"
+          format: sarif
+          output: trivy-api.sarif
+          limitSeveritiesForSarif: "true"
+        env:
+          TRIVY_DB_REPOSITORY: public.ecr.aws/aquasecurity/trivy-db
+
+      - name: Scan OCR worker image
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: rescue-meal-ocr-worker:scan
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: "1"
+          format: sarif
+          output: trivy-ocr.sarif
+          limitSeveritiesForSarif: "true"
+        env:
+          TRIVY_DB_REPOSITORY: public.ecr.aws/aquasecurity/trivy-db
+
+      - name: Upload image scan results
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-api.sarif
+          category: api-image
+
+      - name: Upload OCR worker scan results
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-ocr.sarif
+          category: ocr-worker-image
