@@ -465,8 +465,17 @@ test("receipt review only commits selected candidates", async ({ page }) => {
   await expect(page.getByRole("button", { name: "3개 항목 반영하기" })).toBeVisible();
   await expect(page.locator(".review-summary")).toContainText("확인 필요 1개");
   await expect(page.getByRole("note")).toContainText("확인 필요 1개가 포함돼요");
+  const firstReviewTarget = page.getByRole("button", { name: "맛타리버섯 2팩 · 3,980원 확인 필요" });
+  await expect(firstReviewTarget).toBeFocused();
+  await expect.poll(() => firstReviewTarget.evaluate((element) => {
+    const content = element.closest<HTMLElement>(".sheet-content");
+    if (!content) return false;
+    const contentBox = content.getBoundingClientRect();
+    const targetBox = element.getBoundingClientRect();
+    return targetBox.top >= contentBox.top - 1 && targetBox.bottom <= contentBox.bottom + 1;
+  })).toBe(true);
 
-  await page.getByRole("button", { name: "맛타리버섯 2팩 · 3,980원 확인 필요" }).click();
+  await firstReviewTarget.click();
   await expect(page.getByRole("button", { name: "2개 항목 반영하기" })).toBeVisible();
   await page.getByRole("button", { name: "2개 항목 반영하기" }).click();
 

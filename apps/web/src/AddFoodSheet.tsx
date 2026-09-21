@@ -443,6 +443,7 @@ function ReceiptReview({
   const reviewRef = useRef<HTMLDivElement | null>(null);
   const sourcePreviewRef = useRef<HTMLDivElement | null>(null);
   const lineCardRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const initialReviewFocusHandledRef = useRef(false);
   const resumedFocusHandledRef = useRef(false);
   const initialSourceLineId = lines.find((line) => line.requiresReview && line.sourceObservationIds?.length)?.id ?? lines.find((line) => line.sourceObservationIds?.length)?.id ?? lines[0]?.id ?? null;
   const [editingIds, setEditingIds] = useState<string[]>(() => {
@@ -482,6 +483,19 @@ function ReceiptReview({
     });
     return () => window.cancelAnimationFrame(frame);
   }, []);
+
+  useEffect(() => {
+    if (resumedFromDraft || initialReviewFocusHandledRef.current || !lines.some((line) => line.requiresReview)) return;
+    const frame = window.requestAnimationFrame(() => {
+      const target = reviewRef.current?.querySelector<HTMLElement>(".receipt-line-card-editing .receipt-line-toggle")
+        ?? reviewRef.current?.querySelector<HTMLElement>(".receipt-line-toggle[aria-label*='확인 필요']");
+      if (!target || target.hasAttribute("disabled")) return;
+      target.scrollIntoView({ behavior: getMobileScrollBehavior(), block: "center" });
+      target.focus({ preventScroll: true });
+      initialReviewFocusHandledRef.current = true;
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [lines, resumedFromDraft]);
 
   useEffect(() => {
     if (!resumedFromDraft || resumedFocusHandledRef.current) return;
