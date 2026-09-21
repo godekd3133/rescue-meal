@@ -1,0 +1,23 @@
+{
+  "surface": "native-mobile-app-only",
+  "viewport": {
+    "width": 1280,
+    "height": 900
+  },
+  "appShell": "native",
+  "phoneBezelDisplay": "none",
+  "devicePickerDisplay": "none",
+  "statusBarDisplay": "none",
+  "homeIndicatorDisplay": "none",
+  "screenBox": {
+    "x": 443.5,
+    "y": 0,
+    "width": 393,
+    "height": 900
+  },
+  "phoneFrameCount": 1,
+  "consoleErrors": [],
+  "pageErrors": [],
+  "viewportScreenshot": "native-app-only-1280x900.png",
+  "appScreenshot": "native-app-only-screen.png"
+}

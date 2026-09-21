@@ -1,9 +1,9 @@
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 from fastapi.testclient import TestClient
 
 import app.main as main_module
-from app.main import _FoodRecord, _food, _notification_clock
+from app.main import GrocyOutboxRecord, _FoodRecord, _food, _notification_clock
 from app.notifications import FoodNotificationInput, GrocyNotificationInput, NotificationPreferences, build_notifications, push_endpoint_fingerprint
 from app.notification_delivery import quiet_hours_active
 
@@ -147,6 +147,68 @@ def test_notification_rules_include_grocy_action_items_and_restore_read_state() 
     assert notifications[0].kind == "grocy_sync"
     assert notifications[0].action == "grocy"
     assert notifications[0].read_at == now
+
+
+def test_notification_read_model_exposes_the_grocy_sync_lifecycle() -> None:
+    now = datetime(2026, 9, 19, 10, 30, tzinfo=timezone.utc)
+    notifications = build_notifications(
+        foods=[],
+        grocy_items=[
+            GrocyNotificationInput("blocked-1", "매핑 확인 식품", "blocked", "상품 매핑이 필요합니다.", now),
+            GrocyNotificationInput("queued-1", "처리 대기 식품", "pending", None, now),
+            GrocyNotificationInput("processing-1", "반영 중 식품", "in_flight", None, now),
+            GrocyNotificationInput("applied-1", "반영 완료 식품", "succeeded", None, now),
+            GrocyNotificationInput("dead-letter-1", "실패 식품", "dead_letter", "외부 재고 반영에 실패했습니다.", now),
+            GrocyNotificationInput("reconcile-1", "재확인 식품", "reconciliation_required", "반영 여부를 확인해 주세요.", now),
+        ],
+        read_at={},
+        today=date(2026, 9, 19),
+        now=now,
+    )
+
+    by_id = {item.id: item for item in notifications}
+    assert by_id["grocy-outbox:blocked-1:blocked"].sync_state == "action_required"
+    assert by_id["grocy-outbox:blocked-1:blocked"].title == "Grocy 매핑 확인 필요"
+    assert by_id["grocy-outbox:queued-1:pending"].sync_state == "queued"
+    assert by_id["grocy-outbox:queued-1:pending"].title == "외부 재고 반영을 기다리는 중이에요"
+    assert by_id["grocy-outbox:processing-1:in_flight"].sync_state == "processing"
+    assert by_id["grocy-outbox:applied-1:succeeded"].sync_state == "applied"
+    assert by_id["grocy-outbox:applied-1:succeeded"].sync_record_id == "applied-1"
+    assert by_id["grocy-outbox:applied-1:succeeded"].title == "외부 재고에 반영했어요"
+    assert by_id["grocy-outbox:queued-1:pending"].created_at == now
+    assert by_id["grocy-outbox:applied-1:succeeded"].severity == "info"
+    assert all(by_id[f"grocy-outbox:{key}:{status}"].action == "grocy" for key, status in [("dead-letter-1", "dead_letter"), ("reconcile-1", "reconciliation_required")])
+
+
+def test_notification_api_keeps_recent_sync_states_and_expires_old_success() -> None:
+    now = datetime.now(timezone.utc)
+    for outbox_id, status, updated_at in (
+        ("api-queued", "pending", now),
+        ("api-applied", "succeeded", now),
+        ("api-old-applied", "succeeded", now - timedelta(days=2)),
+    ):
+        main_module.store.grocy_outbox[outbox_id] = GrocyOutboxRecord(
+            id=outbox_id,
+            operation="consume",
+            aggregate_id=outbox_id,
+            idempotency_key=f"storage-event:{outbox_id}",
+            canonical_name=outbox_id,
+            grocy_product_id=88,
+            quantity=1,
+            unit="팩",
+            payload={},
+            status=status,
+            created_at=updated_at,
+            updated_at=updated_at,
+        )
+    main_module.store.flush()
+
+    response = client.get("/api/notifications")
+    assert response.status_code == 200
+    payload = {item["canonical_name"]: item for item in response.json()}
+    assert payload["api-queued"]["sync_state"] == "queued"
+    assert payload["api-applied"]["sync_state"] == "applied"
+    assert "api-old-applied" not in payload
 
 
 def test_notification_api_marks_current_notification_read_and_filters_unread() -> None:

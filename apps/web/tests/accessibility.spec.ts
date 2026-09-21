@@ -38,6 +38,9 @@ test.beforeEach(async ({ page }) => {
 
 test("home surface passes axe audit", async ({ page }) => {
   await expect(page.getByRole("main", { name: "Rescue Meal 홈" })).toBeVisible();
+  await expect(page.locator(".brand-lockup")).toHaveAttribute("aria-label", "Rescue Meal");
+  await expect(page.locator(".brand-mark")).toHaveAttribute("aria-hidden", "true");
+  await expect(page.locator(".brand-name")).toHaveAttribute("aria-hidden", "true");
   await expectNoViolations(page, "home");
 });
 
@@ -56,7 +59,7 @@ test("account and notification surfaces pass axe audit", async ({ page }) => {
   // ~160ms; scanning inside that window flags a transient focus race.
   await expect(page.getByRole("dialog", { name: "내 계정" })).toHaveCount(0);
 
-  await page.locator(".notification-button").click();
+  await page.locator(".mobile-hero-notification").click();
   await openSheet(page, "알림");
   await expectNoViolations(page, "notification center");
 });

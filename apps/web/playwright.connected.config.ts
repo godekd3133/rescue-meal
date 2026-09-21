@@ -46,6 +46,7 @@ export default defineConfig({
         ...process.env,
         VITE_DEPLOYMENT_MODE: "demo",
         VITE_API_BASE_URL: apiUrl,
+        VITE_APP_SHELL: "preview",
       },
     },
   ],

@@ -1,0 +1,15 @@
+{
+  "surface": "web",
+  "viewport": {
+    "width": 1440,
+    "height": 1000
+  },
+  "phoneFrameCount": 0,
+  "deviceScreenCount": 0,
+  "devicePickerCount": 0,
+  "webRuntimeCount": 1,
+  "homeScreenshot": "web-home-1440x1000.png",
+  "mealModalScreenshot": "web-meal-modal-1440x1000.png",
+  "consoleErrors": [],
+  "pageErrors": []
+}

@@ -1,5 +1,6 @@
-import { type PropsWithChildren, useEffect, useState } from "react";
+import { type PropsWithChildren, useEffect, useRef, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
+import { Cross2Icon } from "@radix-ui/react-icons";
 import { useDrag } from "@use-gesture/react";
 import { AnimatePresence, motion } from "motion/react";
 import { useKeyboard, useKeyboardInsets } from "./Keyboard";
@@ -27,6 +28,7 @@ export function BottomSheet({
   const keyboard = useKeyboard();
   const { keyboardHeight } = useKeyboardInsets();
   const [dragY, setDragY] = useState(0);
+  const sheetContentRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (open) keyboard.hide();
@@ -39,6 +41,66 @@ export function BottomSheet({
 
     onOpenChange(nextOpen);
   };
+
+  useEffect(() => {
+    if (!open) return;
+
+    let attachFrame: number | null = null;
+    let cleanup: (() => void) | null = null;
+    const attach = () => {
+      const content = sheetContentRef.current;
+      if (!content) {
+        attachFrame = window.requestAnimationFrame(attach);
+        return;
+      }
+
+      let frame: number | null = null;
+      let previousScrollTop = content.scrollTop;
+      const updateDetailActions = () => {
+        frame = null;
+        const sentinel = content.querySelector<HTMLElement>(".detail-actions-sentinel");
+        const actions = content.querySelector<HTMLElement>(".detail-actions");
+        if (!sentinel || !actions) return;
+        const next = sentinel.getBoundingClientRect().bottom < content.getBoundingClientRect().top - 1;
+        actions.classList.toggle("detail-actions-stuck", next);
+        if (!next) {
+          actions.classList.remove("detail-actions-scroll-down", "detail-actions-scroll-up");
+        } else if (content.scrollTop > previousScrollTop + 1) {
+          actions.classList.add("detail-actions-scroll-down");
+          actions.classList.remove("detail-actions-scroll-up");
+        } else if (content.scrollTop < previousScrollTop - 1) {
+          actions.classList.add("detail-actions-scroll-up");
+          actions.classList.remove("detail-actions-scroll-down");
+        }
+        previousScrollTop = content.scrollTop;
+      };
+      const scheduleUpdate = () => {
+        if (frame !== null) return;
+        frame = window.requestAnimationFrame(updateDetailActions);
+      };
+      const resizeObserver = new ResizeObserver(scheduleUpdate);
+      const mutationObserver = new MutationObserver(scheduleUpdate);
+
+      content.addEventListener("scroll", scheduleUpdate, { passive: true });
+      window.addEventListener("resize", scheduleUpdate);
+      resizeObserver.observe(content);
+      mutationObserver.observe(content, { childList: true, subtree: true });
+      updateDetailActions();
+      cleanup = () => {
+        content.removeEventListener("scroll", scheduleUpdate);
+        window.removeEventListener("resize", scheduleUpdate);
+        resizeObserver.disconnect();
+        mutationObserver.disconnect();
+        if (frame !== null) window.cancelAnimationFrame(frame);
+      };
+    };
+
+    attach();
+    return () => {
+      if (attachFrame !== null) window.cancelAnimationFrame(attachFrame);
+      cleanup?.();
+    };
+  }, [open]);
 
   const bindDrag = useDrag(
     (state) => {
@@ -65,7 +127,16 @@ export function BottomSheet({
     },
   );
 
-  const sheetHeight = Math.round(device.geometry.screen.height * snap);
+  // Native webviews can resize their actual screen when the browser chrome or
+  // system keyboard changes. The calibrated geometry remains the source of
+  // truth for the preview simulator, but native sheets must size from the
+  // current screen element or a short viewport can clip the sheet above the
+  // visible surface.
+  const isNativeSurface = Boolean(screenRef.current?.closest(".app-shell-native"));
+  const screenHeight = isNativeSurface && screenRef.current
+    ? screenRef.current.clientHeight
+    : device.geometry.screen.height;
+  const sheetHeight = Math.round(screenHeight * snap);
   const effectiveHeight = Math.max(260, sheetHeight - Math.min(keyboardHeight, 180));
   const sheetBottom =
     device.platform === "android"
@@ -123,8 +194,13 @@ export function BottomSheet({
                   <div className="sheet-header">
                     <Dialog.Title className="sheet-title">{title}</Dialog.Title>
                     {description ? <Dialog.Description className="sheet-description">{description}</Dialog.Description> : null}
+                    <Dialog.Close asChild>
+                      <button className="sheet-close-button" type="button" aria-label="닫기" title="닫기" onClick={() => keyboard.hide()}>
+                        <Cross2Icon width={18} height={18} aria-hidden="true" />
+                      </button>
+                    </Dialog.Close>
                   </div>
-                  <div className="sheet-content">{children}</div>
+                  <div className="sheet-content" ref={sheetContentRef}>{children}</div>
                 </motion.div>
               </Dialog.Content>
             </>

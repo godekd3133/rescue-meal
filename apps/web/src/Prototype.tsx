@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from "react";
 import { MotionConfig } from "motion/react";
 import {
   ArchiveIcon,
@@ -25,7 +25,9 @@ import {
 } from "@radix-ui/react-icons";
 import { KeyboardInput, useKeyboard } from "./mobile/Keyboard";
 import { MobileScroll } from "./mobile/MobileScroll";
-import { createReceiptCommitIdempotencyKey, isMealApiAuthError, isMealApiConflictError, isMealApiFoodDateConfirmedError, isMealApiFoodDatePersistenceError, isMealApiFoodLotSelectionError, isMealApiManualFoodPersistenceError, isMealApiNotificationReadPersistenceError, isMealApiProductInfoPersistenceError, isMealApiProductProvenancePersistenceError, isMealApiReceiptCommitPersistenceError, isMealApiShoppingListPersistenceError, isMealApiShoppingReceivePersistenceError, isMealApiStorageEventPersistenceError, isMealApiWorkspaceConflictError, MEAL_API_WORKSPACE_CONFLICT_MESSAGE, mealApi, type ApiDateKind, type ApiFood, type ApiGrocySyncStatus, type ApiNotification, type ApiProductProvenance, type ApiReceiptDraft, type ApiReceiptSummary, type ApiShoppingListItem, type ApiStorageLocation, type ApiStorageType } from "./mealApi";
+import { getMobileScrollBehavior, revealAndFocus } from "./mobile/scroll";
+import ConnectionStatus from "./ConnectionStatus";
+import { createReceiptCommitIdempotencyKey, isMealApiAuthError, isMealApiConflictError, isMealApiFoodDateConfirmedError, isMealApiFoodDatePersistenceError, isMealApiFoodLotSelectionError, isMealApiManualFoodPersistenceError, isMealApiNotificationReadPersistenceError, isMealApiProductInfoPersistenceError, isMealApiProductProvenancePersistenceError, isMealApiReceiptCommitPersistenceError, isMealApiShoppingListPersistenceError, isMealApiShoppingReceivePersistenceError, isMealApiStorageEventPersistenceError, isMealApiWorkspaceConflictError, MEAL_API_WORKSPACE_CONFLICT_MESSAGE, mealApi, type ApiDateKind, type ApiFood, type ApiGrocySyncStatus, type ApiNotification, type ApiOcrReviewObservation, type ApiProductProvenance, type ApiReceiptDraft, type ApiReceiptSummary, type ApiShoppingListItem, type ApiStorageLocation, type ApiStorageType } from "./mealApi";
 import RuntimeConfigurationGuard from "./RuntimeConfigurationGuard";
 import RuntimeErrorBoundary from "./RuntimeErrorBoundary";
 import InstallPrompt from "./InstallPrompt";
@@ -49,6 +51,7 @@ export type ProductProvenance = {
 type SheetName = "add" | "detail" | "meal" | "shopping" | "guidance" | "account" | "notifications" | "recipe-review" | "receipt-queue" | null;
 type ConnectionState = "fixture" | "checking" | "connected" | "offline" | "auth_required";
 type ThemeMode = "light" | "dark";
+type NotificationSyncFocus = "action_required" | "queued";
 type InventorySearchStatus = "idle" | "loading" | "ready" | "error";
 type ShoppingListStatus = "idle" | "loading" | "ready" | "error";
 type ToastAction = {
@@ -77,6 +80,29 @@ type ProductProvenanceStatus = {
   foodId: string;
   message: string;
   retryable: boolean;
+};
+type InventoryReturnContext = {
+  foodId: string;
+  returnNav: "food";
+  scrollTop: number;
+  rowOffset: number | null;
+};
+type PendingAddedFoodFocus = {
+  name: string;
+  sourceNav: "home" | "food";
+  trigger: HTMLElement | null;
+};
+type PendingFoodDateFocus = {
+  foodId: string;
+  name: string;
+  sourceNav: "home" | "food";
+  trigger: HTMLElement | null;
+};
+type PendingMealCompletionFocus = {
+  sourceNav: "home" | "food";
+  preferredFoodIds: string[];
+  beforeFoodsSignature: string;
+  trigger: HTMLElement | null;
 };
 export type FoodItem = {
   id: string;
@@ -209,8 +235,9 @@ const INITIAL_FOODS: FoodItem[] = [
     quantity: "2팩",
     storage: "냉동",
     dateLabel: formatApiDate("2026-09-06"),
-    dateDetail: "사용자 확인",
+    dateDetail: "2026.09.06",
     dateKind: "user_confirmed",
+    dateAssertionKind: "user_reminder",
     dateSource: "사용자 입력",
     image: FOOD_IMAGES.chicken,
     category: "육류",
@@ -294,11 +321,53 @@ const INITIAL_FOODS: FoodItem[] = [
 
 function withGrocySyncNotice(base: string, status?: ApiGrocySyncStatus | ApiGrocySyncStatus[]) {
   const statuses = Array.isArray(status) ? status : status ? [status] : [];
-  if (statuses.includes("dead_letter")) return `${base} Grocy 동기화에 실패해 재확인이 필요해요`;
-  if (statuses.includes("needs_reconciliation")) return `${base} Grocy 외부 반영 여부를 확인해 주세요`;
-  if (statuses.includes("needs_mapping")) return `${base} Grocy 상품·보관 위치 매핑을 확인해 주세요`;
-  if (statuses.some((item) => item === "queued" || item === "in_flight")) return `${base} Grocy 동기화를 대기 중이에요`;
+  if (statuses.includes("dead_letter")) return `${base} · 외부 재고 반영에 실패해 확인이 필요해요`;
+  if (statuses.includes("needs_reconciliation")) return `${base} · 외부 반영 여부를 확인해 주세요`;
+  if (statuses.includes("needs_mapping")) return `${base} · 외부 상품·보관 위치 연결을 확인해 주세요`;
+  if (statuses.some((item) => item === "queued" || item === "in_flight")) return `${base} · 외부 재고 반영을 대기 중이에요`;
   return base;
+}
+
+function hasDeferredExternalSync(status?: ApiGrocySyncStatus | ApiGrocySyncStatus[]) {
+  const statuses = Array.isArray(status) ? status : status ? [status] : [];
+  return statuses.some((item) => item === "queued" || item === "in_flight" || item === "dead_letter" || item === "needs_reconciliation" || item === "needs_mapping");
+}
+
+function needsExternalSyncAttention(status?: ApiGrocySyncStatus | ApiGrocySyncStatus[]) {
+  const statuses = Array.isArray(status) ? status : status ? [status] : [];
+  return statuses.some((item) => item === "dead_letter" || item === "needs_reconciliation" || item === "needs_mapping");
+}
+
+function withServerReadbackNotice(base: string, synced: boolean) {
+  return synced ? base : `${base} · 서버 저장은 완료됐지만 최신 목록은 아직 다시 읽지 못했어요`;
+}
+
+function withNextPriorityCue(base: string, foods: FoodItem[], enabled: boolean) {
+  if (!enabled) return base;
+  const next = [...foods]
+    .sort((left, right) => left.priority - right.priority)
+    .find((food) => food.priority <= 3);
+  return next ? `${base} · 다음: ${next.name}` : `${base} · 오늘 먼저 확인할 식품이 없어요`;
+}
+
+function mealCompletionMessage(foodIds: string[], skippedCount: number, consumedAllocations: Array<{ food_id: string; quantity: number }>) {
+  const consumedCount = Math.max(foodIds.length, consumedAllocations.filter((allocation) => allocation.quantity > 0).length);
+  if (skippedCount > 0) return `조리 완료 · ${consumedCount}개 재료를 사용했어요 · ${skippedCount}개는 재고에 남겼어요`;
+  if (consumedCount > 0) return `조리 완료 · ${consumedCount}개 재료를 차감했어요`;
+  return "조리 완료 기록을 남겼어요";
+}
+
+function withKoreanObjectParticle(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return value;
+  const lastCodePoint = trimmed.charCodeAt(trimmed.length - 1);
+  const hasFinalConsonant = lastCodePoint >= 0xac00 && lastCodePoint <= 0xd7a3 && (lastCodePoint - 0xac00) % 28 !== 0;
+  return `${trimmed}${hasFinalConsonant ? "을" : "를"}`;
+}
+
+function addedFoodFollowUpLabel(food: FoodItem) {
+  if (food.dateKind !== "unknown") return null;
+  return food.productProvenance ? "상품·날짜 확인" : "날짜·보관 확인";
 }
 
 const RECEIPT_LINES: ReceiptLine[] = [
@@ -340,12 +409,28 @@ const RECEIPT_LINES: ReceiptLine[] = [
   },
 ];
 
+const RECEIPT_SOURCE_REVIEW_FIXTURE = {
+  source: "샘플 영수증",
+  merchantName: "익명 동네마트",
+  sourcePreviewUrl: "/assets/receipts/source-review-fixture-v1.png",
+  sourcePreviewKind: "image" as const,
+  reviewObservations: [
+    { id: "fixture-observation-spinach", bbox: [0.36, 0.735, 0.32, 0.022] as [number, number, number, number], confidence: 0.96 },
+    { id: "fixture-observation-tofu", bbox: [0.36, 0.695, 0.32, 0.022] as [number, number, number, number], confidence: 0.94 },
+    { id: "fixture-observation-mushroom", bbox: [0.36, 0.675, 0.32, 0.022] as [number, number, number, number], confidence: 0.91 },
+  ] satisfies ApiOcrReviewObservation[],
+  lines: RECEIPT_LINES.map((line, index) => ({
+    ...line,
+    sourceObservationIds: index === 0 ? ["fixture-observation-spinach"] : index === 1 ? ["fixture-observation-tofu"] : ["fixture-observation-mushroom"],
+  })),
+};
+
 const STORAGE_OPTIONS: StorageType[] = ["냉장", "냉동", "실온"];
 const THEME_STORAGE_KEY = "rescue-meal.theme";
+const IS_WEB_SURFACE = ((import.meta.env.VITE_APP_SHELL as string | undefined)?.trim().toLowerCase() ?? "web") === "web";
 const BarcodeScanner = lazy(() => import("./BarcodeScanner"));
 const loadBottomSheet = () => import("./mobile/BottomSheet").then(({ BottomSheet }) => ({ default: BottomSheet }));
 const LazyBottomSheet = lazy(loadBottomSheet);
-const ConnectionStatus = lazy(() => import("./ConnectionStatus"));
 const FoodHistory = lazy(() => import("./FoodHistory"));
 const DateAssertionEditor = lazy(() => import("./DateAssertionEditor"));
 const AccountSheet = lazy(() => import("./AccountSheet"));
@@ -370,7 +455,7 @@ function DeferredBottomSheet({ open, onOpenChange, title, description, snap, chi
   return <Suspense fallback={open ? <ProcessingState label="화면을 준비하고 있어요" detail="잠시만 기다려 주세요." /> : null}><LazyBottomSheet open={open} onOpenChange={onOpenChange} title={title} description={description} snap={snap}>{children}</LazyBottomSheet></Suspense>;
 }
 
-function ReceiptReviewQueue({ receipts, onSelect, notice }: { receipts: ApiReceiptSummary[]; onSelect: (receiptId: string) => void; notice?: string }) {
+function ReceiptReviewQueue({ receipts, onSelect, onAddReceipt, notice }: { receipts: ApiReceiptSummary[]; onSelect: (receiptId: string) => void; onAddReceipt: () => void; notice?: string }) {
   return (
     <div className="receipt-review-queue">
       <div className="receipt-review-queue-intro" role="status">
@@ -384,7 +469,7 @@ function ReceiptReviewQueue({ receipts, onSelect, notice }: { receipts: ApiRecei
           <span className="receipt-review-queue-row-copy"><strong>{receipt.merchant_name ?? "저장된 영수증"}</strong><small>{formatPurchasedAt(receipt.purchased_at) ?? "구매일 확인 필요"} · 상품 {receipt.line_count}개</small></span>
           <span className="receipt-review-queue-row-action">이어서 확인 <ChevronRightIcon width={14} height={14} /></span>
         </button></div>)}
-      </div> : <div className="receipt-review-queue-empty" role="status"><strong>검수할 영수증이 없어요</strong><small>목록을 다시 확인하거나 새 영수증을 선택해 주세요.</small></div>}
+      </div> : <div className="receipt-review-queue-empty" role="status"><strong>검수할 영수증이 없어요</strong><small>목록을 다시 확인하거나 새 영수증을 선택해 주세요.</small><button className="secondary-sheet-button" type="button" onClick={onAddReceipt}><PlusIcon width={15} height={15} /> 새 영수증으로 추가</button></div>}
       <p className="receipt-review-queue-footnote">이미 반영했거나 삭제한 영수증은 이 목록에서 자동으로 빠져요.</p>
     </div>
   );
@@ -436,7 +521,7 @@ function getDateBadge(food: FoodItem) {
   }
   if (food.dateKind === "user_confirmed") return "사용자 확인";
   if (food.dateKind === "unknown") return "확인 필요";
-  return "AI 소비 우선순위";
+  return "먼저 사용 권장";
 }
 
 const DEMO_NOTIFICATION_SOURCE = {
@@ -494,9 +579,10 @@ function getInitialTheme(): ThemeMode {
   return "light";
 }
 
-function mealPlanHint(priorityFoods: FoodItem[], foodCount: number) {
+function mealPlanHint(priorityFoods: FoodItem[], foodCount: number, priorityNeedsReviewCount = 0) {
   if (foodCount === 0) return "식품을 추가하면 바로 맞춤 식단을 만들어요.";
   if (priorityFoods.length === 0) return "먼저 먹을 식품을 확인하면 맞춤 식단을 만들어요.";
+  if (priorityNeedsReviewCount > 0) return `확인이 필요한 식품 ${priorityNeedsReviewCount}개를 먼저 읽고 오늘 식단을 만들어요.`;
   const names = priorityFoods.slice(0, 3).map((food) => food.name);
   const suffix = priorityFoods.length > names.length ? ` 외 ${priorityFoods.length - names.length}개` : "";
   return `${names.join("·")}${suffix}을 먼저 써볼까요?`;
@@ -509,10 +595,41 @@ function formatPurchasedAt(value?: string | null) {
   return new Intl.DateTimeFormat("ko-KR", { year: "numeric", month: "long", day: "numeric" }).format(parsed);
 }
 
-function formatDashboardCacheTime(value: string) {
+function parseDashboardCacheTime(value: string) {
   const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return "최근 동기화 시각 확인 필요";
-  return new Intl.DateTimeFormat("ko-KR", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" }).format(parsed);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function formatDashboardCacheAge(value: string, now = new Date()) {
+  const parsed = parseDashboardCacheTime(value);
+  if (!parsed) return "동기화 시각 확인 필요";
+  const elapsedMinutes = Math.max(0, Math.floor((now.getTime() - parsed.getTime()) / 60_000));
+  return elapsedMinutes < 1
+    ? "방금 전"
+    : elapsedMinutes < 60
+      ? `${elapsedMinutes}분 전`
+      : elapsedMinutes < 24 * 60
+        ? `${Math.floor(elapsedMinutes / 60)}시간 전`
+        : elapsedMinutes < 48 * 60
+          ? "어제"
+          : `${Math.floor(elapsedMinutes / (24 * 60))}일 전`;
+}
+
+function dashboardCacheFreshness(value: string, now = new Date()): "recent" | "stale" | "old" | "unknown" {
+  const parsed = parseDashboardCacheTime(value);
+  if (!parsed) return "unknown";
+  const elapsedMinutes = Math.max(0, Math.floor((now.getTime() - parsed.getTime()) / 60_000));
+  if (elapsedMinutes < 60) return "recent";
+  if (elapsedMinutes < 24 * 60) return "stale";
+  return "old";
+}
+
+function formatDashboardCacheTime(value: string, now = new Date()) {
+  const parsed = parseDashboardCacheTime(value);
+  if (!parsed) return "최근 동기화 시각 확인 필요";
+  const relative = formatDashboardCacheAge(value, now);
+  const absolute = new Intl.DateTimeFormat("ko-KR", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" }).format(parsed);
+  return `${relative} · ${absolute}`;
 }
 
 function mapApiFood(food: ApiFood, storageLocations: ApiStorageLocation[] = []): FoodItem {
@@ -553,7 +670,7 @@ function mapApiFood(food: ApiFood, storageLocations: ApiStorageLocation[] = []):
       ? storageLocations.find((location) => location.id === food.storage_location_id)?.name
       : undefined,
     dateLabel: formatApiDate(displayDate),
-    dateDetail: dateKind === "user_confirmed" ? "사용자 확인" : food.date_assertion.display_label.replaceAll("-", "."),
+    dateDetail: food.date_assertion.display_label.replaceAll("-", "."),
     dateKind,
     dateAssertionKind: assertionKind,
     dateStorageHint: food.date_assertion.applicable_storage_type ?? undefined,
@@ -599,6 +716,15 @@ function dateReviewReason(food: FoodItem, referenceDate: Date) {
   const assertionKind = food.dateAssertionKind ?? "use_by";
   if (["use_by", "sell_by", "best_before"].includes(assertionKind) && target.getTime() <= today.getTime()) return "조리 전 날짜 확인";
   return null;
+}
+
+function storageConditionReviewReason(food: FoodItem) {
+  if (!food.dateStorageHint || food.dateStorageHint === storageToApi(food.storage)) return null;
+  return "보관 조건 확인";
+}
+
+function attentionReviewReason(food: FoodItem, referenceDate: Date) {
+  return dateReviewReason(food, referenceDate) ?? storageConditionReviewReason(food);
 }
 
 function quantityParts(quantity: string) {
@@ -658,22 +784,50 @@ function prepareReceiptLine(line: ReceiptLine): PreparedReceiptLine | null {
   return { line, canonicalName, quantity, unit, storage: line.storage, storageLocationId: line.storageLocationId ?? null };
 }
 
-function useViewportHeight() {
-  const [height, setHeight] = useState(() => typeof window === "undefined" ? 852 : window.innerHeight);
+type ViewportMetrics = {
+  height: number;
+  offsetTop: number;
+};
+
+function readViewportMetrics(): ViewportMetrics {
+  if (typeof window === "undefined") return { height: 852, offsetTop: 0 };
+  const visualViewport = window.visualViewport;
+  const height = typeof visualViewport?.height === "number" && visualViewport.height > 0
+    ? visualViewport.height
+    : window.innerHeight;
+  return {
+    height,
+    offsetTop: typeof visualViewport?.offsetTop === "number" ? visualViewport.offsetTop : 0,
+  };
+}
+
+function useViewportMetrics() {
+  const [metrics, setMetrics] = useState(readViewportMetrics);
 
   useEffect(() => {
-    const update = () => setHeight(window.innerHeight);
+    const update = () => setMetrics((current) => {
+      const next = readViewportMetrics();
+      return current.height === next.height && current.offsetTop === next.offsetTop ? current : next;
+    });
+    const visualViewport = window.visualViewport;
     update();
     window.addEventListener("resize", update);
-    return () => window.removeEventListener("resize", update);
+    visualViewport?.addEventListener("resize", update);
+    visualViewport?.addEventListener("scroll", update);
+    return () => {
+      window.removeEventListener("resize", update);
+      visualViewport?.removeEventListener("resize", update);
+      visualViewport?.removeEventListener("scroll", update);
+    };
   }, []);
 
-  return height;
+  return metrics;
 }
 
 function PrototypeContent() {
   const keyboard = useKeyboard();
-  const viewportHeight = useViewportHeight();
+  const viewportMetrics = useViewportMetrics();
+  const viewportHeight = viewportMetrics.height;
   const [themeMode, setThemeMode] = useState<ThemeMode>(getInitialTheme);
 
   useEffect(() => {
@@ -681,6 +835,9 @@ function PrototypeContent() {
 
     document.documentElement.dataset.rescueTheme = themeMode;
     document.documentElement.style.colorScheme = themeMode;
+    const themeColor = themeMode === "dark" ? "#101419" : "#f2f4f6";
+    document.documentElement.style.setProperty("--rescue-app-background", themeColor);
+    document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')?.setAttribute("content", themeColor);
 
     try {
       window.localStorage.setItem(THEME_STORAGE_KEY, themeMode);
@@ -722,21 +879,50 @@ function PrototypeContent() {
   const [currentDate, setCurrentDate] = useState(() => new Date());
   const [sheet, setSheet] = useState<SheetName>(null);
   const [activeNav, setActiveNav] = useState<"home" | "food" | "meal">("home");
+  const activeContentNavRef = useRef<"home" | "food">("home");
+  const navigationIntentRef = useRef<"home" | "food" | null>(null);
+  const navigationIntentLastScrollTopRef = useRef<number | null>(null);
+  const mealSheetOriginNavRef = useRef<"home" | "food">("home");
+  const mealReturnSheetRef = useRef<"shopping" | null>(null);
+  const mealDetailReturnRef = useRef(false);
+  const mealDetailReturnFocusIdRef = useRef<string | null>(null);
+  const accountDetailReturnRef = useRef(false);
+  const notificationDetailReturnRef = useRef(false);
+  const notificationAccountReturnRef = useRef(false);
+  const notificationReturnFocusIdRef = useRef<string | null>(null);
+  const notificationInitialFocusRef = useRef(false);
+  const mealPlanOptionsRef = useRef({ maxMinutes: 30, servings: 1 });
+  const guidanceReturnSheetRef = useRef<"detail" | null>(null);
+  const addReturnSheetRef = useRef<"detail" | null>(null);
   const sheetRef = useRef<SheetName>(null);
   sheetRef.current = sheet;
   const sheetRestoreFocusRef = useRef<HTMLElement | null>(null);
+  const addOriginFocusRef = useRef<HTMLElement | null>(null);
+  const pendingAddedFoodFocusRef = useRef<PendingAddedFoodFocus | null>(null);
+  const pendingFoodDateFocusRef = useRef<PendingFoodDateFocus | null>(null);
+  const pendingMealCompletionFocusRef = useRef<PendingMealCompletionFocus | null>(null);
+  const inventoryReturnContextRef = useRef<InventoryReturnContext | null>(null);
   const [addMode, setAddMode] = useState<AddMode>("receipt");
   const [selectedFoodId, setSelectedFoodId] = useState<string | null>(null);
+  const [detailEntryIntent, setDetailEntryIntent] = useState<"date-review" | "provenance-review" | "consume-action" | null>(null);
+  const [detailSyncFocusId, setDetailSyncFocusId] = useState<string | null>(null);
+  const [detailHistoryRefreshKey, setDetailHistoryRefreshKey] = useState(0);
+  const detailHistoryDisclosureOpenRef = useRef(false);
+  const updateDetailHistoryDisclosure = useCallback((open: boolean) => {
+    detailHistoryDisclosureOpenRef.current = open;
+  }, []);
   const [detailRemoteRefreshRequired, setDetailRemoteRefreshRequired] = useState(false);
   const detailRevisionRef = useRef<number | null>(null);
   const detailPollingInFlightRef = useRef(false);
   const [accountRemoteRefreshRequired, setAccountRemoteRefreshRequired] = useState(false);
   const [accountRemoteRefreshing, setAccountRemoteRefreshing] = useState(false);
   const [accountRefreshNonce, setAccountRefreshNonce] = useState(0);
+  const [accountGrocyOutboxFocusId, setAccountGrocyOutboxFocusId] = useState<string | null>(null);
   const accountRevisionRef = useRef<number | null>(null);
   const accountPollingInFlightRef = useRef(false);
   const [storageFilter, setStorageFilter] = useState<InventoryStorageFilter>("전체");
   const [inventoryQuery, setInventoryQuery] = useState("");
+  const inventorySearchFocusRef = useRef(false);
   const [inventorySearchResults, setInventorySearchResults] = useState<FoodItem[]>([]);
   const [inventorySearchTotal, setInventorySearchTotal] = useState<number | null>(null);
   const [inventorySearchHasMore, setInventorySearchHasMore] = useState(false);
@@ -753,13 +939,19 @@ function PrototypeContent() {
   const [notificationsError, setNotificationsError] = useState("");
   const [notificationsNotice, setNotificationsNotice] = useState("");
   const [notificationRetryAction, setNotificationRetryAction] = useState<NotificationRetryAction | null>(null);
+  const [notificationSyncFocus, setNotificationSyncFocus] = useState<NotificationSyncFocus | null>(null);
+  const [pendingNotificationSyncRecordId, setPendingNotificationSyncRecordId] = useState<string | null>(null);
   const notificationRevisionRef = useRef<number | null>(null);
   const notificationPollingInFlightRef = useRef(false);
   const notificationReadInFlightRef = useRef(0);
   const notificationRefreshQueuedRef = useRef(false);
+  const notificationReadOverridesRef = useRef(new Map<string, string>());
+  const notificationFocusOverrideRef = useRef(false);
   const [productInfoRetryAction, setProductInfoRetryAction] = useState<ProductInfoRetryAction | null>(null);
+  const [productInfoSavingFoodId, setProductInfoSavingFoodId] = useState<string | null>(null);
+  const [productInfoNotice, setProductInfoNotice] = useState<{ foodId: string; message: string; requiresRefresh?: boolean } | null>(null);
   const [productProvenanceStatus, setProductProvenanceStatus] = useState<ProductProvenanceStatus | null>(null);
-  const [productProvenanceNotice, setProductProvenanceNotice] = useState<{ foodId: string; message: string } | null>(null);
+  const [productProvenanceNotice, setProductProvenanceNotice] = useState<{ foodId: string; message: string; requiresRefresh?: boolean } | null>(null);
   const [demoNotificationReadAt, setDemoNotificationReadAt] = useState<Record<string, string>>({});
   const [shoppingList, setShoppingList] = useState<ApiShoppingListItem[]>([]);
   const [shoppingListStatus, setShoppingListStatus] = useState<ShoppingListStatus>("idle");
@@ -767,6 +959,7 @@ function PrototypeContent() {
   const [shoppingListNotice, setShoppingListNotice] = useState("");
   const [shoppingListMutating, setShoppingListMutating] = useState(false);
   const [shoppingListRetryAction, setShoppingListRetryAction] = useState<ShoppingListRetryAction | null>(null);
+  const [recentlyReceivedFood, setRecentlyReceivedFood] = useState<{ id: string; name: string } | null>(null);
   const shoppingListMutatingRef = useRef(false);
   shoppingListMutatingRef.current = shoppingListMutating;
   const shoppingListRevisionRef = useRef<number | null>(null);
@@ -774,22 +967,27 @@ function PrototypeContent() {
   const shoppingListSyncInFlightRef = useRef(false);
   const shoppingListRefreshQueuedRef = useRef(false);
   const shoppingReceiveKeys = useRef(new Map<string, string>());
+  const shoppingInitialFocusRef = useRef(false);
   const [receiptSummaries, setReceiptSummaries] = useState<ApiReceiptSummary[]>([]);
   const [receiptSummariesStatus, setReceiptSummariesStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [receiptSummariesNotice, setReceiptSummariesNotice] = useState("");
   const receiptSummariesRevisionRef = useRef<number | null>(null);
   const receiptSummariesPollingInFlightRef = useRef(false);
   const receiptSummariesSyncInFlightRef = useRef(false);
+  const receiptQueueInitialFocusRef = useRef(false);
   const [connectionState, setConnectionState] = useState<ConnectionState>(mealApi.isConfigured ? "checking" : "fixture");
   const [dashboardStaleAt, setDashboardStaleAt] = useState<string | null>(null);
   const dashboardRevisionRef = useRef<number | null>(null);
   const dashboardPollingInFlightRef = useRef(false);
+  const dashboardPollQueuedRef = useRef(false);
   const dashboardSyncInFlightRef = useRef(false);
   const [resumeReceiptId, setResumeReceiptId] = useState<string | null>(null);
   const [addSheetSessionKey, setAddSheetSessionKey] = useState(0);
   const addSheetOpenRequestRef = useRef(0);
   const mealSheetOpenRequestRef = useRef(0);
   const [reviewMode] = useState(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("review") === "1");
+  const [receiptSourceReviewMode] = useState(() => typeof window !== "undefined" && mealApi.deploymentMode === "demo" && new URLSearchParams(window.location.search).get("review") === "1" && new URLSearchParams(window.location.search).get("receipt_source_review") === "1");
+  const receiptSourceReviewOpenedRef = useRef(false);
   const [passwordResetToken] = useState(() => typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("reset_token")?.trim() ?? "" : "");
   const workspaceSyncRef = useRef<WorkspaceSyncCoordinator | null>(null);
   if (workspaceSyncRef.current === null) {
@@ -816,11 +1014,107 @@ function PrototypeContent() {
   }, [passwordResetToken]);
 
   const changeSheet = (next: SheetName) => {
-    if (next !== null && sheet === null) {
+    const resolvedNext = next === null && sheet === "add" && addReturnSheetRef.current
+      ? addReturnSheetRef.current
+      : next;
+    if (resolvedNext === "receipt-queue" && sheet !== "receipt-queue") receiptQueueInitialFocusRef.current = true;
+    if (resolvedNext !== null && sheet === null) {
       const activeElement = document.activeElement;
       sheetRestoreFocusRef.current = activeElement instanceof HTMLElement ? activeElement : null;
     }
-    setSheet(next);
+    if (resolvedNext === null && sheet === "meal") {
+      const returnSheet = mealReturnSheetRef.current;
+      mealReturnSheetRef.current = null;
+      setActiveNav(mealSheetOriginNavRef.current);
+      if (returnSheet) {
+        pendingMealCompletionFocusRef.current = null;
+        setSheet(returnSheet);
+        return;
+      }
+    }
+    if (resolvedNext === null && sheet === "detail") {
+      setDetailEntryIntent(null);
+      setDetailSyncFocusId(null);
+    }
+    if (resolvedNext === null && sheet === "detail" && notificationDetailReturnRef.current) {
+      notificationDetailReturnRef.current = false;
+      setDetailSyncFocusId(null);
+      inventoryReturnContextRef.current = null;
+      setSheet("notifications");
+      return;
+    }
+    if (resolvedNext === null && sheet === "detail" && accountDetailReturnRef.current) {
+      accountDetailReturnRef.current = false;
+      setDetailSyncFocusId(null);
+      inventoryReturnContextRef.current = null;
+      setSheet("account");
+      return;
+    }
+    if (resolvedNext === null && sheet === "shopping") {
+      setRecentlyReceivedFood(null);
+      shoppingInitialFocusRef.current = false;
+    }
+    if (resolvedNext === null && sheet === "receipt-queue") {
+      receiptQueueInitialFocusRef.current = false;
+    }
+    if (resolvedNext === null && sheet === "notifications") {
+      notificationDetailReturnRef.current = false;
+      notificationAccountReturnRef.current = false;
+      notificationReturnFocusIdRef.current = null;
+      notificationInitialFocusRef.current = false;
+      setNotificationSyncFocus(null);
+    }
+    if (resolvedNext === null && sheet === "account" && notificationAccountReturnRef.current) {
+      notificationAccountReturnRef.current = false;
+      setAccountGrocyOutboxFocusId(null);
+      notificationInitialFocusRef.current = false;
+      setSheet("notifications");
+      return;
+    }
+    if (resolvedNext === null && sheet === "account" && accountDetailReturnRef.current) {
+      accountDetailReturnRef.current = false;
+      setAccountGrocyOutboxFocusId(null);
+      setSheet("detail");
+      return;
+    }
+    if (resolvedNext === null && sheet === "add" && activeNav === "meal") {
+      activeContentNavRef.current = mealSheetOriginNavRef.current;
+      navigationIntentRef.current = mealSheetOriginNavRef.current;
+      navigationIntentLastScrollTopRef.current = null;
+      setActiveNav(mealSheetOriginNavRef.current);
+    }
+    if (resolvedNext === null && sheet === "detail" && mealDetailReturnRef.current) {
+      mealDetailReturnRef.current = false;
+      setSheet("meal");
+      return;
+    }
+    if (resolvedNext === null && sheet === "account" && activeContentNavRef.current === "food") {
+      const scroll = document.querySelector<HTMLElement>(".app-screen.mobile-scroll, .app-screen .mobile-scroll");
+      navigationIntentRef.current = "food";
+      navigationIntentLastScrollTopRef.current = scroll?.scrollTop ?? null;
+      activeContentNavRef.current = "food";
+      setActiveNav("food");
+      window.requestAnimationFrame(() => {
+        document.querySelector<HTMLElement>(".inventory-section")?.scrollIntoView({ behavior: "auto", block: "start" });
+        activeContentNavRef.current = "food";
+        navigationIntentRef.current = "food";
+        navigationIntentLastScrollTopRef.current = scroll?.scrollTop ?? null;
+        setActiveNav("food");
+      });
+    }
+    if (next === null && sheet === "add") addReturnSheetRef.current = null;
+    setSheet(resolvedNext);
+  };
+
+  const openGuidanceSheet = () => {
+    guidanceReturnSheetRef.current = sheet === "detail" ? "detail" : null;
+    changeSheet("guidance");
+  };
+
+  const closeGuidanceSheet = () => {
+    const returnSheet = guidanceReturnSheetRef.current;
+    guidanceReturnSheetRef.current = null;
+    changeSheet(returnSheet);
   };
 
   const toggleTheme = () => {
@@ -835,32 +1129,606 @@ function PrototypeContent() {
 
     let disposed = false;
     let fallbackTimer: number | undefined;
+    let restoreTimer: number | undefined;
     const restoreFocus = () => {
       if (disposed || document.querySelector('[data-testid="bottom-sheet"]')) return;
-      if (trigger.isConnected && !trigger.hasAttribute("disabled")) {
-        trigger.focus({ preventScroll: true });
-      }
-      observer.disconnect();
-      if (fallbackTimer !== undefined) window.clearTimeout(fallbackTimer);
+      if (restoreTimer !== undefined) window.clearTimeout(restoreTimer);
+      restoreTimer = window.setTimeout(() => {
+        restoreTimer = undefined;
+        if (disposed || document.querySelector('[data-testid="bottom-sheet"]')) return;
+        const fallbackCandidates = activeContentNavRef.current === "food"
+          ? [
+            ...document.querySelectorAll<HTMLElement>("[data-inventory-food-id]"),
+            ...document.querySelectorAll<HTMLElement>(".inventory-empty-action, .inventory-add-button"),
+          ]
+          : [
+            ...document.querySelectorAll<HTMLElement>(".priority-card"),
+            ...document.querySelectorAll<HTMLElement>(".rescue-status-card, .meal-plan-button"),
+          ];
+        const fallback = fallbackCandidates.find((element) => !element.hasAttribute("disabled"))
+          ?? document.querySelector<HTMLElement>(".connection-pill");
+        const target = trigger.isConnected && !trigger.hasAttribute("disabled") ? trigger : fallback;
+        if (!target || target.hasAttribute("disabled")) return;
+        target.focus({ preventScroll: true });
+        observer.disconnect();
+        if (fallbackTimer !== undefined) window.clearTimeout(fallbackTimer);
+      }, 60);
     };
     const observer = new MutationObserver(restoreFocus);
     observer.observe(document.body, { childList: true, subtree: true });
     restoreFocus();
     fallbackTimer = window.setTimeout(() => {
-      if (!disposed && trigger.isConnected && !trigger.hasAttribute("disabled")) {
-        trigger.focus({ preventScroll: true });
-      }
-      observer.disconnect();
+      if (!disposed) restoreFocus();
     }, 1200);
 
     return () => {
       disposed = true;
       observer.disconnect();
       if (fallbackTimer !== undefined) window.clearTimeout(fallbackTimer);
+      if (restoreTimer !== undefined) window.clearTimeout(restoreTimer);
     };
   }, [sheet]);
 
-  const selectedFood = foods.find((food) => food.id === selectedFoodId) ?? null;
+  // An intake sheet closes before a connected mutation has necessarily
+  // returned. Keep the user's focus on the newly added food once its
+  // authoritative row appears, but never steal focus if they have already
+  // started another interaction.
+  useEffect(() => {
+    const pending = pendingAddedFoodFocusRef.current;
+    if (!pending || sheet !== null) return;
+
+    let disposed = false;
+    let timer: number | undefined;
+    let focusTimer: number | undefined;
+    let observer: MutationObserver;
+    const normalizedName = pending.name.trim().replace(/\s+/g, " ");
+    const findTarget = () => {
+      const matchesName = (element: HTMLElement) => !element.hasAttribute("disabled") && element.textContent?.replace(/\s+/g, " ").includes(normalizedName);
+      const priorityTarget = Array.from(document.querySelectorAll<HTMLElement>(".priority-card")).find(matchesName);
+      if (pending.sourceNav === "home" && priorityTarget) return priorityTarget;
+      return Array.from(document.querySelectorAll<HTMLElement>("[data-inventory-food-id]")).find(matchesName) ?? null;
+    };
+    const cleanup = () => {
+      observer.disconnect();
+      if (timer !== undefined) window.clearTimeout(timer);
+      if (focusTimer !== undefined) window.clearTimeout(focusTimer);
+    };
+    const tryFocus = () => {
+      if (disposed || sheetRef.current !== null || document.querySelector('[data-testid="bottom-sheet"]')) return;
+      const activeElement = document.activeElement;
+      const isExpectedFocus = activeElement === pending.trigger
+      || activeElement === document.body
+        || activeElement === document.documentElement
+        || (activeElement instanceof HTMLElement && Boolean(activeElement.closest(".toast")))
+        || !activeElement?.isConnected;
+      if (!isExpectedFocus) {
+        pendingAddedFoodFocusRef.current = null;
+        cleanup();
+        return;
+      }
+      const candidates = pending.sourceNav === "food"
+        ? Array.from(document.querySelectorAll<HTMLElement>("[data-inventory-food-id]"))
+        : Array.from(document.querySelectorAll<HTMLElement>(".priority-card"));
+      const target = findTarget() ?? candidates.find((element) => !element.hasAttribute("disabled") && element.textContent?.replace(/\s+/g, " ").includes(normalizedName));
+      if (!target) return;
+      if (focusTimer !== undefined) return;
+      focusTimer = window.setTimeout(() => {
+        focusTimer = undefined;
+        if (disposed || sheetRef.current !== null || document.querySelector('[data-testid="bottom-sheet"]')) return;
+        const currentActiveElement = document.activeElement;
+        const canTakeFocus = currentActiveElement === pending.trigger
+          || currentActiveElement === document.body
+          || currentActiveElement === document.documentElement
+          || (currentActiveElement instanceof HTMLElement && Boolean(currentActiveElement.closest(".toast")))
+          || !currentActiveElement?.isConnected;
+        if (!canTakeFocus) {
+          pendingAddedFoodFocusRef.current = null;
+          cleanup();
+          return;
+        }
+        const currentTarget = findTarget();
+        if (!currentTarget) {
+          tryFocus();
+          return;
+        }
+        if (currentTarget.matches(".inventory-row")) currentTarget.scrollIntoView({ behavior: getMobileScrollBehavior(), block: "center" });
+        currentTarget.focus({ preventScroll: true });
+        pendingAddedFoodFocusRef.current = null;
+        cleanup();
+      }, 100);
+    };
+
+    observer = new MutationObserver(tryFocus);
+    observer.observe(document.body, { childList: true, subtree: true });
+    timer = window.setTimeout(() => {
+      if (pendingAddedFoodFocusRef.current !== pending) {
+        cleanup();
+        return;
+      }
+      const activeElement = document.activeElement;
+      const canUseFallback = activeElement === pending.trigger
+        || activeElement === document.body
+        || activeElement === document.documentElement
+        || (activeElement instanceof HTMLElement && Boolean(activeElement.closest(".toast")))
+        || !activeElement?.isConnected;
+      pendingAddedFoodFocusRef.current = null;
+      if (canUseFallback) document.querySelector<HTMLElement>(".connection-pill")?.focus({ preventScroll: true });
+      cleanup();
+    }, 8_000);
+    tryFocus();
+
+    return () => {
+      disposed = true;
+      cleanup();
+    };
+  }, [foods, sheet]);
+
+  // Keep the notification list as the task context after a notification
+  // opens a food detail. The row may rerender when its read state is written,
+  // so focus by notification id after the list is mounted again.
+  useEffect(() => {
+    if (sheet !== "notifications" || !notificationReturnFocusIdRef.current) return;
+
+    const notificationId = notificationReturnFocusIdRef.current;
+    let disposed = false;
+    let timer: number | undefined;
+    let focusTimer: number | undefined;
+    let settleFocusInterval: number | undefined;
+    let observer: MutationObserver;
+    const canTakeFocus = () => {
+      const activeElement = document.activeElement;
+      return notificationFocusOverrideRef.current
+        || activeElement === document.body
+        || activeElement === document.documentElement
+        || (activeElement instanceof HTMLElement && activeElement.classList.contains("sheet-close-button"))
+        || !activeElement?.isConnected;
+    };
+    const findTarget = () => {
+      const exactTarget = Array.from(document.querySelectorAll<HTMLElement>("[data-notification-id]"))
+        .find((element) => element.dataset.notificationId === notificationId && !element.hasAttribute("disabled"));
+      if (exactTarget) return exactTarget;
+      if (notificationsLoading) return null;
+      return document.querySelector<HTMLElement>(".notification-row, .notification-read-all, .notification-summary");
+    };
+    const cleanup = () => {
+      observer.disconnect();
+      if (timer !== undefined) window.clearTimeout(timer);
+      if (focusTimer !== undefined) window.clearTimeout(focusTimer);
+      if (settleFocusInterval !== undefined) window.clearInterval(settleFocusInterval);
+    };
+    const tryFocus = () => {
+      if (disposed || sheetRef.current !== "notifications" || !canTakeFocus()) return;
+      const target = findTarget();
+      if (!target || focusTimer !== undefined) return;
+      focusTimer = window.setTimeout(() => {
+        focusTimer = undefined;
+        if (disposed || sheetRef.current !== "notifications" || !canTakeFocus()) return;
+        const currentTarget = findTarget();
+        if (!currentTarget) {
+          tryFocus();
+          return;
+        }
+        const forceSettleFocus = notificationFocusOverrideRef.current;
+        revealAndFocus(currentTarget, { block: "nearest" });
+        notificationFocusOverrideRef.current = false;
+        if (forceSettleFocus) {
+          const settleStartedAt = performance.now();
+          settleFocusInterval = window.setInterval(() => {
+            if (disposed || sheetRef.current !== "notifications") {
+              cleanup();
+              return;
+            }
+            const settledTarget = findTarget();
+            settledTarget?.focus({ preventScroll: true });
+            if (performance.now() - settleStartedAt >= 1_800) {
+              notificationReturnFocusIdRef.current = null;
+              cleanup();
+            }
+          }, 80);
+        } else {
+          notificationReturnFocusIdRef.current = null;
+          cleanup();
+        }
+      }, 80);
+    };
+
+    observer = new MutationObserver(tryFocus);
+    observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "aria-describedby"] });
+    timer = window.setTimeout(() => {
+      if (notificationReturnFocusIdRef.current !== notificationId) {
+        cleanup();
+        return;
+      }
+      if (canTakeFocus()) {
+        (findTarget() ?? document.querySelector<HTMLElement>(".notification-row, .notification-read-all"))?.focus({ preventScroll: true });
+      }
+      notificationFocusOverrideRef.current = false;
+      notificationReturnFocusIdRef.current = null;
+      cleanup();
+    }, notificationFocusOverrideRef.current ? 3_000 : 1_500);
+    tryFocus();
+
+    return () => {
+      disposed = true;
+      cleanup();
+    };
+  }, [demoNotificationReadAt, notifications, notificationsLoading, pendingNotificationSyncRecordId, sheet]);
+
+  useEffect(() => {
+    if (sheet !== "notifications" || !pendingNotificationSyncRecordId || notificationsLoading) return;
+    const target = notifications.find((notification) => notification.sync_record_id === pendingNotificationSyncRecordId);
+    if (target) {
+      notificationInitialFocusRef.current = false;
+      notificationReturnFocusIdRef.current = target.id;
+      setPendingNotificationSyncRecordId(null);
+      return;
+    }
+    const message = "이 작업의 알림은 현재 목록에서 찾지 못했어요. 계정에서 작업 상세를 확인해 주세요.";
+    setPendingNotificationSyncRecordId(null);
+    setToastAction({
+      message,
+      label: "계정에서 확인",
+      onInvoke: () => {
+        notificationAccountReturnRef.current = true;
+        setAccountGrocyOutboxFocusId(pendingNotificationSyncRecordId);
+        changeSheet("account");
+      },
+    });
+    setToast(message);
+  }, [notifications, notificationsLoading, pendingNotificationSyncRecordId, sheet]);
+
+  // A notification center opened from Home is an action list, so the first
+  // unread row is the useful starting point for keyboard and assistive-tech
+  // users. Returning from food detail has a separate exact-row contract above;
+  // this intent is only set for a fresh notification-center entry.
+  useEffect(() => {
+    if (sheet !== "notifications" || !notificationInitialFocusRef.current || notificationReturnFocusIdRef.current) return;
+    let disposed = false;
+    let timer: number | undefined;
+    let focusTimer: number | undefined;
+    let observer: MutationObserver;
+    const canTakeFocus = () => {
+      const activeElement = document.activeElement;
+      return activeElement === document.body
+        || activeElement === document.documentElement
+        || (activeElement instanceof HTMLElement && activeElement.classList.contains("sheet-close-button"))
+        || !activeElement?.isConnected;
+    };
+    const findTarget = () => {
+      const unreadTarget = document.querySelector<HTMLElement>(".notification-row:not(.notification-row-read)");
+      if (unreadTarget) return unreadTarget;
+      if (notificationsLoading) return null;
+      return document.querySelector<HTMLElement>(".notification-summary");
+    };
+    const cleanup = () => {
+      observer.disconnect();
+      if (timer !== undefined) window.clearTimeout(timer);
+      if (focusTimer !== undefined) window.clearTimeout(focusTimer);
+    };
+    const tryFocus = () => {
+      if (disposed || sheetRef.current !== "notifications" || notificationReturnFocusIdRef.current || !canTakeFocus()) return;
+      const target = findTarget();
+      if (!target || target.hasAttribute("disabled") || focusTimer !== undefined) return;
+      focusTimer = window.setTimeout(() => {
+        focusTimer = undefined;
+        if (disposed || sheetRef.current !== "notifications" || notificationReturnFocusIdRef.current || !canTakeFocus()) return;
+        const currentTarget = findTarget();
+        if (!currentTarget || currentTarget.hasAttribute("disabled")) {
+          tryFocus();
+          return;
+        }
+        currentTarget.scrollIntoView({ behavior: "auto", block: "nearest" });
+        currentTarget.focus({ preventScroll: true });
+        notificationInitialFocusRef.current = false;
+        cleanup();
+      }, 120);
+    };
+    observer = new MutationObserver(tryFocus);
+    observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "aria-describedby"] });
+    timer = window.setTimeout(() => {
+      notificationInitialFocusRef.current = false;
+      cleanup();
+    }, 3_000);
+    tryFocus();
+    return () => {
+      disposed = true;
+      cleanup();
+    };
+  }, [demoNotificationReadAt, notifications, notificationsLoading, sheet]);
+
+  // A fresh receipt queue entry is itself a task list. Focus the first resume
+  // row after the sheet settles, while a selected receipt hands off to the
+  // AddFoodSheet review-focus contract instead.
+  useEffect(() => {
+    if (sheet !== "receipt-queue" || !receiptQueueInitialFocusRef.current) return;
+    let disposed = false;
+    let timer: number | undefined;
+    let focusTimer: number | undefined;
+    let observer: MutationObserver;
+    const canTakeFocus = () => {
+      const activeElement = document.activeElement;
+      return activeElement === document.body
+        || activeElement === document.documentElement
+        || (activeElement instanceof HTMLElement && activeElement.classList.contains("sheet-close-button"))
+        || !activeElement?.isConnected;
+    };
+    const findTarget = () => document.querySelector<HTMLElement>(".receipt-review-queue-row, .receipt-review-queue-empty .secondary-sheet-button");
+    const cleanup = () => {
+      observer.disconnect();
+      if (timer !== undefined) window.clearTimeout(timer);
+      if (focusTimer !== undefined) window.clearTimeout(focusTimer);
+    };
+    const tryFocus = () => {
+      if (disposed || sheetRef.current !== "receipt-queue" || !receiptQueueInitialFocusRef.current || !canTakeFocus()) return;
+      const target = findTarget();
+      if (!target || target.hasAttribute("disabled") || focusTimer !== undefined) return;
+      focusTimer = window.setTimeout(() => {
+        focusTimer = undefined;
+        if (disposed || sheetRef.current !== "receipt-queue" || !receiptQueueInitialFocusRef.current || !canTakeFocus()) return;
+        const currentTarget = findTarget();
+        if (!currentTarget || currentTarget.hasAttribute("disabled")) {
+          tryFocus();
+          return;
+        }
+        currentTarget.scrollIntoView({ behavior: "auto", block: "nearest" });
+        currentTarget.focus({ preventScroll: true });
+        receiptQueueInitialFocusRef.current = false;
+        cleanup();
+      }, 120);
+    };
+    observer = new MutationObserver(tryFocus);
+    observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "aria-describedby"] });
+    timer = window.setTimeout(() => {
+      receiptQueueInitialFocusRef.current = false;
+      cleanup();
+    }, 3_000);
+    tryFocus();
+    return () => {
+      disposed = true;
+      cleanup();
+    };
+  }, [receiptSummaries, receiptSummariesStatus, sheet]);
+
+  // A planner safety link opens a detail sheet without leaving the planner.
+  // Restore that exact link after the detail closes so a user can continue
+  // checking the remaining guidance where they left off.
+  useEffect(() => {
+    if (sheet !== "meal" || !mealDetailReturnFocusIdRef.current) return;
+
+    const foodId = mealDetailReturnFocusIdRef.current;
+    let disposed = false;
+    let timer: number | undefined;
+    let focusTimer: number | undefined;
+    let observer: MutationObserver;
+    const canTakeFocus = () => {
+      const activeElement = document.activeElement;
+      return activeElement === document.body
+        || activeElement === document.documentElement
+        || (activeElement instanceof HTMLElement && activeElement.classList.contains("sheet-close-button"))
+        || !activeElement?.isConnected;
+    };
+    const findTarget = () => {
+      const linkedTarget = Array.from(document.querySelectorAll<HTMLElement>("[data-meal-food-id]"))
+        .find((element) => element.dataset.mealFoodId === foodId && !element.hasAttribute("disabled") && element.getClientRects().length > 0);
+      if (linkedTarget) return linkedTarget;
+      return Array.from(document.querySelectorAll<HTMLElement>(".recipe-safety-summary, .recipe-actions .primary-sheet-button"))
+        .find((element) => !element.hasAttribute("disabled") && element.getClientRects().length > 0) ?? null;
+    };
+    const cleanup = () => {
+      observer.disconnect();
+      if (timer !== undefined) window.clearTimeout(timer);
+      if (focusTimer !== undefined) window.clearTimeout(focusTimer);
+    };
+    const tryFocus = () => {
+      if (disposed || sheetRef.current !== "meal" || !canTakeFocus()) return;
+      const target = findTarget();
+      if (!target || focusTimer !== undefined) return;
+      focusTimer = window.setTimeout(() => {
+        focusTimer = undefined;
+        if (disposed || sheetRef.current !== "meal" || !canTakeFocus()) return;
+        const currentTarget = findTarget();
+        if (!currentTarget) {
+          tryFocus();
+          return;
+        }
+        currentTarget.scrollIntoView({ behavior: getMobileScrollBehavior(), block: "nearest" });
+        currentTarget.focus({ preventScroll: true });
+        mealDetailReturnFocusIdRef.current = null;
+        cleanup();
+      }, 80);
+    };
+
+    observer = new MutationObserver(tryFocus);
+    observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "aria-describedby"] });
+    timer = window.setTimeout(() => {
+      if (mealDetailReturnFocusIdRef.current !== foodId) {
+        cleanup();
+        return;
+      }
+      if (canTakeFocus()) findTarget()?.focus({ preventScroll: true });
+      mealDetailReturnFocusIdRef.current = null;
+      cleanup();
+    }, 1_500);
+    tryFocus();
+
+    return () => {
+      disposed = true;
+      cleanup();
+    };
+  }, [foods, sheet]);
+
+  // Meal completion closes the planner before the authoritative inventory
+  // readback necessarily arrives. Wait for food rows/quantities to change,
+  // then focus the first remaining ingredient in the same origin.
+  useEffect(() => {
+    const pending = pendingMealCompletionFocusRef.current;
+    if (!pending || sheet !== null) return;
+    const currentFoodsSignature = foods.map((food) => `${food.id}:${food.quantity}`).join("|");
+    if (currentFoodsSignature === pending.beforeFoodsSignature) return;
+
+    let disposed = false;
+    let timer: number | undefined;
+    let focusTimer: number | undefined;
+    let observer: MutationObserver;
+    const canTakeFocus = () => {
+      const activeElement = document.activeElement;
+      return activeElement === document.body
+        || activeElement === document.documentElement
+        || (activeElement instanceof HTMLElement && (activeElement.classList.contains("sheet-close-button") || activeElement.classList.contains("app-bottom-nav-item")))
+        || !activeElement?.isConnected;
+    };
+    const findTarget = () => {
+      const candidates = pending.sourceNav === "home"
+        ? Array.from(document.querySelectorAll<HTMLElement>(".priority-card"))
+        : Array.from(document.querySelectorAll<HTMLElement>("[data-inventory-food-id]"));
+      const preferred = pending.preferredFoodIds
+        .map((foodId) => candidates.find((element) => (pending.sourceNav === "home" ? element.dataset.priorityFoodId : element.dataset.inventoryFoodId) === foodId && !element.hasAttribute("disabled")))
+        .find((element): element is HTMLElement => Boolean(element));
+      return preferred ?? candidates.find((element) => !element.hasAttribute("disabled")) ?? null;
+    };
+    const cleanup = () => {
+      observer.disconnect();
+      if (timer !== undefined) window.clearTimeout(timer);
+      if (focusTimer !== undefined) window.clearTimeout(focusTimer);
+    };
+    const tryFocus = () => {
+      if (disposed || sheetRef.current !== null || document.querySelector('[data-testid="bottom-sheet"]')) return;
+      if (!canTakeFocus()) {
+        pendingMealCompletionFocusRef.current = null;
+        cleanup();
+        return;
+      }
+      if (!findTarget() || focusTimer !== undefined) return;
+      focusTimer = window.setTimeout(() => {
+        focusTimer = undefined;
+        if (disposed || sheetRef.current !== null || document.querySelector('[data-testid="bottom-sheet"]')) return;
+        if (!canTakeFocus()) {
+          pendingMealCompletionFocusRef.current = null;
+          cleanup();
+          return;
+        }
+        const currentTarget = findTarget();
+        if (!currentTarget) {
+          tryFocus();
+          return;
+        }
+        if (pending.sourceNav === "food") currentTarget.scrollIntoView({ behavior: getMobileScrollBehavior(), block: "center" });
+        currentTarget.focus({ preventScroll: true });
+        pendingMealCompletionFocusRef.current = null;
+        cleanup();
+      }, 100);
+    };
+
+    observer = new MutationObserver(tryFocus);
+    observer.observe(document.body, { childList: true, subtree: true });
+    timer = window.setTimeout(() => {
+      if (pendingMealCompletionFocusRef.current !== pending) {
+        cleanup();
+        return;
+      }
+      if (canTakeFocus()) document.querySelector<HTMLElement>(".connection-pill")?.focus({ preventScroll: true });
+      pendingMealCompletionFocusRef.current = null;
+      cleanup();
+    }, 8_000);
+    tryFocus();
+
+    return () => {
+      disposed = true;
+      cleanup();
+    };
+  }, [foods, sheet]);
+
+  // Date confirmation closes the detail sheet before a connected mutation
+  // necessarily returns. Keep the result discoverable by restoring focus to
+  // the exact food row once the updated dashboard state is rendered. This is
+  // separate from intake focus because a date write can keep the existing row
+  // in place and should not be treated as a newly added item.
+  useEffect(() => {
+    const pending = pendingFoodDateFocusRef.current;
+    if (!pending || sheet !== null) return;
+
+    let disposed = false;
+    let timer: number | undefined;
+    let focusTimer: number | undefined;
+    let observer: MutationObserver;
+    const normalizedName = pending.name.trim().replace(/\s+/g, " ");
+    const findTarget = () => {
+      const matches = (element: HTMLElement) => {
+        if (element.hasAttribute("disabled")) return false;
+        if (pending.sourceNav === "food" && element.dataset.inventoryFoodId === pending.foodId) return true;
+        if (pending.sourceNav === "home" && element.dataset.priorityFoodId === pending.foodId) return true;
+        return element.textContent?.replace(/\s+/g, " ").includes(normalizedName) ?? false;
+      };
+      const scoped = pending.sourceNav === "home"
+        ? Array.from(document.querySelectorAll<HTMLElement>(".priority-card"))
+        : Array.from(document.querySelectorAll<HTMLElement>("[data-inventory-food-id]"));
+      return scoped.find(matches) ?? null;
+    };
+    const cleanup = () => {
+      observer.disconnect();
+      if (timer !== undefined) window.clearTimeout(timer);
+      if (focusTimer !== undefined) window.clearTimeout(focusTimer);
+    };
+    const canTakeFocus = () => {
+      const activeElement = document.activeElement;
+      return activeElement === pending.trigger
+        || activeElement === document.body
+        || activeElement === document.documentElement
+        || (activeElement instanceof HTMLElement && Boolean(activeElement.closest(".toast")))
+        || !activeElement?.isConnected;
+    };
+    const tryFocus = () => {
+      if (disposed || sheetRef.current !== null || document.querySelector('[data-testid="bottom-sheet"]')) return;
+      if (!canTakeFocus()) {
+        pendingFoodDateFocusRef.current = null;
+        cleanup();
+        return;
+      }
+      const target = findTarget();
+      if (!target || focusTimer !== undefined) return;
+      focusTimer = window.setTimeout(() => {
+        focusTimer = undefined;
+        if (disposed || sheetRef.current !== null || document.querySelector('[data-testid="bottom-sheet"]')) return;
+        if (!canTakeFocus()) {
+          pendingFoodDateFocusRef.current = null;
+          cleanup();
+          return;
+        }
+        const currentTarget = findTarget();
+        if (!currentTarget) {
+          tryFocus();
+          return;
+        }
+        if (currentTarget.matches(".inventory-row")) currentTarget.scrollIntoView({ behavior: getMobileScrollBehavior(), block: "center" });
+        currentTarget.focus({ preventScroll: true });
+        pendingFoodDateFocusRef.current = null;
+        cleanup();
+      }, 100);
+    };
+
+    observer = new MutationObserver(tryFocus);
+    observer.observe(document.body, { childList: true, subtree: true });
+    timer = window.setTimeout(() => {
+      if (pendingFoodDateFocusRef.current !== pending) {
+        cleanup();
+        return;
+      }
+      if (canTakeFocus()) document.querySelector<HTMLElement>(".connection-pill")?.focus({ preventScroll: true });
+      pendingFoodDateFocusRef.current = null;
+      cleanup();
+    }, 8_000);
+    tryFocus();
+
+    return () => {
+      disposed = true;
+      cleanup();
+    };
+  }, [foods, sheet]);
+
+  const findFoodById = (foodId: string) => foods.find((food) => food.id === foodId)
+    ?? inventorySearchResults.find((food) => food.id === foodId)
+    ?? null;
+  const selectedFood = selectedFoodId ? findFoodById(selectedFoodId) : null;
   const customStorageLocations = useMemo(
     () => storageLocations.filter((location) => !["ambient", "refrigerated", "frozen"].includes(location.id)),
     [storageLocations],
@@ -870,9 +1738,37 @@ function PrototypeContent() {
     () => foods.filter((food) => food.priority <= 3).sort((a, b) => a.priority - b.priority),
     [foods],
   );
+  const mealDateReviewFoods = useMemo(
+    () => foods.slice(0, 3)
+      .filter((food) => Boolean(dateReviewReason(food, currentDate)))
+      .map((food) => ({ id: food.id, name: food.name })),
+    [currentDate, foods],
+  );
   const priorityNeedsReviewCount = useMemo(
-    () => priorityFoods.filter((food) => Boolean(dateReviewReason(food, currentDate))).length,
+    () => priorityFoods.filter((food) => Boolean(attentionReviewReason(food, currentDate))).length,
     [currentDate, priorityFoods],
+  );
+  const priorityReviewTopicLabel = useMemo(() => {
+    const topics = new Set<"date" | "storage">();
+    priorityFoods.forEach((food) => {
+      const reason = attentionReviewReason(food, currentDate);
+      if (!reason) return;
+      if (reason === "보관 조건 확인") topics.add("storage");
+      else topics.add("date");
+    });
+    if (topics.has("date") && topics.has("storage")) return "날짜·보관 상태";
+    if (topics.has("storage")) return "보관 상태";
+    return "날짜";
+  }, [currentDate, priorityFoods]);
+  const homeTrustTitle = priorityNeedsReviewCount
+    ? `확인 필요 ${priorityNeedsReviewCount}개 · ${priorityReviewTopicLabel}를 먼저 확인해요`
+    : "AI는 소비기한을 확정하지 않아요";
+  const homeTrustDescription = priorityNeedsReviewCount
+    ? "AI는 소비기한을 확정하지 않아요. 포장지와 실제 상태를 확인한 뒤 식단을 만들어요."
+    : "표시 날짜와 사용자 확인을 가장 먼저 보여드려요.";
+  const inventoryNeedsReviewCount = useMemo(
+    () => foods.filter((food) => Boolean(attentionReviewReason(food, currentDate))).length,
+    [currentDate, foods],
   );
   const normalizedInventoryQuery = inventoryQuery.trim().toLocaleLowerCase("ko-KR");
   const filteredFoods = useMemo(() => {
@@ -889,7 +1785,7 @@ function PrototypeContent() {
     return byStorage.filter((food) => [food.name, food.brand, food.category].some((value) => value.toLocaleLowerCase("ko-KR").includes(normalizedInventoryQuery)));
   }, [foods, inventorySearchKey, inventorySearchResults, inventorySearchStatus, normalizedInventoryQuery, storageFilter]);
   const todayEyebrow = formatTodayEyebrow(currentDate);
-  const currentMealPlanHint = mealPlanHint(priorityFoods, foods.length);
+  const currentMealPlanHint = mealPlanHint(priorityFoods, foods.length, priorityNeedsReviewCount);
   const hasInventoryQuery = inventoryQuery.trim().length > 0;
   const inventorySearchCanUseServer = mealApi.isConfigured && connectionState !== "offline" && connectionState !== "auth_required";
   const inventorySearchActive = inventorySearchCanUseServer && (Boolean(normalizedInventoryQuery) || storageFilter !== "전체");
@@ -897,6 +1793,56 @@ function PrototypeContent() {
   const inventorySearchOwnsResults = inventorySearchActive && inventorySearchKey === inventorySearchRequestKey && inventorySearchStatus !== "idle";
   const inventoryCount = inventorySearchOwnsResults && inventorySearchTotal != null ? inventorySearchTotal : filteredFoods.length;
   const inventorySearchPending = inventorySearchOwnsResults && inventorySearchStatus === "loading";
+  const inventoryDataUnknown = mealApi.isConfigured && connectionState !== "connected" && !foods.length;
+  const inventoryDataStatusLabel = connectionState === "checking"
+    ? "재고를 확인하는 중"
+    : connectionState === "auth_required"
+      ? "계정 연결이 필요해요"
+      : "재고 확인이 필요해요";
+  const inventoryDataStatusDescription = connectionState === "auth_required"
+    ? "계정을 다시 연결하면 오늘 먼저 먹을 식품과 내 식품 목록을 확인할 수 있어요."
+    : connectionState === "checking"
+      ? "서버에서 내 식품과 오늘의 우선순위를 확인하고 있어요."
+      : "서버에 다시 연결하면 실제 재고와 오늘의 우선순위를 확인할 수 있어요.";
+  const priorityStatusAccessibleName = inventoryDataUnknown
+    ? connectionState === "checking"
+      ? "재고를 확인하는 중"
+      : connectionState === "auth_required"
+        ? "계정 연결이 필요해요, 계정 다시 연결"
+        : "재고를 확인할 수 없어요, 다시 연결"
+    : connectionState === "offline" && dashboardStaleAt
+      ? `최근 동기화한 오늘 먼저 확인할 식품 ${priorityFoods.length}개, 식품 목록 열기`
+      : connectionState === "auth_required" && dashboardStaleAt
+        ? `최근 확인한 재고의 오늘 먼저 확인할 식품 ${priorityFoods.length}개, 식품 목록 열기`
+      : !foods.length
+        ? "아직 식품이 없어요, 식품 추가"
+        : `오늘 먼저 확인할 식품 ${priorityFoods.length}개, 식품 목록 열기`;
+  const priorityHeadingAccessibleName = inventoryDataUnknown
+    ? inventoryDataStatusLabel
+    : connectionState === "offline" && dashboardStaleAt
+      ? `최근 동기화한 오늘 먼저 확인할 식품 ${priorityFoods.length}`
+      : connectionState === "auth_required" && dashboardStaleAt
+        ? `최근 확인한 재고의 오늘 먼저 확인할 식품 ${priorityFoods.length}`
+      : `오늘 먼저 확인할 식품 ${priorityFoods.length}`;
+  const inventoryScopeLabel = hasInventoryQuery
+    ? `“${inventoryQuery.trim()}” 검색 결과`
+    : storageFilter !== "전체"
+      ? `${selectedStorageLocation?.name ?? storageFilter} 보관 식품`
+      : "";
+  const inventorySearchLoadingLabel = hasInventoryQuery
+    ? `“${inventoryQuery.trim()}” 검색 결과를 불러오고 있어요`
+    : storageFilter !== "전체"
+      ? `${selectedStorageLocation?.name ?? storageFilter} 보관 식품을 불러오고 있어요`
+      : "재고를 불러오고 있어요";
+  const inventorySearchErrorLabel = hasInventoryQuery
+    ? `“${inventoryQuery.trim()}” 검색 결과를 불러오지 못했어요`
+    : storageFilter !== "전체"
+      ? `${selectedStorageLocation?.name ?? storageFilter} 보관 식품을 불러오지 못했어요`
+      : "재고를 불러오지 못했어요";
+  const showInventoryScope = Boolean(inventoryScopeLabel)
+    && !(inventorySearchPending && !filteredFoods.length)
+    && !(inventorySearchStatus === "error" && !filteredFoods.length);
+  const inventoryHasEmptyResult = (hasInventoryQuery || storageFilter !== "전체") && !filteredFoods.length;
   const pendingReceiptSummaries = useMemo(
     () => receiptSummaries
       .filter((receipt) => receipt.status === "review_required" && !receipt.stock_created && !receipt.source_redacted)
@@ -915,6 +1861,119 @@ function PrototypeContent() {
       setStorageFilter("전체");
     }
   }, [storageFilter, storageLocations]);
+
+  const captureInventoryReturnContext = (foodId: string) => {
+    if (typeof document === "undefined") return;
+    const scroll = document.querySelector<HTMLElement>(".app-screen.mobile-scroll, .app-screen .mobile-scroll");
+    if (!scroll) return;
+    const scrollTop = scroll.getBoundingClientRect().top;
+    const row = Array.from(document.querySelectorAll<HTMLElement>("[data-inventory-food-id]")).find((element) => element.dataset.inventoryFoodId === foodId);
+    inventoryReturnContextRef.current = {
+      foodId,
+      returnNav: "food",
+      scrollTop: scroll.scrollTop,
+      rowOffset: row ? row.getBoundingClientRect().top - scrollTop : null,
+    };
+  };
+
+  const restoreInventoryReturnContext = () => {
+    const context = inventoryReturnContextRef.current;
+    inventoryReturnContextRef.current = null;
+    if (!context || typeof document === "undefined") return;
+    const scroll = document.querySelector<HTMLElement>(".app-screen.mobile-scroll, .app-screen .mobile-scroll");
+    if (!scroll) return;
+
+    activeContentNavRef.current = context.returnNav;
+    navigationIntentRef.current = context.returnNav;
+    navigationIntentLastScrollTopRef.current = scroll.scrollTop;
+    setActiveNav(context.returnNav);
+
+    const row = Array.from(document.querySelectorAll<HTMLElement>("[data-inventory-food-id]")).find((element) => element.dataset.inventoryFoodId === context.foodId);
+    if (row && context.rowOffset !== null) {
+      const currentOffset = row.getBoundingClientRect().top - scroll.getBoundingClientRect().top;
+      const maxScrollTop = Math.max(0, scroll.scrollHeight - scroll.clientHeight);
+      const targetScrollTop = Math.max(0, Math.min(maxScrollTop, scroll.scrollTop + currentOffset - context.rowOffset));
+      scroll.scrollTo({ top: targetScrollTop, behavior: "auto" });
+      return;
+    }
+
+    const maxScrollTop = Math.max(0, scroll.scrollHeight - scroll.clientHeight);
+    scroll.scrollTo({ top: Math.max(0, Math.min(maxScrollTop, context.scrollTop)), behavior: "auto" });
+  };
+
+  useEffect(() => {
+    if (sheet !== null || typeof document === "undefined") return;
+
+    const scroll = document.querySelector<HTMLElement>(".app-screen.mobile-scroll, .app-screen .mobile-scroll");
+    const inventory = document.querySelector<HTMLElement>(".inventory-section");
+    if (!scroll || !inventory) return;
+
+    let frame: number | null = null;
+    const updateActiveNav = () => {
+      frame = null;
+      const viewportTop = scroll.getBoundingClientRect().top;
+      const inventoryTop = inventory.getBoundingClientRect().top;
+      const threshold = viewportTop + Math.min(scroll.clientHeight * 0.42, 360);
+      const atBottom = scroll.scrollTop >= scroll.scrollHeight - scroll.clientHeight - 8;
+      // scrollIntoView can settle with a small fractional/overscroll delta on
+      // mobile. Do not interpret that settling noise as the user abandoning
+      // the tab they just selected; a real reverse scroll is still allowed to
+      // clear the intent once it moves beyond this tolerance.
+      const navigationIntentJitter = Math.min(16, Math.max(8, scroll.clientHeight * 0.02));
+      const previousIntentScrollTop = navigationIntentLastScrollTopRef.current;
+      if (navigationIntentRef.current !== null && previousIntentScrollTop !== null) {
+        const movedAwayFromIntent = navigationIntentRef.current === "food"
+          ? scroll.scrollTop < previousIntentScrollTop - navigationIntentJitter
+          : scroll.scrollTop > previousIntentScrollTop + navigationIntentJitter;
+        if (movedAwayFromIntent) {
+          navigationIntentRef.current = null;
+          navigationIntentLastScrollTopRef.current = null;
+        }
+      }
+      const navigationIntent = navigationIntentRef.current;
+      if (navigationIntent === "home" && scroll.scrollTop > 1) {
+        activeContentNavRef.current = "home";
+        navigationIntentLastScrollTopRef.current = scroll.scrollTop;
+        setActiveNav((current) => current === "home" ? current : "home");
+        return;
+      }
+      if (navigationIntent === "food" && inventoryTop > viewportTop + 5 && !atBottom) {
+        activeContentNavRef.current = "food";
+        navigationIntentLastScrollTopRef.current = scroll.scrollTop;
+        setActiveNav((current) => current === "food" ? current : "food");
+        return;
+      }
+      navigationIntentRef.current = null;
+      navigationIntentLastScrollTopRef.current = null;
+      const nextNav = inventoryTop <= threshold || atBottom ? "food" : "home";
+      activeContentNavRef.current = nextNav;
+      setActiveNav((current) => current === nextNav ? current : nextNav);
+    };
+    const scheduleUpdate = () => {
+      if (frame !== null) return;
+      frame = window.requestAnimationFrame(updateActiveNav);
+    };
+    const resizeObserver = new ResizeObserver(scheduleUpdate);
+
+    scroll.addEventListener("scroll", scheduleUpdate, { passive: true });
+    resizeObserver.observe(scroll);
+    resizeObserver.observe(inventory);
+    const content = scroll.querySelector<HTMLElement>(".mobile-scroll-content");
+    if (content) resizeObserver.observe(content);
+    scheduleUpdate();
+
+    return () => {
+      scroll.removeEventListener("scroll", scheduleUpdate);
+      resizeObserver.disconnect();
+      if (frame !== null) window.cancelAnimationFrame(frame);
+    };
+  }, [sheet]);
+
+  useEffect(() => {
+    if (sheet !== null || !inventoryReturnContextRef.current) return;
+    const frame = window.requestAnimationFrame(restoreInventoryReturnContext);
+    return () => window.cancelAnimationFrame(frame);
+  }, [sheet]);
 
   useEffect(() => {
     const timer = window.setInterval(() => setCurrentDate(new Date()), 60_000);
@@ -987,6 +2046,46 @@ function PrototypeContent() {
     });
   }, [storageLocations]);
 
+  const keepInventorySearchVisible = () => {
+    if (typeof document === "undefined") return;
+    const scroll = document.querySelector<HTMLElement>(".app-screen.mobile-scroll, .app-screen .mobile-scroll");
+    const inventory = document.querySelector<HTMLElement>(".inventory-section");
+    if (!scroll || !inventory) return;
+    const offset = inventory.getBoundingClientRect().top - scroll.getBoundingClientRect().top;
+    const maxScrollTop = Math.max(0, scroll.scrollHeight - scroll.clientHeight);
+    const targetScrollTop = Math.max(0, Math.min(maxScrollTop, scroll.scrollTop + offset));
+    scroll.scrollTop = targetScrollTop;
+
+    const input = document.querySelector<HTMLElement>(".inventory-search-input");
+    if (!input) return;
+    const scrollRect = scroll.getBoundingClientRect();
+    const screenRect = document.querySelector<HTMLElement>("[data-testid=device-screen]")?.getBoundingClientRect();
+    const visualViewportBottom = typeof window.visualViewport?.height === "number"
+      ? (window.visualViewport.offsetTop + window.visualViewport.height)
+      : window.innerHeight;
+    const visibleBottom = Math.min(scrollRect.bottom, screenRect?.bottom ?? Number.POSITIVE_INFINITY, visualViewportBottom);
+    const inputRect = input.getBoundingClientRect();
+    const toolbarRect = document.querySelector<HTMLElement>(".inventory-toolbar")?.getBoundingClientRect();
+    const inputDelta = Math.max(0, inputRect.bottom - visibleBottom) + Math.min(0, inputRect.top - scrollRect.top);
+    const toolbarDelta = toolbarRect ? Math.max(0, toolbarRect.bottom - visibleBottom) : 0;
+    const scrollDelta = Math.max(inputDelta, toolbarDelta);
+    if (scrollDelta === 0) return;
+    const adjustedScrollTop = Math.max(0, Math.min(maxScrollTop, scroll.scrollTop + scrollDelta));
+    scroll.scrollTo({ top: adjustedScrollTop, behavior: "auto" });
+  };
+
+  useEffect(() => {
+    if (!inventorySearchFocusRef.current) return;
+    let secondFrame: number | null = null;
+    const frame = window.requestAnimationFrame(() => {
+      secondFrame = window.requestAnimationFrame(keepInventorySearchVisible);
+    });
+    return () => {
+      window.cancelAnimationFrame(frame);
+      if (secondFrame !== null) window.cancelAnimationFrame(secondFrame);
+    };
+  }, [filteredFoods.length, inventoryQuery, inventorySearchStatus, keyboard.height, storageFilter, viewportHeight, viewportMetrics.offsetTop]);
+
   const rememberNotificationRevision = (value: unknown) => {
     if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0) return null;
     notificationRevisionRef.current = notificationRevisionRef.current === null
@@ -998,6 +2097,16 @@ function PrototypeContent() {
   const rememberCurrentNotificationRevision = () => {
     if (mealApi.workspaceRevision !== null) rememberNotificationRevision(mealApi.workspaceRevision);
   };
+
+  const applyNotificationReadOverrides = (items: ApiNotification[]) => items.map((notification) => {
+    const readAt = notificationReadOverridesRef.current.get(notification.id);
+    if (!readAt) return notification;
+    if (notification.read_at) {
+      notificationReadOverridesRef.current.delete(notification.id);
+      return notification;
+    }
+    return { ...notification, read_at: readAt };
+  });
 
   const refreshNotifications = async (nextNotice?: string) => {
     if (!mealApi.isConfigured) return false;
@@ -1030,7 +2139,7 @@ function PrototypeContent() {
         notificationRefreshQueuedRef.current = true;
         return false;
       }
-      setNotifications(nextNotifications);
+      setNotifications(applyNotificationReadOverrides(nextNotifications));
       if (payload?.revision) rememberNotificationRevision(payload.revision.revision);
       else rememberCurrentNotificationRevision();
       if (nextNotice) setNotificationsNotice(nextNotice);
@@ -1057,7 +2166,11 @@ function PrototypeContent() {
     notificationReadInFlightRef.current = Math.max(0, notificationReadInFlightRef.current - 1);
     if (notificationReadInFlightRef.current !== 0 || !notificationRefreshQueuedRef.current) return;
     notificationRefreshQueuedRef.current = false;
-    if (sheetRef.current === "notifications") void refreshNotifications();
+    // The user may have followed a notification into a food detail while the
+    // read mutation was in flight. Refresh the in-memory notification source
+    // even when the sheet is no longer visible, so reopening it cannot show
+    // the pre-mutation or pre-revision list.
+    void refreshNotifications();
   };
 
   const rememberShoppingListRevision = (value: unknown) => {
@@ -1206,10 +2319,12 @@ function PrototypeContent() {
     setAccountRemoteRefreshRequired(false);
     setAccountRemoteRefreshing(false);
     setAccountRefreshNonce(0);
+    dashboardPollQueuedRef.current = false;
     notificationRevisionRef.current = null;
     notificationPollingInFlightRef.current = false;
     notificationReadInFlightRef.current = 0;
     notificationRefreshQueuedRef.current = false;
+    notificationReadOverridesRef.current.clear();
     shoppingListRevisionRef.current = null;
     shoppingListPollingInFlightRef.current = false;
     shoppingListSyncInFlightRef.current = false;
@@ -1228,12 +2343,35 @@ function PrototypeContent() {
     clearReceiptSummaries();
   };
 
+  const resetWorkspacePresentation = () => {
+    resetWorkspaceReads();
+    setFoods([]);
+    updateStorageLocations([]);
+    setInventoryQuery("");
+    setStorageFilter("전체");
+    setInventorySearchResults([]);
+    setInventorySearchTotal(null);
+    setInventorySearchHasMore(false);
+    setInventorySearchStatus("idle");
+    setInventorySearchError("");
+    setInventorySearchKey("");
+    setProductInfoRetryAction(null);
+    setProductProvenanceStatus(null);
+    setProductProvenanceNotice(null);
+    setRecentlyReceivedFood(null);
+    setDashboardStaleAt(null);
+    setSelectedFoodId(null);
+    setDetailEntryIntent(null);
+    setDetailRemoteRefreshRequired(false);
+    setDemoNotificationReadAt({});
+  };
+
   const demoNotifications: ApiNotification[] = priorityFoods.slice(0, 3).map((food, index) => ({
     id: `demo-priority:${food.id}`,
     kind: food.dateKind === "estimated_use_first" ? "date_due" : "date_check",
     severity: index === 0 ? "urgent" : "attention",
-    title: index === 0 ? "오늘 먼저 확인할 식품이에요" : "확인할 식품이 있어요",
-    message: `${food.name}을(를) 먼저 확인해 보세요. 데모 모드에서는 서버 알림을 저장하지 않아요.`,
+    title: index === 0 ? "오늘 먼저 확인할 식품이에요" : `${food.name} 확인이 필요해요`,
+    message: index === 0 ? `${food.name} 먼저 확인해 보세요.` : "표시 날짜와 보관 상태를 확인해 주세요.",
     canonical_name: food.name,
     food_id: food.id,
     due_date: null,
@@ -1243,7 +2381,19 @@ function PrototypeContent() {
     created_at: new Date().toISOString(),
   }));
   const visibleNotifications = mealApi.isConfigured ? notifications : demoNotifications;
+  const grocySyncNotifications = visibleNotifications.filter((notification) => notification.kind === "grocy_sync");
+  const homeSyncAttentionCount = grocySyncNotifications.filter((notification) => (notification.sync_state ?? "action_required") === "action_required").length;
+  const homeSyncWaitingCount = grocySyncNotifications.filter((notification) => notification.sync_state === "queued" || notification.sync_state === "processing").length;
+  const showHomeSyncSummary = mealApi.isConfigured && connectionState === "connected" && (homeSyncAttentionCount > 0 || homeSyncWaitingCount > 0);
   const unreadNotificationCount = visibleNotifications.filter((notification) => notification.read_at === null).length;
+  const unreadUrgentNotificationCount = visibleNotifications.filter((notification) => notification.read_at === null && notification.severity === "urgent").length;
+  const unreadAttentionNotificationCount = visibleNotifications.filter((notification) => notification.read_at === null && notification.severity === "attention").length;
+  const unreadNotificationTone = unreadUrgentNotificationCount ? "urgent" : unreadAttentionNotificationCount ? "attention" : "info";
+  const unreadNotificationDotColor = unreadNotificationTone === "urgent" ? "var(--atelier-coral)" : unreadNotificationTone === "attention" ? "var(--atelier-amber)" : "var(--atelier-blue)";
+  const notificationTriggerLabel = unreadNotificationCount
+    ? `알림 확인, ${unreadUrgentNotificationCount ? `먼저 확인할 알림 ${unreadUrgentNotificationCount}개, ` : ""}읽지 않은 알림 ${unreadNotificationCount}개`
+    : "알림 확인";
+  const unreadNotificationBadge = unreadNotificationCount > 9 ? "9+" : String(unreadNotificationCount);
   const shoppingRemainingCount = shoppingList.filter((item) => !item.checked).length;
   const shoppingCompletedCount = shoppingList.length - shoppingRemainingCount;
   const hasManualShoppingItems = shoppingList.some((item) => item.sources.some((source) => source.source_type === "manual"));
@@ -1253,12 +2403,28 @@ function PrototypeContent() {
     : hasManualShoppingItems
       ? "직접 추가한 항목"
       : "식단에서 자동으로 모았어요";
+  const shoppingSummaryTitle = shoppingListStatus === "loading" && !shoppingList.length
+    ? "장보기 목록을 불러오는 중"
+    : shoppingListStatus === "error"
+      ? "장보기 목록을 다시 확인해요"
+      : shoppingRemainingCount > 0
+        ? `장보기 ${shoppingRemainingCount}개가 남아 있어요`
+        : shoppingList.length
+          ? "모두 구매했어요 · 재고 반영 전"
+          : "장보기 목록은 비어 있어요";
+  const shoppingSummaryDescription = shoppingListStatus === "error"
+    ? "탭해서 다시 동기화해 주세요."
+    : shoppingList.length
+      ? shoppingRemainingCount > 0
+        ? `${shoppingCompletedCount}개 구매 완료 · ${shoppingOriginLabel}`
+        : `${shoppingCompletedCount}개 구매 완료 · 재고에 반영해 주세요 · ${shoppingOriginLabel}`
+      : "식단을 저장하거나 필요한 물건을 직접 추가해 보세요.";
 
   useEffect(() => {
-    if (!toast) return;
+    if (!toast || toastAction?.message === toast) return;
     const timer = window.setTimeout(() => setToast(null), 2600);
     return () => window.clearTimeout(timer);
-  }, [toast]);
+  }, [toast, toastAction]);
 
   useEffect(() => {
     if (toastAction && toastAction.message !== toast) setToastAction(null);
@@ -1267,6 +2433,66 @@ function PrototypeContent() {
   const showRetryToast = (message: string, onRetry: () => void) => {
     setToastAction({ message, label: "다시 시도", onInvoke: onRetry });
     setToast(message);
+  };
+
+  const focusToastRecoveryTarget = () => {
+    if (pendingAddedFoodFocusRef.current) return;
+    let disposed = false;
+    let fallbackTimer: number | undefined;
+    let focusTimer: number | undefined;
+    let settleTimer: number | undefined;
+    let hasFocusedTarget = false;
+    const cleanup = () => {
+      if (disposed) return;
+      disposed = true;
+      observer.disconnect();
+      if (fallbackTimer !== undefined) window.clearTimeout(fallbackTimer);
+      if (focusTimer !== undefined) window.clearTimeout(focusTimer);
+      if (settleTimer !== undefined) window.clearTimeout(settleTimer);
+    };
+    const focusTarget = () => {
+      if (disposed) return;
+      if (document.querySelector('[data-testid="bottom-sheet"]')) {
+        cleanup();
+        return;
+      }
+      const fallbackCandidates = activeNav === "meal"
+        ? [
+          ...document.querySelectorAll<HTMLElement>(".meal-plan-button"),
+          ...document.querySelectorAll<HTMLElement>(".priority-card"),
+        ]
+        : activeContentNavRef.current === "food"
+          ? [
+            ...document.querySelectorAll<HTMLElement>("[data-inventory-food-id]"),
+            ...document.querySelectorAll<HTMLElement>(".inventory-empty-action, .inventory-add-button"),
+          ]
+        : [
+          ...document.querySelectorAll<HTMLElement>(".priority-card"),
+          ...document.querySelectorAll<HTMLElement>(".rescue-status-card, .meal-plan-button"),
+        ];
+      const target = fallbackCandidates.find((element) => !element.hasAttribute("disabled"));
+      if (!target) return;
+      target.focus({ preventScroll: true });
+      hasFocusedTarget = true;
+      if (settleTimer !== undefined) window.clearTimeout(settleTimer);
+      settleTimer = window.setTimeout(cleanup, 400);
+    };
+    const scheduleFocus = () => {
+      if (disposed) return;
+      if (focusTimer !== undefined) window.clearTimeout(focusTimer);
+      focusTimer = window.setTimeout(() => {
+        focusTimer = undefined;
+        focusTarget();
+      }, 30);
+    };
+    const observer = new MutationObserver(scheduleFocus);
+    observer.observe(document.body, { childList: true, subtree: true });
+    window.requestAnimationFrame(scheduleFocus);
+    fallbackTimer = window.setTimeout(() => {
+      if (disposed) return;
+      if (!hasFocusedTarget) document.querySelector<HTMLElement>(".connection-pill")?.focus({ preventScroll: true });
+      cleanup();
+    }, 5000);
   };
 
   useEffect(() => {
@@ -1315,8 +2541,14 @@ function PrototypeContent() {
 
   useEffect(() => {
     if (!mealApi.isConfigured || connectionState !== "connected" || sheet !== null || typeof window === "undefined" || typeof document === "undefined") return;
+    let active = true;
+    let queuedTimer: number | null = null;
     const pollRevision = async () => {
-      if (document.visibilityState === "hidden" || dashboardPollingInFlightRef.current || dashboardSyncInFlightRef.current) return;
+      if (document.visibilityState === "hidden") return;
+      if (dashboardPollingInFlightRef.current || dashboardSyncInFlightRef.current) {
+        dashboardPollQueuedRef.current = true;
+        return;
+      }
       dashboardPollingInFlightRef.current = true;
       try {
         const previousRevision = dashboardRevisionRef.current;
@@ -1339,6 +2571,13 @@ function PrototypeContent() {
         // the next visible/interval probe retry.
       } finally {
         dashboardPollingInFlightRef.current = false;
+        if (dashboardPollQueuedRef.current && active && document.visibilityState === "visible" && sheetRef.current === null) {
+          dashboardPollQueuedRef.current = false;
+          queuedTimer = window.setTimeout(() => {
+            queuedTimer = null;
+            if (active) void pollRevision();
+          }, 0);
+        }
       }
     };
     void pollRevision();
@@ -1348,8 +2587,11 @@ function PrototypeContent() {
     };
     document.addEventListener("visibilitychange", onVisibilityChange);
     return () => {
+      active = false;
+      dashboardPollQueuedRef.current = false;
       window.clearInterval(interval);
       document.removeEventListener("visibilitychange", onVisibilityChange);
+      if (queuedTimer !== null) window.clearTimeout(queuedTimer);
     };
   }, [connectionState, inventorySearchActive, sheet, workspaceSync]);
 
@@ -1548,14 +2790,18 @@ function PrototypeContent() {
     };
   }, [accountRemoteRefreshRequired, accountRemoteRefreshing, sheet, workspaceSync]);
 
-  const openAdd = (mode: AddMode = "receipt", receiptId: string | null = null) => {
+  const openAdd = (mode: AddMode = "receipt", receiptId: string | null = null, returnSheet: "detail" | null = null) => {
     // Start the primary intake chunk on user intent so the sheet's dialog
     // shell and its file/camera controls become ready together. Keep the
     // lazy split to avoid increasing the initial bundle for users who do not
     // open intake.
     const requestId = addSheetOpenRequestRef.current + 1;
     addSheetOpenRequestRef.current = requestId;
+    receiptQueueInitialFocusRef.current = false;
     keyboard.hide();
+    const activeElement = document.activeElement;
+    addOriginFocusRef.current = activeElement instanceof HTMLElement ? activeElement : null;
+    addReturnSheetRef.current = returnSheet;
     setAddMode(mode);
     setResumeReceiptId(receiptId);
     setAddSheetSessionKey((current) => current + 1);
@@ -1570,7 +2816,19 @@ function PrototypeContent() {
     });
   };
 
+  useEffect(() => {
+    if (!receiptSourceReviewMode || receiptSourceReviewOpenedRef.current) return;
+    receiptSourceReviewOpenedRef.current = true;
+    openAdd("receipt");
+  }, [receiptSourceReviewMode]);
+
   const openMealPlan = () => {
+    mealDetailReturnRef.current = false;
+    mealDetailReturnFocusIdRef.current = null;
+    pendingMealCompletionFocusRef.current = null;
+    mealReturnSheetRef.current = sheet === "shopping" ? "shopping" : null;
+    if (sheet === "shopping") shoppingInitialFocusRef.current = false;
+    mealSheetOriginNavRef.current = navigationIntentRef.current ?? activeContentNavRef.current;
     setActiveNav("meal");
     const requestId = mealSheetOpenRequestRef.current + 1;
     mealSheetOpenRequestRef.current = requestId;
@@ -1579,9 +2837,11 @@ function PrototypeContent() {
       if (requestId !== mealSheetOpenRequestRef.current) return;
       setToast(null);
       setToastAction(null);
+      setActiveNav("meal");
       changeSheet("meal");
     }).catch(() => {
       if (requestId !== mealSheetOpenRequestRef.current) return;
+      setActiveNav(mealSheetOriginNavRef.current);
       showRetryToast("식단 화면을 준비하지 못했어요.", openMealPlan);
     });
   };
@@ -1598,26 +2858,85 @@ function PrototypeContent() {
     if (mealApi.workspaceRevision !== null) rememberDetailRevision(mealApi.workspaceRevision);
   };
 
-  const openDetail = (food: FoodItem) => {
+  const openDetail = (food: FoodItem, source: "home" | "inventory" = "inventory") => {
+    if (source === "inventory") captureInventoryReturnContext(food.id);
+    else inventoryReturnContextRef.current = null;
+    detailHistoryDisclosureOpenRef.current = false;
     detailRevisionRef.current = dashboardRevisionRef.current;
     if (detailRevisionRef.current === null) rememberCurrentDetailRevision();
     setDetailRemoteRefreshRequired(false);
+    const needsDateReview = Boolean(attentionReviewReason(food, currentDate));
+    const needsProvenanceReview = Boolean(food.productProvenance && !needsDateReview);
+    setDetailEntryIntent(needsDateReview ? "date-review" : needsProvenanceReview ? "provenance-review" : source === "home" && food.priority <= 3 ? "consume-action" : null);
     setSelectedFoodId(food.id);
     changeSheet("detail");
   };
 
+  const openFoodDetailFromMeal = (foodId: string) => {
+    const food = findFoodById(foodId);
+    if (!food) return;
+    mealDetailReturnRef.current = true;
+    mealDetailReturnFocusIdRef.current = food.id;
+    inventoryReturnContextRef.current = null;
+    detailHistoryDisclosureOpenRef.current = false;
+    detailRevisionRef.current = dashboardRevisionRef.current;
+    if (detailRevisionRef.current === null) rememberCurrentDetailRevision();
+    setDetailRemoteRefreshRequired(false);
+    setDetailEntryIntent(null);
+    setSelectedFoodId(food.id);
+    changeSheet("detail");
+  };
+
+  const openFoodFromSyncHistory = (foodId: string, canonicalName: string, outboxId?: string) => {
+    const food = findFoodById(foodId);
+    if (!food) {
+      const message = `${canonicalName}의 최신 식품 기록을 찾지 못했어요.`;
+      setToastAction({
+        message,
+        label: "최신 재고 확인",
+        onInvoke: () => {
+          void syncDashboard().then((synced) => {
+            setToast(synced ? "최신 식품 목록을 확인했어요" : "최신 식품 목록을 불러오지 못했어요");
+            if (synced) openInventory();
+          });
+        },
+      });
+      setToast(message);
+      return;
+    }
+    accountDetailReturnRef.current = true;
+    openDetail(food, "inventory");
+    detailHistoryDisclosureOpenRef.current = true;
+    setDetailSyncFocusId(outboxId ?? null);
+  };
+
   const refreshDetailFromRemote = async () => {
-    if (!selectedFoodId) return;
+    if (!selectedFoodId) return false;
     setDetailRemoteRefreshRequired(false);
     setToast("식품 상세를 최신 상태로 읽는 중이에요");
     const synced = await syncDashboard();
     if (!synced) {
       setDetailRemoteRefreshRequired(true);
       setToast("최신 식품 상태를 불러오지 못했어요. 다시 시도해 주세요");
-      return;
+      return false;
     }
     rememberCurrentDetailRevision();
     setToast("식품 상세를 최신 상태로 갱신했어요");
+    return true;
+  };
+
+  const refreshProductProvenanceFromRemote = async () => {
+    const synced = await refreshDetailFromRemote();
+    if (synced) {
+      setProductProvenanceNotice((current) => current ? { ...current, requiresRefresh: false } : current);
+    }
+  };
+
+  const refreshProductInfoFromRemote = async () => {
+    const synced = await refreshDetailFromRemote();
+    if (synced) {
+      setProductInfoNotice((current) => current ? { ...current, requiresRefresh: false } : current);
+    }
   };
 
   const rememberAccountRevision = (value: unknown) => {
@@ -1652,14 +2971,35 @@ function PrototypeContent() {
     }
   };
 
-  const openNotifications = () => {
+  const openNotifications = (syncFocus: NotificationSyncFocus | null = null) => {
+    notificationDetailReturnRef.current = false;
+    notificationAccountReturnRef.current = false;
+    setAccountGrocyOutboxFocusId(null);
+    notificationReturnFocusIdRef.current = null;
+    notificationInitialFocusRef.current = syncFocus === null;
+    setNotificationSyncFocus(syncFocus);
     changeSheet("notifications");
     void refreshNotifications();
   };
 
   const openShoppingList = () => {
+    shoppingInitialFocusRef.current = true;
     changeSheet("shopping");
     if (shoppingListStatus === "idle" || shoppingListStatus === "error") void refreshShoppingList();
+  };
+
+  const openRecentlyReceivedFood = () => {
+    const recent = recentlyReceivedFood;
+    if (!recent) return;
+    setRecentlyReceivedFood(null);
+    const food = findFoodById(recent.id);
+    if (food) {
+      openDetail(food, "inventory");
+      setDetailEntryIntent("date-review");
+      return;
+    }
+    openInventory();
+    setToast(`${recent.name} 재고를 목록에서 확인해 주세요`);
   };
 
   const beginShoppingListMutation = () => {
@@ -1708,6 +3048,7 @@ function PrototypeContent() {
     beginShoppingListMutation();
     setShoppingListError("");
     setShoppingListRetryAction(null);
+    setToastAction(null);
     const requestFingerprint = `${item.id}:${input.quantity}:${input.storageType}:${input.storageLocationId ?? ""}`;
     const idempotencyKey = shoppingReceiveKeys.current.get(requestFingerprint) ?? createId("shopping-receive");
     shoppingReceiveKeys.current.set(requestFingerprint, idempotencyKey);
@@ -1715,15 +3056,38 @@ function PrototypeContent() {
       const response = await mealApi.receiveShoppingListItem(item.id, input.quantity, input.storageType, idempotencyKey, input.storageLocationId);
       if (!response) throw new Error("shopping-list-receive-empty");
       shoppingReceiveKeys.current.delete(requestFingerprint);
+      if (response.inventory_lot?.id) {
+        setRecentlyReceivedFood({
+          id: response.inventory_lot.id,
+          name: response.inventory_lot.display_name ?? response.inventory_lot.canonical_name ?? item.canonical_name,
+        });
+      }
       setShoppingList(response.items);
       rememberCurrentShoppingListRevision();
       setShoppingListStatus("ready");
       const synced = await syncDashboard();
-      setToast(synced
+      const receiveMessage = synced
         ? response.removed_planned_source_count > 0
-          ? `${item.canonical_name}을(를) 재고에 추가하고 식단 장보기를 정리했어요`
-          : `${item.canonical_name}을(를) 재고에 추가했어요`
-        : `${item.canonical_name}을(를) 재고에 반영했어요. 화면을 다시 읽지는 못했어요`);
+          ? `${withKoreanObjectParticle(item.canonical_name)} 재고에 추가하고 식단 장보기를 정리했어요`
+          : `${withKoreanObjectParticle(item.canonical_name)} 재고에 추가했어요`
+        : `${withKoreanObjectParticle(item.canonical_name)} 재고에 반영했어요`;
+      const receiveReadbackMessage = withServerReadbackNotice(
+        `${receiveMessage} · 반영 수량: ${response.received_quantity}${item.unit}`,
+        synced,
+      );
+      const finalReceiveMessage = synced ? receiveMessage : receiveReadbackMessage;
+      if (!synced) {
+        setToastAction({
+          message: finalReceiveMessage,
+          label: "최신 재고 확인",
+          onInvoke: () => {
+            void syncDashboard().then((latestSynced) => {
+              setToast(latestSynced ? "최신 재고를 확인했어요" : "최신 재고를 아직 불러오지 못했어요");
+            });
+          },
+        });
+      }
+      setToast(finalReceiveMessage);
       return true;
     } catch (reason) {
       if (isMealApiAuthError(reason)) {
@@ -1825,7 +3189,8 @@ function PrototypeContent() {
     try {
       const updated = await mealApi.markNotificationRead(notification.id);
       if (!updated) throw new Error("notification-read-empty");
-      setNotifications((current) => current.map((item) => item.id === updated.id ? updated : item));
+      notificationReadOverridesRef.current.set(updated.id, updated.read_at ?? readAt);
+      setNotifications((current) => current.map((item) => item.id === updated.id ? { ...updated, read_at: updated.read_at ?? readAt } : item));
       rememberCurrentNotificationRevision();
       setNotificationsError("");
       setNotificationRetryAction(null);
@@ -1858,6 +3223,9 @@ function PrototypeContent() {
     try {
       const result = await mealApi.markAllNotificationsRead();
       if (!result) throw new Error("notifications-read-all-empty");
+      notifications.forEach((notification) => {
+        notificationReadOverridesRef.current.set(notification.id, notification.read_at ?? readAt);
+      });
       rememberCurrentNotificationRevision();
       await refreshNotifications();
     } catch (reason) {
@@ -1878,13 +3246,64 @@ function PrototypeContent() {
   };
 
   const openNotificationTarget = (notification: ApiNotification) => {
+    notificationInitialFocusRef.current = false;
     void markNotificationRead(notification);
     if (notification.action === "food" && notification.food_id) {
+      if (mealApi.isConfigured && !findFoodById(notification.food_id)) {
+        const message = "알림에 연결된 식품을 최신 목록에서 찾지 못했어요.";
+        notificationDetailReturnRef.current = false;
+        notificationReturnFocusIdRef.current = null;
+        inventoryReturnContextRef.current = null;
+        changeSheet(null);
+        setToastAction({
+          message,
+          label: "최신 재고 확인",
+          onInvoke: () => {
+            void syncDashboard().then((synced) => {
+              setToast(synced ? "최신 식품 목록을 확인했어요" : "최신 식품 목록을 불러오지 못했어요");
+              if (synced) openInventory();
+            });
+          },
+        });
+        setToast(message);
+        return;
+      }
+      notificationDetailReturnRef.current = true;
+      notificationReturnFocusIdRef.current = notification.id;
+      captureInventoryReturnContext(notification.food_id);
       setSelectedFoodId(notification.food_id);
       changeSheet("detail");
     } else if (notification.action === "grocy") {
+      notificationDetailReturnRef.current = false;
+      notificationAccountReturnRef.current = true;
+      const notificationOutboxId = notification.sync_record_id
+        ?? (notification.id.startsWith("grocy-outbox:") ? notification.id.split(":")[1] ?? null : null);
+      setAccountGrocyOutboxFocusId(notificationOutboxId);
+      notificationReturnFocusIdRef.current = notification.id;
       changeSheet("account");
     }
+  };
+
+  const openSyncRecordFromDetail = (outboxId: string) => {
+    const returnToNotification = notificationAccountReturnRef.current || notificationDetailReturnRef.current;
+    notificationDetailReturnRef.current = false;
+    accountDetailReturnRef.current = !returnToNotification;
+    notificationAccountReturnRef.current = returnToNotification;
+    setAccountGrocyOutboxFocusId(outboxId);
+    changeSheet("account");
+  };
+
+  const openSyncNotificationFromDetail = (outboxId: string) => {
+    notificationDetailReturnRef.current = false;
+    notificationAccountReturnRef.current = false;
+    accountDetailReturnRef.current = false;
+    setAccountGrocyOutboxFocusId(null);
+    notificationReturnFocusIdRef.current = null;
+    notificationFocusOverrideRef.current = true;
+    notificationInitialFocusRef.current = false;
+    setPendingNotificationSyncRecordId(outboxId);
+    changeSheet("notifications");
+    void refreshNotifications();
   };
 
   const rememberDashboardRevision = (value: unknown) => {
@@ -1918,6 +3337,10 @@ function PrototypeContent() {
       const nextStorageLocations = payload.storage_locations ?? [];
       updateStorageLocations(nextStorageLocations);
       setFoods(payload.inventory.map((food) => mapApiFood(food, nextStorageLocations)));
+      if (sheetRef.current === "detail") setDetailHistoryRefreshKey((current) => current + 1);
+      if (mealApi.isConfigured && (inventoryQuery.trim() || storageFilter !== "전체")) {
+        setInventorySearchRetry((current) => current + 1);
+      }
       if (dashboardResult?.revision) {
         rememberDashboardRevision(dashboardResult.revision.revision);
         if (sheetRef.current === "detail") rememberDetailRevision(dashboardResult.revision.revision);
@@ -2000,19 +3423,33 @@ function PrototypeContent() {
     setInventorySearchRetry((current) => current + 1);
   };
 
-  const navigateFromBottom = (destination: "home" | "food") => {
+  const openInventory = () => {
     keyboard.hide();
-    setActiveNav(destination);
+    setStorageFilter("전체");
+    setInventoryQuery("");
+    const scroll = document.querySelector<HTMLElement>(".app-screen.mobile-scroll, .app-screen .mobile-scroll");
+    navigationIntentRef.current = "food";
+    navigationIntentLastScrollTopRef.current = scroll?.scrollTop ?? null;
+    activeContentNavRef.current = "food";
+    setActiveNav("food");
     changeSheet(null);
     window.setTimeout(() => {
-      const scroll = document.querySelector<HTMLElement>(".app-screen .mobile-scroll");
-      if (!scroll) return;
-      if (destination === "home") {
-        scroll.scrollTo({ top: 0, behavior: "smooth" });
-        return;
-      }
-      document.querySelector<HTMLElement>(".inventory-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      document.querySelector<HTMLElement>(".inventory-section")?.scrollIntoView({ behavior: getMobileScrollBehavior(), block: "start" });
     }, 0);
+  };
+
+  const navigateFromBottom = (destination: "home" | "food") => {
+    keyboard.hide();
+    const scroll = document.querySelector<HTMLElement>(".app-screen.mobile-scroll, .app-screen .mobile-scroll");
+    navigationIntentRef.current = destination;
+    navigationIntentLastScrollTopRef.current = scroll?.scrollTop ?? null;
+    activeContentNavRef.current = destination;
+    setActiveNav(destination);
+    if (scroll) {
+      if (destination === "home") scroll.scrollTo({ top: 0, behavior: "auto" });
+      else document.querySelector<HTMLElement>(".inventory-section")?.scrollIntoView({ behavior: "auto", block: "start" });
+    }
+    changeSheet(null);
   };
 
   const loadMoreInventory = () => {
@@ -2043,40 +3480,60 @@ function PrototypeContent() {
       });
   };
 
-  const handleAuthenticated = async (session: { mode: "account" | "guest" }) => {
+  const handleAuthenticated = async (session: { mode: "account" | "guest" }, successMessage?: string) => {
     changeSheet(null);
-    resetWorkspaceReads();
+    resetWorkspacePresentation();
     setAddSheetSessionKey((current) => current + 1);
     shoppingReceiveKeys.current.clear();
     setConnectionState("checking");
     const synced = await syncDashboard();
-    setToast(synced ? session.mode === "account" ? "계정 workspace에 연결했어요" : "게스트 workspace에 연결했어요" : "계정은 연결했지만 식품 목록을 읽지 못했어요");
+      setToast(synced ? successMessage ?? (session.mode === "account" ? "계정에 연결했어요" : "게스트 기록 공간에 연결했어요") : "계정은 연결했지만 식품 목록을 읽지 못했어요");
   };
 
   const handleSignedOut = async () => {
-    resetWorkspaceReads();
+    resetWorkspacePresentation();
     setAddSheetSessionKey((current) => current + 1);
     const serverRevoked = await mealApi.logoutSession();
     changeSheet(null);
     shoppingReceiveKeys.current.clear();
     setConnectionState("checking");
     const synced = await syncDashboard();
-    setToast(synced ? serverRevoked ? "로그아웃하고 게스트 workspace로 전환했어요" : "이 기기에서 로그아웃하고 게스트 workspace로 전환했어요" : "로그아웃했지만 식품 목록을 읽지 못했어요");
+      setToast(synced ? serverRevoked ? "로그아웃하고 새 게스트 기록 공간으로 전환했어요" : "이 기기에서 로그아웃하고 새 게스트 기록 공간으로 전환했어요" : "로그아웃했지만 식품 목록을 읽지 못했어요");
   };
 
   const handleAccountDeleted = async () => {
     mealApi.clearSession();
     changeSheet(null);
-    resetWorkspaceReads();
+    resetWorkspacePresentation();
     setAddSheetSessionKey((current) => current + 1);
     shoppingReceiveKeys.current.clear();
     setConnectionState("checking");
     const synced = await syncDashboard();
-    setToast(synced ? "계정과 기록을 삭제하고 새 게스트 workspace로 전환했어요" : "계정과 기록은 삭제했지만 새 게스트 workspace를 열지 못했어요");
+      setToast(synced ? "계정과 기록을 삭제하고 새 게스트 기록 공간으로 전환했어요" : "계정과 기록은 삭제했지만 새 게스트 기록 공간을 열지 못했어요");
   };
 
   const handleMealCompleted = (foodIds: string[], skippedCount = 0, consumedAllocations: Array<{ food_id: string; quantity: number }> = [], grocySyncStatus?: ApiGrocySyncStatus) => {
+    const mealOriginNav = mealSheetOriginNavRef.current;
+    const hasInventoryResult = foodIds.length > 0 || consumedAllocations.length > 0;
+    pendingMealCompletionFocusRef.current = hasInventoryResult
+      ? {
+          sourceNav: mealOriginNav,
+          preferredFoodIds: Array.from(new Set(consumedAllocations.map((allocation) => allocation.food_id))),
+          beforeFoodsSignature: foods.map((food) => `${food.id}:${food.quantity}`).join("|"),
+          trigger: document.activeElement instanceof HTMLElement ? document.activeElement : null,
+        }
+      : null;
+    if (hasInventoryResult) sheetRestoreFocusRef.current = null;
     changeSheet(null);
+    if (mealOriginNav === "home") {
+      activeContentNavRef.current = "home";
+      navigationIntentRef.current = "home";
+      setActiveNav("home");
+      window.requestAnimationFrame(() => {
+        document.querySelector<HTMLElement>(".app-screen.mobile-scroll, .app-screen .mobile-scroll")?.scrollTo({ top: 0, behavior: "auto" });
+      });
+    }
+    const completionMessage = mealCompletionMessage(foodIds, skippedCount, consumedAllocations);
     if (!mealApi.isConfigured) {
       const consumedIds = new Set(foodIds);
       const quantitiesByFoodId = new Map(consumedAllocations.map((allocation) => [allocation.food_id, allocation.quantity]));
@@ -2090,12 +3547,21 @@ function PrototypeContent() {
           return remaining > 0 ? [{ ...food, quantity: `${remaining}${currentQuantity.unit}` }] : [];
         })
         .map((food, index) => ({ ...food, priority: index + 1 })));
-      setToast(withGrocySyncNotice(skippedCount ? `일부 재료만 차감하고 ${skippedCount}개는 확인이 필요해요` : foodIds.length ? "식단을 완료하고 재고를 갱신했어요" : "조리 완료 기록을 남겼어요", grocySyncStatus));
+      setToastAction(null);
+      setToast(withGrocySyncNotice(completionMessage, grocySyncStatus));
       return;
     }
+    setToastAction(null);
     setToast("식단 완료를 서버에 저장하는 중이에요");
     void syncDashboard().then((synced) => {
-      setToast(synced ? withGrocySyncNotice(skippedCount ? `일부 재료만 차감하고 ${skippedCount}개는 확인이 필요해요` : "식단을 완료하고 재고를 갱신했어요", grocySyncStatus) : "식단은 기록했지만 재고를 다시 읽지 못했어요");
+      const completionSyncMessage = withGrocySyncNotice(completionMessage, grocySyncStatus);
+      const finalCompletionMessage = withServerReadbackNotice(completionSyncMessage, synced);
+      if (needsExternalSyncAttention(grocySyncStatus)) {
+        setToastAction({ message: finalCompletionMessage, label: "연동 상태 확인", onInvoke: () => changeSheet("account") });
+      } else {
+        setToastAction(null);
+      }
+      setToast(finalCompletionMessage);
     });
   };
 
@@ -2134,8 +3600,41 @@ function PrototypeContent() {
     });
   };
 
+  const queueAddedFoodFocus = (foodName: string) => {
+    if (!foodName.trim() || addReturnSheetRef.current) {
+      pendingAddedFoodFocusRef.current = null;
+      return;
+    }
+    pendingAddedFoodFocusRef.current = {
+      name: foodName,
+      sourceNav: activeNav === "meal" ? mealSheetOriginNavRef.current : activeContentNavRef.current,
+      trigger: addOriginFocusRef.current ?? sheetRestoreFocusRef.current ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null),
+    };
+  };
+
+  const queueFoodDateFocus = (food: FoodItem) => {
+    if (mealDetailReturnRef.current || notificationDetailReturnRef.current) {
+      // Planner and notification detail both return to an already-open
+      // context sheet. Do not let a dashboard-row focus intent survive until
+      // that sheet is closed later.
+      pendingFoodDateFocusRef.current = null;
+      return;
+    }
+    const sourceNav = inventoryReturnContextRef.current ? "food" : activeContentNavRef.current;
+    pendingFoodDateFocusRef.current = {
+      foodId: food.id,
+      name: food.name,
+      sourceNav,
+      trigger: document.activeElement instanceof HTMLElement ? document.activeElement : null,
+    };
+    // A detail sheet can be opened from the shopping sheet, so the generic
+    // sheet trigger may point at a now-hidden shopping control. The date
+    // result owns restoration for this transition.
+    sheetRestoreFocusRef.current = null;
+  };
+
   const saveFood = (foodId: string, storage: StorageType, opened: boolean, eventQuantity: number, storageLocationId: string | null = null) => {
-    const previousFood = foods.find((food) => food.id === foodId);
+    const previousFood = findFoodById(foodId);
     const storageMutationKey = createId("storage-event");
     const previousQuantity = previousFood ? quantityParts(previousFood.quantity) : { amount: eventQuantity, unit: "개" };
     const isPartial = Boolean(previousFood && eventQuantity < previousQuantity.amount);
@@ -2146,6 +3645,23 @@ function PrototypeContent() {
       : undefined;
     const storageChanged = Boolean(previousFood && (previousFood.storage !== storage || previousStorageLocationId !== nextStorageLocationId));
     const shouldSplit = Boolean(isPartial && previousFood && (storageChanged || (!previousFood.opened && opened)));
+    const pendingChangeLabels = [
+      storageChanged ? "보관 위치" : null,
+      previousFood && !previousFood.opened && opened ? "개봉 상태" : null,
+      isPartial ? "수량" : null,
+    ].filter((value): value is string => Boolean(value));
+    const pendingChangeSummary = pendingChangeLabels.join("·");
+    const persistenceFailureMessage = pendingChangeLabels.length > 1
+      ? `보관 상태를 저장하지 못했어요. ${pendingChangeSummary} 변경 전 상태를 유지했어요.`
+      : "보관 상태를 저장하지 못했어요. 기존 상태를 유지했어요.";
+    const rollbackFailureMessage = pendingChangeLabels.length > 1
+      ? `서버 저장에 실패해 ${pendingChangeSummary} 변경 전 상태로 되돌렸어요`
+      : "서버 저장에 실패해 원래 상태로 되돌렸어요";
+    const storageSavedMessage = shouldSplit ? "보관 상태를 저장하고 남은 수량을 나눴어요" : "보관 상태를 저장했어요";
+    const storageScopeLabel = pendingChangeLabels.join("·");
+    const withStorageScope = (includeScope: boolean) => includeScope && storageScopeLabel
+      ? `${storageSavedMessage} · 변경 범위: ${storageScopeLabel}`
+      : storageSavedMessage;
     const previousFoods = foods;
     const applyOptimistic = () => {
       if (!(mealApi.isConfigured && shouldSplit) && previousFood) {
@@ -2181,7 +3697,7 @@ function PrototypeContent() {
     };
     if (!mealApi.isConfigured || !previousFood) applyOptimistic();
     changeSheet(null);
-    setToast(mealApi.isConfigured ? "보관 상태를 서버에 저장하는 중이에요" : "보관 상태를 저장했어요");
+    setToast(mealApi.isConfigured ? "보관 상태를 서버에 저장하는 중이에요" : storageSavedMessage);
     if (mealApi.isConfigured && previousFood) {
       const persistEvents = async (): Promise<StorageMutationResult> => {
         const moveRequested = storageChanged;
@@ -2236,17 +3752,24 @@ function PrototypeContent() {
             if (result.inventory) {
               setFoods(result.inventory.map((food, index) => ({ ...mapApiFood(food, storageLocations), priority: index + 1 })));
             }
-            setToast(synced
-              ? withGrocySyncNotice("보관 상태를 저장했어요", result.statuses)
-              : "보관 상태를 저장했어요. 최신 목록은 아직 다시 읽지 못했어요");
+            const externalSyncDeferred = hasDeferredExternalSync(result.statuses);
+            const storageSyncMessage = withGrocySyncNotice(withStorageScope(externalSyncDeferred || !synced), result.statuses);
+            const finalStorageMessage = withServerReadbackNotice(storageSyncMessage, synced);
+            const externalSyncNeedsAttention = needsExternalSyncAttention(result.statuses);
+            if (externalSyncNeedsAttention) {
+              setToastAction({ message: finalStorageMessage, label: "연동 상태 확인", onInvoke: () => changeSheet("account") });
+            } else {
+              setToastAction(null);
+            }
+            setToast(finalStorageMessage);
           },
           onFailure: (reason, retry) => {
             showRetryToast(
               isMealApiWorkspaceConflictError(reason)
                 ? MEAL_API_WORKSPACE_CONFLICT_MESSAGE
                 : isMealApiStorageEventPersistenceError(reason)
-                  ? "보관 상태를 저장하지 못했어요. 기존 상태를 유지했어요."
-                  : "서버 저장에 실패해 원래 상태로 되돌렸어요",
+                  ? persistenceFailureMessage
+                  : rollbackFailureMessage,
               () => { void retry(); },
             );
           },
@@ -2257,11 +3780,21 @@ function PrototypeContent() {
   };
 
   const consumeFood = (foodId: string, eventQuantity?: number) => {
-    const food = foods.find((item) => item.id === foodId);
+    const food = findFoodById(foodId);
     const consumeMutationKey = createId("consume-event");
     const quantity = food ? quantityParts(food.quantity) : { amount: eventQuantity ?? 1, unit: "개" };
     const isPartial = Boolean(eventQuantity && eventQuantity < quantity.amount);
+    const consumeSuccessMessage = food ? `${withKoreanObjectParticle(food.name)} 먹은 기록으로 남겼어요` : "먹은 기록을 저장했어요";
+    const consumeScopeMessage = `기록 범위: ${isPartial ? `${eventQuantity}${quantity.unit}` : `전체 ${quantity.amount}${quantity.unit}`}`;
+    const withConsumeScope = (includeScope: boolean) => includeScope ? `${consumeSuccessMessage} · ${consumeScopeMessage}` : consumeSuccessMessage;
     const previousFoods = foods;
+    const shouldCueNextPriority = activeContentNavRef.current === "home"
+      && !inventoryReturnContextRef.current
+      && !mealDetailReturnRef.current;
+    const optimisticFoods = (isPartial
+      ? previousFoods.map((item) => item.id === foodId ? { ...item, quantity: `${quantity.amount - (eventQuantity ?? 0)}${quantity.unit}` } : item)
+      : previousFoods.filter((item) => item.id !== foodId)
+    ).map((item, index) => ({ ...item, priority: index + 1 }));
     const applyOptimistic = () => {
       if (isPartial) {
         setFoods((current) => current.map((item) => item.id === foodId ? { ...item, quantity: `${quantity.amount - (eventQuantity ?? 0)}${quantity.unit}` } : item));
@@ -2271,7 +3804,8 @@ function PrototypeContent() {
     };
     if (!mealApi.isConfigured) applyOptimistic();
     changeSheet(null);
-    setToast(mealApi.isConfigured ? "먹은 기록을 서버에 저장하는 중이에요" : food ? `${food.name}을(를) 먹은 기록으로 남겼어요` : "먹은 기록을 저장했어요");
+    setToastAction(null);
+    setToast(mealApi.isConfigured ? "먹은 기록을 서버에 저장하는 중이에요" : withNextPriorityCue(consumeSuccessMessage, optimisticFoods, shouldCueNextPriority));
     if (mealApi.isConfigured) {
       const persistAndSync = () => {
         void runStorageMutationRecovery({
@@ -2283,12 +3817,20 @@ function PrototypeContent() {
           },
           sync: syncDashboard,
           onSuccess: ({ value: result, synced }) => {
+            const nextInventory = result.inventory
+              ? result.inventory.map((item, index) => ({ ...mapApiFood(item, storageLocations), priority: index + 1 }))
+              : optimisticFoods;
             if (result.inventory) {
-              setFoods(result.inventory.map((item, index) => ({ ...mapApiFood(item, storageLocations), priority: index + 1 })));
+              setFoods(nextInventory);
             }
-            setToast(synced
-              ? withGrocySyncNotice(food ? `${food.name}을(를) 먹은 기록으로 남겼어요` : "먹은 기록을 저장했어요", result.statuses)
-              : "먹은 기록을 저장했어요. 최신 목록은 아직 다시 읽지 못했어요");
+            const successMessage = withGrocySyncNotice(withConsumeScope(hasDeferredExternalSync(result.statuses) || !synced), result.statuses);
+            const finalConsumeMessage = withNextPriorityCue(withServerReadbackNotice(successMessage, synced), nextInventory, shouldCueNextPriority);
+            if (needsExternalSyncAttention(result.statuses)) {
+              setToastAction({ message: finalConsumeMessage, label: "연동 상태 확인", onInvoke: () => changeSheet("account") });
+            } else {
+              setToastAction(null);
+            }
+            setToast(finalConsumeMessage);
           },
           onFailure: (reason, retry) => {
             showRetryToast(
@@ -2307,10 +3849,15 @@ function PrototypeContent() {
   };
 
   const discardFood = (foodId: string, eventQuantity?: number) => {
-    const food = foods.find((item) => item.id === foodId);
+    const food = findFoodById(foodId);
     const discardMutationKey = createId("discard-event");
     const quantity = food ? quantityParts(food.quantity) : { amount: eventQuantity ?? 1, unit: "개" };
     const isPartial = Boolean(eventQuantity && eventQuantity < quantity.amount);
+    const discardSuccessMessage = food
+      ? isPartial ? `${food.name} ${eventQuantity}${quantity.unit}을 폐기 기록으로 남겼어요` : `${food.name} 폐기 기록을 남겼어요`
+      : "폐기 기록을 저장했어요";
+    const discardScopeMessage = `기록 범위: ${isPartial ? `${eventQuantity}${quantity.unit}` : `전체 ${quantity.amount}${quantity.unit}`}`;
+    const withDiscardScope = (includeScope: boolean) => includeScope ? `${discardSuccessMessage} · ${discardScopeMessage}` : discardSuccessMessage;
     const previousFoods = foods;
     const applyOptimistic = () => {
       if (isPartial) {
@@ -2321,7 +3868,8 @@ function PrototypeContent() {
     };
     if (!mealApi.isConfigured) applyOptimistic();
     changeSheet(null);
-    setToast(mealApi.isConfigured ? "폐기 기록을 서버에 저장하는 중이에요" : food ? `${food.name} 폐기 기록을 남겼어요` : "폐기 기록을 저장했어요");
+    setToastAction(null);
+    setToast(mealApi.isConfigured ? "폐기 기록을 서버에 저장하는 중이에요" : discardSuccessMessage);
     if (mealApi.isConfigured) {
       const persistAndSync = () => {
         void runStorageMutationRecovery({
@@ -2336,9 +3884,14 @@ function PrototypeContent() {
             if (result.inventory) {
               setFoods(result.inventory.map((item, index) => ({ ...mapApiFood(item, storageLocations), priority: index + 1 })));
             }
-            setToast(synced
-              ? withGrocySyncNotice(food ? `${food.name} 폐기 기록을 남겼어요` : "폐기 기록을 저장했어요", result.statuses)
-              : "폐기 기록을 저장했어요. 최신 목록은 아직 다시 읽지 못했어요");
+            const discardSyncMessage = withGrocySyncNotice(withDiscardScope(hasDeferredExternalSync(result.statuses) || !synced), result.statuses);
+            const finalDiscardMessage = withServerReadbackNotice(discardSyncMessage, synced);
+            if (needsExternalSyncAttention(result.statuses)) {
+              setToastAction({ message: finalDiscardMessage, label: "연동 상태 확인", onInvoke: () => changeSheet("account") });
+            } else {
+              setToastAction(null);
+            }
+            setToast(finalDiscardMessage);
           },
           onFailure: (reason, retry) => {
             showRetryToast(
@@ -2357,7 +3910,7 @@ function PrototypeContent() {
   };
 
   const confirmFoodDate = (foodId: string, dateValue: string, kind: "sell_by" | "use_by" | "best_before" | "user_reminder") => {
-    const food = foods.find((item) => item.id === foodId);
+    const food = findFoodById(foodId);
     if (!food) return;
     const actualPrinted = kind !== "user_reminder";
     const updatedFood: FoodItem = {
@@ -2370,10 +3923,17 @@ function PrototypeContent() {
       confidence: 1,
       note: actualPrinted ? "포장지에서 확인한 날짜를 사용자 확인으로 기록했어요." : "사용자가 설정한 알림 날짜를 기록했어요.",
     };
+    const dateMeaning = kind === "sell_by" ? "유통기한" : kind === "best_before" ? "품질유지기한" : kind === "user_reminder" ? "알림일" : "소비기한";
+    const savedDateMessage = actualPrinted
+      ? `${food.name} ${dateMeaning}을 사용자 확인으로 저장했어요`
+      : `${food.name} ${dateMeaning}을 저장했어요`;
+    queueFoodDateFocus(food);
     changeSheet(null);
-    setToast(mealApi.isConfigured ? "확인한 날짜를 서버에 저장하는 중이에요" : `${food.name} 날짜를 사용자 확인으로 저장했어요`);
+    setToastAction(null);
+    setToast(mealApi.isConfigured ? "확인한 날짜를 서버에 저장하는 중이에요" : savedDateMessage);
     if (!mealApi.isConfigured) {
       setFoods((current) => current.map((item) => item.id === foodId ? updatedFood : item));
+      setToastAction(null);
       return;
     }
     void runAuthoritativeMutation({
@@ -2390,9 +3950,21 @@ function PrototypeContent() {
       sync: syncDashboard,
     })
       .then(({ synced }) => {
-        setToast(synced
-          ? `${food.name} 날짜를 사용자 확인으로 저장했어요`
-          : `${food.name} 날짜를 저장했어요. 최신 목록은 아직 다시 읽지 못했어요`);
+        const finalDateMessage = withServerReadbackNotice(savedDateMessage, synced);
+        if (!synced) {
+          setToastAction({
+            message: finalDateMessage,
+            label: "최신 목록 확인",
+            onInvoke: () => {
+              void syncDashboard().then((latestSynced) => {
+                setToast(latestSynced ? "최신 목록을 확인했어요" : "최신 목록을 아직 불러오지 못했어요");
+              });
+            },
+          });
+        } else {
+          setToastAction(null);
+        }
+        setToast(finalDateMessage);
       })
       .catch(async (reason) => {
         await syncDashboard();
@@ -2408,13 +3980,13 @@ function PrototypeContent() {
   };
 
   const removeProductProvenance = (foodId: string) => {
-    const food = foods.find((item) => item.id === foodId);
+    const food = findFoodById(foodId);
     if (!food?.productProvenance) return;
     setProductProvenanceStatus(null);
     setProductProvenanceNotice(null);
     if (!mealApi.isConfigured) {
       setFoods((current) => current.map((item) => item.id === foodId ? { ...item, productProvenance: undefined } : item));
-      setProductProvenanceNotice({ foodId, message: `${food.name}의 상품 출처 기록을 지웠어요` });
+      setProductProvenanceNotice({ foodId, message: `${food.name}의 상품 출처 기록을 지웠어요`, requiresRefresh: false });
       setToast(`${food.name}의 상품 출처 기록을 지웠어요`);
       return;
     }
@@ -2431,15 +4003,15 @@ function PrototypeContent() {
     })
       .then(({ synced }) => {
         setProductProvenanceStatus(null);
+        const noticeMessage = synced
+          ? `${food.name}의 상품 출처를 지웠어요. 이전 변경 이력은 보존됩니다`
+          : `${food.name}의 상품 출처를 지웠어요. 최신 목록은 아직 다시 읽지 못했어요`;
         setProductProvenanceNotice({
           foodId,
-          message: synced
-            ? `${food.name}의 상품 출처를 지웠어요. 이전 변경 이력은 보존됩니다`
-            : `${food.name}의 상품 출처를 지웠어요. 최신 목록은 아직 다시 읽지 못했어요`,
+          message: noticeMessage,
+          requiresRefresh: !synced,
         });
-        setToast(synced
-          ? `${food.name}의 상품 출처를 지웠어요. 이전 변경 이력은 보존됩니다`
-          : `${food.name}의 상품 출처를 지웠어요. 최신 목록은 아직 다시 읽지 못했어요`);
+        setToast(noticeMessage);
       })
       .catch(async (reason) => {
         const conflict = isMealApiWorkspaceConflictError(reason);
@@ -2470,9 +4042,11 @@ function PrototypeContent() {
   };
 
   const updateProductInfo = (foodId: string, input: { name: string; brand: string; category: string }) => {
-    const food = foods.find((item) => item.id === foodId);
+    const food = findFoodById(foodId);
     if (!food) return;
     setProductInfoRetryAction(null);
+    setProductInfoSavingFoodId(foodId);
+    setProductInfoNotice(null);
     const updatedFood: FoodItem = {
       ...food,
       name: input.name,
@@ -2482,9 +4056,13 @@ function PrototypeContent() {
     };
     setFoods((current) => current.map((item) => item.id === foodId ? updatedFood : item));
     if (!mealApi.isConfigured) {
+      setProductInfoSavingFoodId(null);
+      setToastAction(null);
+      setProductInfoNotice({ foodId, message: `${input.name} 상품 정보를 저장했어요`, requiresRefresh: false });
       setToast(`${input.name} 상품 정보를 저장했어요`);
       return;
     }
+    setToastAction(null);
     setToast("상품 정보를 서버에 저장하는 중이에요");
     void runAuthoritativeMutation({
       operation: "product-info",
@@ -2500,15 +4078,32 @@ function PrototypeContent() {
       sync: syncDashboard,
     })
       .then(({ synced }) => {
+        setProductInfoSavingFoodId(null);
         setProductInfoRetryAction(null);
-        setToast(synced
-          ? `${input.name} 상품 정보를 저장했어요. 기존 상품 출처는 변경 이력에 남겼어요`
-          : `${input.name} 상품 정보를 저장했어요. 최신 목록은 아직 다시 읽지 못했어요`);
+        const savedProductInfoMessage = `${input.name} 상품 정보를 저장했어요. 기존 상품 출처는 변경 이력에 남겼어요`;
+        const finalProductInfoMessage = withServerReadbackNotice(savedProductInfoMessage, synced);
+        setProductInfoNotice({ foodId, message: finalProductInfoMessage, requiresRefresh: !synced });
+        if (!synced) {
+          setToastAction({
+            message: finalProductInfoMessage,
+            label: "최신 목록 확인",
+            onInvoke: () => {
+              void syncDashboard().then((latestSynced) => {
+                setToast(latestSynced ? "최신 목록을 확인했어요" : "최신 목록을 아직 불러오지 못했어요");
+              });
+            },
+          });
+        } else {
+          setToastAction(null);
+        }
+        setToast(finalProductInfoMessage);
       })
       .catch(async (reason) => {
         // Only the mutation failure path restores the previous local state.
         // A successful PATCH followed by a failed dashboard read is handled
         // above without hiding the durable server result.
+        setProductInfoSavingFoodId(null);
+        setProductInfoNotice(null);
         setFoods((current) => current.map((item) => item.id === foodId ? food : item));
         const persistenceFailure = isMealApiProductInfoPersistenceError(reason);
         if (persistenceFailure) {
@@ -2530,13 +4125,31 @@ function PrototypeContent() {
   };
 
   const addManualFood = (food: FoodItem) => {
+    queueAddedFoodFocus(food.name);
     changeSheet(null);
+    setToastAction(null);
+    const followUpLabel = addedFoodFollowUpLabel(food);
+    const reviewAddedFood = (foodId: string) => {
+      pendingAddedFoodFocusRef.current = null;
+      const addedFood = findFoodById(foodId) ?? (food.id === foodId ? food : null);
+      if (addedFood) {
+        openDetail(addedFood, "home");
+        setDetailEntryIntent("date-review");
+      } else {
+        openInventory();
+        setToast(`${food.name}을 식품 목록에서 확인해 주세요`);
+      }
+    };
     if (!mealApi.isConfigured) {
       mergeFoods([food]);
-      setToast(`${food.name}을(를) 식품 목록에 추가했어요`);
+      if (followUpLabel) {
+        setToastAction({ message: `${withKoreanObjectParticle(food.name)} 식품 목록에 추가했어요`, label: followUpLabel, onInvoke: () => reviewAddedFood(food.id) });
+      }
+      setToast(`${withKoreanObjectParticle(food.name)} 식품 목록에 추가했어요`);
       return;
     }
-    setToast(`${food.name}을(를) 서버에 추가하는 중이에요`);
+    setToast(`${withKoreanObjectParticle(food.name)} 서버에 추가하는 중이에요`);
+    let authoritativeFoodId = food.id;
     const dateKind = food.dateKind === "actual_printed"
       ? food.dateAssertionKind ?? "use_by"
       : food.dateKind === "user_confirmed" ? "user_reminder" : "unknown";
@@ -2575,6 +4188,7 @@ function PrototypeContent() {
         user_confirmed: food.dateKind === "actual_printed" || food.dateKind === "user_confirmed",
       }),
       apply: (updatedApiFood) => {
+        authoritativeFoodId = updatedApiFood.id;
         const updatedReadModel = mapApiFood(updatedApiFood, storageLocations);
         setFoods((current) => {
           const existingIndex = current.findIndex((item) => item.id === updatedReadModel.id);
@@ -2587,9 +4201,24 @@ function PrototypeContent() {
       sync: syncDashboard,
     })
       .then(({ synced }) => {
-        setToast(synced
-          ? `${food.name}을(를) 식품 목록에 추가했어요`
-          : `${food.name}을(를) 추가했어요. 최신 목록은 아직 다시 읽지 못했어요`);
+        const addedFoodMessage = `${withKoreanObjectParticle(food.name)} 식품 목록에 추가했어요`;
+        const finalAddedFoodMessage = withServerReadbackNotice(addedFoodMessage, synced);
+        if (!synced) {
+          setToastAction({
+            message: finalAddedFoodMessage,
+            label: "최신 목록 확인",
+            onInvoke: () => {
+              void syncDashboard().then((latestSynced) => {
+                setToast(latestSynced ? "최신 목록을 확인했어요" : "최신 목록을 아직 불러오지 못했어요");
+              });
+            },
+          });
+        } else if (followUpLabel) {
+          setToastAction({ message: finalAddedFoodMessage, label: followUpLabel, onInvoke: () => reviewAddedFood(authoritativeFoodId) });
+        } else {
+          setToastAction(null);
+        }
+        setToast(finalAddedFoodMessage);
       })
       .catch(async (reason) => {
         await syncDashboard();
@@ -2632,12 +4261,15 @@ function PrototypeContent() {
       barcode: line.barcode ?? undefined,
       note: "영수증 구매일은 기록했지만, 실제 소비기한은 포장지에서 확인해야 해요.",
     }));
+    queueAddedFoodFocus(lineFoods[0]?.name ?? "");
     changeSheet(null);
     if (!mealApi.isConfigured) {
       mergeFoods(lineFoods);
+      setToastAction(null);
       setToast(`${lines.length}개 항목을 검토 후 반영했어요`);
       return;
     }
+    setToastAction(null);
     setToast(`${lines.length}개 항목을 서버에 반영하는 중이에요`);
     {
       const apiLines = preparedLines.map(({ line, canonicalName, quantity, unit }) => ({
@@ -2698,15 +4330,16 @@ function PrototypeContent() {
         })
           .then(({ value: commit, synced }) => {
             const idempotencyReplayed = commit.idempotency_replayed === true;
-            setToast(idempotencyReplayed
+            const receiptCommitMessage = idempotencyReplayed
               ? `${lines.length}개 항목은 이미 반영되어 최신 목록을 확인했어요`
-              : commit.grocy_sync_status === "needs_mapping"
-              ? `${lines.length}개 항목을 반영했지만 Grocy 상품 매핑이 필요해요`
-              : commit.grocy_sync_status === "queued"
-                ? `${lines.length}개 항목을 반영했고 Grocy 동기화를 대기 중이에요`
-                : synced
-                  ? `${lines.length}개 항목을 검토 후 반영했어요`
-                  : `${lines.length}개 항목을 반영했어요. 최신 목록은 아직 다시 읽지 못했어요`);
+              : withGrocySyncNotice(`${lines.length}개 항목을 검토 후 반영했어요`, commit.grocy_sync_status);
+            const finalReceiptMessage = withServerReadbackNotice(receiptCommitMessage, synced);
+            if (!idempotencyReplayed && needsExternalSyncAttention(commit.grocy_sync_status)) {
+              setToastAction({ message: finalReceiptMessage, label: "연동 상태 확인", onInvoke: () => changeSheet("account") });
+            } else {
+              setToastAction(null);
+            }
+            setToast(finalReceiptMessage);
           })
           .catch(async (reason) => {
             await syncDashboard();
@@ -2730,20 +4363,25 @@ function PrototypeContent() {
     }
   };
 
-  const detailSheetSnap = Math.min(0.993, Math.max(0.78, (viewportHeight - 6) / 852));
+  const detailSheetSnap = Math.min(0.993, Math.max(0.78, (viewportHeight - 6) / Math.max(1, viewportHeight)));
+  const homeAddFoodAction = foods.length ? <button className="add-food-button" style={!IS_WEB_SURFACE ? { marginTop: 0, minHeight: 53, gap: 4, justifyContent: "center", padding: "0 8px", border: "1px solid var(--atelier-border-strong)", borderRadius: 13, background: "color-mix(in srgb, var(--atelier-surface) 82%, transparent)", textAlign: "center" } : undefined} type="button" aria-label="식품 추가하기" onClick={() => openAdd("receipt")}>
+    <span className="add-food-plus"><PlusIcon width={20} height={20} /></span>
+    <span><strong>식품 추가</strong><small>영수증·바코드·라벨·직접 입력</small></span>
+    <ArrowRightIcon width={18} height={18} />
+  </button> : null;
 
   return (
     <MotionConfig reducedMotion="user">
     <>
       <MobileScroll className={`app-screen rescue-theme-${themeMode}`}>
-        <main className="screen-content meal-home" aria-label="Rescue Meal 홈">
+        <main className={`screen-content meal-home${inventoryDataUnknown ? " meal-home-data-unknown" : ""}`} aria-label="Rescue Meal 홈">
           <header className="app-header">
-            <div className="brand-lockup" aria-label="Rescue Meal">
-              <span className="brand-mark">r</span>
-              <span className="brand-name">rescue meal</span>
+            <div className="brand-lockup" role="img" aria-label="Rescue Meal">
+              <span className="brand-mark" aria-hidden="true">r</span>
+              <span className="brand-name" aria-hidden="true">rescue meal</span>
             </div>
             <div className="header-actions">
-              <Suspense fallback={null}><ConnectionStatus state={connectionState} hasCachedData={Boolean(dashboardStaleAt)} onOpenAccount={() => changeSheet("account")} /></Suspense>
+              <ConnectionStatus state={connectionState} hasCachedData={Boolean(dashboardStaleAt)} cachedAtLabel={dashboardStaleAt ? formatDashboardCacheAge(dashboardStaleAt, currentDate) : undefined} cachedAtFreshness={dashboardStaleAt ? dashboardCacheFreshness(dashboardStaleAt, currentDate) : undefined} onOpenAccount={() => changeSheet("account")} />
               <button
                 className="icon-button theme-toggle-button"
                 type="button"
@@ -2755,14 +4393,15 @@ function PrototypeContent() {
               >
                 {themeMode === "light" ? <MoonIcon width={18} height={18} /> : <SunIcon width={18} height={18} />}
               </button>
-              <button className="icon-button scan-button" type="button" onClick={() => openAdd("receipt")} aria-label="식품 스캔 열기">
+              <button className="icon-button scan-button" type="button" onClick={() => openAdd("receipt")} aria-label="식품 스캔·추가 열기" title="식품 스캔·추가">
                 <CameraIcon width={18} height={18} />
+              </button>
+              <button className={`notification-button ${IS_WEB_SURFACE ? "web-header-notification" : "mobile-hero-notification"}`} type="button" onClick={() => openNotifications()} aria-label={notificationTriggerLabel}>
+                <BellIcon width={18} height={18} />
+                {unreadNotificationCount ? <span className={`notification-dot notification-dot-${unreadNotificationTone}`} style={{ background: unreadNotificationDotColor }} aria-hidden="true">{unreadNotificationBadge}</span> : null}
               </button>
             </div>
           </header>
-
-          <InstallPrompt />
-          <ServiceWorkerUpdatePrompt />
 
           {connectionState === "checking" && !foods.length ? (
             <div className="service-bootstrap-status" role="status" aria-live="polite">
@@ -2774,7 +4413,7 @@ function PrototypeContent() {
           {connectionState === "auth_required" ? (
             <div className="session-expired-callout" role="alert">
               <InfoCircledIcon width={17} height={17} />
-              <span><strong>계정 연결이 만료됐어요</strong><small>기록을 안전하게 이어가려면 다시 로그인해 주세요. 다른 workspace로 자동 전환하지 않았어요.</small></span>
+              <span><strong>계정 연결이 만료됐어요</strong><small>기록을 안전하게 이어가려면 다시 로그인해 주세요. 다른 기록 공간으로 자동 전환하지 않았어요.</small></span>
               <button type="button" onClick={() => changeSheet("account")}>다시 로그인</button>
             </div>
           ) : null}
@@ -2789,7 +4428,7 @@ function PrototypeContent() {
             <button className="receipt-review-entry-card" type="button" data-testid="pending-receipt-review" onClick={() => pendingReceiptSummaries.length > 1 ? changeSheet("receipt-queue") : openAdd("receipt", latestPendingReceipt.id)}>
               <span className="receipt-review-entry-icon"><ReaderIcon width={17} height={17} /></span>
               <span className="receipt-review-entry-copy">
-                <span className="receipt-review-entry-kicker">REVIEW NEEDED</span>
+                <span className="receipt-review-entry-kicker">검수 대기</span>
                 <strong>검수할 영수증 {pendingReceiptSummaries.length > 1 ? `${pendingReceiptSummaries.length}건` : "1건"}</strong>
                 <small>{latestPendingReceipt.merchant_name ? `${latestPendingReceipt.merchant_name} · ` : "저장된 영수증 · "}{formatPurchasedAt(latestPendingReceipt.purchased_at) ?? "구매일 확인 필요"} · 상품 {latestPendingReceipt.line_count}개</small>
               </span>
@@ -2804,44 +4443,54 @@ function PrototypeContent() {
                 <h1 id="greeting-title">오늘도,<br /><em>남은 재료부터</em></h1>
                 <p className="hero-description">버려지지 않을 맛있는 식재료를<br />오늘의 식탁으로 보내요.</p>
               </div>
-            <button className="notification-button" type="button" onClick={openNotifications} aria-label={`알림 확인${unreadNotificationCount ? `, 읽지 않은 알림 ${unreadNotificationCount}개` : ""}`}>
-              <BellIcon width={18} height={18} />
-              {unreadNotificationCount ? <span className="notification-dot" /> : null}
-            </button>
             </section>
 
             <section className="mini-summary" aria-label="냉장고 요약">
               <div className="summary-item">
                 <ArchiveIcon width={17} height={17} />
-                <span><strong>{foods.length}개</strong> 보관 중</span>
+                <span><strong>{inventoryDataUnknown ? "—" : `${foods.length}개`}</strong> {inventoryDataUnknown ? "보관 수 확인 필요" : "보관 중"}</span>
               </div>
               <div className="summary-divider" />
               <div className="summary-item">
                 <LightningBoltIcon width={17} height={17} />
-                <span><strong>{priorityFoods.length}개</strong> 먼저 먹기</span>
+                <span><strong>{inventoryDataUnknown ? "—" : `${priorityFoods.length}개`}</strong> {inventoryDataUnknown ? "우선순위 확인 필요" : "먼저 먹기"}</span>
               </div>
             </section>
           </div>
 
           <section className="priority-section" aria-labelledby="priority-title">
-            <div className="rescue-status-card" aria-label={`오늘 먼저 확인할 식품 ${priorityFoods.length}개`}>
+            <button
+              className="rescue-status-card"
+              type="button"
+              disabled={inventoryDataUnknown && connectionState === "checking"}
+              aria-label={priorityStatusAccessibleName}
+              onClick={() => inventoryDataUnknown ? connectionState === "auth_required" ? changeSheet("account") : retryConnection() : !foods.length ? openAdd("receipt") : openInventory()}
+            >
+              <span
+                aria-hidden="true"
+                style={{ position: "absolute", top: 14, right: 15, display: "inline-flex", gap: 3, alignItems: "center", color: "var(--atelier-pistachio)", fontSize: 9, fontWeight: 750, lineHeight: 1 }}
+              >
+                {inventoryDataUnknown ? connectionState === "auth_required" ? "계정 연결" : "다시 확인" : !foods.length ? "식품 추가" : "목록 보기"}
+                <ChevronRightIcon width={13} height={13} />
+              </span>
               <div className="rescue-status-main">
-                <span className="rescue-status-kicker">오늘 먼저 확인할 식품</span>
-                <strong>{priorityFoods.length}<small>개</small></strong>
-                <span className="rescue-status-description">지금 확인하고, 오늘 먹을 재료를 준비해요.</span>
+                <span className="rescue-status-kicker">{inventoryDataUnknown ? inventoryDataStatusLabel : !foods.length ? "식품을 추가해 주세요" : connectionState === "offline" && dashboardStaleAt ? "최근 동기화 재고" : "오늘 먼저 확인할 식품"}</span>
+                <strong>{inventoryDataUnknown ? "—" : priorityFoods.length}<small>{inventoryDataUnknown ? "확인 필요" : "개"}</small></strong>
+                <span className="rescue-status-description">{inventoryDataUnknown ? inventoryDataStatusDescription : !foods.length ? "첫 식품을 추가하면 오늘 먼저 확인할 순서를 만들어요." : "지금 확인하고, 오늘 먹을 재료를 준비해요."}</span>
               </div>
-              <div className="rescue-status-legend" aria-label="식품 상태 안내">
-                <span><i className="status-dot status-dot-warning" /><b>확인 필요</b><em>{priorityNeedsReviewCount}</em></span>
-                <span><i className="status-dot status-dot-action" /><b>먼저 사용</b><em>{Math.max(0, priorityFoods.length - priorityNeedsReviewCount)}</em></span>
-                <span><i className="status-dot status-dot-recorded" /><b>기록됨</b><em>{foods.length}</em></span>
+              <div className="rescue-status-legend" aria-label={inventoryDataUnknown ? "재고 상태를 확인할 수 없음" : connectionState === "offline" && dashboardStaleAt ? "최근 동기화한 재고 상태와 전체 보관 수" : "식품 상태와 전체 보관 수"}>
+                {!inventoryDataUnknown && !foods.length ? <span className="rescue-status-empty-hint" style={{ display: "inline-flex", gridTemplateColumns: "none", gap: 7, alignItems: "center", color: "var(--atelier-muted)", fontSize: 10, lineHeight: 1.4 }}><i className="status-dot status-dot-recorded" /><b style={{ overflow: "visible", color: "var(--atelier-soft)", fontSize: 10, fontWeight: 700, textOverflow: "clip", whiteSpace: "normal" }}>첫 식품을 추가하면 우선순위를 만들어요</b></span> : <>
+                  <span><i className="status-dot status-dot-warning" /><b>우선 확인 필요</b><em>{inventoryDataUnknown ? "—" : priorityNeedsReviewCount}</em></span>
+                  <span><i className="status-dot status-dot-action" /><b>먼저 사용</b><em>{inventoryDataUnknown ? "—" : Math.max(0, priorityFoods.length - priorityNeedsReviewCount)}</em></span>
+                  <span><i className="status-dot status-dot-recorded" /><b>보관 중</b><em>{inventoryDataUnknown ? "—" : foods.length}</em></span>
+                </>}
               </div>
-            </div>
+            </button>
             <div className="section-heading">
               <div>
-                <p className="section-kicker">RESCUE QUEUE · TODAY</p>
-                <h2 id="priority-title" aria-label={`오늘 먼저 확인할 식품 ${priorityFoods.length}`}><span aria-hidden="true">오늘 먼저 확인할 식품</span><span aria-hidden="true">{priorityFoods.length}</span></h2>
+              <p className="section-kicker">먼저 확인할 식품</p>
+                <h2 id="priority-title" aria-label={priorityHeadingAccessibleName}><span aria-hidden="true">{inventoryDataUnknown ? inventoryDataStatusLabel : "먼저 확인할 식품"}</span><span aria-hidden="true">{inventoryDataUnknown ? "—" : priorityFoods.length}</span></h2>
               </div>
-              <button className="text-button" type="button" onClick={() => setStorageFilter("전체")}>전체 보기 <ChevronRightIcon width={14} height={14} /></button>
             </div>
 
             <div className="priority-list">
@@ -2851,7 +4500,9 @@ function PrototypeContent() {
                     key={food.id}
                     className={`priority-card ${food.priority === 1 ? "priority-card-accent" : ""}`}
                     type="button"
-                    onClick={() => openDetail(food)}
+                    data-priority-food-id={food.id}
+                    data-priority-state={attentionReviewReason(food, currentDate) ? "needs-review" : "use-next"}
+                    onClick={() => openDetail(food, "home")}
                   >
                     <div className="food-image-wrap">
                       <img src={food.image} alt="" className="food-image" draggable={false} />
@@ -2864,105 +4515,136 @@ function PrototypeContent() {
                       <span className="food-subline">{food.brand} · {food.quantity}</span>
                       <span className="food-meta-line">
                         <span className={`storage-pill ${getStorageClass(food.storage)}`}>{food.storageLocationName ?? food.storage}</span>
-                        <span className={`date-source ${dateReviewReason(food, currentDate) ? "date-source-warning" : ""}`}>{dateReviewReason(food, currentDate) ?? getDateBadge(food)}</span>
+                        <span className={`date-source ${attentionReviewReason(food, currentDate) ? "date-source-warning" : ""}`}>{attentionReviewReason(food, currentDate) ?? getDateBadge(food)}</span>
                       </span>
                     </span>
                     <span className="priority-date">
-                      <small>{dateReviewReason(food, currentDate) ? "확인" : food.dateKind === "actual_printed" ? "기한" : "우선"}</small>
+                      <small title={attentionReviewReason(food, currentDate) ? "날짜·보관 상태 확인이 필요해요" : "확인 후 먼저 사용해요"} style={attentionReviewReason(food, currentDate) ? { color: "var(--atelier-coral)", fontWeight: 850 } : { color: "var(--atelier-amber)", fontWeight: 850 }}>{attentionReviewReason(food, currentDate) ? "확인 필요" : "먼저 사용"}</small>
                       <strong>{food.dateLabel}</strong>
                       <ChevronRightIcon width={14} height={14} />
                     </span>
                   </button>
                 ))}
-              </div> : <div className="priority-empty-state">
+              </div> : <div className={`priority-empty-state${inventoryDataUnknown ? " priority-unknown-state" : ""}`}>
                 <span className="priority-empty-icon"><ArchiveIcon width={19} height={19} /></span>
                 <span className="priority-empty-copy">
-                  <strong>{foods.length ? "오늘 먼저 확인할 식품이 없어요" : "아직 식품을 등록하지 않았어요"}</strong>
-                  <small>{foods.length ? "재고의 날짜와 보관 상태를 확인하면 Rescue Queue가 채워져요." : "영수증·바코드·라벨 중 편한 방법으로 시작해 보세요."}</small>
+                  <strong>{inventoryDataUnknown ? inventoryDataStatusLabel : foods.length ? "오늘 먼저 확인할 식품이 없어요" : "아직 식품을 등록하지 않았어요"}</strong>
+                  <small>{inventoryDataUnknown ? inventoryDataStatusDescription : foods.length ? "재고의 날짜와 보관 상태를 확인하면 Rescue Queue가 채워져요." : "영수증·바코드·라벨 중 편한 방법으로 시작해 보세요."}</small>
                 </span>
               </div>}
             </div>
 
-            <button className="meal-plan-button" type="button" onClick={() => foods.length ? openMealPlan() : openAdd("receipt")}>
-              <span className="meal-plan-icon"><LightningBoltIcon width={17} height={17} /></span>
-              <span><strong>{foods.length ? "확인하고 오늘 식단 만들기" : "첫 식품을 추가하고 시작하기"}</strong><small>{currentMealPlanHint}</small></span>
-              <ArrowRightIcon width={18} height={18} />
-            </button>
+            <div className={`home-action-row${foods.length ? " home-action-row-with-add" : ""}`} style={!IS_WEB_SURFACE ? { display: "grid", gap: 8, gridTemplateColumns: foods.length ? "1fr 102px" : "1fr" } : undefined}>
+              <button className="meal-plan-button" type="button" disabled={inventoryDataUnknown && connectionState === "checking"} onClick={() => inventoryDataUnknown ? connectionState === "auth_required" ? changeSheet("account") : retryConnection() : connectionState === "auth_required" ? changeSheet("account") : connectionState === "offline" ? retryConnection() : foods.length ? openMealPlan() : openAdd("receipt")}>
+                <span className="meal-plan-icon"><LightningBoltIcon width={17} height={17} /></span>
+                <span><strong>{inventoryDataUnknown ? connectionState === "auth_required" ? "계정 다시 연결하기" : connectionState === "checking" ? "재고 확인 중" : "다시 연결하고 재고 확인하기" : connectionState === "auth_required" ? "계정 다시 연결하기" : connectionState === "offline" ? "다시 연결하고 오늘 식단 만들기" : foods.length ? "확인하고 오늘 식단 만들기" : "첫 식품을 추가하고 시작하기"}</strong><small>{inventoryDataUnknown ? inventoryDataStatusDescription : connectionState === "auth_required" ? "기록을 이어가려면 다시 로그인해 주세요." : connectionState === "offline" ? "최신 상태를 확인한 뒤 오늘 식단을 계산해요." : currentMealPlanHint}</small></span>
+                <ArrowRightIcon width={18} height={18} />
+              </button>
+              {!IS_WEB_SURFACE ? homeAddFoodAction : null}
+            </div>
 
             {mealApi.isConfigured && connectionState === "connected" && shoppingListStatus !== "idle" ? (
               <button className="shopping-summary-card" type="button" onClick={openShoppingList}>
                 <span className="shopping-summary-icon"><ReaderIcon width={17} height={17} /></span>
                 <span className="shopping-summary-copy">
-                  <span className="shopping-summary-kicker">SHOPPING LIST</span>
-                  <strong>{shoppingListStatus === "loading" && !shoppingList.length ? "장보기 목록을 불러오는 중" : shoppingListStatus === "error" ? "장보기 목록을 다시 확인해요" : shoppingRemainingCount > 0 ? `장보기 ${shoppingRemainingCount}개가 남아 있어요` : shoppingList.length ? "장보기 준비가 끝났어요" : "장보기 목록은 비어 있어요"}</strong>
-                  <small>{shoppingListStatus === "error" ? "탭해서 다시 동기화해 주세요." : shoppingList.length ? `${shoppingCompletedCount}개 구매 완료 · ${shoppingOriginLabel}` : "식단을 저장하거나 필요한 물건을 직접 추가해 보세요."}</small>
+                  <span className="shopping-summary-kicker">장보기 목록</span>
+                  <strong>{shoppingSummaryTitle}</strong>
+                  <small>{shoppingSummaryDescription}</small>
                 </span>
                 <ChevronRightIcon width={16} height={16} />
               </button>
             ) : null}
 
-            {foods.length ? <button className="add-food-button" type="button" onClick={() => openAdd("receipt")}>
-              <span className="add-food-plus"><PlusIcon width={20} height={20} /></span>
-              <span><strong>식품 추가하기</strong><small>영수증·바코드·라벨로 빠르게</small></span>
-              <ArrowRightIcon width={18} height={18} />
-            </button> : null}
+            {showHomeSyncSummary ? (
+              <button className="shopping-summary-card" type="button" onClick={() => openNotifications(homeSyncAttentionCount > 0 ? "action_required" : "queued")}>
+                <span className="shopping-summary-icon"><SewingPinIcon width={17} height={17} /></span>
+                <span className="shopping-summary-copy">
+                  <span className="shopping-summary-kicker">외부 재고 연동</span>
+                  <strong>{homeSyncAttentionCount > 0 ? "외부 상품·보관 위치 연결을 확인해 주세요" : "외부 재고 반영 중이에요"}</strong>
+                  <small>{[homeSyncAttentionCount ? `확인 필요 ${homeSyncAttentionCount}건` : "", homeSyncWaitingCount ? `처리 대기 ${homeSyncWaitingCount}건` : ""].filter(Boolean).join(" · ")} · 알림 센터에서 상태를 확인해요.</small>
+                </span>
+                <ChevronRightIcon width={16} height={16} />
+              </button>
+            ) : null}
+
+            {IS_WEB_SURFACE ? homeAddFoodAction : null}
+
           </section>
 
-          <button className="trust-card" type="button" onClick={() => changeSheet("guidance")}>
+          <InstallPrompt />
+          <ServiceWorkerUpdatePrompt />
+
+          <button className="trust-card" data-trust-state={priorityNeedsReviewCount ? "needs-review" : "neutral"} aria-label={`${homeTrustTitle}. ${homeTrustDescription}`} style={!IS_WEB_SURFACE ? { marginTop: 9 } : undefined} type="button" onClick={openGuidanceSheet}>
             <span className="trust-icon"><InfoCircledIcon width={18} height={18} /></span>
-            <span><strong>AI는 소비기한을 확정하지 않아요</strong><small>표시 날짜와 사용자 확인을 가장 먼저 보여드려요.</small></span>
+            <span><strong style={priorityNeedsReviewCount ? { color: "var(--atelier-coral)" } : undefined}>{homeTrustTitle}</strong><small>{homeTrustDescription}</small></span>
             <ChevronRightIcon width={16} height={16} />
           </button>
 
-          <section className="inventory-section" aria-labelledby="inventory-title">
-            <div className="section-heading inventory-heading">
-              <div className="inventory-heading-copy">
-                <p className="section-kicker">YOUR PANTRY</p>
-                <h2 id="inventory-title">내 식품 목록 <span>{inventoryCount}</span></h2>
+          <section className={`inventory-section${inventoryHasEmptyResult || inventoryDataUnknown ? " inventory-section-empty-result" : ""}${inventoryDataUnknown ? " inventory-section-unknown" : ""}`} aria-labelledby="inventory-title" aria-busy={inventorySearchPending}>
+            <div className="inventory-toolbar">
+              <div className="section-heading inventory-heading">
+                <div className="inventory-heading-copy">
+                  <p className="section-kicker">내 식품 목록</p>
+                  <h2 id="inventory-title" aria-label={inventoryDataUnknown ? "내 식품 목록 확인 필요" : `내 식품 목록 ${inventoryCount}`}>내 식품 목록 <span>{inventoryDataUnknown ? "—" : inventoryCount}</span></h2>
+                </div>
+                <div style={{ display: "flex", gap: 6, alignItems: "center", flex: "0 0 auto" }}>
+                  <button className="icon-button inventory-add-button" style={{ display: "inline-flex", width: 62, height: 44, gap: 4, alignItems: "center", justifyContent: "center", padding: "0 6px", borderRadius: 11, whiteSpace: "nowrap" }} type="button" aria-label="식품 목록에 추가" title="식품 목록에 추가" onClick={() => openAdd("receipt")}>
+                    <PlusIcon width={16} height={16} aria-hidden="true" />
+                    <span>추가</span>
+                  </button>
+                  <label className="filter-select-wrap">
+                    <span className="sr-only">보관 위치 필터</span>
+                    <select value={storageFilter} onChange={(event) => setStorageFilter(event.target.value as InventoryStorageFilter)}>
+                      <option value="전체">보관위치 전체</option>
+                      <option value="냉장">냉장만</option>
+                      <option value="냉동">냉동만</option>
+                      <option value="실온">실온만</option>
+                      {customStorageLocations.length ? <optgroup label="내 보관 위치">{customStorageLocations.map((location) => <option key={location.id} value={`location:${location.id}`}>{location.name}만</option>)}</optgroup> : null}
+                    </select>
+                    <ChevronDownIcon width={13} height={13} />
+                  </label>
+                </div>
               </div>
-              <label className="filter-select-wrap">
-                <span className="sr-only">보관 위치 필터</span>
-                <select value={storageFilter} onChange={(event) => setStorageFilter(event.target.value as InventoryStorageFilter)}>
-                  <option value="전체">보관위치 전체</option>
-                  <option value="냉장">냉장만</option>
-                  <option value="냉동">냉동만</option>
-                  <option value="실온">실온만</option>
-                  {customStorageLocations.length ? <optgroup label="내 보관 위치">{customStorageLocations.map((location) => <option key={location.id} value={`location:${location.id}`}>{location.name}만</option>)}</optgroup> : null}
-                </select>
-                <ChevronDownIcon width={13} height={13} />
+              <label className="inventory-search">
+                <MagnifyingGlassIcon width={15} height={15} aria-hidden="true" />
+                <KeyboardInput className="inventory-search-input" type="search" value={inventoryQuery} placeholder="식품·브랜드·카테고리 검색" aria-label="식품·브랜드·카테고리 검색" onChange={(event) => setInventoryQuery(event.target.value)} onFocus={() => { inventorySearchFocusRef.current = true; window.requestAnimationFrame(keepInventorySearchVisible); }} onBlur={() => { inventorySearchFocusRef.current = false; keyboard.hide(); }} />
+                {hasInventoryQuery ? <button type="button" aria-label="식품 검색어 지우기" onPointerDown={(event) => event.preventDefault()} onClick={clearInventorySearch}><Cross2Icon width={14} height={14} /></button> : null}
               </label>
+              {showInventoryScope ? <div className="inventory-filter-summary" role="status" aria-live="polite">
+                <span><i aria-hidden="true" />{inventoryScopeLabel} · {inventoryCount}개</span>
+                <button type="button" onClick={clearInventoryFilters}>검색·필터 초기화</button>
+              </div> : !inventoryDataUnknown && !hasInventoryQuery && storageFilter === "전체" && inventoryNeedsReviewCount ? <div className="inventory-filter-summary inventory-health-summary">
+                <span><i aria-hidden="true" />확인 필요 {inventoryNeedsReviewCount}개</span>
+                <span>날짜·보관 상태를 먼저 확인해요</span>
+              </div> : null}
             </div>
-            <label className="inventory-search">
-              <MagnifyingGlassIcon width={15} height={15} aria-hidden="true" />
-              <KeyboardInput className="inventory-search-input" type="search" value={inventoryQuery} placeholder="식품·브랜드·카테고리 검색" aria-label="식품·브랜드·카테고리 검색" onChange={(event) => setInventoryQuery(event.target.value)} onBlur={() => keyboard.hide()} />
-              {hasInventoryQuery ? <button type="button" aria-label="식품 검색어 지우기" onPointerDown={(event) => event.preventDefault()} onClick={clearInventorySearch}><Cross2Icon width={14} height={14} /></button> : null}
-            </label>
 
-            {inventorySearchActive && inventorySearchPending && !filteredFoods.length ? <div className="inventory-search-state inventory-search-loading" role="status"><MagnifyingGlassIcon width={16} height={16} /><span>재고를 찾고 있어요</span></div> : inventorySearchActive && inventorySearchStatus === "error" && !filteredFoods.length ? <div className="inventory-search-state inventory-search-error" role="alert"><span><strong>재고를 찾지 못했어요</strong><small>{inventorySearchError || "잠시 후 다시 시도해 주세요."}</small></span><button type="button" onClick={retryInventorySearch}>다시 시도</button></div> : filteredFoods.length ? <>
+            {inventorySearchActive && inventorySearchPending && !filteredFoods.length ? <div className="inventory-search-state inventory-search-loading" role="status"><span className="inventory-search-loading-icon" aria-hidden="true"><MagnifyingGlassIcon width={16} height={16} /></span><span>{inventorySearchLoadingLabel}</span></div> : inventorySearchActive && inventorySearchStatus === "error" && !filteredFoods.length ? <div className="inventory-search-state inventory-search-error" role="alert"><span><strong>{inventorySearchErrorLabel}</strong><small>{inventorySearchError || "잠시 후 다시 시도해 주세요."}</small></span><button type="button" onClick={retryInventorySearch}>다시 시도</button></div> : filteredFoods.length ? <>
               {inventorySearchActive && inventorySearchStatus === "error" ? <div className="inventory-search-inline-error" role="alert"><span>{inventorySearchError || "더 많은 재고를 불러오지 못했어요."}</span><button type="button" onClick={retryInventorySearch}>다시 시도</button></div> : null}
             <div className="inventory-list">
               {filteredFoods.map((food) => (
-                <button className="inventory-row" type="button" key={food.id} onClick={() => openDetail(food)}>
+                <button className="inventory-row" type="button" key={food.id} data-inventory-food-id={food.id} onClick={() => openDetail(food, "inventory")}>
                   <div className="inventory-image-wrap"><img src={food.image} alt="" className="inventory-image" draggable={false} /></div>
                   <span className="inventory-copy"><strong>{food.name}</strong><small>{food.brand} · {food.quantity}{food.storageLocationName ? ` · ${food.storageLocationName}` : ""}</small></span>
-                  <span className={`inventory-status ${dateReviewReason(food, currentDate) ? "inventory-status-warning" : ""}`}><span className={`storage-dot ${getStorageClass(food.storage)}`} />{dateReviewReason(food, currentDate) ? "확인 필요" : food.dateLabel}</span>
+                  <span className={`inventory-status ${attentionReviewReason(food, currentDate) ? "inventory-status-warning" : ""}`}><span className={`storage-dot ${getStorageClass(food.storage)}`} />{attentionReviewReason(food, currentDate) ? "확인 필요" : food.priority <= 3 ? `우선 · ${food.dateLabel}` : food.dateLabel}</span>
                   <ChevronRightIcon className="row-chevron" width={15} height={15} />
                 </button>
               ))}
             </div>
             {inventorySearchOwnsResults && inventorySearchHasMore ? <button className="inventory-load-more" type="button" disabled={inventorySearchPending} onClick={loadMoreInventory}>{inventorySearchPending ? "더 불러오는 중" : `더 보기 · ${Math.max(0, (inventorySearchTotal ?? 0) - filteredFoods.length)}개 남음`}</button> : null}
-            </> : <div className="inventory-empty-state">
+            </> : <div className={`inventory-empty-state${inventoryDataUnknown ? " inventory-unknown-state" : ""}`}>
               <span className="inventory-empty-icon"><ArchiveIcon width={18} height={18} /></span>
               <span className="inventory-empty-copy">
-                <strong>{hasInventoryQuery ? `“${inventoryQuery.trim()}” 검색 결과가 없어요` : foods.length ? `${selectedStorageLocation?.name ?? storageFilter} 보관 식품이 없어요` : "아직 등록된 식품이 없어요"}</strong>
-                <small>{hasInventoryQuery ? "상품명·브랜드·카테고리를 다시 확인하거나 검색 조건을 지워 보세요." : foods.length ? "다른 보관 위치를 선택하거나 새 식품을 추가해 보세요." : "첫 식품을 기록하면 이곳에서 보관 상태와 날짜를 관리할 수 있어요."}</small>
-                {hasInventoryQuery ? <button className="inventory-empty-action" type="button" onClick={clearInventoryFilters}>검색 조건 초기화</button> : storageFilter !== "전체" ? <button className="inventory-empty-action" type="button" onClick={() => setStorageFilter("전체")}>전체 목록 보기</button> : <button className="inventory-empty-action" type="button" onClick={() => openAdd("receipt")}>식품 추가하기</button>}
+                <strong>{inventoryDataUnknown ? inventoryDataStatusLabel : hasInventoryQuery ? `“${inventoryQuery.trim()}” 검색 결과가 없어요` : foods.length ? `${selectedStorageLocation?.name ?? storageFilter} 보관 식품이 없어요` : "아직 등록된 식품이 없어요"}</strong>
+                <small>{inventoryDataUnknown ? inventoryDataStatusDescription : hasInventoryQuery ? "상품명·브랜드·카테고리를 다시 확인하거나 검색 조건을 지워 보세요." : foods.length ? "다른 보관 위치를 선택하거나 새 식품을 추가해 보세요." : "첫 식품을 기록하면 이곳에서 보관 상태와 날짜를 관리할 수 있어요."}</small>
+                {inventoryDataUnknown ? <button className="inventory-empty-action" type="button" onClick={() => connectionState === "auth_required" ? changeSheet("account") : retryConnection()}>{connectionState === "auth_required" ? "계정 다시 연결" : "다시 연결"}</button> : hasInventoryQuery ? <button className="inventory-empty-action" type="button" onClick={clearInventoryFilters}>검색 조건 초기화</button> : storageFilter !== "전체" ? <button className="inventory-empty-action" type="button" onClick={() => setStorageFilter("전체")}>전체 목록 보기</button> : <button className="inventory-empty-action" type="button" onClick={() => openAdd("receipt")}>식품 추가하기</button>}
               </span>
             </div>}
           </section>
 
           <p className="footer-caption"><ReaderIcon width={14} height={14} /> Rescue Meal은 기록을 돕는 생활 도구예요.</p>
-          {reviewMode ? <button className="recipe-review-entry" type="button" onClick={() => changeSheet("recipe-review")}>운영자 recipe review 열기</button> : null}
+          {reviewMode ? <button className="recipe-review-entry" type="button" onClick={() => changeSheet("recipe-review")}>운영자 레시피 검토 열기</button> : null}
+          {receiptSourceReviewMode ? <button className="recipe-review-entry receipt-source-review-entry" type="button" onClick={() => openAdd("receipt")}>영수증 원본 대조 다시 열기</button> : null}
         </main>
       </MobileScroll>
 
@@ -2987,11 +4669,11 @@ function PrototypeContent() {
           if (!open) setResumeReceiptId(null);
           changeSheet(open ? "add" : null);
         }}
-        title={addMode === "receipt" ? "영수증으로 추가" : addMode === "barcode" ? "바코드로 추가" : addMode === "label" ? "라벨로 추가" : "직접 추가"}
-        description="구매 기록과 보관 상태를 확인한 뒤 내 식품 목록에 반영해요."
+        title={receiptSourceReviewMode && addMode === "receipt" ? "영수증 원본 대조" : addMode === "receipt" ? "영수증으로 추가" : addMode === "barcode" ? "바코드로 추가" : addMode === "label" ? "라벨로 추가" : "직접 추가"}
+        description={receiptSourceReviewMode && addMode === "receipt" ? "샘플 영수증에서 원본 위치와 상품 항목의 연결을 확인해요." : "구매 기록과 보관 상태를 확인한 뒤 내 식품 목록에 반영해요."}
         snap={0.84}
       >
-        <AddFoodSheet mode={addMode} onModeChange={setAddMode} onAddManual={addManualFood} onAddReceipt={addReceiptFoods} resumeReceiptId={resumeReceiptId} sessionKey={addSheetSessionKey} receiptLines={RECEIPT_LINES} existingFoods={foods} storageLocations={storageLocations} createFood={createFood} formatApiDate={formatApiDate} storageFromApi={storageFromApi} imageForFoodName={imageForFoodName} formatReceiptLineDetail={formatReceiptLineDetail} receiptLineError={receiptLineError} />
+        <AddFoodSheet mode={addMode} onModeChange={setAddMode} onAddManual={addManualFood} onAddReceipt={addReceiptFoods} resumeReceiptId={resumeReceiptId} sessionKey={addSheetSessionKey} receiptLines={RECEIPT_LINES} existingFoods={foods} storageLocations={storageLocations} createFood={createFood} formatApiDate={formatApiDate} storageFromApi={storageFromApi} imageForFoodName={imageForFoodName} formatReceiptLineDetail={formatReceiptLineDetail} receiptLineError={receiptLineError} reviewFixture={receiptSourceReviewMode ? RECEIPT_SOURCE_REVIEW_FIXTURE : undefined} />
       </DeferredBottomSheet>
 
       <DeferredBottomSheet
@@ -3001,7 +4683,7 @@ function PrototypeContent() {
         description="확인이 끝나지 않은 영수증을 골라 이어가요."
         snap={0.72}
       >
-        <ReceiptReviewQueue receipts={pendingReceiptSummaries} notice={receiptSummariesNotice} onSelect={(receiptId) => openAdd("receipt", receiptId)} />
+        <ReceiptReviewQueue receipts={pendingReceiptSummaries} notice={receiptSummariesNotice} onSelect={(receiptId) => openAdd("receipt", receiptId)} onAddReceipt={() => openAdd("receipt")} />
       </DeferredBottomSheet>
 
       <DeferredBottomSheet
@@ -3011,7 +4693,7 @@ function PrototypeContent() {
         description={selectedFood?.brand ?? "보관 상태와 날짜 출처를 확인해요."}
         snap={detailSheetSnap}
       >
-        {selectedFood ? <Suspense fallback={<ProcessingState label="식품 상세를 준비하고 있어요" detail="보관 이력과 날짜 출처를 불러옵니다." />}><FoodDetailSheet food={selectedFood} storageLocations={storageLocations} dateReviewReason={dateReviewReason(selectedFood, currentDate)} remoteRefreshRequired={detailRemoteRefreshRequired} onRefreshRemote={() => void refreshDetailFromRemote()} productInfoError={productInfoRetryAction?.foodId === selectedFood.id ? productInfoRetryAction.message : undefined} onRetryProductInfo={productInfoRetryAction?.foodId === selectedFood.id ? () => updateProductInfo(selectedFood.id, productInfoRetryAction.input) : undefined} productProvenanceError={productProvenanceStatus?.foodId === selectedFood.id ? productProvenanceStatus.message : undefined} onRetryProductProvenance={productProvenanceStatus?.foodId === selectedFood.id && productProvenanceStatus.retryable ? () => removeProductProvenance(selectedFood.id) : undefined} productProvenanceNotice={productProvenanceNotice?.foodId === selectedFood.id ? productProvenanceNotice.message : undefined} onSave={saveFood} onConsume={consumeFood} onDiscard={discardFood} onConfirmDate={confirmFoodDate} onRemoveProductProvenance={removeProductProvenance} onUpdateProductInfo={updateProductInfo} onShowGuidance={() => changeSheet("guidance")} /></Suspense> : null}
+        {selectedFood ? <Suspense fallback={<ProcessingState label="식품 상세를 준비하고 있어요" detail="보관 이력과 날짜 출처를 불러옵니다." />}><FoodDetailSheet food={selectedFood} readOnly={connectionState === "offline" && Boolean(dashboardStaleAt)} autoFocusDateReview={detailEntryIntent === "date-review" || Boolean(attentionReviewReason(selectedFood, currentDate))} autoFocusPrimaryAction={detailEntryIntent === "consume-action"} autoFocusProvenanceReview={detailEntryIntent === "provenance-review"} focusSyncOutboxId={detailSyncFocusId} historyRefreshKey={detailHistoryRefreshKey} initialHistoryDisclosureOpen={detailHistoryDisclosureOpenRef.current} onHistoryDisclosureChange={updateDetailHistoryDisclosure} storageLocations={storageLocations} dateReviewReason={dateReviewReason(selectedFood, currentDate)} remoteRefreshRequired={detailRemoteRefreshRequired} onRefreshRemote={refreshDetailFromRemote} productInfoError={productInfoRetryAction?.foodId === selectedFood.id ? productInfoRetryAction.message : undefined} onRetryProductInfo={productInfoRetryAction?.foodId === selectedFood.id ? () => updateProductInfo(selectedFood.id, productInfoRetryAction.input) : undefined} productInfoSaving={productInfoSavingFoodId === selectedFood.id} productInfoNotice={productInfoNotice?.foodId === selectedFood.id ? productInfoNotice.message : undefined} onRefreshProductInfo={productInfoNotice?.foodId === selectedFood.id && productInfoNotice.requiresRefresh ? refreshProductInfoFromRemote : undefined} productProvenanceError={productProvenanceStatus?.foodId === selectedFood.id ? productProvenanceStatus.message : undefined} onRetryProductProvenance={productProvenanceStatus?.foodId === selectedFood.id && productProvenanceStatus.retryable ? () => removeProductProvenance(selectedFood.id) : undefined} productProvenanceNotice={productProvenanceNotice?.foodId === selectedFood.id ? productProvenanceNotice.message : undefined} onRefreshProductProvenance={productProvenanceNotice?.foodId === selectedFood.id && productProvenanceNotice.requiresRefresh ? refreshProductProvenanceFromRemote : undefined} onSave={saveFood} onConsume={consumeFood} onDiscard={discardFood} onConfirmDate={confirmFoodDate} onRemoveProductProvenance={removeProductProvenance} onUpdateProductInfo={updateProductInfo} onShowGuidance={openGuidanceSheet} onOpenLabelReview={() => openAdd("label", null, "detail")} onOpenSyncRecord={openSyncRecordFromDetail} onOpenSyncNotification={openSyncNotificationFromDetail} /></Suspense> : null}
       </DeferredBottomSheet>
 
       <DeferredBottomSheet
@@ -3019,9 +4701,9 @@ function PrototypeContent() {
         onOpenChange={(open) => changeSheet(open ? "meal" : null)}
         title="오늘의 Rescue Meal"
         description="먼저 먹을 식품을 기준으로 만든 가벼운 제안이에요."
-        snap={0.76}
+        snap={0.86}
       >
-        <Suspense fallback={<ProcessingState label="식단 화면을 준비하고 있어요" detail="현재 재료와 우선순위를 확인합니다." />}><MealPlanSheet active={sheet === "meal"} foods={foods} workspaceSync={workspaceSync} workspaceTransport={workspaceTransport} onSaved={(kind) => setToast(kind === "multi-day" ? "3일 식단을 저장했어요" : "오늘의 식단을 저장했어요")} onCompleted={handleMealCompleted} /></Suspense>
+        <Suspense fallback={<ProcessingState label="식단 화면을 준비하고 있어요" detail="현재 재료와 우선순위를 확인합니다." />}><MealPlanSheet active={sheet === "meal"} foods={foods} initialMaxMinutes={mealPlanOptionsRef.current.maxMinutes} initialServings={mealPlanOptionsRef.current.servings} dateReviewFoods={mealDateReviewFoods} onOptionsChange={(options) => { mealPlanOptionsRef.current = options; }} workspaceSync={workspaceSync} workspaceTransport={workspaceTransport} onOpenFoodDetail={openFoodDetailFromMeal} onOpenAdd={() => openAdd("receipt")} onSaved={(kind, hasMissingIngredients) => { const message = kind === "multi-day" ? hasMissingIngredients ? "3일 식단 저장 완료 · 부족 재료를 장보기에 추가해 주세요" : "3일 식단을 저장했어요" : hasMissingIngredients ? "식단 저장 완료 · 부족 재료를 장보기에 추가해 주세요" : "식단 저장 완료 · 사용량을 확인해 주세요"; setToast(message); if (hasMissingIngredients) setToastAction({ message, label: "장보기 목록 보기", onInvoke: openShoppingList }); else setToastAction(null); }} onCompleted={handleMealCompleted} /></Suspense>
       </DeferredBottomSheet>
 
       <DeferredBottomSheet
@@ -3031,12 +4713,12 @@ function PrototypeContent() {
         description="부족한 재료를 한 곳에서 확인하고 장보며 체크해요."
         snap={0.82}
       >
-        <Suspense fallback={<ProcessingState label="장보기 목록을 준비하고 있어요" detail="저장한 식단과 현재 재고를 확인합니다." />}><ShoppingListSheet items={shoppingList} loading={shoppingListStatus === "loading"} mutating={shoppingListMutating} error={shoppingListError} notice={shoppingListNotice} retryAction={shoppingListRetryAction} storageLocations={storageLocations} onRefresh={() => void refreshShoppingList()} onToggle={(item) => void toggleShoppingItem(item)} onDelete={(item) => void removeShoppingItem(item)} onAddManual={addManualShoppingItem} onReceive={receiveShoppingItem} /></Suspense>
+        <Suspense fallback={<ProcessingState label="장보기 목록을 준비하고 있어요" detail="저장한 식단과 현재 재고를 확인합니다." />}><ShoppingListSheet items={shoppingList} loading={shoppingListStatus === "loading"} mutating={shoppingListMutating} error={shoppingListError} notice={shoppingListNotice} retryAction={shoppingListRetryAction} recentlyReceivedFoodName={recentlyReceivedFood?.name} onOpenReceivedFood={openRecentlyReceivedFood} onOpenMeal={openMealPlan} initialFocus={shoppingInitialFocusRef.current} storageLocations={storageLocations} onRefresh={() => void refreshShoppingList()} onToggle={(item) => void toggleShoppingItem(item)} onDelete={(item) => void removeShoppingItem(item)} onAddManual={addManualShoppingItem} onReceive={receiveShoppingItem} /></Suspense>
       </DeferredBottomSheet>
 
       <DeferredBottomSheet
         open={sheet === "guidance"}
-        onOpenChange={(open) => changeSheet(open ? "guidance" : null)}
+        onOpenChange={(open) => open ? changeSheet("guidance") : closeGuidanceSheet()}
         title="날짜를 읽는 방법"
         description="안전과 편의를 분리해서 기록해요."
         snap={0.68}
@@ -3048,20 +4730,20 @@ function PrototypeContent() {
         open={sheet === "account"}
         onOpenChange={(open) => changeSheet(open ? "account" : null)}
         title="내 계정"
-        description="다른 기기에서도 같은 식품 기록을 이어가요."
-        snap={0.8}
+        description="계정에 연결하면 다른 기기에서도 기록을 이어가요."
+        snap={0.9}
       >
-        <Suspense fallback={<ProcessingState label="계정 화면을 준비하고 있어요" detail="잠시만 기다려 주세요." />}><AccountSheet initialPasswordResetToken={passwordResetToken} workspaceSync={workspaceSync} workspaceTransport={workspaceTransport} remoteRefreshRequired={accountRemoteRefreshRequired} remoteRefreshing={accountRemoteRefreshing} refreshNonce={accountRefreshNonce} onRefreshRemote={() => void refreshAccountFromRemote()} onAuthenticated={handleAuthenticated} onSignedOut={handleSignedOut} onAccountDeleted={handleAccountDeleted} /></Suspense>
+        <Suspense fallback={<ProcessingState label="계정 화면을 준비하고 있어요" detail="잠시만 기다려 주세요." />}><AccountSheet active={sheet === "account"} initialPasswordResetToken={passwordResetToken} workspaceSync={workspaceSync} workspaceTransport={workspaceTransport} remoteRefreshRequired={accountRemoteRefreshRequired} remoteRefreshing={accountRemoteRefreshing} refreshNonce={accountRefreshNonce} onRefreshRemote={() => void refreshAccountFromRemote()} focusGrocyOutboxId={accountGrocyOutboxFocusId} returnToNotification={notificationAccountReturnRef.current} onReturnToNotification={() => changeSheet(null)} onOpenFoodFromSync={openFoodFromSyncHistory} onAuthenticated={handleAuthenticated} onSignedOut={handleSignedOut} onAccountDeleted={handleAccountDeleted} /></Suspense>
       </DeferredBottomSheet>
 
       <DeferredBottomSheet
         open={sheet === "notifications"}
         onOpenChange={(open) => changeSheet(open ? "notifications" : null)}
         title="알림"
-        description="확인이 필요한 날짜와 동기화 작업을 모아 보여드려요."
+        description="확인할 날짜와 기록 상태를 모아 보여드려요."
         snap={0.72}
       >
-        <Suspense fallback={<ProcessingState label="알림을 준비하고 있어요" detail="확인이 필요한 항목을 불러옵니다." />}><NotificationSheet notifications={visibleNotifications} loading={mealApi.isConfigured && notificationsLoading} error={notificationsError} notice={notificationsNotice} retryAction={notificationRetryAction} onSelect={openNotificationTarget} onReadAll={() => void markAllNotificationsRead()} /></Suspense>
+        <Suspense fallback={<ProcessingState label="알림을 준비하고 있어요" detail="확인이 필요한 항목을 불러옵니다." />}><NotificationSheet notifications={visibleNotifications} loading={mealApi.isConfigured && notificationsLoading} error={notificationsError} notice={notificationsNotice} retryAction={notificationRetryAction} onSelect={openNotificationTarget} onReadAll={() => void markAllNotificationsRead()} returnFocusNotificationId={notificationReturnFocusIdRef.current} initialSyncFocus={notificationSyncFocus} onSyncFocusHandled={() => setNotificationSyncFocus(null)} /></Suspense>
       </DeferredBottomSheet>
 
       <DeferredBottomSheet
@@ -3071,10 +4753,10 @@ function PrototypeContent() {
         description="승인된 source만 사용자 planner에 노출해요."
         snap={0.9}
       >
-        <Suspense fallback={<ProcessingState label="recipe review를 준비하고 있어요" detail="운영자 검토 도구를 불러옵니다." />}><RecipeReviewPanel workspaceTransport={workspaceTransport} /></Suspense>
+        <Suspense fallback={<ProcessingState label="레시피 검토를 준비하고 있어요" detail="운영자 검토 도구를 불러옵니다." />}><RecipeReviewPanel workspaceTransport={workspaceTransport} /></Suspense>
       </DeferredBottomSheet>
 
-      {toast ? <div className="toast" role="status"><CheckCircledIcon width={17} height={17} /><span className="toast-message">{toast}</span>{toastAction?.message === toast ? <button className="toast-action" type="button" onClick={() => { const action = toastAction; setToast(null); setToastAction(null); action.onInvoke(); }}>{toastAction.label}</button> : null}</div> : null}
+      {toast ? <div className="toast-layer" style={{ position: "absolute", zIndex: 1102, inset: 0, pointerEvents: "none" }}><div className="toast" role="status" style={{ pointerEvents: "auto" }}><CheckCircledIcon width={17} height={17} /><span className="toast-message">{toast}</span>{toastAction?.message === toast ? <button className="toast-action" type="button" onClick={() => { const action = toastAction; setToast(null); setToastAction(null); action.onInvoke(); window.setTimeout(focusToastRecoveryTarget, 0); }}>{toastAction.label}</button> : null}</div></div> : null}
     </>
     </MotionConfig>
   );

@@ -7,6 +7,7 @@
     "check:runtime": "node scripts/check-mobile-runtime.mjs",
     "update:runtime-lock": "node scripts/update-mobile-runtime-lock.mjs",
     "test:runtime": "playwright test",
+    "test:web": "playwright test --config=playwright.web.config.ts",
     "test:native": "playwright test --config=playwright.native.config.ts",
     "test:connected": "playwright test --config=playwright.connected.config.ts",
     "test:mutation-readback": "node --experimental-strip-types --test tests/mutation-readback.test.mjs",

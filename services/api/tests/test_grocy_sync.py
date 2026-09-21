@@ -562,6 +562,8 @@ def test_consumed_and_discarded_events_use_grocy_consume_with_spoiled_flag(monke
     assert discarded.status_code == 200
     assert consumed.json()["grocy_sync_status"] == "queued"
     assert discarded.json()["grocy_sync_status"] == "queued"
+    assert consumed.json()["grocy_outbox_id"]
+    assert consumed.json()["grocy_transaction_id"] is None
     pending = client.get("/api/integrations/grocy/outbox?status=pending").json()
     assert [record["operation"] for record in pending] == ["consume", "consume"]
     assert pending[0]["spoiled"] is True
@@ -576,6 +578,9 @@ def test_consumed_and_discarded_events_use_grocy_consume_with_spoiled_flag(monke
     assert grocy.calls[1][3]["spoiled"] is True
     events = client.get("/api/foods/chicken-1/storage-events").json()
     assert {event["grocy_sync_status"] for event in events} == {"succeeded"}
+    assert all(event["grocy_outbox_id"] for event in events)
+    assert {event["grocy_transaction_id"] for event in events} == {"grocy-consume-1"}
+    assert all([entry["status"] for entry in event["grocy_status_history"]][-1] == "succeeded" for event in events)
 
 
 def test_opened_event_uses_grocy_open_and_transfer_requires_location_mappings(monkeypatch) -> None:

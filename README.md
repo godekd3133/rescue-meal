@@ -422,15 +422,25 @@ uv run uvicorn app.main:app --host 127.0.0.1 --port 8002
 
 API에 `RESCUE_MEAL_OCR_URL=http://127.0.0.1:8002`를 지정하면 이미지 intake가 이 worker를 사용합니다. worker의 `/health`는 liveness만 확인하고, `/ready`가 PaddleOCR 모델 초기화까지 성공해야 Compose healthcheck가 통과합니다. 기본 CPU 동시 추론은 1건이며 `RESCUE_MEAL_OCR_MAX_CONCURRENCY`(1~8)와 `RESCUE_MEAL_OCR_QUEUE_TIMEOUT_SECONDS`(기본 2초)로 명시 조정할 수 있습니다. 현재 pinned PaddlePaddle Linux CPU wheel이 `x86_64` 대상이어서 Compose/Dockerfile은 worker를 `linux/amd64`로 고정합니다. Apple Silicon에서는 Docker emulation이 필요하고 production은 amd64 node 또는 별도 ARM runtime 검증이 필요합니다. worker가 꺼져 있거나 준비되지 않으면 API는 `needs_ocr_engine` 또는 `OCR worker 연결 실패`를 반환하고 임의의 상품을 만들지 않습니다. 정확도·매장 coverage·실기기 촬영은 별도 acceptance입니다.
 
-터미널 2 — 모바일 프론트:
+터미널 2 — 웹 프론트:
 
 ```bash
 cd apps/web
 npm ci --prefer-offline --no-audit --no-fund
-VITE_DEPLOYMENT_MODE=demo VITE_API_BASE_URL=http://127.0.0.1:8000 npm run dev -- --host 127.0.0.1 --port 4173
+VITE_APP_SHELL=web VITE_DEPLOYMENT_MODE=demo VITE_API_BASE_URL=http://127.0.0.1:8000 npm run dev -- --host 127.0.0.1 --port 4173
 ```
 
-브라우저에서 `http://127.0.0.1:4173/`을 열면 됩니다. 프론트 런타임 무결성은 `npm run check:runtime`, fixture/mobile runtime은 `npm run test:runtime`, native 320px shell 회귀는 `VITE_APP_SHELL=native NATIVE_RUNTIME_TEST_PORT=4481 npm run test:native`, 프론트 빌드는 `npm run build`, 백엔드 API smoke는 `cd services/api && uv run pytest`로 확인합니다. 다른 로컬 앱이 기본 fixture 포트 `4174`를 사용 중이면 `MOBILE_RUNTIME_TEST_PORT=4451 npm run test:runtime`처럼 전용 포트를 지정합니다. Playwright fixture lane은 요청 포트를 엄격히 사용하고, 다른 서버를 자동 재사용하거나 Vite가 다른 포트로 이동한 상태를 정상으로 취급하지 않습니다. 연결형 browser E2E는 `npm run test:connected` 한 번으로 disposable SQLite API와 Vite를 함께 띄워 실행합니다. PostgreSQL two-process lot 경계는 `cd services/api && RESCUE_MEAL_DATABASE_URL=... RESCUE_MEAL_AUTH_SECRET=... uv run python scripts/postgres_manual_food_lot_smoke.py`로 확인합니다. production-shaped PostgreSQL/OCR/API container와 normalized read/write/idempotency replay는 `sh infra/container-smoke.sh`로 실행하며, 이 명령은 자기 disposable Compose resources만 정리합니다. 각 Playwright lane은 서로 다른 server/config contract를 사용합니다.
+브라우저에서 `http://127.0.0.1:4173/`을 열면 PhoneFrame 없이 실제 웹용 Rescue Meal 화면이 표시됩니다. 웹 표면은 데스크톱 상단 내비게이션과 넓은 콘텐츠 영역을 사용하고, 식단·식품 상세 sheet도 브라우저용 modal로 표시합니다.
+
+폰 시뮬레이터를 확인하려면 별도로 `preview`를 지정합니다.
+
+```bash
+VITE_APP_SHELL=preview VITE_DEPLOYMENT_MODE=demo npm run dev -- --host 127.0.0.1 --port 4173
+```
+
+개발 중 OCR 원본 대조 흐름을 직접 확인하려면 demo/native preview에서 `?review=1&receipt_source_review=1` query를 사용합니다. 예: `http://127.0.0.1:4176/?review=1&receipt_source_review=1`. 이 fixture는 익명 로컬 receipt 이미지와 observation 좌표만 사용하며 `VITE_DEPLOYMENT_MODE=production`에서는 활성화되지 않습니다.
+
+실제 native shell은 `VITE_APP_SHELL=native`로 유지합니다. native를 브라우저에서 열어도 PhoneFrame/기기 외곽선은 숨겨지고 앱 UI만 표시되며, 데스크톱 review 폭에서는 모바일 composition을 최대 `393px` canvas로 중앙 정렬합니다. 프론트 런타임 무결성은 `npm run check:runtime`, 웹 surface 회귀는 `WEB_SURFACE_TEST_PORT=4491 npm run test:web`, fixture/mobile runtime은 `MOBILE_RUNTIME_TEST_PORT=4451 npm run test:runtime`, native 320px shell 회귀는 `NATIVE_RUNTIME_TEST_PORT=4481 npm run test:native`, 프론트 빌드는 `npm run build`, 백엔드 API smoke는 `cd services/api && uv run pytest`로 확인합니다. Playwright fixture lane은 `preview`, web lane은 `web`, native lane은 `native`를 각 config에서 명시해 서로 다른 surface를 섞지 않습니다. 연결형 browser E2E는 `npm run test:connected` 한 번으로 disposable SQLite API와 preview Vite를 함께 띄워 실행합니다. PostgreSQL two-process lot 경계는 `cd services/api && RESCUE_MEAL_DATABASE_URL=... RESCUE_MEAL_AUTH_SECRET=... uv run python scripts/postgres_manual_food_lot_smoke.py`로 확인합니다. production-shaped PostgreSQL/OCR/API container와 normalized read/write/idempotency replay는 `sh infra/container-smoke.sh`로 실행하며, 이 명령은 자기 disposable Compose resources만 정리합니다.
 
 운영 프론트엔드는 반드시 `VITE_DEPLOYMENT_MODE=production`과 실제 HTTPS
 `VITE_API_BASE_URL`을 빌드 시 주입해야 합니다. production build에서 mode 자체가

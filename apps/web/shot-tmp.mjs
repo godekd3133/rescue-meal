@@ -1,0 +1,12 @@
+import { chromium } from "playwright";
+const url = "http://localhost:5174/";
+const theme = process.argv[2] || "light";
+const out = process.argv[3] || `/tmp/rescue-${theme}.png`;
+const browser = await chromium.launch();
+const page = await browser.newPage({ viewport: { width: 1280, height: 860 } });
+await page.addInitScript((t) => { window.localStorage.setItem("rescue-meal.theme", t); }, theme);
+await page.goto(url, { waitUntil: "networkidle", timeout: 30000 }).catch(() => {});
+await page.waitForTimeout(2500);
+await page.screenshot({ path: out });
+await browser.close();
+console.log("saved", out);

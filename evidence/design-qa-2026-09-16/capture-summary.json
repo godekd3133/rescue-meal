@@ -1,0 +1,45 @@
+{
+  "baseUrl": "http://127.0.0.1:4173/",
+  "browserViewport": {
+    "width": 1399,
+    "height": 1200
+  },
+  "cssViewport": {
+    "width": 393,
+    "height": 852
+  },
+  "deviceScaleFactor": 1,
+  "themes": {
+    "light": {
+      "homeScreenshot": "light-home-screen.png",
+      "mealScreenshot": "light-meal-sheet.png",
+      "sourceScreenshot": "/Users/kimminkyu/.codex/generated_images/01a0a833-a6f4-7190-abd5-9d4f0c8f71e4/exec-dba081f8-cdd4-4351-8ee7-8bc0b93be7b2.png",
+      "themeAttr": "light",
+      "screenBox": {
+        "width": 393,
+        "height": 852
+      },
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    "dark": {
+      "homeScreenshot": "dark-home-screen.png",
+      "mealScreenshot": "dark-meal-sheet.png",
+      "sourceScreenshot": "/Users/kimminkyu/.codex/generated_images/01a0a833-a6f4-7190-abd5-9d4f0c8f71e4/exec-a14f573c-d163-43e5-851f-e6bea5e583d8.png",
+      "themeAttr": "dark",
+      "screenBox": {
+        "width": 393,
+        "height": 852
+      },
+      "consoleErrors": [],
+      "pageErrors": []
+    }
+  },
+  "primaryInteractions": [
+    "theme toggle light to dark and back",
+    "open meal plan CTA",
+    "dismiss meal sheet with Escape"
+  ],
+  "consoleErrors": [],
+  "pageErrors": []
+}

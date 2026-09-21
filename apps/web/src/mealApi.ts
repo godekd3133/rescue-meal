@@ -48,6 +48,12 @@ export type ApiGrocyProductMappingAuditEvent = {
   after: ApiGrocyProductMapping;
 };
 export type ApiGrocyOutboxStatus = "blocked" | "pending" | "in_flight" | "succeeded" | "dead_letter" | "reconciliation_required";
+export type ApiGrocyOutboxStatusHistory = {
+  status: ApiGrocyOutboxStatus;
+  occurred_at: string;
+  source: "created" | "mapping" | "worker" | "retry" | "reconciliation" | "system";
+  note: string | null;
+};
 export type ApiGrocyOutboxRecord = {
   id: string;
   operation: "receipt_add" | "consume" | "open" | "transfer";
@@ -62,6 +68,7 @@ export type ApiGrocyOutboxRecord = {
   to_grocy_location_id: number | null;
   payload: Record<string, unknown>;
   status: ApiGrocyOutboxStatus;
+  status_history: ApiGrocyOutboxStatusHistory[];
   attempts: number;
   last_error: string | null;
   last_dead_letter_error: string | null;
@@ -241,6 +248,8 @@ export type ApiDashboardCache = {
 export type ApiNotification = {
   id: string;
   kind: "date_due" | "date_check" | "storage_mismatch" | "grocy_sync";
+  sync_state?: "action_required" | "queued" | "processing" | "applied" | null;
+  sync_record_id?: string | null;
   severity: "urgent" | "attention" | "info";
   title: string;
   message: string;
@@ -372,6 +381,9 @@ export type ApiStorageEvent = {
   created_child_food_id: string | null;
   meal_plan_id?: string | null;
   grocy_sync_status?: ApiGrocySyncStatus;
+  grocy_outbox_id?: string | null;
+  grocy_transaction_id?: string | null;
+  grocy_status_history?: ApiGrocyOutboxStatusHistory[];
   inventory?: ApiFood[];
 };
 
@@ -401,6 +413,7 @@ export type ApiMealPlan = {
   preference_note?: string | null;
   date_review_required?: boolean;
   date_review_foods?: string[];
+  date_review_food_ids?: string[];
   date_review_note?: string | null;
   recipe_id: string;
   planner_version: string;
@@ -988,7 +1001,7 @@ export function isMealApiRecipePublishError(error: unknown): error is MealApiErr
   return error instanceof MealApiError && error.code === "recipe_review_publish_forbidden";
 }
 
-export const MEAL_API_WORKSPACE_CONFLICT_MESSAGE = "다른 기기에서 먼저 변경했어요. 최신 목록을 불러왔습니다. 내용을 확인한 뒤 다시 시도해 주세요.";
+export const MEAL_API_WORKSPACE_CONFLICT_MESSAGE = "다른 기기에서 먼저 변경했어요. 최신 상태를 확인한 뒤 다시 시도해 주세요.";
 
 export type ApiOcrReceiptIntake = {
   status: "review_required" | "needs_ocr_engine" | "failed";

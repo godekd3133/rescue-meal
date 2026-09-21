@@ -22,7 +22,15 @@ NotificationKind = Literal["date_due", "date_check", "storage_mismatch", "grocy_
 NotificationSeverity = Literal["urgent", "attention", "info"]
 NotificationSource = Literal["printed_date", "user_reminder", "estimated_window", "unknown_date", "storage_condition", "grocy_outbox"]
 NotificationAction = Literal["food", "grocy", "none"]
-GrocyNotificationStatus = Literal["blocked", "dead_letter", "reconciliation_required"]
+GrocyNotificationStatus = Literal[
+    "blocked",
+    "pending",
+    "in_flight",
+    "succeeded",
+    "dead_letter",
+    "reconciliation_required",
+]
+GrocyNotificationSyncState = Literal["action_required", "queued", "processing", "applied"]
 DEFAULT_NOTIFICATION_TIMEZONE = "Asia/Seoul"
 
 
@@ -50,6 +58,11 @@ class NotificationResponse(BaseModel):
     action: NotificationAction
     read_at: datetime | None = None
     created_at: datetime
+    # Only Grocy-derived notifications expose a provider lifecycle state. Date
+    # and storage advisories keep this null so clients do not infer a sync
+    # contract from a local safety reminder.
+    sync_state: GrocyNotificationSyncState | None = None
+    sync_record_id: str | None = None
 
 
 class NotificationReadAllResponse(BaseModel):
@@ -152,6 +165,7 @@ class GrocyNotificationInput:
     canonical_name: str
     status: GrocyNotificationStatus
     last_error: str | None
+    updated_at: datetime | None = None
 
 
 _TRUSTED_DATE_KINDS = {"sell_by", "use_by", "best_before", "user_reminder"}
@@ -348,14 +362,32 @@ def _grocy_notification(
         title = "Grocy 매핑 확인 필요"
         fallback = "상품·단위 또는 보관 위치 매핑을 확인해 주세요."
         severity: NotificationSeverity = "attention"
+        sync_state: GrocyNotificationSyncState = "action_required"
+    elif item.status == "pending":
+        title = "외부 재고 반영을 기다리는 중이에요"
+        fallback = "서버에 저장한 작업이 외부 재고 반영 대기열에 있어요."
+        severity = "info"
+        sync_state = "queued"
+    elif item.status == "in_flight":
+        title = "외부 재고에 반영 중이에요"
+        fallback = "외부 재고 서비스에 반영하고 있어요. 잠시 후 결과를 확인해 주세요."
+        severity = "info"
+        sync_state = "processing"
+    elif item.status == "succeeded":
+        title = "외부 재고에 반영했어요"
+        fallback = "외부 재고 반영이 완료됐어요."
+        severity = "info"
+        sync_state = "applied"
     elif item.status == "dead_letter":
         title = "Grocy 동기화 실패"
         fallback = "실패한 외부 재고 작업을 설정 화면에서 재시도해 주세요."
         severity = "urgent"
+        sync_state = "action_required"
     else:
         title = "Grocy 반영 여부 확인 필요"
         fallback = "외부 재고 반영 여부를 확인한 뒤 완료 또는 재시도를 선택해 주세요."
         severity = "urgent"
+        sync_state = "action_required"
     detail = (item.last_error or "").strip()
     message = f"{item.canonical_name}: {detail or fallback}"
     return NotificationResponse(
@@ -368,7 +400,9 @@ def _grocy_notification(
         source="grocy_outbox",
         action="grocy",
         read_at=read_at.get(f"grocy-outbox:{item.id}:{item.status}"),
-        created_at=current_time,
+        created_at=item.updated_at or current_time,
+        sync_state=sync_state,
+        sync_record_id=item.id,
     )
 
 

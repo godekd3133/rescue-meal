@@ -63,7 +63,7 @@ export default class RuntimeErrorBoundary extends Component<RuntimeErrorBoundary
     return (
       <main className="runtime-error-screen" aria-label="Rescue Meal 화면 오류">
         <div className="runtime-error-mark" aria-hidden="true">!</div>
-        <span className="runtime-error-kicker">RESCUE MEAL · RECOVERY</span>
+        <span className="runtime-error-kicker">RESCUE MEAL · 복구 안내</span>
         <h1>잠시<br /><em>문제가 생겼어요</em></h1>
         <p>기록은 지워지지 않았어요. 화면을 다시 시작하면 이어서 확인할 수 있어요.</p>
         <div className="runtime-error-note" role="alert">

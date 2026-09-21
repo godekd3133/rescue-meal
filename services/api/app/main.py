@@ -189,6 +189,7 @@ GrocySyncStatus = Literal["not_configured", "needs_mapping", "queued", "in_fligh
 GrocyOutboxStatus = Literal["blocked", "pending", "in_flight", "succeeded", "dead_letter", "reconciliation_required"]
 GrocyOutboxOperation = Literal["receipt_add", "consume", "open", "transfer"]
 GrocyReconciliationDecision = Literal["already_applied", "not_applied"]
+GrocyStatusHistorySource = Literal["created", "mapping", "worker", "retry", "reconciliation", "system"]
 
 REDACTED_RECEIPT_SOURCE_FILENAME = "원본 영수증 정보 삭제됨"
 REDACTED_RECEIPT_RAW_NAME = "삭제된 OCR 원문"
@@ -898,6 +899,15 @@ class GrocyLocationMappingRequest(BaseModel):
     source: Literal["user_confirmed", "admin"] = "user_confirmed"
 
 
+class GrocyOutboxStatusHistoryEntry(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    status: GrocyOutboxStatus
+    occurred_at: datetime
+    source: GrocyStatusHistorySource = "system"
+    note: str | None = Field(default=None, max_length=300)
+
+
 class GrocyOutboxRecord(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -914,6 +924,7 @@ class GrocyOutboxRecord(BaseModel):
     to_grocy_location_id: int | None = Field(default=None, gt=0)
     payload: dict[str, object] = Field(default_factory=dict)
     status: GrocyOutboxStatus = "pending"
+    status_history: list[GrocyOutboxStatusHistoryEntry] = Field(default_factory=list, max_length=20)
     attempts: int = Field(default=0, ge=0, le=10)
     last_error: str | None = Field(default=None, max_length=300)
     last_dead_letter_error: str | None = Field(default=None, max_length=300)
@@ -1027,6 +1038,9 @@ class StorageEventResponse(BaseModel):
     created_child_food_id: str | None = None
     meal_plan_id: str | None = None
     grocy_sync_status: GrocySyncStatus = "not_configured"
+    grocy_outbox_id: str | None = None
+    grocy_transaction_id: str | None = None
+    grocy_status_history: list[GrocyOutboxStatusHistoryEntry] = Field(default_factory=list, max_length=20)
     # Additive read model snapshot for clients that must preserve a successful
     # storage mutation when a follow-up dashboard read is stale or unavailable.
     inventory: list[FoodResponse] = Field(default_factory=list)
@@ -1099,6 +1113,7 @@ class MealPlanResponse(BaseModel):
     preference_note: str | None = None
     date_review_required: bool = False
     date_review_foods: list[str] = Field(default_factory=list, max_length=20)
+    date_review_food_ids: list[str] = Field(default_factory=list, max_length=20)
     date_review_note: str | None = None
     recipe_id: str
     planner_version: str
@@ -7579,6 +7594,54 @@ def _resolve_grocy_outbox_mapping(
     return True, product_id, from_mapping.grocy_location_id, to_mapping.grocy_location_id, None
 
 
+def _record_grocy_status(
+    record: GrocyOutboxRecord,
+    status: GrocyOutboxStatus,
+    *,
+    source: GrocyStatusHistorySource,
+    note: str | None = None,
+    occurred_at: datetime | None = None,
+) -> None:
+    now = occurred_at or datetime.now(timezone.utc)
+    normalized_note = note.strip() if note and note.strip() else None
+    if not record.status_history:
+        record.status_history.append(
+            GrocyOutboxStatusHistoryEntry(
+                status=record.status,
+                occurred_at=record.updated_at,
+                source="system",
+            )
+        )
+    record.status = status
+    last = record.status_history[-1] if record.status_history else None
+    if last is not None and last.status == status and last.source == source and last.note == normalized_note:
+        record.updated_at = now
+        return
+    record.status_history.append(
+        GrocyOutboxStatusHistoryEntry(
+            status=status,
+            occurred_at=now,
+            source=source,
+            note=normalized_note,
+        )
+    )
+    if len(record.status_history) > 20:
+        record.status_history = record.status_history[-20:]
+    record.updated_at = now
+
+
+def _initialize_grocy_status_history(record: GrocyOutboxRecord, *, source: GrocyStatusHistorySource = "created") -> None:
+    if record.status_history:
+        return
+    record.status_history = [
+        GrocyOutboxStatusHistoryEntry(
+            status=record.status,
+            occurred_at=record.created_at,
+            source=source,
+        )
+    ]
+
+
 def _refresh_grocy_outbox_mapping(record: GrocyOutboxRecord) -> None:
     if record.status not in {"blocked", "pending"}:
         return
@@ -7586,9 +7649,14 @@ def _refresh_grocy_outbox_mapping(record: GrocyOutboxRecord) -> None:
     record.grocy_product_id = product_id
     record.from_grocy_location_id = from_location_id
     record.to_grocy_location_id = to_location_id
-    record.status = "pending" if ready else "blocked"
+    next_status: GrocyOutboxStatus = "pending" if ready else "blocked"
+    _record_grocy_status(
+        record,
+        next_status,
+        source="mapping",
+        note=None if ready else error,
+    )
     record.last_error = None if ready else error
-    record.updated_at = datetime.now(timezone.utc)
 
 
 def _queue_grocy_receipt_sync(
@@ -7630,6 +7698,7 @@ def _queue_grocy_receipt_sync(
         created_at=now,
         updated_at=now,
     )
+    _initialize_grocy_status_history(outbox)
     store.grocy_outbox[outbox.id] = outbox
     _refresh_grocy_outbox_mapping(outbox)
     return _grocy_sync_status_for_outbox(outbox)
@@ -7655,7 +7724,10 @@ def _queue_grocy_storage_sync(
     idempotency_key = f"storage-event:{event.id}"
     existing = store.grocy_outbox.get(_outbox_id(idempotency_key))
     if existing is not None:
+        event.grocy_outbox_id = existing.id
+        event.grocy_transaction_id = existing.grocy_transaction_id
         _refresh_grocy_outbox_mapping(existing)
+        _refresh_grocy_projection(existing)
         return _grocy_sync_status_for_outbox(existing)
     now = datetime.now(timezone.utc)
     outbox = GrocyOutboxRecord(
@@ -7682,8 +7754,12 @@ def _queue_grocy_storage_sync(
         created_at=now,
         updated_at=now,
     )
+    _initialize_grocy_status_history(outbox)
     store.grocy_outbox[outbox.id] = outbox
+    event.grocy_outbox_id = outbox.id
+    event.grocy_transaction_id = outbox.grocy_transaction_id
     _refresh_grocy_outbox_mapping(outbox)
+    _refresh_grocy_projection(outbox)
     return _grocy_sync_status_for_outbox(outbox)
 
 
@@ -7697,6 +7773,10 @@ def _refresh_grocy_event_status(storage_event_id: str) -> None:
         if record.payload.get("storage_event_id") == storage_event_id
     ]
     if related:
+        primary = max(related, key=lambda record: record.updated_at)
+        event.grocy_outbox_id = primary.id
+        event.grocy_transaction_id = primary.grocy_transaction_id
+        event.grocy_status_history = [entry.model_copy(deep=True) for entry in primary.status_history[-20:]]
         event.grocy_sync_status = _aggregate_grocy_sync_status(
             [_grocy_sync_status_for_outbox(record) for record in related]
         )
@@ -7705,6 +7785,10 @@ def _refresh_grocy_event_status(storage_event_id: str) -> None:
 def _refresh_grocy_projection(record: GrocyOutboxRecord) -> None:
     storage_event_id = record.payload.get("storage_event_id")
     if isinstance(storage_event_id, str):
+        event = next((item for item in store.storage_events if item.id == storage_event_id), None)
+        if event is not None:
+            event.grocy_outbox_id = record.id
+            event.grocy_transaction_id = record.grocy_transaction_id
         _refresh_grocy_event_status(storage_event_id)
     transaction_id = record.payload.get("commit_transaction_id")
     if isinstance(transaction_id, str):
@@ -7817,7 +7901,7 @@ def _process_grocy_outbox_unleased(
         ):
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Grocy outbox worker lease가 만료되었습니다.")
         now = datetime.now(timezone.utc)
-        record.status = "in_flight"
+        _record_grocy_status(record, "in_flight", source="worker", occurred_at=now)
         record.attempts += 1
         record.in_flight_started_at = now
         record.last_in_flight_started_at = now
@@ -7829,7 +7913,7 @@ def _process_grocy_outbox_unleased(
             record.from_grocy_location_id = from_location_id
             record.to_grocy_location_id = to_location_id
             if not ready:
-                record.status = "blocked"
+                _record_grocy_status(record, "blocked", source="worker", note=mapping_error or PRODUCT_MAPPING_REQUIRED)
                 record.last_error = mapping_error or PRODUCT_MAPPING_REQUIRED
                 record.in_flight_started_at = None
                 blocked += 1
@@ -7838,17 +7922,17 @@ def _process_grocy_outbox_unleased(
                 transaction_id = _grocy_transaction_id(response)
                 if transaction_id is None:
                     raise GrocyError("Grocy transaction readback이 없습니다.")
-                record.status = "succeeded"
+                _record_grocy_status(record, "succeeded", source="worker", note=f"외부 작업 #{transaction_id}")
                 record.grocy_transaction_id = transaction_id
                 record.last_error = None
                 record.in_flight_started_at = None
                 succeeded += 1
         except GrocyError:
             if record.attempts >= 3:
-                record.status = "dead_letter"
+                _record_grocy_status(record, "dead_letter", source="worker", note="재시도 한도에 도달했어요.")
                 dead_lettered += 1
             else:
-                record.status = "pending"
+                _record_grocy_status(record, "pending", source="worker", note="외부 반영을 다시 시도해요.")
                 retried += 1
             record.last_error = "Grocy stock sync 실패; reconciliation 확인이 필요합니다."
             record.in_flight_started_at = None
@@ -7919,7 +8003,7 @@ def _scan_stale_grocy_outbox_unleased(
         key=lambda record: (record.in_flight_started_at or record.last_in_flight_started_at or record.updated_at, record.id),
     )[:limit]
     for record in candidates:
-        record.status = "reconciliation_required"
+        _record_grocy_status(record, "reconciliation_required", source="reconciliation", note=RECONCILIATION_REQUIRED, occurred_at=now)
         record.last_error = RECONCILIATION_REQUIRED
         record.in_flight_started_at = None
         record.updated_at = now
@@ -8135,11 +8219,11 @@ def reconcile_grocy_outbox(outbox_id: str, request: Request, payload: GrocyOutbo
         record.last_reconciled_at = now
         record.in_flight_started_at = None
         if payload.decision == "already_applied":
-            record.status = "succeeded"
+            _record_grocy_status(record, "succeeded", source="reconciliation", note="운영자가 외부 반영을 확인했어요.", occurred_at=now)
             record.grocy_transaction_id = transaction_id
             record.last_error = None
         else:
-            record.status = "pending"
+            _record_grocy_status(record, "pending", source="reconciliation", note="운영자가 미반영을 확인해 재시도 대기로 돌렸어요.", occurred_at=now)
             record.attempts = 0
             record.grocy_transaction_id = None
             record.last_error = None
@@ -8182,7 +8266,7 @@ def retry_grocy_outbox(outbox_id: str, request: Request, payload: GrocyOutboxRet
         record.manual_retry_count += 1
         record.last_retry_note = payload.operator_note.strip() if payload.operator_note and payload.operator_note.strip() else None
         record.last_retry_at = now
-        record.status = "pending"
+        _record_grocy_status(record, "pending", source="retry", note=record.last_retry_note or "수동 재시도 대기로 돌렸어요.", occurred_at=now)
         record.updated_at = now
         _refresh_grocy_projection(record)
         return record
@@ -9713,15 +9797,22 @@ def _current_notifications(*, for_push: bool = False) -> list[NotificationRespon
         )
         for record in store.foods.values()
     ]
+    recent_sync_cutoff = current_time - timedelta(hours=24)
     grocy_items = [
         GrocyNotificationInput(
             id=record.id,
             canonical_name=record.canonical_name,
             status=record.status,
             last_error=record.last_error or record.last_dead_letter_error,
+            updated_at=record.updated_at,
         )
         for record in store.grocy_outbox.values()
-        if record.status in {"blocked", "dead_letter", "reconciliation_required"}
+        if (
+            record.status in {"blocked", "dead_letter", "reconciliation_required", "pending", "in_flight"}
+            and not for_push
+        )
+        or record.status in {"blocked", "dead_letter", "reconciliation_required"}
+        or (record.status == "succeeded" and not for_push and record.updated_at >= recent_sync_cutoff)
     ]
     return build_notifications(
         foods=foods,
@@ -10381,10 +10472,17 @@ def create_manual_food(http_request: Request, http_response: Response, request: 
             current_date_is_trusted = current_date.kind in trusted_date_kinds
             incoming_date_is_trusted = request.date_kind in trusted_date_kinds
             preserve_existing_date = current_date_is_trusted and not incoming_date_is_trusted
-
+            explicit_lot_correction = (
+                request.lot_action == "correct"
+                and request.target_food_id is not None
+                and request.date_source == "label_ocr"
+                and request.brand == "라벨 확인 필요"
+                and request.category == "기타"
+            )
+            preserve_product_identity = explicit_lot_correction
             if incoming_date_is_trusted and current_date_is_trusted:
                 same_date_value = current_date.kind == food.date_assertion.kind and current_date.value == food.date_assertion.value
-                if not same_date_value:
+                if not same_date_value and not explicit_lot_correction:
                     raise HTTPException(
                         status_code=status.HTTP_409_CONFLICT,
                         detail={
@@ -10393,12 +10491,21 @@ def create_manual_food(http_request: Request, http_response: Response, request: 
                             "food_id": existing.response.id,
                         },
                     )
-                else:
+                elif same_date_value:
                     # A legacy/seed lot may have the same date but lack the
                     # user's explicit confirmation flag. Refreshing the
                     # metadata is safe without adding a duplicate history
                     # entry because the date value itself did not change.
                     existing.response.date_assertion = food.date_assertion
+                else:
+                    # A label review with an explicitly selected target lot is
+                    # an intentional correction, not an ambiguous manual
+                    # overwrite. Preserve the old assertion for audit/readback
+                    # and replace the target lot's date with the reviewed
+                    # label meaning and value.
+                    existing.response.date_assertion_history.append(current_date.model_copy(deep=True))
+                    existing.response.date_assertion = food.date_assertion
+                    existing.response.estimated_use_first_window = None
             elif incoming_date_is_trusted:
                 existing.response.date_assertion_history.append(current_date.model_copy(deep=True))
                 existing.response.date_assertion = food.date_assertion
@@ -10410,7 +10517,8 @@ def create_manual_food(http_request: Request, http_response: Response, request: 
             # A target is a correction/enrichment operation, not a new
             # purchase. Preserve the target lot's quantity and unit so a label
             # scan with the UI default of 1개 cannot silently change inventory.
-            existing.response.brand = request.brand
+            if not preserve_product_identity:
+                existing.response.brand = request.brand
             existing.response.storage_type = request.storage_type
             if request.storage_location_id is not None:
                 existing.response.storage_location_id = request.storage_location_id
@@ -10418,9 +10526,10 @@ def create_manual_food(http_request: Request, http_response: Response, request: 
                 existing_location = store.storage_locations.get(existing.response.storage_location_id)
                 if existing_location is None or existing_location.storage_type != request.storage_type:
                     existing.response.storage_location_id = None
-            existing.response.category = request.category
-            existing.response.image_path = request.image_path
-            existing.response.note = request.note
+            if not preserve_product_identity:
+                existing.response.category = request.category
+                existing.response.image_path = request.image_path
+                existing.response.note = request.note
             if request.barcode is not None:
                 existing.response.barcode = request.barcode
             if request.barcode_lot is not None:
@@ -11241,11 +11350,14 @@ def list_storage_events(food_id: str) -> list[StorageEventResponse]:
         for event in store.storage_events
     ):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="식품을 찾을 수 없습니다.")
-    return [
+    events = [
         event
         for event in store.storage_events
         if event.food_id == food_id or event.created_child_food_id == food_id
     ]
+    for event in events:
+        _refresh_grocy_event_status(event.id)
+    return events
 
 
 def _build_meal_plan(
@@ -11306,7 +11418,9 @@ def _build_meal_plan(
             preference_filtered=preference_filtered,
             preference_note="알레르기 정보가 불명확한 recipe는 회피 조건이 설정된 동안 추천하지 않습니다." if preference_filtered else None,
         )
-    date_review_foods = _meal_plan_date_review_foods(selected, planned)
+    date_review_records = _meal_plan_date_review_records(selected, planned)
+    date_review_foods = [food.display_name for food in date_review_records]
+    date_review_food_ids = [food.id for food in date_review_records]
     storage_mismatch_foods = _meal_plan_storage_mismatch_foods(selected, planned)
     storage_mismatch_labels = _meal_plan_storage_mismatch_labels(selected, planned)
     date_review_food_label = "·".join(date_review_foods)
@@ -11355,6 +11469,7 @@ def _build_meal_plan(
         allergen_metadata_status="known" if planned.allergens is not None else "unknown",
         date_review_required=bool(date_review_foods),
         date_review_foods=date_review_foods,
+        date_review_food_ids=date_review_food_ids,
         date_review_note=(
             f"{date_review_food_label}의 포장지 보관조건·현재 보관 위치({storage_mismatch_label})·표시 날짜를 다시 확인하세요. 이 안내는 소비기한을 새로 판정하지 않습니다."
             if date_review_foods and storage_mismatch_foods
@@ -11409,14 +11524,14 @@ def _workspace_timezone() -> ZoneInfo:
     return notification_zone(store.get_notification_preferences().timezone)
 
 
-def _meal_plan_date_review_foods(selected: list[FoodResponse], planned: PlannedRecipe) -> list[str]:
+def _meal_plan_date_review_records(selected: list[FoodResponse], planned: PlannedRecipe) -> list[FoodResponse]:
     allocated_food_ids = {
         allocation.food_id
         for ingredient in planned.ingredients
         for allocation in ingredient.allocations
     }
     today = datetime.now(timezone.utc).astimezone(_workspace_timezone()).date()
-    review_names: list[str] = []
+    review_records: list[FoodResponse] = []
     for food in selected:
         if food.id not in allocated_food_ids:
             continue
@@ -11432,8 +11547,12 @@ def _meal_plan_date_review_foods(selected: list[FoodResponse], planned: PlannedR
             and assertion.applicable_storage_type != food.storage_type
         )
         if due_or_past_printed_date or unresolved_or_non_expiry_date or storage_condition_mismatch:
-            review_names.append(food.display_name)
-    return list(dict.fromkeys(review_names))
+            review_records.append(food)
+    return list({food.id: food for food in review_records}.values())
+
+
+def _meal_plan_date_review_foods(selected: list[FoodResponse], planned: PlannedRecipe) -> list[str]:
+    return [food.display_name for food in _meal_plan_date_review_records(selected, planned)]
 
 
 def _meal_plan_storage_mismatch_foods(selected: list[FoodResponse], planned: PlannedRecipe) -> list[str]:

@@ -1003,7 +1003,7 @@
 }
 
 .notification-button {
-  margin-top: 28px;
+  margin-top: 0;
   border-color: transparent;
   background: transparent;
   box-shadow: none;
@@ -1011,13 +1011,14 @@
 
 .notification-dot {
   position: absolute;
-  top: 7px;
-  right: 7px;
-  width: 6px;
-  height: 6px;
-  border: 1px solid var(--meal-cream);
+  top: 4px;
+  right: 4px;
+  width: 18px;
+  height: 16px;
   border-radius: 50%;
   background: var(--meal-coral);
+  color: #fff;
+  font: 800 9px/16px sans-serif;
 }
 
 .notification-sheet {
@@ -2688,6 +2689,11 @@
   line-height: 1.4;
 }
 
+.account-error > span {
+  min-width: 0;
+  flex: 1;
+}
+
 .account-error svg {
   flex: 0 0 auto;
   margin-top: 1px;
@@ -2695,7 +2701,6 @@
 
 .account-error-action {
   flex: 0 0 auto;
-  margin-left: auto;
   padding: 4px 7px;
   border: 1px solid rgba(145, 105, 85, 0.28);
   border-radius: 7px;
@@ -2704,10 +2709,6 @@
   font-size: 9px;
   font-weight: 800;
   white-space: nowrap;
-}
-
-.account-error-action:hover {
-  background: #fff;
 }
 
 .product-provenance-save-notice {
@@ -4053,9 +4054,9 @@
   width: 100%;
   min-height: 34px;
   padding: 0 9px;
-  border: 1px solid var(--meal-line);
+  border: 1px solid #d6dfd1;
   border-radius: 9px;
-  background: var(--meal-white);
+  background: rgba(255, 254, 250, 0.8);
   color: var(--meal-ink);
   font-size: 10px;
   outline: none;
@@ -5803,7 +5804,7 @@
   color: #ad6d57;
 }
 
-.date-review-callout > span:last-child {
+.date-review-callout > span:nth-child(2) {
   display: grid;
   gap: 3px;
   min-width: 0;
@@ -5817,7 +5818,7 @@
 
 .date-review-callout small {
   color: #9a7565;
-  font-size: 9px;
+  font-size: 10px;
   line-height: 1.45;
 }
 
@@ -6239,9 +6240,9 @@
   align-items: center;
   justify-content: center;
   padding: 0 3px;
-  border: 1px solid #d6dfd1;
+  border: 1px solid var(--meal-line);
   border-radius: 9px;
-  background: rgba(255, 254, 250, 0.8);
+  background: var(--meal-white);
   color: var(--meal-muted);
   font-size: 10px;
   font-weight: 750;
@@ -6559,15 +6560,15 @@
 }
 
 .history-row small,
+.history-row time,
 .history-empty {
   color: var(--meal-muted);
   font-size: 9px;
 }
 
 .history-row small {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.35;
+  white-space: normal;
 }
 
 .history-empty {
@@ -7485,7 +7486,7 @@
 
 .shopping-sheet-receive-cancel,
 .shopping-sheet-receive-submit {
-  min-height: 31px;
+  min-height: 44px;
   padding: 0 10px;
   border-radius: 8px;
   font-size: 9px;
@@ -8886,7 +8887,7 @@
 
 .guidance-row small {
   color: var(--meal-muted);
-  font-size: 9px;
+  font-size: 10px;
   line-height: 1.4;
   letter-spacing: -0.035em;
 }
@@ -8894,7 +8895,7 @@
 .guidance-badge {
   padding: 4px 5px;
   border-radius: 6px;
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 800;
 }
 
@@ -9014,35 +9015,8 @@
 .meal-home {
   isolation: isolate;
   overflow: hidden;
-  background-color: var(--atelier-on-accent);
-  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0, rgba(255, 255, 255, 0.96) 355px, #f2f4f6 610px);
-}
-
-.meal-home::before {
-  position: absolute;
-  z-index: -1;
-  top: 0;
-  right: 0;
-  left: 0;
-  height: 342px;
-  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.02) 0%, rgba(255, 255, 255, 0.08) 48%, rgba(255, 255, 255, 0.98) 100%), url("/assets/food/rescue-hero-background-v1.webp");
-  background-position: center top;
-  background-size: auto 100%, cover;
-  content: "";
-  opacity: 0.94;
-  pointer-events: none;
-}
-
-.meal-home::after {
-  position: absolute;
-  z-index: -1;
-  top: 0;
-  right: 0;
-  left: 0;
-  height: 360px;
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.62), transparent 74%);
-  content: "";
-  pointer-events: none;
+  background-color: var(--atelier-deep);
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.85) 0, rgba(255, 255, 255, 0) 340px);
 }
 
 .meal-home > *,
@@ -9072,7 +9046,7 @@
   border-radius: 9px 9px 9px 3px;
   background: var(--atelier-pistachio);
   color: var(--atelier-on-accent);
-  box-shadow: 0 8px 22px rgba(49, 130, 246, 0.18);
+  box-shadow: 0 8px 22px color-mix(in srgb, var(--atelier-pistachio) 18%, transparent);
   font-size: 17px;
 }
 
@@ -9095,7 +9069,7 @@
   min-height: 27px;
   padding: 0 8px;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.66);
+  background: color-mix(in srgb, var(--atelier-surface) 66%, transparent);
   backdrop-filter: blur(10px);
 }
 
@@ -9103,8 +9077,8 @@
 .notification-button {
   width: 34px;
   height: 34px;
-  border-color: rgba(2, 32, 71, 0.132);
-  background: rgba(255, 255, 255, 0.64);
+  border-color: color-mix(in srgb, var(--atelier-ink) 13%, transparent);
+  background: color-mix(in srgb, var(--atelier-surface) 64%, transparent);
   backdrop-filter: blur(10px);
 }
 
@@ -9121,7 +9095,7 @@
 }
 
 .eyebrow {
-  color: var(--atelier-blue);
+  color: var(--atelier-dim);
   font-size: 11px;
   font-weight: 650;
   letter-spacing: 0.045em;
@@ -9136,7 +9110,7 @@
   font-weight: 720;
   letter-spacing: -0.09em;
   line-height: 1.12;
-  text-shadow: 0 4px 22px rgba(2, 32, 71, 0.1008);
+  text-shadow: 0 4px 22px color-mix(in srgb, var(--atelier-ink) 10%, transparent);
 }
 
 .greeting-block h1 em {
@@ -9150,7 +9124,7 @@
 
 .hero-description {
   margin: 13px 0 0;
-  color: #6b7684;
+  color: var(--atelier-muted);
   font-size: 12px;
   font-weight: 520;
   line-height: 1.65;
@@ -9161,10 +9135,10 @@
   max-width: 290px;
   margin: 22px 0 0;
   padding: 10px 13px;
-  border-color: rgba(2, 32, 71, 0.121);
+  border-color: color-mix(in srgb, var(--atelier-ink) 12%, transparent);
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.72);
-  box-shadow: 0 12px 25px rgba(2, 32, 71, 0.0672);
+  background: color-mix(in srgb, var(--atelier-surface) 72%, transparent);
+  box-shadow: 0 12px 25px color-mix(in srgb, var(--atelier-ink) 7%, transparent);
   backdrop-filter: blur(12px);
 }
 
@@ -9187,7 +9161,7 @@
 
 .summary-divider {
   height: 21px;
-  background: rgba(2, 32, 71, 0.1375);
+  background: color-mix(in srgb, var(--atelier-ink) 14%, transparent);
 }
 
 .priority-section {
@@ -9198,24 +9172,13 @@
   position: relative;
   min-height: 184px;
   padding: 21px 18px;
-  border-color: rgba(2, 32, 71, 0.132);
+  border-color: color-mix(in srgb, var(--atelier-ink) 13%, transparent);
   border-radius: 20px;
   background: var(--atelier-surface);
-  box-shadow: 0 14px 34px rgba(2, 32, 71, 0.08);
+  box-shadow: 0 14px 34px color-mix(in srgb, var(--atelier-ink) 8%, transparent);
 }
 
-.rescue-status-card::after {
-  position: absolute;
-  right: 14px;
-  bottom: 12px;
-  width: 108px;
-  height: 48px;
-  background: linear-gradient(145deg, transparent, rgba(49, 130, 246, 0.08));
-  border-radius: 50%;
-  content: "";
-  opacity: 0.8;
-  pointer-events: none;
-}
+
 
 .rescue-status-main > strong {
   margin-top: 7px;
@@ -9226,14 +9189,14 @@
 }
 
 .rescue-status-main > strong small {
-  color: #6b7684;
+  color: var(--atelier-muted);
   font-size: 20px;
   letter-spacing: -0.08em;
 }
 
 .rescue-status-description {
   max-width: 165px;
-  color: #6b7684;
+  color: var(--atelier-muted);
   font-size: 10px;
   line-height: 1.55;
 }
@@ -9241,11 +9204,11 @@
 .rescue-status-legend {
   gap: 14px;
   padding-left: 16px;
-  border-left-color: rgba(2, 32, 71, 0.154);
+  border-left-color: color-mix(in srgb, var(--atelier-ink) 15%, transparent);
 }
 
 .rescue-status-legend b {
-  color: #333d4b;
+  color: var(--atelier-soft);
   font-size: 10px;
 }
 
@@ -9260,7 +9223,7 @@
 }
 
 .section-kicker {
-  color: var(--atelier-pistachio-deep);
+  color: var(--atelier-dim);
   font-size: 8px;
   font-weight: 850;
   letter-spacing: 0.18em;
@@ -9291,8 +9254,8 @@
 }
 
 .priority-list-items {
-  border-top-color: rgba(2, 32, 71, 0.154);
-  border-bottom-color: rgba(2, 32, 71, 0.154);
+  border-top-color: color-mix(in srgb, var(--atelier-ink) 15%, transparent);
+  border-bottom-color: color-mix(in srgb, var(--atelier-ink) 15%, transparent);
 }
 
 .priority-card {
@@ -9305,15 +9268,15 @@
 .priority-card:focus-visible,
 .priority-card-accent,
 .priority-card-accent:hover {
-  background: rgba(2, 32, 71, 0.0303);
+  background: color-mix(in srgb, var(--atelier-ink) 3%, transparent);
 }
 
 .food-image-wrap {
   width: 66px;
   height: 66px;
-  border-color: rgba(2, 32, 71, 0.121);
+  border-color: color-mix(in srgb, var(--atelier-ink) 12%, transparent);
   border-radius: 18px;
-  background: #f2f4f6;
+  background: var(--atelier-deep);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
 }
 
@@ -9338,7 +9301,7 @@
 }
 
 .food-subline {
-  color: #8b95a1;
+  color: var(--atelier-dim);
 }
 
 .date-source-warning {
@@ -9368,8 +9331,8 @@
   margin-top: 19px;
   padding: 0 17px;
   border-radius: 17px;
-  background: linear-gradient(135deg, #3182f6, #64a1f8);
-  box-shadow: 0 15px 30px rgba(49, 130, 246, 0.198);
+  background: linear-gradient(135deg, var(--atelier-pistachio), var(--atelier-pistachio));
+  box-shadow: 0 15px 30px color-mix(in srgb, var(--atelier-pistachio) 20%, transparent);
 }
 
 .meal-plan-button:active {
@@ -9408,8 +9371,8 @@
 .trust-card {
   margin-top: 28px;
   padding: 13px;
-  border-color: rgba(240, 68, 82, 0.26);
-  background: rgba(240, 68, 82, 0.08);
+  border-color: color-mix(in srgb, var(--atelier-coral) 26%, transparent);
+  background: color-mix(in srgb, var(--atelier-coral) 8%, transparent);
 }
 
 .trust-card strong {
@@ -9433,18 +9396,18 @@
 .filter-select-wrap select {
   min-height: 30px;
   padding: 0 28px 0 9px;
-  border-color: rgba(2, 32, 71, 0.121);
+  border-color: color-mix(in srgb, var(--atelier-ink) 12%, transparent);
   border-radius: 9px;
-  background: rgba(255, 255, 255, 0.84);
+  background: color-mix(in srgb, var(--atelier-surface) 84%, transparent);
   color: var(--atelier-muted);
 }
 
 .inventory-search {
   min-height: 44px;
   margin-top: 14px;
-  border-color: rgba(2, 32, 71, 0.121);
+  border-color: color-mix(in srgb, var(--atelier-ink) 12%, transparent);
   border-radius: 13px;
-  background: rgba(255, 255, 255, 0.76);
+  background: color-mix(in srgb, var(--atelier-surface) 76%, transparent);
 }
 
 .inventory-search-input {
@@ -9453,14 +9416,14 @@
 
 .inventory-list {
   margin-top: 12px;
-  border-top-color: rgba(2, 32, 71, 0.154);
-  border-bottom-color: rgba(2, 32, 71, 0.154);
+  border-top-color: color-mix(in srgb, var(--atelier-ink) 15%, transparent);
+  border-bottom-color: color-mix(in srgb, var(--atelier-ink) 15%, transparent);
 }
 
 .inventory-row {
   min-height: 75px;
   gap: 10px;
-  border-bottom-color: rgba(2, 32, 71, 0.0825);
+  border-bottom-color: color-mix(in srgb, var(--atelier-ink) 8%, transparent);
 }
 
 .inventory-row:last-child {
@@ -9486,7 +9449,7 @@
   min-height: 62px;
   margin-top: 24px;
   padding: 0 14px;
-  border-color: rgba(2, 32, 71, 0.187);
+  border-color: color-mix(in srgb, var(--atelier-ink) 19%, transparent);
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.46);
 }
@@ -9503,7 +9466,7 @@
 .add-food-plus {
   width: 30px;
   height: 30px;
-  border-color: rgba(2, 32, 71, 0.231);
+  border-color: color-mix(in srgb, var(--atelier-ink) 23%, transparent);
   color: var(--atelier-pistachio);
 }
 
@@ -9516,16 +9479,16 @@
 .app-bottom-nav {
   min-height: 79px;
   padding: 11px 17px 9px;
-  border-top-color: rgba(2, 32, 71, 0.11);
-  background: rgba(255, 255, 255, 0.93);
-  box-shadow: 0 -10px 28px rgba(2, 32, 71, 0.0756);
+  border-top-color: color-mix(in srgb, var(--atelier-ink) 11%, transparent);
+  background: color-mix(in srgb, var(--atelier-surface) 93%, transparent);
+  box-shadow: 0 -10px 28px color-mix(in srgb, var(--atelier-ink) 8%, transparent);
   backdrop-filter: blur(16px);
 }
 
 .app-bottom-nav-item {
   gap: 6px;
   min-height: 51px;
-  color: #8b95a1;
+  color: var(--atelier-dim);
   font-size: 10px;
 }
 
@@ -9537,20 +9500,18 @@
   right: 27%;
   left: 27%;
   height: 3px;
-  box-shadow: 0 0 12px rgba(49, 130, 246, 0.34);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--atelier-pistachio) 34%, transparent);
 }
 
-/* Shared sheet foundation ------------------------------------------------ */
-
 .bottom-sheet {
-  --sheet-surface: #ffffff;
-  --sheet-surface-raised: #ffffff;
-  --sheet-border: rgba(2, 32, 71, 0.11);
-  --sheet-border-strong: rgba(2, 32, 71, 0.187);
+  --sheet-surface: var(--atelier-surface);
+  --sheet-surface-raised: var(--atelier-surface);
+  --sheet-border: color-mix(in srgb, var(--atelier-ink) 11%, transparent);
+  --sheet-border-strong: color-mix(in srgb, var(--atelier-ink) 19%, transparent);
   border-top: 1px solid var(--sheet-border);
   border-radius: 24px 24px 0 0;
-  background: #ffffff;
-  box-shadow: 0 -12px 44px rgba(2, 32, 71, 0.16);
+  background: var(--sheet-surface);
+  box-shadow: 0 -12px 44px color-mix(in srgb, var(--atelier-ink) 16%, transparent);
 }
 
 .sheet-handle {
@@ -9558,7 +9519,7 @@
   height: 4px;
   margin-top: 10px;
   border-radius: 999px;
-  background: rgba(2, 32, 71, 0.176);
+  background: color-mix(in srgb, var(--atelier-ink) 18%, transparent);
 }
 
 .sheet-header {
@@ -9605,7 +9566,7 @@
   padding: 4px;
   border-color: var(--sheet-border);
   border-radius: 13px;
-  background: rgba(255, 255, 255, 0.9);
+  background: color-mix(in srgb, var(--atelier-surface) 90%, transparent);
 }
 
 .bottom-sheet .mode-tab,
@@ -9623,7 +9584,7 @@
 .bottom-sheet .recipe-review-filter-bar button[aria-pressed="true"] {
   background: var(--atelier-pistachio);
   color: var(--atelier-on-accent);
-  box-shadow: 0 5px 12px rgba(49, 130, 246, 0.144);
+  box-shadow: 0 5px 12px color-mix(in srgb, var(--atelier-pistachio) 14%, transparent);
 }
 
 .bottom-sheet .primary-sheet-button,
@@ -9634,11 +9595,11 @@
   min-height: 45px;
   border: 1px solid var(--atelier-pistachio);
   border-radius: 13px;
-  background: linear-gradient(135deg, #3182f6, #64a1f8);
+  background: linear-gradient(135deg, var(--atelier-pistachio), var(--atelier-pistachio));
   color: var(--atelier-on-accent);
   font-size: 12px;
   font-weight: 820;
-  box-shadow: 0 10px 22px rgba(49, 130, 246, 0.135);
+  box-shadow: 0 10px 22px color-mix(in srgb, var(--atelier-pistachio) 14%, transparent);
 }
 
 .bottom-sheet .primary-sheet-button:hover,
@@ -9646,7 +9607,7 @@
 .bottom-sheet .shopping-sheet-manual-submit:hover,
 .bottom-sheet .recipe-multi-day-save:hover,
 .bottom-sheet .recipe-complete-button:hover {
-  background: #e8f1fe;
+  background: var(--meal-blue-soft);
 }
 
 .bottom-sheet .secondary-sheet-button,
@@ -9658,7 +9619,7 @@
   min-height: 42px;
   border: 1px solid var(--sheet-border-strong);
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.68);
+  background: color-mix(in srgb, var(--atelier-surface) 68%, transparent);
   color: var(--atelier-pistachio);
   font-size: 11px;
   font-weight: 760;
@@ -9673,7 +9634,7 @@
   min-height: 43px;
   border: 1px solid var(--sheet-border-strong);
   border-radius: 11px;
-  background: rgba(255, 255, 255, 0.92) !important;
+  background: color-mix(in srgb, var(--atelier-surface) 92%, transparent) !important;
   color: var(--atelier-ink);
   font-size: 11px;
 }
@@ -9709,9 +9670,9 @@
 .bottom-sheet .notification-row-icon,
 .bottom-sheet .account-profile-icon {
   border-color: var(--sheet-border);
-  background: rgba(49, 130, 246, 0.12);
+  background: color-mix(in srgb, var(--atelier-pistachio) 12%, transparent);
   color: var(--atelier-pistachio);
-  box-shadow: 0 8px 16px rgba(2, 32, 71, 0.063);
+  box-shadow: 0 8px 16px color-mix(in srgb, var(--atelier-ink) 6%, transparent);
 }
 
 .bottom-sheet .capture-intro h3,
@@ -9808,7 +9769,7 @@
 .bottom-sheet .notification-row-read,
 .bottom-sheet .shopping-sheet-row-checked,
 .bottom-sheet .recipe-shopping-row-checked {
-  background: rgba(49, 130, 246, 0.08);
+  background: color-mix(in srgb, var(--atelier-pistachio) 8%, transparent);
 }
 
 .bottom-sheet .receipt-line-card strong,
@@ -9853,7 +9814,7 @@
   min-height: 38px;
   border-color: var(--sheet-border);
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.84);
+  background: color-mix(in srgb, var(--atelier-surface) 84%, transparent);
   color: var(--atelier-muted);
 }
 
@@ -9863,8 +9824,8 @@
 .bottom-sheet .recipe-preferences-toggle[aria-pressed="true"],
 .bottom-sheet .recipe-time-picker button[aria-pressed="true"],
 .bottom-sheet .recipe-serving-picker button[aria-pressed="true"] {
-  border-color: rgba(49, 130, 246, 0.46);
-  background: rgba(49, 130, 246, 0.14);
+  border-color: color-mix(in srgb, var(--atelier-pistachio) 46%, transparent);
+  background: color-mix(in srgb, var(--atelier-pistachio) 14%, transparent);
   color: var(--atelier-pistachio);
 }
 
@@ -9876,18 +9837,18 @@
 .bottom-sheet .review-badge {
   border: 1px solid var(--sheet-border);
   border-radius: 7px;
-  background: rgba(49, 130, 246, 0.11);
+  background: color-mix(in srgb, var(--atelier-pistachio) 11%, transparent);
   color: var(--atelier-pistachio);
 }
 
 .bottom-sheet .badge-blue {
-  background: rgba(94, 127, 160, 0.13);
+  background: color-mix(in srgb, var(--atelier-blue) 13%, transparent);
   color: var(--atelier-blue);
 }
 
 .bottom-sheet .badge-coral,
 .bottom-sheet .review-badge {
-  background: rgba(240, 68, 82, 0.12);
+  background: color-mix(in srgb, var(--atelier-coral) 12%, transparent);
   color: var(--atelier-coral);
 }
 
@@ -9902,10 +9863,10 @@
 .bottom-sheet .account-error,
 .bottom-sheet .notification-error,
 .bottom-sheet .shopping-sheet-error {
-  border-color: rgba(240, 68, 82, 0.3);
+  border-color: color-mix(in srgb, var(--atelier-coral) 30%, transparent);
   border-radius: 13px;
-  background: rgba(240, 68, 82, 0.08);
-  color: #f04452;
+  background: color-mix(in srgb, var(--atelier-coral) 8%, transparent);
+  color: var(--atelier-coral);
 }
 
 .bottom-sheet .recipe-safety strong,
@@ -9927,17 +9888,17 @@
 .bottom-sheet .label-source-preview-frame {
   border-color: var(--sheet-border-strong);
   border-radius: 16px;
-  background: #ffffff;
+  background: #101419;
 }
 
 .bottom-sheet .scanner-frame {
-  border-color: rgba(49, 130, 246, 0.68);
+  border-color: color-mix(in srgb, var(--atelier-pistachio) 68%, transparent);
   box-shadow: 0 0 0 999px rgba(15, 23, 42, 0.42);
 }
 
 .bottom-sheet .camera-capture-guide {
-  border-color: rgba(49, 130, 246, 0.4);
-  background: rgba(255, 255, 255, 0.72);
+  border-color: color-mix(in srgb, var(--atelier-pistachio) 40%, transparent);
+  background: color-mix(in srgb, var(--atelier-surface) 72%, transparent);
   color: var(--atelier-ink);
 }
 
@@ -10020,7 +9981,7 @@
   padding: 15px;
   border: 1px solid var(--sheet-border);
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.84);
+  background: color-mix(in srgb, var(--atelier-surface) 84%, transparent);
 }
 
 .bottom-sheet .account-tabs {
@@ -10040,7 +10001,7 @@
   min-height: 42px;
   border: 1px solid var(--sheet-border-strong);
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.72);
+  background: color-mix(in srgb, var(--atelier-surface) 72%, transparent);
   color: var(--atelier-pistachio);
   font-size: 11px;
   font-weight: 760;
@@ -10082,7 +10043,7 @@
 
 .bottom-sheet .account-danger-button,
 .bottom-sheet .account-delete-panel {
-  border-color: rgba(240, 68, 82, 0.28);
+  border-color: color-mix(in srgb, var(--atelier-coral) 28%, transparent);
 }
 
 .bottom-sheet .account-danger-button {
@@ -10099,7 +10060,7 @@
 .bottom-sheet .storage-location-row,
 .bottom-sheet .guest-transfer-summary {
   border-color: var(--sheet-border);
-  background: rgba(255, 255, 255, 0.6);
+  background: color-mix(in srgb, var(--atelier-surface) 60%, transparent);
 }
 
 .bottom-sheet .notification-preference-row,
@@ -10150,18 +10111,18 @@
   height: 25px;
   flex: 0 0 auto;
   border-color: var(--sheet-border-strong);
-  background: rgba(255, 255, 255, 0.8);
+  background: color-mix(in srgb, var(--atelier-surface) 80%, transparent);
 }
 
 .bottom-sheet .toggle span {
   width: 19px;
   height: 19px;
-  background: #8b95a1;
+  background: var(--atelier-dim);
 }
 
 .bottom-sheet .toggle-on {
   border-color: var(--atelier-pistachio);
-  background: rgba(49, 130, 246, 0.3);
+  background: color-mix(in srgb, var(--atelier-pistachio) 30%, transparent);
 }
 
 .bottom-sheet .toggle-on span {
@@ -10194,7 +10155,7 @@
   padding: 4px;
   border: 1px solid var(--sheet-border);
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.72);
+  background: color-mix(in srgb, var(--atelier-surface) 72%, transparent);
 }
 
 .bottom-sheet .shopping-sheet-item {
@@ -10217,7 +10178,7 @@
   min-height: 34px;
   border: 1px solid var(--sheet-border);
   border-radius: 9px;
-  background: rgba(255, 255, 255, 0.76);
+  background: color-mix(in srgb, var(--atelier-surface) 76%, transparent);
   color: var(--atelier-pistachio);
 }
 
@@ -10255,7 +10216,7 @@
   padding: 12px;
   border: 1px solid var(--sheet-border);
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.72);
+  background: color-mix(in srgb, var(--atelier-surface) 72%, transparent);
 }
 
 .bottom-sheet .recipe-time-picker > span,
@@ -10282,7 +10243,7 @@
   padding: 0 5px;
   border: 1px solid var(--sheet-border);
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.62);
+  background: color-mix(in srgb, var(--atelier-surface) 62%, transparent);
   color: var(--atelier-muted);
   font-size: 10px;
   font-weight: 760;
@@ -10291,8 +10252,8 @@
 .bottom-sheet .recipe-time-picker button[aria-pressed="true"],
 .bottom-sheet .recipe-serving-picker button[aria-pressed="true"],
 .bottom-sheet .recipe-preference-chip-active {
-  border-color: rgba(49, 130, 246, 0.48);
-  background: rgba(49, 130, 246, 0.16);
+  border-color: color-mix(in srgb, var(--atelier-pistachio) 48%, transparent);
+  background: color-mix(in srgb, var(--atelier-pistachio) 16%, transparent);
   color: var(--atelier-pistachio);
 }
 
@@ -10317,7 +10278,7 @@
   gap: 7px;
   border: 1px dashed var(--sheet-border-strong);
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.62);
+  background: color-mix(in srgb, var(--atelier-surface) 62%, transparent);
   color: var(--atelier-pistachio);
 }
 
@@ -10351,7 +10312,7 @@
   width: 82px;
   height: 82px;
   object-fit: contain;
-  filter: drop-shadow(0 8px 9px rgba(2, 32, 71, 0.0756));
+  filter: drop-shadow(0 8px 9px color-mix(in srgb, var(--atelier-ink) 8%, transparent));
 }
 
 .bottom-sheet .recipe-title-row {
@@ -10405,7 +10366,7 @@
   padding: 7px 9px;
   border: 1px solid var(--sheet-border);
   border-radius: 11px;
-  background: rgba(255, 255, 255, 0.56);
+  background: color-mix(in srgb, var(--atelier-surface) 56%, transparent);
   color: var(--atelier-ink);
   font-size: 10px;
   font-weight: 720;
@@ -10417,11 +10378,11 @@
   flex: 0 0 auto;
   object-fit: contain;
   border-radius: 8px;
-  background: #f2f4f6;
+  background: var(--atelier-deep);
 }
 
 .bottom-sheet .recipe-ingredient-missing {
-  border-color: rgba(255, 159, 10, 0.34) !important;
+  border-color: color-mix(in srgb, var(--atelier-amber) 34%, transparent) !important;
   color: var(--atelier-amber) !important;
 }
 
@@ -10439,16 +10400,16 @@
   gap: 9px;
   align-items: flex-start;
   padding: 11px 12px;
-  border: 1px solid rgba(255, 159, 10, 0.3);
+  border: 1px solid color-mix(in srgb, var(--atelier-amber) 30%, transparent);
   border-radius: 13px;
-  background: rgba(255, 159, 10, 0.12);
+  background: color-mix(in srgb, var(--atelier-amber) 12%, transparent);
   color: var(--atelier-amber);
 }
 
 .bottom-sheet .recipe-preference-callout,
 .bottom-sheet .recipe-date-review-callout {
-  border-color: rgba(240, 68, 82, 0.3);
-  background: rgba(240, 68, 82, 0.08);
+  border-color: color-mix(in srgb, var(--atelier-coral) 30%, transparent);
+  background: color-mix(in srgb, var(--atelier-coral) 8%, transparent);
   color: var(--atelier-coral);
 }
 
@@ -10481,7 +10442,7 @@
   padding: 12px;
   border: 1px solid var(--sheet-border);
   border-radius: 15px;
-  background: rgba(255, 255, 255, 0.72);
+  background: color-mix(in srgb, var(--atelier-surface) 72%, transparent);
 }
 
 .bottom-sheet .recipe-actions {
@@ -10512,7 +10473,7 @@
   padding: 9px;
   border: 1px solid var(--sheet-border);
   border-radius: 11px;
-  background: rgba(255, 255, 255, 0.56);
+  background: color-mix(in srgb, var(--atelier-surface) 56%, transparent);
 }
 
 .bottom-sheet .recipe-consumption-row > span {
@@ -10538,7 +10499,7 @@
   align-items: center;
   border: 1px solid var(--sheet-border-strong);
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.72);
+  background: color-mix(in srgb, var(--atelier-surface) 72%, transparent);
 }
 
 .bottom-sheet .recipe-consumption-stepper button,
@@ -10679,7 +10640,7 @@
   align-items: flex-start;
   margin: 0;
   color: var(--atelier-muted);
-  font-size: 9px;
+  font-size: 10px;
   line-height: 1.5;
 }
 
@@ -10708,7 +10669,7 @@
   padding: 11px 12px;
   border: 1px solid var(--sheet-border);
   border-radius: 13px;
-  background: rgba(255, 255, 255, 0.66);
+  background: color-mix(in srgb, var(--atelier-surface) 66%, transparent);
 }
 
 .bottom-sheet .review-summary > span,
@@ -10750,7 +10711,7 @@
   padding: 11px;
   border: 1px solid var(--sheet-border);
   border-radius: 15px;
-  background: rgba(255, 255, 255, 0.78);
+  background: color-mix(in srgb, var(--atelier-surface) 78%, transparent);
 }
 
 .bottom-sheet .receipt-source-preview-heading,
@@ -10847,7 +10808,7 @@
   padding: 10px 11px;
   border: 1px solid var(--sheet-border);
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.62);
+  background: color-mix(in srgb, var(--atelier-surface) 62%, transparent);
 }
 
 .bottom-sheet .manual-note span,
@@ -10888,7 +10849,7 @@
   overflow: hidden;
   border: 1px solid var(--sheet-border);
   border-radius: 19px;
-  background: #f2f4f6;
+  background: var(--atelier-deep);
 }
 
 .bottom-sheet .detail-image {
@@ -10920,9 +10881,9 @@
   gap: 8px;
   align-items: flex-start;
   padding: 11px 12px;
-  border: 1px solid rgba(255, 159, 10, 0.3);
+  border: 1px solid color-mix(in srgb, var(--atelier-amber) 30%, transparent);
   border-radius: 13px;
-  background: rgba(255, 159, 10, 0.12);
+  background: color-mix(in srgb, var(--atelier-amber) 12%, transparent);
   color: var(--atelier-amber);
 }
 
@@ -10950,7 +10911,7 @@
   min-height: 32px;
   flex: 0 0 auto;
   padding: 0 8px;
-  border: 1px solid rgba(255, 159, 10, 0.32);
+  border: 1px solid color-mix(in srgb, var(--atelier-amber) 32%, transparent);
   border-radius: 8px;
   background: transparent;
   color: var(--atelier-amber);
@@ -10969,7 +10930,7 @@
   padding: 12px;
   border: 1px solid var(--sheet-border);
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.78);
+  background: color-mix(in srgb, var(--atelier-surface) 78%, transparent);
 }
 
 .bottom-sheet .date-proof-card > div:not(.proof-icon),
@@ -10989,7 +10950,7 @@
   place-items: center;
   border: 1px solid var(--sheet-border);
   border-radius: 10px;
-  background: rgba(49, 130, 246, 0.12);
+  background: color-mix(in srgb, var(--atelier-pistachio) 12%, transparent);
   color: var(--atelier-pistachio);
 }
 
@@ -11033,8 +10994,8 @@
 .bottom-sheet .inference-trace-card {
   display: grid;
   gap: 9px;
-  border-color: rgba(49, 130, 246, 0.2);
-  background: rgba(49, 130, 246, 0.065);
+  border-color: color-mix(in srgb, var(--atelier-pistachio) 20%, transparent);
+  background: color-mix(in srgb, var(--atelier-pistachio) 6%, transparent);
 }
 
 .bottom-sheet .inference-trace-heading {
@@ -11051,7 +11012,7 @@
   flex: 0 0 auto;
   place-items: center;
   border-radius: 9px;
-  background: rgba(49, 130, 246, 0.13);
+  background: color-mix(in srgb, var(--atelier-pistachio) 13%, transparent);
   color: var(--atelier-pistachio);
 }
 
@@ -11280,7 +11241,7 @@
 
 .add-food-button:hover {
   border-color: transparent;
-  background: rgba(2, 32, 71, 0.0248);
+  background: color-mix(in srgb, var(--atelier-ink) 2%, transparent);
 }
 
 .add-food-plus {
@@ -11429,7 +11390,7 @@
 .bottom-sheet .history-row {
   border-color: var(--sheet-border);
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.58);
+  background: color-mix(in srgb, var(--atelier-surface) 58%, transparent);
 }
 
 .bottom-sheet .notification-row {
@@ -11441,8 +11402,8 @@
 
 .bottom-sheet .notification-row-unread,
 .bottom-sheet .notification-row:not(.notification-row-read) {
-  border-color: rgba(49, 130, 246, 0.26);
-  background: rgba(49, 130, 246, 0.07);
+  border-color: color-mix(in srgb, var(--atelier-pistachio) 26%, transparent);
+  background: color-mix(in srgb, var(--atelier-pistachio) 7%, transparent);
 }
 
 .bottom-sheet .notification-unread-dot {
@@ -11457,7 +11418,7 @@
 .bottom-sheet .detail-image-wrap,
 .bottom-sheet .recipe-art {
   border-color: var(--sheet-border);
-  background: #f2f4f6;
+  background: var(--atelier-deep);
 }
 
 .bottom-sheet .recipe-art img,
@@ -11467,12 +11428,11 @@
 
 .bottom-sheet .toast,
 .toast {
-  border-color: var(--sheet-border-strong);
+  border-color: var(--atelier-border-strong);
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.98);
+  background: var(--atelier-surface);
   color: var(--atelier-ink);
-  box-shadow: 0 18px 35px rgba(2, 32, 71, 0.1512);
-  backdrop-filter: blur(14px);
+  box-shadow: 0 18px 35px color-mix(in srgb, var(--atelier-ink) 15%, transparent);
 }
 
 .toast svg {
@@ -11480,9 +11440,9 @@
 }
 
 .toast-action {
-  border-color: var(--sheet-border-strong);
+  border-color: var(--atelier-border-strong);
   border-radius: 8px;
-  background: rgba(49, 130, 246, 0.1);
+  background: color-mix(in srgb, var(--atelier-pistachio) 10%, transparent);
   color: var(--atelier-pistachio);
 }
 
@@ -11527,22 +11487,22 @@
 .meal-home,
 .bottom-sheet,
 .app-bottom-nav {
-  --atelier-deep: #f2f4f6;
-  --atelier-ink: #191f28;
-  --atelier-soft: #333d4b;
-  --atelier-muted: #6b7684;
-  --atelier-dim: #8b95a1;
-  --atelier-on-accent: #ffffff;
-  --atelier-surface: #ffffff;
-  --atelier-surface-raised: #ffffff;
-  --atelier-border: rgba(2, 32, 71, 0.09);
-  --atelier-border-strong: rgba(2, 32, 71, 0.16);
-  --atelier-pistachio: #3182f6;
-  --atelier-pistachio-deep: #1b64da;
-  --atelier-coral: #f04452;
-  --atelier-amber: #ff9200;
-  --atelier-blue: #5e7fa0;
-  --atelier-shadow: 0 16px 40px rgba(2, 32, 71, 0.1);
+  --atelier-deep: var(--atelier-deep);
+  --atelier-ink: var(--atelier-ink);
+  --atelier-soft: var(--atelier-soft);
+  --atelier-muted: var(--atelier-muted);
+  --atelier-dim: var(--atelier-dim);
+  --atelier-on-accent: var(--atelier-surface);
+  --atelier-surface: var(--atelier-surface);
+  --atelier-surface-raised: var(--atelier-surface);
+  --atelier-border: color-mix(in srgb, var(--atelier-ink) 9%, transparent);
+  --atelier-border-strong: color-mix(in srgb, var(--atelier-ink) 16%, transparent);
+  --atelier-pistachio: var(--atelier-pistachio);
+  --atelier-pistachio-deep: var(--atelier-pistachio-deep);
+  --atelier-coral: var(--atelier-coral);
+  --atelier-amber: var(--atelier-amber);
+  --atelier-blue: var(--atelier-blue);
+  --atelier-shadow: 0 16px 40px color-mix(in srgb, var(--atelier-ink) 10%, transparent);
   --meal-ink: var(--atelier-ink);
   --meal-muted: var(--atelier-muted);
   --meal-soft: var(--atelier-dim);
@@ -11552,8 +11512,8 @@
   --meal-white: var(--atelier-surface);
   --meal-line: var(--atelier-border);
   --meal-coral: var(--atelier-coral);
-  --meal-coral-soft: rgba(240, 68, 82, 0.08);
-  --meal-blue-soft: rgba(49, 130, 246, 0.09);
+  --meal-coral-soft: color-mix(in srgb, var(--atelier-coral) 8%, transparent);
+  --meal-blue-soft: color-mix(in srgb, var(--atelier-pistachio) 9%, transparent);
   --meal-shadow: var(--atelier-shadow);
   color-scheme: light;
   font-family: "Avenir Next", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
@@ -11587,7 +11547,7 @@
 
 .app-header {
   position: relative;
-  z-index: 1;
+  z-index: 4;
   min-height: 34px;
 }
 
@@ -11604,7 +11564,7 @@
   color: var(--atelier-on-accent);
   font: 800 17px/1 "Avenir Next", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
   transform: none;
-  box-shadow: 0 5px 12px rgba(49, 130, 246, 0.13);
+  box-shadow: 0 5px 12px color-mix(in srgb, var(--atelier-pistachio) 13%, transparent);
 }
 
 .brand-name {
@@ -11614,19 +11574,19 @@
 }
 
 .header-actions {
-  gap: 8px;
+  gap: 4px;
 }
 
 .connection-pill {
   max-width: 124px;
   border-color: var(--atelier-border);
-  background: rgba(255, 255, 255, 0.92);
+  background: color-mix(in srgb, var(--atelier-surface) 92%, transparent);
   color: var(--atelier-muted);
 }
 
 .connection-connected {
-  border-color: rgba(49, 130, 246, 0.28);
-  background: rgba(255, 255, 255, 0.94);
+  border-color: color-mix(in srgb, var(--atelier-pistachio) 28%, transparent);
+  background: color-mix(in srgb, var(--atelier-surface) 94%, transparent);
   color: var(--atelier-pistachio);
 }
 
@@ -11636,9 +11596,9 @@
 
 .connection-offline,
 .connection-auth_required {
-  border-color: rgba(240, 68, 82, 0.34);
-  background: rgba(240, 68, 82, 0.08);
-  color: #f5a3ac;
+  border-color: color-mix(in srgb, var(--atelier-coral) 34%, transparent);
+  background: color-mix(in srgb, var(--atelier-coral) 8%, transparent);
+  color: var(--atelier-coral);
 }
 
 .connection-offline .connection-dot,
@@ -11649,7 +11609,7 @@
 .icon-button,
 .notification-button {
   border-color: var(--atelier-border);
-  background: rgba(255, 255, 255, 0.86);
+  background: color-mix(in srgb, var(--atelier-surface) 86%, transparent);
   color: var(--atelier-pistachio);
   box-shadow: none;
 }
@@ -11679,7 +11639,7 @@
   border-color: var(--atelier-border);
   background: var(--atelier-surface);
   color: var(--atelier-ink);
-  box-shadow: 0 12px 24px rgba(2, 32, 71, 0.0756);
+  box-shadow: 0 12px 24px color-mix(in srgb, var(--atelier-ink) 8%, transparent);
 }
 
 .install-prompt-icon,
@@ -11714,15 +11674,15 @@
 
 .install-prompt-close:hover,
 .update-prompt-later:hover:not(:disabled) {
-  background: rgba(2, 32, 71, 0.055);
+  background: color-mix(in srgb, var(--atelier-ink) 6%, transparent);
   color: var(--atelier-ink);
 }
 
 .session-expired-callout,
 .connection-retry-callout {
-  border-color: rgba(240, 68, 82, 0.34);
-  background: rgba(240, 68, 82, 0.08);
-  color: #f5a3ac;
+  border-color: color-mix(in srgb, var(--atelier-coral) 34%, transparent);
+  background: color-mix(in srgb, var(--atelier-coral) 8%, transparent);
+  color: var(--atelier-coral);
 }
 
 .session-expired-callout strong,
@@ -11732,31 +11692,31 @@
 
 .session-expired-callout small,
 .connection-retry-callout small {
-  color: #e0606d;
+  color: var(--atelier-coral);
 }
 
 .session-expired-callout button,
 .connection-retry-callout button {
-  border-color: rgba(240, 68, 82, 0.35);
+  border-color: color-mix(in srgb, var(--atelier-coral) 35%, transparent);
   background: transparent;
-  color: #f04452;
+  color: var(--atelier-coral);
 }
 
 .receipt-review-entry-card {
-  border-color: rgba(255, 159, 10, 0.32);
-  background: rgba(255, 159, 10, 0.12);
+  border-color: color-mix(in srgb, var(--atelier-amber) 32%, transparent);
+  background: color-mix(in srgb, var(--atelier-amber) 12%, transparent);
   color: var(--atelier-ink);
   box-shadow: none;
 }
 
 .receipt-review-entry-card:hover {
-  border-color: rgba(255, 159, 10, 0.52);
-  background: rgba(255, 159, 10, 0.12);
+  border-color: color-mix(in srgb, var(--atelier-amber) 52%, transparent);
+  background: color-mix(in srgb, var(--atelier-amber) 12%, transparent);
   box-shadow: none;
 }
 
 .receipt-review-entry-icon {
-  background: rgba(255, 159, 10, 0.17);
+  background: color-mix(in srgb, var(--atelier-amber) 17%, transparent);
   color: var(--atelier-amber);
 }
 
@@ -11782,7 +11742,7 @@
 .eyebrow,
 .section-kicker,
 .recipe-kicker {
-  color: var(--atelier-pistachio-deep);
+  color: var(--atelier-dim);
   font-size: 9px;
   letter-spacing: 0.19em;
 }
@@ -11799,8 +11759,6 @@
 .greeting-block h1 em {
   color: var(--atelier-pistachio);
   font-family: "Avenir Next", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
-  font-size: 1.06em;
-  font-weight: 500;
 }
 
 .mini-summary {
@@ -11981,7 +11939,7 @@
 .priority-card-accent,
 .priority-card-accent:hover {
   border-color: var(--atelier-border);
-  background: rgba(2, 32, 71, 0.0248);
+  background: color-mix(in srgb, var(--atelier-ink) 2%, transparent);
   box-shadow: none;
   transform: none;
 }
@@ -11991,7 +11949,7 @@
   height: 59px;
   border: 1px solid var(--atelier-border);
   border-radius: 14px;
-  background: #f2f4f6;
+  background: var(--atelier-deep);
 }
 
 .priority-copy {
@@ -12018,21 +11976,21 @@
 }
 
 .storage-fridge {
-  border-color: rgba(49, 130, 246, 0.18);
-  background: rgba(49, 130, 246, 0.12);
+  border-color: color-mix(in srgb, var(--atelier-pistachio) 18%, transparent);
+  background: color-mix(in srgb, var(--atelier-pistachio) 12%, transparent);
   color: var(--atelier-pistachio);
 }
 
 .storage-freezer {
-  border-color: rgba(94, 127, 160, 0.22);
-  background: rgba(94, 127, 160, 0.16);
-  color: #5e7fa0;
+  border-color: color-mix(in srgb, var(--atelier-blue) 22%, transparent);
+  background: color-mix(in srgb, var(--atelier-blue) 16%, transparent);
+  color: var(--atelier-blue);
 }
 
 .storage-room {
-  border-color: rgba(255, 159, 10, 0.2);
-  background: rgba(255, 159, 10, 0.12);
-  color: #f08c00;
+  border-color: color-mix(in srgb, var(--atelier-amber) 20%, transparent);
+  background: color-mix(in srgb, var(--atelier-amber) 12%, transparent);
+  color: var(--atelier-amber);
 }
 
 .date-source-warning {
@@ -12057,7 +12015,7 @@
 
 .priority-empty-icon,
 .inventory-empty-icon {
-  background: rgba(49, 130, 246, 0.12);
+  background: color-mix(in srgb, var(--atelier-pistachio) 12%, transparent);
   color: var(--atelier-pistachio);
 }
 
@@ -12079,11 +12037,11 @@
   border-radius: 15px;
   background: var(--atelier-pistachio);
   color: var(--atelier-on-accent);
-  box-shadow: 0 14px 25px rgba(49, 130, 246, 0.162);
+  box-shadow: 0 14px 25px color-mix(in srgb, var(--atelier-pistachio) 16%, transparent);
 }
 
 .meal-plan-button:hover {
-  background: #e8f1fe;
+  background: var(--atelier-pistachio-deep);
 }
 
 .meal-plan-icon {
@@ -12121,7 +12079,7 @@
 }
 
 .shopping-summary-icon {
-  background: rgba(94, 127, 160, 0.14);
+  background: color-mix(in srgb, var(--atelier-blue) 14%, transparent);
   color: var(--atelier-blue);
 }
 
@@ -12142,10 +12100,10 @@
 }
 
 .trust-card {
-  border-color: rgba(240, 68, 82, 0.25);
+  border-color: color-mix(in srgb, var(--atelier-coral) 25%, transparent);
   border-radius: 14px;
-  background: rgba(240, 68, 82, 0.08);
-  color: #e0606d;
+  background: color-mix(in srgb, var(--atelier-coral) 8%, transparent);
+  color: var(--atelier-coral);
 }
 
 .trust-card strong {
@@ -12153,16 +12111,16 @@
 }
 
 .trust-card small {
-  color: #e0606d;
+  color: var(--atelier-coral);
 }
 
 .trust-icon {
-  background: rgba(240, 68, 82, 0.15);
+  background: color-mix(in srgb, var(--atelier-coral) 15%, transparent);
   color: var(--atelier-coral);
 }
 
 .trust-card > svg {
-  color: #e0606d;
+  color: var(--atelier-coral);
 }
 
 .inventory-section {
@@ -12186,7 +12144,7 @@
 .inventory-search:focus-within {
   border-color: var(--atelier-pistachio-deep);
   background: var(--atelier-surface-raised);
-  box-shadow: 0 0 0 3px rgba(49, 130, 246, 0.1);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--atelier-pistachio) 10%, transparent);
 }
 
 .inventory-search-input {
@@ -12198,7 +12156,7 @@
 }
 
 .inventory-search > button {
-  background: rgba(49, 130, 246, 0.12);
+  background: color-mix(in srgb, var(--atelier-pistachio) 12%, transparent);
   color: var(--atelier-pistachio);
 }
 
@@ -12210,9 +12168,9 @@
 
 .inventory-search-error,
 .inventory-search-inline-error {
-  border-color: rgba(240, 68, 82, 0.3);
-  background: rgba(240, 68, 82, 0.08);
-  color: #e0606d;
+  border-color: color-mix(in srgb, var(--atelier-coral) 30%, transparent);
+  background: color-mix(in srgb, var(--atelier-coral) 8%, transparent);
+  color: var(--atelier-coral);
 }
 
 .inventory-search-error strong {
@@ -12222,7 +12180,7 @@
 .inventory-search-error small,
 .inventory-search-state button,
 .inventory-search-inline-error button {
-  color: #e0606d;
+  color: var(--atelier-coral);
 }
 
 .inventory-load-more {
@@ -12241,12 +12199,12 @@
 }
 
 .inventory-row:hover {
-  background: rgba(2, 32, 71, 0.0248);
+  background: color-mix(in srgb, var(--atelier-ink) 2%, transparent);
 }
 
 .inventory-image-wrap {
   border: 1px solid var(--atelier-border);
-  background: #f2f4f6;
+  background: var(--atelier-deep);
 }
 
 .inventory-status-warning {
@@ -12269,7 +12227,7 @@
 
 .add-food-button:hover {
   border-color: var(--atelier-pistachio-deep);
-  background: rgba(2, 32, 71, 0.0248);
+  background: color-mix(in srgb, var(--atelier-ink) 2%, transparent);
 }
 
 .add-food-plus {
@@ -12363,11 +12321,11 @@
   border-top: 1px solid var(--atelier-border);
   background: var(--atelier-surface);
   color: var(--atelier-ink);
-  box-shadow: 0 -18px 48px rgba(2, 32, 71, 0.1764);
+  box-shadow: 0 -18px 48px color-mix(in srgb, var(--atelier-ink) 18%, transparent);
 }
 
 .sheet-handle {
-  background: rgba(2, 32, 71, 0.231);
+  background: color-mix(in srgb, var(--atelier-ink) 23%, transparent);
 }
 
 .sheet-header {
@@ -12412,11 +12370,11 @@
   border-color: var(--atelier-pistachio);
   background: var(--atelier-pistachio);
   color: var(--atelier-on-accent);
-  box-shadow: 0 10px 22px rgba(49, 130, 246, 0.144);
+  box-shadow: 0 10px 22px color-mix(in srgb, var(--atelier-pistachio) 14%, transparent);
 }
 
 .bottom-sheet .primary-sheet-button:hover {
-  background: #e8f1fe;
+  background: var(--meal-blue-soft);
 }
 
 .bottom-sheet .secondary-sheet-button {
@@ -12427,7 +12385,7 @@
 
 .bottom-sheet .secondary-sheet-button:hover {
   border-color: var(--atelier-pistachio-deep);
-  background: rgba(2, 32, 71, 0.033);
+  background: color-mix(in srgb, var(--atelier-ink) 3%, transparent);
 }
 
 .bottom-sheet .capture-visual,
@@ -12436,7 +12394,7 @@
 .bottom-sheet .history-icon,
 .bottom-sheet .proof-icon {
   border-color: var(--atelier-border);
-  background: rgba(49, 130, 246, 0.12);
+  background: color-mix(in srgb, var(--atelier-pistachio) 12%, transparent);
   color: var(--atelier-pistachio);
 }
 
@@ -12525,9 +12483,9 @@
 .bottom-sheet .quality-callout,
 .bottom-sheet .receipt-validation-callout,
 .bottom-sheet .guidance-warning {
-  border-color: rgba(240, 68, 82, 0.28);
-  background: rgba(240, 68, 82, 0.08);
-  color: #f04452;
+  border-color: color-mix(in srgb, var(--atelier-coral) 28%, transparent);
+  background: color-mix(in srgb, var(--atelier-coral) 8%, transparent);
+  color: var(--atelier-coral);
 }
 
 .bottom-sheet .scanner-preview,
@@ -12600,15 +12558,15 @@
 .bottom-sheet .receipt-source-preview-frame,
 .bottom-sheet .label-source-preview-frame {
   border-color: var(--atelier-border-strong);
-  background: #ffffff;
+  background: #101419;
 }
 
 .bottom-sheet .scanner-preview {
-  background: #ffffff;
+  background: var(--atelier-surface);
 }
 
 .bottom-sheet .scanner-unavailable {
-  color: #f04452;
+  color: var(--atelier-coral);
 }
 
 .bottom-sheet .scanner-unavailable p {
@@ -12617,7 +12575,7 @@
 
 .bottom-sheet .camera-capture-guide {
   border-color: var(--atelier-border-strong);
-  background: rgba(255, 255, 255, 0.88);
+  background: color-mix(in srgb, var(--atelier-surface) 88%, transparent);
   color: var(--atelier-ink);
 }
 
@@ -12679,17 +12637,17 @@
 .bottom-sheet .badge-blue,
 .bottom-sheet .badge-coral {
   border: 1px solid var(--atelier-border);
-  background: rgba(49, 130, 246, 0.12);
+  background: color-mix(in srgb, var(--atelier-pistachio) 12%, transparent);
   color: var(--atelier-pistachio);
 }
 
 .bottom-sheet .badge-blue {
-  background: rgba(94, 127, 160, 0.14);
+  background: color-mix(in srgb, var(--atelier-blue) 14%, transparent);
   color: var(--atelier-blue);
 }
 
 .bottom-sheet .badge-coral {
-  background: rgba(240, 68, 82, 0.14);
+  background: color-mix(in srgb, var(--atelier-coral) 14%, transparent);
   color: var(--atelier-coral);
 }
 
@@ -12699,9 +12657,9 @@
   left: 17px;
   border-color: var(--atelier-border-strong);
   border-radius: 13px;
-  background: rgba(255, 255, 255, 0.98);
+  background: var(--atelier-surface);
   color: var(--atelier-ink);
-  box-shadow: 0 14px 30px rgba(2, 32, 71, 0.147);
+  box-shadow: 0 14px 30px color-mix(in srgb, var(--atelier-ink) 15%, transparent);
 }
 
 .toast svg {
@@ -12710,7 +12668,7 @@
 
 .toast-action {
   border-color: var(--atelier-border-strong);
-  background: rgba(49, 130, 246, 0.1);
+  background: color-mix(in srgb, var(--atelier-pistachio) 10%, transparent);
   color: var(--atelier-pistachio);
 }
 
@@ -12757,7 +12715,7 @@
   width: 10px;
   height: 10px;
   flex: 0 0 auto;
-  border: 2px solid rgba(49, 130, 246, 0.22);
+  border: 2px solid color-mix(in srgb, var(--atelier-pistachio) 22%, transparent);
   border-top-color: var(--atelier-pistachio);
   border-radius: 50%;
   animation: service-bootstrap-spin 780ms linear infinite;
@@ -12769,11 +12727,11 @@
 
 .runtime-configuration-screen,
 .runtime-error-screen {
-  --atelier-deep: #f7f8fa;
-  --atelier-ink: #191f28;
-  --atelier-muted: #6b7684;
-  --atelier-pistachio: #3182f6;
-  --atelier-pistachio-deep: #1b64da;
+  --atelier-deep: var(--atelier-deep);
+  --atelier-ink: var(--atelier-ink);
+  --atelier-muted: var(--atelier-muted);
+  --atelier-pistachio: var(--atelier-pistachio);
+  --atelier-pistachio-deep: var(--atelier-pistachio-deep);
   background: var(--atelier-deep);
   color: var(--atelier-ink);
   font-family: "Avenir Next", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
@@ -12783,7 +12741,7 @@
 .runtime-error-mark {
   background: var(--atelier-pistachio);
   color: var(--atelier-on-accent);
-  box-shadow: 0 8px 18px rgba(49, 130, 246, 0.162);
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--atelier-pistachio) 16%, transparent);
 }
 
 .runtime-configuration-kicker,
@@ -12830,12 +12788,12 @@
   border-color: var(--atelier-pistachio);
   background: var(--atelier-pistachio);
   color: var(--atelier-on-accent);
-  box-shadow: 0 10px 22px rgba(49, 130, 246, 0.144);
+  box-shadow: 0 10px 22px color-mix(in srgb, var(--atelier-pistachio) 14%, transparent);
 }
 
 .runtime-configuration-reload:hover,
 .runtime-error-reload:hover {
-  background: #e8f1fe;
+  background: var(--atelier-pistachio-deep);
 }
 
 @media (max-width: 360px) {
@@ -12946,7 +12904,7 @@
 
 .app-shell-preview .priority-card .food-image {
   object-fit: contain;
-  filter: drop-shadow(0 6px 7px rgba(2, 32, 71, 0.0924));
+  filter: drop-shadow(0 6px 7px color-mix(in srgb, var(--atelier-ink) 9%, transparent));
 }
 
 .app-shell-preview .food-name-line strong {
@@ -12980,7 +12938,7 @@
 
 .app-shell-preview .rescue-status-card {
   background: var(--atelier-surface);
-  box-shadow: 0 14px 34px rgba(2, 32, 71, 0.08);
+  box-shadow: 0 14px 34px color-mix(in srgb, var(--atelier-ink) 8%, transparent);
 }
 
 .app-shell-preview .trust-card {
@@ -12991,7 +12949,11 @@
 }
 
 .app-shell-preview .inventory-section {
-  margin-top: 180px;
+  /* Keep the pantry below the first fold without leaving a dead zone after
+     the primary action and safety note. The fixed navigation still owns the
+     bottom edge; the list begins immediately after that protected surface
+     when the user continues scrolling. */
+  margin-top: 155px;
 }
 
 /* Native iPhone webview: PhoneFrame still exposes the calibrated safe-area
@@ -13090,7 +13052,7 @@
 
 .app-shell-native .priority-card .food-image {
   object-fit: contain;
-  filter: drop-shadow(0 6px 7px rgba(2, 32, 71, 0.0924));
+  filter: drop-shadow(0 6px 7px color-mix(in srgb, var(--atelier-ink) 9%, transparent));
 }
 
 .app-shell-native .food-name-line strong {
@@ -13154,7 +13116,7 @@
 }
 
 .app-shell-native .inventory-section {
-  margin-top: 180px;
+  margin-top: 155px;
 }
 
 @media (max-width: 360px) {
@@ -13273,10 +13235,10 @@
   .meal-home,
   .bottom-sheet,
   .app-bottom-nav {
-    --atelier-muted: #4e5968;
-    --atelier-dim: #6b7684;
-    --atelier-border: rgba(2, 32, 71, 0.22);
-    --atelier-border-strong: rgba(2, 32, 71, 0.38);
+    --atelier-muted: var(--atelier-muted);
+    --atelier-dim: var(--atelier-muted);
+    --atelier-border: color-mix(in srgb, var(--atelier-ink) 22%, transparent);
+    --atelier-border-strong: color-mix(in srgb, var(--atelier-ink) 38%, transparent);
   }
 
   .meal-home .connection-pill,
@@ -13299,6 +13261,390 @@
   }
 }
 
+/* -------------------------------------------------------------------------
+   Web surface
+
+   `preview` and `native` keep the calibrated phone runtime. The default
+   browser surface is a real desktop web app: no PhoneFrame, no simulator
+   bezel, no device picker, and no phone-sized content column.
+   ------------------------------------------------------------------------- */
+
+.app-shell-web {
+  min-height: 100vh;
+  background: var(--rescue-app-background, #f2f4f6);
+}
+
+.web-runtime-surface {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  min-height: 100vh;
+  overflow: hidden;
+  background: var(--rescue-app-background, #f2f4f6);
+}
+
+.app-shell-web .mobile-scroll {
+  --keyboard-height: 0px;
+  position: absolute;
+  inset: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: auto;
+  touch-action: auto;
+  user-select: text;
+}
+
+.app-shell-web .mobile-scroll-content {
+  display: block;
+  min-height: 100%;
+  padding: 0;
+}
+
+.app-shell-web .meal-home {
+  isolation: isolate;
+  min-height: 100%;
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 48px 56px 128px;
+  overflow: visible;
+  background: var(--atelier-deep);
+}
+
+.app-shell-web .meal-home::before {
+  position: absolute;
+  z-index: -1;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 330px;
+  background: url("/assets/food/rescue-hero-background-v1.webp") right top / auto 100% no-repeat;
+  content: "";
+  opacity: 0.2;
+  pointer-events: none;
+}
+
+.app-shell-web .meal-home::after {
+  position: absolute;
+  z-index: -1;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 330px;
+  background: linear-gradient(90deg, var(--atelier-deep) 0%, color-mix(in srgb, var(--atelier-deep) 82%, transparent) 52%, transparent 100%);
+  content: "";
+  pointer-events: none;
+}
+
+.app-shell-web .app-header {
+  min-height: 44px;
+}
+
+.app-shell-web .brand-name {
+  font-size: 25px;
+}
+
+.app-shell-web .header-actions {
+  gap: 10px;
+}
+
+.app-shell-web .home-hero-copy {
+  max-width: 780px;
+  margin: 32px 0 0;
+}
+
+.app-shell-web .greeting-block {
+  display: block;
+}
+
+.app-shell-web .greeting-block h1 {
+  max-width: 680px;
+  margin-top: 18px;
+  font-size: clamp(42px, 5vw, 64px);
+  line-height: 1.06;
+}
+
+.app-shell-web .hero-description {
+  margin-top: 18px;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.app-shell-web .notification-button {
+  width: 40px;
+  height: 40px;
+}
+
+.app-shell-web .priority-section {
+  display: grid;
+  grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+  grid-template-areas:
+    "status heading"
+    "status list"
+    "status action"
+    "status add";
+  gap: 0 36px;
+  margin-top: 38px;
+}
+
+.app-shell-web .rescue-status-card {
+  grid-area: status;
+  align-self: stretch;
+  min-height: 300px;
+  padding: 26px 24px;
+}
+
+.app-shell-web .rescue-status-main > strong {
+  font-size: 92px;
+}
+
+.app-shell-web .rescue-status-description {
+  max-width: 190px;
+  font-size: 13px;
+}
+
+.app-shell-web .rescue-status-legend {
+  gap: 16px;
+  padding-left: 22px;
+}
+
+.app-shell-web .section-heading {
+  grid-area: heading;
+  margin-top: 0;
+}
+
+.app-shell-web .section-heading h2 {
+  font-size: 26px;
+}
+
+.app-shell-web .priority-list {
+  grid-area: list;
+  margin-top: 18px;
+}
+
+.app-shell-web .priority-card {
+  min-height: 84px;
+  padding: 12px 8px;
+}
+
+.app-shell-web .food-image-wrap {
+  width: 62px;
+  height: 62px;
+}
+
+.app-shell-web .food-name-line strong {
+  font-size: 15px;
+}
+
+.app-shell-web .food-subline,
+.app-shell-web .food-meta-line,
+.app-shell-web .date-source,
+.app-shell-web .priority-date {
+  font-size: 11px;
+}
+
+.app-shell-web .priority-date strong {
+  font-size: 13px;
+}
+
+.app-shell-web .meal-plan-button {
+  grid-area: action;
+  min-height: 64px;
+  margin-top: 18px;
+  border-radius: 16px;
+}
+
+.app-shell-web .add-food-button {
+  grid-area: add;
+  min-height: 52px;
+  margin-top: 10px;
+}
+
+.app-shell-web .trust-card {
+  max-width: 780px;
+  margin: 26px 0 0;
+}
+
+.app-shell-web .inventory-section {
+  max-width: none;
+  margin-top: 70px;
+  padding-top: 38px;
+  border-top: 1px solid var(--atelier-border-strong);
+}
+
+.app-shell-web .inventory-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 28px;
+}
+
+.app-shell-web .inventory-row {
+  min-height: 72px;
+}
+
+.app-shell-web .app-bottom-nav {
+  position: fixed;
+  z-index: 40;
+  top: auto;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  grid-template-columns: none;
+  justify-content: flex-end;
+  gap: 8px;
+  min-height: 72px;
+  padding: 10px 56px;
+  border-top: 1px solid var(--atelier-border);
+  border-bottom: 0;
+  background: color-mix(in srgb, var(--atelier-deep) 88%, transparent);
+  backdrop-filter: blur(18px);
+}
+
+.app-shell-web .app-bottom-nav-item {
+  min-width: 74px;
+  min-height: 52px;
+  padding: 6px 12px 10px;
+  border-radius: 12px;
+}
+
+.app-shell-web .app-bottom-nav-item-active::after {
+  right: 18px;
+  bottom: 4px;
+  left: 18px;
+}
+
+.app-shell-web .sheet-overlay {
+  position: fixed;
+  z-index: 1000;
+  inset: 0;
+  background: rgba(9, 14, 20, 0.46);
+  backdrop-filter: blur(3px);
+}
+
+.app-shell-web .bottom-sheet {
+  position: fixed;
+  z-index: 1001;
+  top: 24px;
+  right: auto;
+  bottom: 24px !important;
+  left: 50%;
+  width: min(680px, calc(100vw - 48px));
+  max-height: calc(100vh - 48px) !important;
+  border-radius: 24px;
+  translate: -50% 0;
+  touch-action: auto;
+}
+
+.app-shell-web .sheet-handle-zone {
+  height: 18px;
+}
+
+.app-shell-web .sheet-handle {
+  width: 44px;
+  height: 4px;
+}
+
+.app-shell-web .sheet-header {
+  padding: 12px 28px 20px;
+}
+
+.app-shell-web .sheet-content {
+  padding-right: 28px;
+  padding-left: 28px;
+}
+
+.app-shell-web .toast {
+  position: fixed;
+  z-index: 1100;
+  right: 28px;
+  bottom: 28px;
+  left: auto;
+  width: min(420px, calc(100vw - 56px));
+}
+
+@media (max-width: 860px) {
+  .app-shell-web .meal-home {
+    padding-right: 28px;
+    padding-left: 28px;
+  }
+
+  .app-shell-web .app-bottom-nav {
+    padding-right: 28px;
+    padding-left: 28px;
+  }
+
+  .app-shell-web .priority-section {
+    grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+    gap: 0 24px;
+  }
+}
+
+@media (max-width: 700px) {
+  .app-shell-web .meal-home {
+    padding: 72px 20px 104px;
+  }
+
+  .app-shell-web .greeting-block h1 {
+    font-size: 38px;
+  }
+
+  .app-shell-web .priority-section {
+    display: block;
+    margin-top: 34px;
+  }
+
+  .app-shell-web .rescue-status-card {
+    min-height: 220px;
+  }
+
+  .app-shell-web .section-heading {
+    margin-top: 28px;
+  }
+
+  .app-shell-web .meal-plan-button,
+  .app-shell-web .add-food-button {
+    margin-top: 14px;
+  }
+
+  .app-shell-web .inventory-list {
+    grid-template-columns: 1fr;
+  }
+
+  .app-shell-web .app-bottom-nav {
+    justify-content: center;
+    padding-right: 12px;
+    padding-left: 12px;
+  }
+
+  .app-shell-web .app-bottom-nav-item {
+    min-width: 68px;
+  }
+}
+
+/* When the native/mobile surface is opened in a desktop browser for review,
+   keep the mobile composition at a phone-width canvas without painting a
+   phone mockup around it. On an actual <=393px device this media query does
+   not change the full-width native webview layout. */
+@media (min-width: 480px) {
+  .app-shell-native .phone-stage {
+    width: 393px;
+    margin-right: auto;
+    margin-left: auto;
+    padding: 0;
+  }
+
+  .app-shell-native .phone-scale-box,
+  .app-shell-native .phone-device,
+  .app-shell-native .device-screen {
+    width: 100% !important;
+    max-width: 393px;
+  }
+
+  .app-shell-native .phone-scale-box {
+    height: 100% !important;
+  }
+}
+
 /* Large-text baseline
 
    Keep the selected 1x composition unchanged while allowing a browser or
@@ -13312,7 +13658,7 @@ html {
 
 .app-shell-preview .brand-name,
 .app-shell-native .brand-name {
-  font-size: 1.625rem;
+  font-size: 1.5rem;
 }
 
 .app-shell-preview .greeting-block h1,
@@ -13322,7 +13668,7 @@ html {
 
 .app-shell-preview .hero-description,
 .app-shell-native .hero-description {
-  font-size: 0.5625rem;
+  font-size: 0.625rem;
 }
 
 .app-shell-preview .rescue-status-main > strong,
@@ -13346,7 +13692,7 @@ html {
 .app-shell-native .food-subline,
 .app-shell-native .food-meta-line,
 .app-shell-native .date-source {
-  font-size: 0.4375rem;
+  font-size: 0.5rem;
 }
 
 .app-shell-preview .priority-date strong,
@@ -13388,7 +13734,14 @@ html {
 
   .app-shell-preview .hero-description,
   .app-shell-native .hero-description {
-    font-size: 0.5rem;
+    font-size: 0.5625rem;
+  }
+
+  .app-shell-preview .mobile-hero-notification,
+  .app-shell-native .mobile-hero-notification {
+    position: absolute;
+    top: 62px;
+    right: 0;
   }
 
   .app-shell-preview .rescue-status-main > strong,
@@ -13459,12 +13812,6 @@ html {
   margin-top: 0;
 }
 
-.app-shell-preview .trust-card,
-.app-shell-native .trust-card {
-  margin-top: 1px;
-  min-height: 39px;
-}
-
 .bottom-sheet .mode-tab,
 .bottom-sheet .account-tab,
 .bottom-sheet .storage-option,
@@ -13496,7 +13843,7 @@ html {
   height: 25px;
   border: 1px solid var(--sheet-border-strong);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.8);
+  background: color-mix(in srgb, var(--atelier-surface) 80%, transparent);
   content: "";
 }
 
@@ -13509,7 +13856,7 @@ html {
 
 .bottom-sheet .toggle-on::before {
   border-color: var(--atelier-pistachio);
-  background: rgba(49, 130, 246, 0.3);
+  background: color-mix(in srgb, var(--atelier-pistachio) 30%, transparent);
 }
 
 .bottom-sheet .notification-read-all {
@@ -13667,7 +14014,8 @@ html[data-rescue-theme="dark"] .app-screen .mobile-scroll-content {
 
 html[data-rescue-theme="light"] .meal-home,
 html[data-rescue-theme="light"] .bottom-sheet,
-html[data-rescue-theme="light"] .app-bottom-nav {
+html[data-rescue-theme="light"] .app-bottom-nav,
+html[data-rescue-theme="light"] .toast {
   --atelier-deep: #f2f4f6;
   --atelier-ink: #191f28;
   --atelier-soft: #333d4b;
@@ -13700,7 +14048,8 @@ html[data-rescue-theme="light"] .app-bottom-nav {
 
 html[data-rescue-theme="dark"] .meal-home,
 html[data-rescue-theme="dark"] .bottom-sheet,
-html[data-rescue-theme="dark"] .app-bottom-nav {
+html[data-rescue-theme="dark"] .app-bottom-nav,
+html[data-rescue-theme="dark"] .toast {
   --atelier-deep: #101419;
   --atelier-ink: #f5f3ee;
   --atelier-soft: #d6dee9;
@@ -13733,16 +14082,7 @@ html[data-rescue-theme="dark"] .app-bottom-nav {
 
 html[data-rescue-theme="light"] .meal-home {
   background-color: #f2f4f6;
-  background-image: linear-gradient(180deg, rgba(242, 244, 246, 0.04) 0, rgba(242, 244, 246, 0.82) 350px, #f2f4f6 610px);
-}
-
-html[data-rescue-theme="light"] .meal-home::before {
-  background-image: linear-gradient(180deg, rgba(242, 244, 246, 0.02) 0%, rgba(242, 244, 246, 0.28) 48%, #f2f4f6 100%), url("/assets/food/rescue-hero-background-v1.webp");
-  opacity: 0.7;
-}
-
-html[data-rescue-theme="light"] .meal-home::after {
-  background: linear-gradient(90deg, rgba(242, 244, 246, 0.88), rgba(242, 244, 246, 0.08) 74%);
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.85) 0, rgba(255, 255, 255, 0) 340px);
 }
 
 html[data-rescue-theme="dark"] .meal-home {
@@ -13750,18 +14090,9 @@ html[data-rescue-theme="dark"] .meal-home {
   background-image: linear-gradient(180deg, rgba(16, 20, 25, 0.04) 0, rgba(16, 20, 25, 0.9) 355px, #101419 610px);
 }
 
-html[data-rescue-theme="dark"] .meal-home::before {
-  background-image: linear-gradient(180deg, rgba(16, 20, 25, 0.04) 0%, rgba(16, 20, 25, 0.18) 48%, #101419 100%), url("/assets/food/rescue-hero-background-v1.webp");
-  opacity: 0.9;
-}
-
-html[data-rescue-theme="dark"] .meal-home::after {
-  background: linear-gradient(90deg, rgba(16, 20, 25, 0.72), rgba(16, 20, 25, 0.06) 74%);
-}
-
 html[data-rescue-theme="light"] .meal-home .connection-pill {
   border-color: rgba(2, 32, 71, 0.1);
-  background: rgba(255, 255, 255, 0.92);
+  background: color-mix(in srgb, var(--atelier-surface) 92%, transparent);
   color: var(--atelier-muted);
 }
 
@@ -13800,13 +14131,13 @@ html[data-rescue-theme="dark"] .meal-home .connection-auth_required {
 html[data-rescue-theme="light"] .meal-home .icon-button,
 html[data-rescue-theme="light"] .meal-home .notification-button {
   border-color: rgba(2, 32, 71, 0.1);
-  background: rgba(255, 255, 255, 0.9);
+  background: color-mix(in srgb, var(--atelier-surface) 90%, transparent);
   color: var(--atelier-pistachio-deep);
   box-shadow: 0 8px 18px rgba(2, 32, 71, 0.08);
 }
 
 html[data-rescue-theme="light"] .meal-home .notification-button {
-  background: rgba(255, 255, 255, 0.74);
+  background: color-mix(in srgb, var(--atelier-surface) 74%, transparent);
 }
 
 html[data-rescue-theme="dark"] .meal-home .icon-button,
@@ -13933,7 +14264,7 @@ html[data-rescue-theme="dark"] .meal-home .meal-plan-icon {
 
 html[data-rescue-theme="light"] .meal-home .trust-card {
   border-color: rgba(2, 32, 71, 0.1);
-  background: #ffffff;
+  background: var(--atelier-surface);
   color: var(--atelier-muted);
 }
 
@@ -13948,9 +14279,9 @@ html[data-rescue-theme="light"] .meal-home .trust-icon {
 }
 
 html[data-rescue-theme="dark"] .meal-home .trust-card {
-  border-color: rgba(255, 128, 111, 0.25);
-  background: rgba(255, 128, 111, 0.1);
-  color: #d8b0a8;
+  border-color: var(--atelier-border);
+  background: rgba(27, 34, 43, 0.88);
+  color: var(--atelier-muted);
 }
 
 html[data-rescue-theme="dark"] .meal-home .trust-card strong {
@@ -13958,11 +14289,11 @@ html[data-rescue-theme="dark"] .meal-home .trust-card strong {
 }
 
 html[data-rescue-theme="dark"] .meal-home .trust-card small {
-  color: #c59d95;
+  color: var(--atelier-muted);
 }
 
 html[data-rescue-theme="dark"] .meal-home .trust-icon {
-  background: rgba(255, 128, 111, 0.15);
+  background: rgba(255, 128, 111, 0.13);
   color: var(--atelier-coral);
 }
 
@@ -14027,4 +14358,1028 @@ html[data-rescue-theme="dark"] .toast {
   background: rgba(27, 34, 43, 0.98);
   color: var(--atelier-ink);
   box-shadow: 0 14px 30px rgba(0, 0, 0, 0.35);
+}
+
+@media (prefers-contrast: more) {
+  html[data-rescue-theme="light"] .meal-home,
+  html[data-rescue-theme="light"] .bottom-sheet,
+  html[data-rescue-theme="light"] .app-bottom-nav {
+    --atelier-muted: #4e5968;
+    --atelier-dim: #6b7684;
+    --atelier-border: rgba(2, 32, 71, 0.22);
+    --atelier-border-strong: rgba(2, 32, 71, 0.38);
+  }
+
+  html[data-rescue-theme="dark"] .meal-home,
+  html[data-rescue-theme="dark"] .bottom-sheet,
+  html[data-rescue-theme="dark"] .app-bottom-nav {
+    --atelier-muted: #b7c8bf;
+    --atelier-dim: #94aaa0;
+    --atelier-border: rgba(235, 246, 238, 0.38);
+    --atelier-border-strong: rgba(235, 246, 238, 0.58);
+  }
+}
+
+/* Pantry navigation pass -------------------------------------------------
+   Keep the list controls within reach while a user scans a longer pantry.
+   The app content is allowed to remain visible outside the home surface so
+   sticky positioning can use the real MobileScroll root on preview/native. */
+
+.app-shell-preview .meal-home,
+.app-shell-native .meal-home {
+  overflow: visible;
+}
+
+.inventory-toolbar {
+  position: sticky;
+  z-index: 8;
+  top: 0;
+  padding: 10px 0 12px;
+  background: color-mix(in srgb, var(--atelier-deep) 91%, transparent);
+  box-shadow: 0 10px 18px color-mix(in srgb, var(--atelier-deep) 12%, transparent);
+  backdrop-filter: blur(16px);
+}
+
+.inventory-toolbar::after {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 1px;
+  background: var(--atelier-border);
+  content: "";
+  pointer-events: none;
+}
+
+.inventory-toolbar .inventory-heading {
+  margin-top: 0;
+}
+
+.inventory-toolbar .inventory-search {
+  margin-top: 10px;
+}
+
+@media (max-width: 700px) {
+  .inventory-toolbar {
+    padding-top: 8px;
+    padding-bottom: 10px;
+  }
+}
+
+.inventory-filter-summary {
+  display: flex;
+  min-width: 0;
+  min-height: 32px;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 2px 0;
+  color: var(--atelier-muted);
+  font-size: 9px;
+  line-height: 1.3;
+}
+
+.inventory-filter-summary > span {
+  display: inline-flex;
+  min-width: 0;
+  gap: 6px;
+  align-items: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.inventory-filter-summary > span i {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--atelier-pistachio);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--atelier-pistachio) 11%, transparent);
+}
+
+.inventory-filter-summary button {
+  min-height: 32px;
+  flex: 0 0 auto;
+  padding: 4px 0 4px 8px;
+  border: 0;
+  background: transparent;
+  color: var(--atelier-pistachio);
+  font: inherit;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.inventory-filter-summary button:focus-visible {
+  outline: 2px solid var(--atelier-pistachio);
+  outline-offset: 2px;
+  border-radius: 5px;
+}
+
+/* While the preview keyboard owns the lower viewport, destination switching
+   is temporarily secondary to text entry. Hide the sibling app nav from both
+   hit testing and the accessibility tree instead of leaving it underneath the
+   keyboard layer. The native webview keeps its real system-keyboard contract. */
+
+.app-shell-preview .mobile-page[data-keyboard-visible="true"] ~ .app-bottom-nav {
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(8px);
+}
+
+.inventory-search-loading {
+  min-height: 48px;
+  justify-content: flex-start;
+}
+
+.inventory-search-loading-icon {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--atelier-pistachio) 11%, transparent);
+  color: var(--atelier-pistachio);
+  animation: inventory-search-loading-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes inventory-search-loading-pulse {
+  0%,
+  100% {
+    opacity: 0.58;
+    transform: scale(0.96);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .inventory-search-loading-icon {
+    animation: none;
+  }
+}
+
+/* Keep the two primary food-state actions within reach while the user reads
+   provenance, date evidence, and storage history. The safe-area-aware bottom
+   offset belongs to the app-owned action bar; the sheet content remains the
+   scroll owner and the destructive action stays below it in normal flow. */
+
+.bottom-sheet .detail-actions {
+  position: sticky;
+  z-index: 4;
+  bottom: var(--device-safe-area-bottom, 0px);
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: blur(14px);
+  transition: background 160ms ease, box-shadow 160ms ease;
+}
+
+.detail-actions-sentinel {
+  display: block;
+  width: 100%;
+  height: 0;
+  pointer-events: none;
+}
+
+.detail-actions-anchor {
+  display: grid;
+  min-width: 0;
+  gap: 0;
+}
+
+.bottom-sheet .detail-actions.detail-actions-stuck {
+  background: color-mix(in srgb, var(--sheet-surface) 92%, transparent);
+  box-shadow: inset 0 1px 0 var(--sheet-border), 0 -10px 20px color-mix(in srgb, var(--atelier-ink) 8%, transparent);
+}
+
+.bottom-sheet .detail-actions.detail-actions-stuck.detail-actions-scroll-down {
+  background: color-mix(in srgb, var(--sheet-surface) 78%, transparent);
+  box-shadow: inset 0 1px 0 var(--sheet-border), 0 -4px 10px color-mix(in srgb, var(--atelier-ink) 5%, transparent);
+}
+
+/* Give every sheet a discoverable escape hatch in addition to drag, backdrop,
+   and Escape-key dismissal. Keep the header text column clear of the 44px
+   control so long localized titles do not collide with the close affordance. */
+.bottom-sheet .sheet-header {
+  position: relative;
+  padding-right: 64px;
+}
+
+.bottom-sheet .sheet-close-button {
+  position: absolute;
+  top: 50%;
+  right: 16px;
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--atelier-border);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--atelier-surface) 78%, transparent);
+  color: var(--atelier-muted);
+  transform: translateY(-50%);
+  transition: border-color 160ms ease, background 160ms ease, color 160ms ease, transform 160ms ease;
+}
+
+.bottom-sheet .sheet-close-button:hover {
+  border-color: var(--atelier-border-strong);
+  background: var(--atelier-surface-raised);
+  color: var(--atelier-ink);
+}
+
+.bottom-sheet .sheet-close-button:active {
+  transform: translateY(-50%) scale(0.95);
+}
+
+/* Short native screens need the first mutation CTA to clear the app-owned
+   navigation as well as the system safe area. Keep the selected 393x852
+   composition untouched; on a 720px-ish screen reduce only the supporting
+   status/queue density so the primary meal-plan action is fully tappable in
+   the first viewport. */
+@media (min-width: 361px) and (max-height: 760px) {
+  .app-shell-preview .rescue-status-card,
+  .app-shell-native .rescue-status-card {
+    min-height: 156px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+
+  .app-shell-preview .rescue-status-main > strong,
+  .app-shell-native .rescue-status-main > strong {
+    font-size: 57px;
+  }
+
+  .app-shell-preview .meal-home-data-unknown .rescue-status-card,
+  .app-shell-native .meal-home-data-unknown .rescue-status-card {
+    min-height: 151px;
+    padding-top: 5px;
+    padding-bottom: 5px;
+  }
+
+  .app-shell-preview .rescue-status-legend,
+  .app-shell-native .rescue-status-legend {
+    gap: 7px;
+    padding-left: 12px;
+  }
+
+  .app-shell-preview .priority-card,
+  .app-shell-native .priority-card {
+    min-height: 54px;
+    padding-top: 3px;
+    padding-bottom: 3px;
+  }
+
+  .app-shell-preview .food-image-wrap,
+  .app-shell-native .food-image-wrap {
+    width: 40px;
+    height: 40px;
+  }
+
+  .app-shell-preview .priority-copy,
+  .app-shell-native .priority-copy {
+    gap: 2px;
+  }
+}
+
+/* A zero-result search removes the rows that previously provided scroll
+   length. Preserve the pantry destination anchor with an empty-state section
+   min-height so MobileScroll can still place its sticky toolbar at the top;
+   the empty card itself keeps its calm, content-sized treatment. */
+.app-shell-preview .inventory-section-empty-result,
+.app-shell-native .inventory-section-empty-result {
+  min-height: max(522px, calc(100vh - 198px));
+  min-height: max(522px, calc(100dvh - 198px));
+}
+
+/* Unknown inventory is not the same as an empty inventory. Use the existing
+   amber status language for the recovery copy while keeping the normal empty
+   result treatment reserved for a confirmed zero-result search. */
+.meal-home .priority-unknown-state,
+.meal-home .inventory-unknown-state {
+  border-color: color-mix(in srgb, var(--atelier-amber) 30%, var(--atelier-border));
+  background: color-mix(in srgb, var(--atelier-amber) 6%, var(--atelier-surface));
+}
+
+.meal-home .priority-unknown-state .priority-empty-icon,
+.meal-home .inventory-unknown-state .inventory-empty-icon {
+  background: color-mix(in srgb, var(--atelier-amber) 16%, transparent);
+  color: var(--atelier-amber);
+}
+
+.meal-home .priority-unknown-state .priority-empty-copy strong,
+.meal-home .inventory-unknown-state .inventory-empty-copy strong {
+  color: var(--atelier-ink);
+}
+
+.meal-home .priority-unknown-state .priority-empty-copy small,
+.meal-home .inventory-unknown-state .inventory-empty-copy small,
+.meal-home .inventory-unknown-state .inventory-empty-action {
+  color: var(--atelier-muted);
+}
+
+/* Cached dashboard details remain readable, but every durable mutation waits
+   for a live connection. Keep the explanation close to the affected controls
+   so a disabled state is a product rule, not an unexplained grey button. */
+.bottom-sheet .detail-read-only-callout,
+.bottom-sheet .detail-read-only-inline-note {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+  margin: 0;
+  padding: 11px 12px;
+  border: 1px solid color-mix(in srgb, var(--atelier-blue) 30%, var(--sheet-border));
+  border-radius: 13px;
+  background: color-mix(in srgb, var(--atelier-blue) 8%, var(--sheet-surface));
+  color: var(--atelier-blue);
+}
+
+.bottom-sheet .detail-read-only-callout > span,
+.bottom-sheet .detail-read-only-inline-note > span {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.bottom-sheet .detail-read-only-callout strong,
+.bottom-sheet .detail-read-only-inline-note strong {
+  color: var(--atelier-ink);
+  font-size: 10px;
+}
+
+.bottom-sheet .detail-read-only-callout small,
+.bottom-sheet .detail-read-only-inline-note small {
+  color: var(--atelier-muted);
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.bottom-sheet .detail-actions.detail-actions-read-only {
+  display: flex;
+  min-height: 0;
+  gap: 9px;
+  align-items: flex-start;
+  padding: 11px 12px;
+  border: 1px solid color-mix(in srgb, var(--atelier-blue) 30%, var(--sheet-border));
+  border-radius: 15px;
+  background: color-mix(in srgb, var(--atelier-blue) 8%, var(--sheet-surface));
+  color: var(--atelier-blue);
+}
+
+.bottom-sheet .detail-actions.detail-actions-read-only > span {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.bottom-sheet .detail-actions.detail-actions-read-only strong {
+  color: var(--atelier-ink);
+  font-size: 10px;
+}
+
+.bottom-sheet .detail-actions.detail-actions-read-only small {
+  color: var(--atelier-muted);
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.bottom-sheet .detail-read-only-danger {
+  border-color: color-mix(in srgb, var(--atelier-coral) 30%, var(--sheet-border));
+  background: color-mix(in srgb, var(--atelier-coral) 8%, var(--sheet-surface));
+  color: var(--atelier-coral);
+}
+
+.bottom-sheet .storage-option:disabled,
+.bottom-sheet .product-info-edit-button:disabled,
+.bottom-sheet .quantity-stepper button:disabled,
+.bottom-sheet .opened-row .toggle:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+/* Let the compact cached-age badge carry a calibrated urgency cue. The
+   callout remains the authoritative copy; this tier only changes the header
+   pill's visual weight so a long-offline snapshot is not mistaken for a
+   recently cached one. */
+html[data-rescue-theme="light"] .meal-home .connection-offline-recent {
+  border-color: rgba(255, 146, 0, 0.28);
+  background: rgba(255, 146, 0, 0.08);
+  color: #a35f00;
+}
+
+html[data-rescue-theme="light"] .meal-home .connection-offline-stale {
+  border-color: rgba(240, 68, 82, 0.34);
+  background: rgba(240, 68, 82, 0.1);
+  color: #c93442;
+}
+
+html[data-rescue-theme="light"] .meal-home .connection-offline-old {
+  border-color: rgba(182, 38, 53, 0.5);
+  background: rgba(240, 68, 82, 0.16);
+  color: #b62635;
+  box-shadow: 0 0 0 2px rgba(240, 68, 82, 0.06);
+}
+
+html[data-rescue-theme="dark"] .meal-home .connection-offline-recent {
+  border-color: rgba(242, 193, 90, 0.34);
+  background: rgba(242, 193, 90, 0.12);
+  color: #f2c15a;
+}
+
+html[data-rescue-theme="dark"] .meal-home .connection-offline-stale {
+  border-color: rgba(255, 128, 111, 0.38);
+  background: rgba(255, 128, 111, 0.14);
+  color: #ffb3a6;
+}
+
+html[data-rescue-theme="dark"] .meal-home .connection-offline-old {
+  border-color: rgba(255, 128, 111, 0.56);
+  background: rgba(255, 128, 111, 0.2);
+  color: #ffc0b5;
+  box-shadow: 0 0 0 2px rgba(255, 128, 111, 0.08);
+}
+
+/* Compound meal safety states deserve one readable decision surface. Keep
+   each message's existing selector and semantics, but give the user one
+   heading/count before the individual checks stack below it. */
+.bottom-sheet .recipe-safety-summary {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--atelier-amber) 32%, var(--sheet-border));
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--atelier-amber) 7%, var(--sheet-surface));
+  color: var(--atelier-amber);
+}
+
+.bottom-sheet .recipe-safety-summary-heading {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+}
+
+.bottom-sheet .recipe-safety-summary-icon {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--atelier-amber) 16%, transparent);
+  color: var(--atelier-amber);
+}
+
+.bottom-sheet .recipe-safety-summary-heading > span:nth-child(2) {
+  display: grid;
+  min-width: 0;
+  flex: 1 1 auto;
+  gap: 2px;
+}
+
+.bottom-sheet .recipe-safety-summary-heading strong {
+  color: var(--atelier-ink);
+  font-size: 11px;
+  font-weight: 820;
+}
+
+.bottom-sheet .recipe-safety-summary-heading small {
+  color: var(--atelier-muted);
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+.bottom-sheet .recipe-safety-summary-heading em {
+  flex: 0 0 auto;
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--atelier-amber) 16%, transparent);
+  color: var(--atelier-amber);
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 820;
+  white-space: nowrap;
+}
+
+.bottom-sheet .recipe-safety-summary-list {
+  display: grid;
+  gap: 6px;
+}
+
+.bottom-sheet .recipe-safety-summary-list .recipe-safety-summary-item {
+  gap: 8px;
+  padding: 9px 10px;
+  border-radius: 11px;
+}
+
+.bottom-sheet .recipe-safety-summary-list .recipe-date-review-callout,
+.bottom-sheet .recipe-safety-summary-list .recipe-preference-callout {
+  border-color: color-mix(in srgb, var(--atelier-coral) 28%, var(--sheet-border));
+  background: color-mix(in srgb, var(--atelier-coral) 7%, var(--sheet-surface));
+  color: var(--atelier-coral);
+}
+
+.bottom-sheet .recipe-safety-summary-list .recipe-missing-callout,
+.bottom-sheet .recipe-safety-summary-list .recipe-allergen-callout {
+  border-color: color-mix(in srgb, var(--atelier-amber) 28%, var(--sheet-border));
+  background: color-mix(in srgb, var(--atelier-amber) 7%, var(--sheet-surface));
+  color: var(--atelier-amber);
+}
+
+.bottom-sheet .recipe-safety-summary-list .recipe-safety-summary-item > svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+
+.bottom-sheet .recipe-safety-summary-list .recipe-safety-summary-item > span {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.bottom-sheet .recipe-safety-summary-list .recipe-safety-summary-item strong {
+  color: var(--atelier-ink);
+  font-size: 10px;
+}
+
+.bottom-sheet .recipe-safety-summary-list .recipe-safety-summary-item small {
+  color: var(--atelier-muted);
+  font-size: 9px;
+  line-height: 1.42;
+}
+
+/* Date review is an execution-blocking safety state. Keep the evidence card,
+   the warning, and the user-confirmed date action visually adjacent, with the
+   amber pending treatment shared by both theme modes. */
+.bottom-sheet .date-edit-button {
+  display: flex;
+  min-height: 48px;
+  gap: 9px;
+  align-items: center;
+  padding: 11px 12px;
+  border: 1px solid color-mix(in srgb, var(--atelier-amber) 34%, var(--sheet-border));
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--atelier-amber) 8%, var(--sheet-surface));
+  color: var(--atelier-amber);
+  text-align: left;
+}
+
+.bottom-sheet .date-edit-button > span {
+  display: grid;
+  min-width: 0;
+  flex: 1 1 auto;
+  gap: 3px;
+}
+
+.bottom-sheet .date-edit-button > svg {
+  flex: 0 0 auto;
+}
+
+.bottom-sheet .date-edit-button > svg:last-child {
+  color: var(--atelier-amber);
+}
+
+.bottom-sheet .date-edit-button strong {
+  color: var(--atelier-ink);
+  font-size: 11px;
+  font-weight: 820;
+}
+
+.bottom-sheet .date-edit-button small {
+  overflow: visible;
+  color: var(--atelier-muted);
+  font-size: 9px;
+  line-height: 1.42;
+  text-overflow: clip;
+  white-space: normal;
+}
+
+.bottom-sheet .date-edit-button:hover {
+  border-color: color-mix(in srgb, var(--atelier-amber) 52%, var(--sheet-border));
+  background: color-mix(in srgb, var(--atelier-amber) 12%, var(--sheet-surface));
+}
+
+.bottom-sheet .detail-section-pending {
+  border-color: color-mix(in srgb, var(--atelier-pistachio) 36%, var(--sheet-border));
+  background: color-mix(in srgb, var(--atelier-pistachio) 5%, var(--sheet-surface));
+}
+
+.bottom-sheet .detail-section-status-pending {
+  color: var(--atelier-pistachio);
+  font-weight: 800;
+}
+
+.bottom-sheet .detail-save-pending {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--atelier-pistachio) 12%, transparent), 0 10px 22px color-mix(in srgb, var(--atelier-pistachio) 18%, transparent);
+}
+
+/* Destructive cleanup stays available after the primary state actions, but a
+   quiet outlined surface makes its meaning scannable without competing with
+   the save/consume controls. */
+.bottom-sheet .danger-text-button {
+  border: 1px solid color-mix(in srgb, var(--atelier-coral) 28%, var(--sheet-border));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--atelier-coral) 5%, var(--sheet-surface));
+}
+
+.bottom-sheet .danger-text-button:hover {
+  border-color: color-mix(in srgb, var(--atelier-coral) 42%, var(--sheet-border));
+  background: color-mix(in srgb, var(--atelier-coral) 9%, var(--sheet-surface));
+}
+
+.bottom-sheet .discard-confirm {
+  border-color: color-mix(in srgb, var(--atelier-coral) 34%, var(--sheet-border));
+  background: color-mix(in srgb, var(--atelier-coral) 9%, var(--sheet-surface));
+}
+
+.bottom-sheet .discard-confirm strong {
+  color: var(--atelier-ink);
+}
+
+.bottom-sheet .discard-confirm small {
+  color: var(--atelier-muted);
+}
+
+.bottom-sheet .manual-source-confirmation {
+  border-color: color-mix(in srgb, var(--atelier-blue) 30%, var(--sheet-border));
+  background: color-mix(in srgb, var(--atelier-blue) 6%, var(--atelier-surface));
+}
+
+.bottom-sheet .manual-source-confirmation em {
+  flex: 0 0 auto;
+  padding: 4px 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--atelier-blue) 14%, transparent);
+  color: var(--atelier-blue);
+  font-size: 8px;
+  font-style: normal;
+  font-weight: 820;
+  white-space: nowrap;
+}
+
+.bottom-sheet .receipt-line-card-editing {
+  border-color: color-mix(in srgb, var(--atelier-pistachio) 34%, var(--sheet-border));
+  background: color-mix(in srgb, var(--atelier-pistachio) 6%, var(--atelier-surface));
+  box-shadow: inset 3px 0 var(--atelier-pistachio);
+}
+
+.bottom-sheet .receipt-line-card-editing .receipt-line-edit-button {
+  border-color: color-mix(in srgb, var(--atelier-pistachio) 38%, var(--sheet-border));
+  background: color-mix(in srgb, var(--atelier-pistachio) 12%, var(--atelier-surface));
+  color: var(--atelier-pistachio-deep);
+}
+
+.bottom-sheet .receipt-review-submit-bar {
+  position: sticky;
+  z-index: 5;
+  bottom: var(--device-safe-area-bottom, 0px);
+  margin-top: 4px;
+  padding: 8px 0 4px;
+  border-top: 1px solid var(--sheet-border);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--atelier-surface) 0%, transparent), color-mix(in srgb, var(--atelier-surface) 92%, transparent) 35%, var(--atelier-surface) 100%);
+  box-shadow: 0 -12px 22px color-mix(in srgb, var(--atelier-ink) 11%, transparent);
+  backdrop-filter: blur(14px);
+}
+
+.bottom-sheet .receipt-review-submit-bar .primary-sheet-button {
+  width: 100%;
+  box-shadow: 0 10px 22px color-mix(in srgb, var(--atelier-pistachio) 14%, transparent);
+}
+
+/* Label review shares the receipt footer treatment, but remains in normal
+   flow so its card fields stay visually before the commit action. */
+.bottom-sheet .label-result-action-bar {
+  position: static;
+}
+
+.bottom-sheet .receipt-line-source-button {
+  min-width: 48px;
+  border-color: color-mix(in srgb, var(--atelier-blue) 30%, var(--sheet-border));
+  background: color-mix(in srgb, var(--atelier-blue) 7%, var(--atelier-surface));
+  color: var(--atelier-blue);
+}
+
+/* Attention and shopping use the same compact decision language: a short
+   status summary first, then the row-level action. */
+.bottom-sheet .notification-summary {
+  display: flex;
+  min-width: 0;
+  gap: 9px;
+  align-items: flex-start;
+  padding: 12px;
+  border: 1px solid var(--sheet-border);
+  border-radius: 15px;
+  background: color-mix(in srgb, var(--atelier-surface) 78%, transparent);
+}
+
+.bottom-sheet .notification-summary-action {
+  border-color: color-mix(in srgb, var(--atelier-pistachio) 30%, var(--sheet-border));
+  background: color-mix(in srgb, var(--atelier-pistachio) 8%, var(--atelier-surface));
+}
+
+.bottom-sheet .notification-summary-icon {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--atelier-pistachio) 14%, transparent);
+  color: var(--atelier-pistachio);
+}
+
+.bottom-sheet .notification-summary > span:nth-child(2) {
+  display: grid;
+  min-width: 0;
+  flex: 1 1 auto;
+  gap: 3px;
+}
+
+.bottom-sheet .notification-summary strong {
+  color: var(--atelier-ink);
+  font-size: 11px;
+  font-weight: 820;
+}
+
+.bottom-sheet .notification-summary small {
+  color: var(--atelier-muted);
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.bottom-sheet .notification-summary em {
+  flex: 0 0 auto;
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--atelier-pistachio) 14%, transparent);
+  color: var(--atelier-pistachio);
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 820;
+  white-space: nowrap;
+}
+
+.bottom-sheet .notification-row:not(.notification-row-read) {
+  position: relative;
+  border-color: color-mix(in srgb, var(--atelier-pistachio) 30%, var(--sheet-border));
+  background: color-mix(in srgb, var(--atelier-pistachio) 6%, var(--atelier-surface));
+}
+
+.bottom-sheet .notification-row:not(.notification-row-read)::before {
+  position: absolute;
+  top: 12px;
+  bottom: 12px;
+  left: 0;
+  width: 3px;
+  border-radius: 0 999px 999px 0;
+  background: var(--atelier-pistachio);
+  content: "";
+}
+
+.bottom-sheet .notification-row-copy em {
+  color: var(--atelier-pistachio);
+}
+
+.bottom-sheet .shopping-sheet-progress {
+  display: grid;
+  gap: 9px;
+  padding: 12px;
+  border: 1px solid var(--sheet-border);
+  border-radius: 15px;
+  background: color-mix(in srgb, var(--atelier-surface) 78%, transparent);
+}
+
+.bottom-sheet .shopping-sheet-progress-active {
+  border-color: color-mix(in srgb, var(--atelier-pistachio) 28%, var(--sheet-border));
+  background: color-mix(in srgb, var(--atelier-pistachio) 7%, var(--atelier-surface));
+}
+
+.bottom-sheet .shopping-sheet-progress-complete {
+  border-color: color-mix(in srgb, var(--atelier-blue) 26%, var(--sheet-border));
+  background: color-mix(in srgb, var(--atelier-blue) 6%, var(--atelier-surface));
+}
+
+.bottom-sheet .shopping-sheet-progress-heading {
+  display: flex;
+  min-width: 0;
+  gap: 10px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.bottom-sheet .shopping-sheet-progress-heading > span {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.bottom-sheet .shopping-sheet-progress-heading strong {
+  color: var(--atelier-ink);
+  font-size: 11px;
+  font-weight: 820;
+}
+
+.bottom-sheet .shopping-sheet-progress-heading small {
+  color: var(--atelier-muted);
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.bottom-sheet .shopping-sheet-progress-heading em {
+  flex: 0 0 auto;
+  color: var(--atelier-pistachio);
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 820;
+}
+
+.bottom-sheet .shopping-sheet-progress-track {
+  height: 7px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--atelier-ink) 9%, transparent);
+}
+
+.bottom-sheet .shopping-sheet-progress-track > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--atelier-pistachio);
+  transition: width 180ms ease;
+}
+
+.bottom-sheet .shopping-sheet-receive-panel {
+  scroll-margin-block-end: calc(var(--device-safe-area-bottom, 0px) + 24px);
+}
+
+.bottom-sheet .shopping-sheet-receive {
+  min-height: 44px;
+  border-color: color-mix(in srgb, var(--atelier-pistachio) 28%, var(--sheet-border));
+  background: color-mix(in srgb, var(--atelier-pistachio) 8%, var(--atelier-surface));
+  color: var(--atelier-pistachio);
+  font-size: 9px;
+}
+
+.bottom-sheet .shopping-sheet-receive-active {
+  border-color: var(--atelier-pistachio);
+  background: color-mix(in srgb, var(--atelier-pistachio) 15%, var(--atelier-surface));
+}
+
+.bottom-sheet .shopping-sheet-delete {
+  min-width: 36px;
+  min-height: 36px;
+  color: var(--atelier-coral);
+}
+
+/* Intake keeps one compact three-step rail across receipt, barcode, label,
+   and manual entry. It makes the review boundary visible without competing
+   with the selected input method or the final commit action. */
+.bottom-sheet .intake-flow-rail {
+  display: grid;
+  gap: 9px;
+  padding: 10px 12px;
+  border: 1px solid var(--sheet-border);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--atelier-surface) 78%, transparent);
+}
+
+.bottom-sheet .intake-flow-rail-heading {
+  display: flex;
+  min-width: 0;
+  gap: 10px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.bottom-sheet .intake-flow-rail-heading > span {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.bottom-sheet .intake-flow-rail-heading strong {
+  color: var(--atelier-ink);
+  font-size: 10px;
+  font-weight: 820;
+}
+
+.bottom-sheet .intake-flow-rail-heading small {
+  color: var(--atelier-muted);
+  font-size: 8px;
+  line-height: 1.4;
+}
+
+.bottom-sheet .intake-flow-rail-heading em {
+  flex: 0 0 auto;
+  color: var(--atelier-pistachio);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 820;
+}
+
+.bottom-sheet .intake-flow-rail ol {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.bottom-sheet .intake-flow-rail li {
+  display: flex;
+  min-width: 0;
+  gap: 5px;
+  align-items: center;
+  padding-top: 5px;
+  border-top: 2px solid var(--sheet-border);
+  color: var(--atelier-dim);
+}
+
+.bottom-sheet .intake-flow-rail li > span {
+  display: grid;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid var(--sheet-border-strong);
+  border-radius: 50%;
+  font-size: 8px;
+  font-weight: 820;
+}
+
+.bottom-sheet .intake-flow-rail li > small {
+  overflow: hidden;
+  font-size: 8px;
+  font-weight: 760;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bottom-sheet .intake-flow-rail li.intake-flow-step-active,
+.bottom-sheet .intake-flow-rail li.intake-flow-step-complete {
+  border-top-color: var(--atelier-pistachio);
+  color: var(--atelier-pistachio);
+}
+
+.bottom-sheet .intake-flow-rail li.intake-flow-step-active > span,
+.bottom-sheet .intake-flow-rail li.intake-flow-step-complete > span {
+  border-color: var(--atelier-pistachio);
+  background: color-mix(in srgb, var(--atelier-pistachio) 14%, transparent);
+  color: var(--atelier-pistachio);
+}
+
+.bottom-sheet .receipt-review-contract,
+.bottom-sheet .label-review-contract {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 10px 11px;
+  border: 1px solid color-mix(in srgb, var(--atelier-pistachio) 28%, var(--sheet-border));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--atelier-pistachio) 7%, var(--atelier-surface));
+  color: var(--atelier-pistachio);
+}
+
+.bottom-sheet .receipt-review-contract > span,
+.bottom-sheet .label-review-contract > span {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.bottom-sheet .receipt-review-contract strong,
+.bottom-sheet .label-review-contract strong {
+  color: var(--atelier-ink);
+  font-size: 10px;
+  font-weight: 820;
+}
+
+.bottom-sheet .receipt-review-contract small,
+.bottom-sheet .label-review-contract small {
+  color: var(--atelier-muted);
+  font-size: 9px;
+  line-height: 1.42;
+}
+
+.bottom-sheet .receipt-review,
+.bottom-sheet .label-result-card {
+  scroll-margin-block: 12px calc(var(--device-safe-area-bottom, 0px) + 24px);
+}
+
+@media (max-width: 360px) {
+  .bottom-sheet .intake-flow-rail {
+    padding: 9px 10px;
+  }
+
+  .bottom-sheet .intake-flow-rail-heading small,
+  .bottom-sheet .receipt-review-contract small,
+  .bottom-sheet .label-review-contract small {
+    font-size: 8px;
+  }
 }

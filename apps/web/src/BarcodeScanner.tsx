@@ -11,6 +11,7 @@ export default function BarcodeScanner({ onDetected, onCancel }: BarcodeScannerP
   const videoRef = useRef<HTMLVideoElement>(null);
   const controlsRef = useRef<{ stop: () => void } | null>(null);
   const onDetectedRef = useRef(onDetected);
+  const fallbackButtonRef = useRef<HTMLButtonElement | null>(null);
   const [status, setStatus] = useState<"starting" | "scanning" | "unavailable">("starting");
 
   useEffect(() => {
@@ -55,6 +56,12 @@ export default function BarcodeScanner({ onDetected, onCancel }: BarcodeScannerP
     };
   }, []);
 
+  useEffect(() => {
+    if (status !== "unavailable") return;
+    const timer = window.setTimeout(() => fallbackButtonRef.current?.focus({ preventScroll: true }), 120);
+    return () => window.clearTimeout(timer);
+  }, [status]);
+
   return (
     <div className="scanner-flow" aria-live="polite">
       {status === "unavailable" ? (
@@ -63,7 +70,7 @@ export default function BarcodeScanner({ onDetected, onCancel }: BarcodeScannerP
         <div className="scanner-preview"><video ref={videoRef} aria-label="바코드 카메라 미리보기" autoPlay muted playsInline /><span className="scanner-frame" aria-hidden="true" /></div>
       )}
       <p className="scanner-status">{status === "starting" ? "카메라를 준비하고 있어요" : status === "scanning" ? "바코드를 화면 안에 맞춰 주세요" : "수동 입력으로도 상품 후보를 찾을 수 있어요"}</p>
-      <button className="secondary-sheet-button" type="button" onClick={onCancel}>{status === "unavailable" ? "수동 입력으로 계속" : "카메라 닫기"}</button>
+      <button ref={fallbackButtonRef} className="secondary-sheet-button" type="button" onClick={onCancel}>{status === "unavailable" ? "수동 입력으로 계속" : "카메라 닫기"}</button>
     </div>
   );
 }

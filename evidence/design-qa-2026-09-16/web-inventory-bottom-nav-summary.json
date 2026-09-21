@@ -1,0 +1,22 @@
+{
+  "surface": "web",
+  "action": "전체 보기",
+  "activeNavigation": "식품",
+  "scrollTop": 700,
+  "inventoryBox": {
+    "x": 156,
+    "y": 382.1875,
+    "width": 1128,
+    "height": 452.046875
+  },
+  "navBox": {
+    "x": 0,
+    "y": 925,
+    "width": 1440,
+    "height": 75
+  },
+  "phoneFrameCount": 0,
+  "deviceScreenCount": 0,
+  "consoleErrors": [],
+  "pageErrors": []
+}

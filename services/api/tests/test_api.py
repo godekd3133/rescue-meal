@@ -1,5 +1,5 @@
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 import gc
 from hashlib import sha256
 from pathlib import Path
@@ -98,7 +98,7 @@ def test_workspace_middleware_does_not_return_plain_storage_503(monkeypatch) -> 
 
 def _guest_headers() -> dict[str, str]:
     response = client.post("/api/auth/guest")
-    assert response.status_code == 200
+    assert response.status_code == 201
     return {"Authorization": f"Bearer {response.json()['access_token']}"}
 
 
@@ -157,7 +157,7 @@ def test_custom_storage_location_crud_and_lot_assignment_keep_canonical_class() 
             "canonical_name": "김치냉장고 보관 두부",
             "quantity": 1,
             "unit": "모",
-            "storage_type": "refrigerated",
+            "storage_type": "ambient",
             "storage_location_id": location["id"],
         },
     )
@@ -4514,6 +4514,7 @@ def test_meal_plan_marks_allocated_foods_that_need_date_review() -> None:
     payload = response.json()
     assert payload["date_review_required"] is True
     assert "시금치" in payload["date_review_foods"]
+    assert payload["date_review_food_ids"] == ["spinach-1"]
     assert "시금치" in payload["date_review_note"]
     assert "포장지 보관조건" in payload["date_review_note"]
     assert "김치냉장고" in payload["date_review_note"]
@@ -5358,6 +5359,81 @@ def test_confirmed_label_date_updates_existing_food_without_duplicate() -> None:
     assert payload["date_assertion"]["value"] == "2026-09-02"
     assert payload["date_assertion"]["user_confirmed"] is True
     assert len(client.get("/api/dashboard").json()["inventory"]) == 7
+
+
+def test_explicit_label_lot_correction_replaces_confirmed_date_and_keeps_history() -> None:
+    response = client.post(
+        "/api/foods",
+        json={
+            "canonical_name": "시금치",
+            "lot_action": "correct",
+            "target_food_id": "spinach-1",
+            "quantity": 1,
+            "unit": "팩",
+            "storage_type": "ambient",
+            "category": "기타",
+            "brand": "라벨 확인 필요",
+            "image_path": "/assets/food/tomato.png",
+            "date_kind": "sell_by",
+            "date_value": "2026-09-13",
+            "date_source": "label_ocr",
+            "date_source_detail": "포장지 유통기한",
+            "applicable_storage_type": "ambient",
+            "storage_condition_text": "직사광선을 피해 실온보관",
+            "user_confirmed": True,
+        },
+    )
+    assert response.status_code == 201
+    payload = response.json()
+    assert payload["id"] == "spinach-1"
+    assert payload["quantity"] == 1
+    assert payload["unit"] == "팩"
+    assert payload["date_assertion"]["kind"] == "sell_by"
+    assert payload["date_assertion"]["value"] == "2026-09-13"
+    assert payload["date_assertion"]["source"] == "label_ocr"
+    assert payload["date_assertion"]["applicable_storage_type"] == "ambient"
+    assert payload["storage_type"] == "ambient"
+    assert payload["brand"] == "국내산 시금치"
+    assert payload["category"] == "채소"
+    assert payload["image_path"] == "/assets/food/spinach.png"
+    assert payload["date_assertion_history"][0]["value"] == "2026-09-02"
+    assert len(client.get("/api/dashboard").json()["inventory"]) == 7
+
+
+def test_label_lot_correction_persistence_failure_restores_target_identity_and_date() -> None:
+    def fail_flush(_store) -> None:
+        raise RuntimeError("simulated label correction persistence outage")
+
+    with patch.object(type(store), "flush", fail_flush):
+        response = client.post(
+            "/api/foods",
+            json={
+                "canonical_name": "시금치",
+                "lot_action": "correct",
+                "target_food_id": "spinach-1",
+                "quantity": 1,
+                "unit": "팩",
+                "storage_type": "ambient",
+                "category": "기타",
+                "brand": "라벨 확인 필요",
+                "image_path": "/assets/food/tomato.png",
+                "date_kind": "sell_by",
+                "date_value": "2026-09-13",
+                "date_source": "label_ocr",
+                "date_source_detail": "포장지 유통기한",
+                "applicable_storage_type": "ambient",
+                "storage_condition_text": "직사광선을 피해 실온보관",
+                "user_confirmed": True,
+            },
+        )
+
+    assert response.status_code == 503
+    assert response.json()["detail"]["code"] == "manual_food_persistence_unavailable"
+    retained = store.foods["spinach-1"].response
+    assert retained.brand == "국내산 시금치"
+    assert retained.storage_type == "refrigerated"
+    assert retained.date_assertion.value == date(2026, 9, 2)
+    assert retained.date_assertion_history == []
 
 
 def test_user_can_confirm_estimated_date_and_previous_assertion_is_kept() -> None:

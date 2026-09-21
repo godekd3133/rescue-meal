@@ -1,0 +1,17 @@
+import { chromium } from "playwright";
+const browser = await chromium.launch();
+const page = await browser.newPage({ viewport: { width: 1280, height: 860 } });
+await page.addInitScript(() => window.localStorage.setItem("rescue-meal.theme", "dark"));
+await page.goto("http://localhost:5174/", { waitUntil: "networkidle", timeout: 30000 }).catch(() => {});
+await page.waitForTimeout(2200);
+await page.getByText("식품 추가하기").first().click().catch(() => {});
+await page.waitForTimeout(1400);
+await page.screenshot({ path: "/tmp/r-dark-add.png" });
+await page.keyboard.press("Escape");
+await page.locator(".sheet-close, [aria-label*='닫기']").first().click().catch(() => {});
+await page.waitForTimeout(600);
+await page.locator(".priority-card, .queue-card").first().click().catch(() => {});
+await page.waitForTimeout(1400);
+await page.screenshot({ path: "/tmp/r-dark-detail.png" });
+await browser.close();
+console.log("done");

@@ -1,0 +1,23 @@
+{
+  "surfaceBox": {
+    "x": 0,
+    "y": 0,
+    "width": 1440,
+    "height": 1000
+  },
+  "navBox": {
+    "x": 0,
+    "y": 925,
+    "width": 1440,
+    "height": 75
+  },
+  "navPosition": "fixed",
+  "navTop": "925px",
+  "navBottom": "0px",
+  "headerNotification": 1,
+  "heroNotification": 0,
+  "phoneFrameCount": 0,
+  "deviceScreenCount": 0,
+  "consoleErrors": [],
+  "pageErrors": []
+}

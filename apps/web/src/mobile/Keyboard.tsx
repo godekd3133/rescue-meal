@@ -14,7 +14,8 @@ import { motion } from "motion/react";
 import { mobileAssets } from "./assets";
 import { useMobileDevice } from "./Device";
 
-const shouldSimulateKeyboard = ((import.meta.env.VITE_APP_SHELL as string | undefined)?.trim().toLowerCase() ?? "") !== "native";
+const appShell = (import.meta.env.VITE_APP_SHELL as string | undefined)?.trim().toLowerCase() ?? "web";
+const shouldSimulateKeyboard = appShell === "preview";
 
 type KeyboardContextValue = {
   visible: boolean;

@@ -52,7 +52,15 @@ function CameraLibraryFallback({ onFile }: { onFile: CaptureFileHandler }) {
   };
 
   return (
-    <label className="secondary-sheet-button file-button camera-library-fallback">
+    <label
+      className="secondary-sheet-button file-button camera-library-fallback"
+      tabIndex={0}
+      onKeyDown={(event) => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        event.currentTarget.querySelector<HTMLInputElement>("input[type=file]")?.click();
+      }}
+    >
       <UploadIcon width={17} height={17} /> 사진에서 선택
       <input type="file" accept="image/*" data-input-source="library" aria-label="사진에서 선택" onChange={handleChange} />
     </label>
@@ -63,6 +71,7 @@ export default function CameraCapture({ title, detail, onFile, onCancel }: Camer
   const videoRef = useRef<HTMLVideoElement>(null);
   const frameRef = useRef<HTMLSpanElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const captureButtonRef = useRef<HTMLButtonElement | null>(null);
   const onFileRef = useRef(onFile);
   const onCancelRef = useRef(onCancel);
   const [status, setStatus] = useState<CameraStatus>("starting");
@@ -156,6 +165,17 @@ export default function CameraCapture({ title, detail, onFile, onCancel }: Camer
     };
   }, []);
 
+  useEffect(() => {
+    if (status === "starting") return;
+    const timer = window.setTimeout(() => {
+      const target = status === "unavailable"
+        ? document.querySelector<HTMLElement>(".camera-capture-fallback-actions .camera-library-fallback")
+        : captureButtonRef.current;
+      target?.focus({ preventScroll: true });
+    }, 120);
+    return () => window.clearTimeout(timer);
+  }, [status]);
+
   const capture = () => {
     const video = videoRef.current;
     if (!video || video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA || !video.videoWidth || !video.videoHeight) {
@@ -198,7 +218,7 @@ export default function CameraCapture({ title, detail, onFile, onCancel }: Camer
           <CameraLibraryFallback onFile={onFileRef.current} />
           <button className="secondary-sheet-button" type="button" onClick={() => onCancelRef.current()}>입력 방법 다시 보기</button>
         </div>
-        <div className="capture-hint"><CheckIcon width={14} height={14} /> 사진을 선택해도 같은 품질 검사와 OCR 검토를 거쳐요.</div>
+        <div className="capture-hint"><CheckIcon width={14} height={14} /> 사진을 선택해도 같은 품질 검사와 사진 인식 확인을 거쳐요.</div>
       </div>
     );
   }
@@ -217,10 +237,10 @@ export default function CameraCapture({ title, detail, onFile, onCancel }: Camer
       </div>
       <p className="camera-capture-status" role="status">{status === "starting" ? "카메라를 준비하고 있어요" : message || "흔들리지 않게 화면을 맞춘 뒤 촬영하세요"}</p>
       <div className="camera-capture-actions">
-        <button className="primary-sheet-button" type="button" disabled={status !== "ready"} onClick={capture}><CameraIcon width={17} height={17} /> 촬영하기</button>
+        <button ref={captureButtonRef} className="primary-sheet-button" type="button" disabled={status !== "ready"} onClick={capture}><CameraIcon width={17} height={17} /> 촬영하기</button>
         <CameraLibraryFallback onFile={onFileRef.current} />
       </div>
-      <p className="capture-hint"><InfoCircledIcon width={14} height={14} /> 원본 이미지는 촬영 후 OCR 처리에만 사용하고 재고 기록에는 저장하지 않아요.</p>
+      <p className="capture-hint"><InfoCircledIcon width={14} height={14} /> 원본 이미지는 촬영 후 사진 인식에만 사용하고 재고 기록에는 저장하지 않아요.</p>
     </div>
   );
 }

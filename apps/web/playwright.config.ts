@@ -9,7 +9,7 @@ export default defineConfig({
   // Connected API tests have their own webServer/API fixture and config.
   // Keeping them out of the fixture-only lane prevents a false failure when
   // this command is run without the disposable API launcher.
-  testIgnore: ["**/connected-prototype.spec.ts", "**/native-viewport.spec.ts"],
+  testIgnore: ["**/connected-prototype.spec.ts", "**/native-viewport.spec.ts", "**/web-surface.spec.ts"],
   timeout: 20_000,
   // One CI retry absorbs observed timing flakes (focus/overlay transitions)
   // without hiding real regressions — a deterministic failure fails twice.
@@ -24,5 +24,9 @@ export default defineConfig({
     command: `npm run check:runtime && exec ./node_modules/.bin/vite --host 127.0.0.1 --port ${testPort} --strictPort`,
     url: `http://127.0.0.1:${testPort}/tests/runtime-fixture.html`,
     reuseExistingServer,
+    env: {
+      ...process.env,
+      VITE_APP_SHELL: "preview",
+    },
   },
 });

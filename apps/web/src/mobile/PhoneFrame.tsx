@@ -37,6 +37,15 @@ export function useScreenPortal() {
   return context;
 }
 
+export function ScreenPortalProvider({
+  children,
+  screenRef,
+}: PropsWithChildren<{ screenRef: RefObject<HTMLDivElement | null> }>) {
+  const contextValue = useMemo(() => ({ screenRef }), [screenRef]);
+
+  return <ScreenPortalContext.Provider value={contextValue}>{children}</ScreenPortalContext.Provider>;
+}
+
 function getDeviceScale(deviceWidth: number, deviceHeight: number) {
   if (typeof window === "undefined") return 1;
 
@@ -66,11 +75,10 @@ export function PhoneFrame({ children }: PropsWithChildren) {
   const { geometry } = device;
   const scale = useDeviceScale(geometry.device.width, geometry.device.height);
   const screenRef = useRef<HTMLDivElement | null>(null);
-  const contextValue = useMemo(() => ({ screenRef }), []);
   const mobileCursor = useMobileCursor();
 
   return (
-    <ScreenPortalContext.Provider value={contextValue}>
+    <ScreenPortalProvider screenRef={screenRef}>
       <div className="phone-stage">
         <DevicePicker />
         <div
@@ -139,6 +147,6 @@ export function PhoneFrame({ children }: PropsWithChildren) {
           </div>
         </div>
       </div>
-    </ScreenPortalContext.Provider>
+    </ScreenPortalProvider>
   );
 }
