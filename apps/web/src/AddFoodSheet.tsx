@@ -337,6 +337,7 @@ function ReceiptSourcePreview({
     setSourceZoomed(false);
   }, [sourcePreviewKind, sourcePreviewUrl]);
 
+
   useEffect(() => {
     if (!sourceZoomed) return;
     const frame = window.requestAnimationFrame(() => {
@@ -346,8 +347,8 @@ function ReceiptSourcePreview({
   }, [previewRef, sourceZoomed]);
 
   return (
-    <div ref={previewRef} className="receipt-source-preview" role="region" aria-label={sourcePreviewKind === "pdf" ? "영수증 PDF 원본 미리보기" : "영수증 원본 미리보기"} aria-describedby="receipt-source-preview-hint">
-      <div className="receipt-source-preview-heading"><span><ReaderIcon width={15} height={15} /><strong>영수증 원본 대조</strong></span><small aria-live="polite" aria-atomic="true">{activeLineLabel && activeObservationIds.length ? `현재 항목 · ${activeLineLabel}` : "이 화면에서만 임시로 표시해요"}</small>{sourcePreviewKind === "image" ? <button className="candidate-apply-button receipt-line-source-button" type="button" aria-pressed={sourceZoomed} aria-label={sourceZoomed ? "원본 축소" : "원본 확대"} onPointerDown={(event) => event.preventDefault()} onClick={() => setSourceZoomed((current) => !current)}>{sourceZoomed ? "축소" : "확대"}</button> : null}</div>
+    <div ref={previewRef} className="receipt-source-preview" role="region" data-source-preview-mode={sourcePreviewKind} data-active-source-count={activeObservationIds.length} data-active-source-line={activeObservationIds.length ? activeLineLabel ?? "" : ""} aria-label={sourcePreviewKind === "pdf" ? "영수증 PDF 원본 미리보기" : "영수증 원본 미리보기"} aria-describedby="receipt-source-preview-hint">
+      <div className="receipt-source-preview-heading"><span><ReaderIcon width={15} height={15} /><strong>영수증 원본 대조</strong></span><small aria-live="polite" aria-atomic="true">{activeLineLabel && activeObservationIds.length ? `현재 항목 · ${activeLineLabel} · 원본 위치 ${activeObservationIds.length}곳 확인 중` : "이 화면에서만 임시로 표시해요"}</small>{sourcePreviewKind === "image" ? <button className="candidate-apply-button receipt-line-source-button" type="button" aria-pressed={sourceZoomed} aria-label={sourceZoomed ? "원본 축소" : "원본 확대"} onPointerDown={(event) => event.preventDefault()} onClick={() => setSourceZoomed((current) => !current)}>{sourceZoomed ? "축소" : "확대"}</button> : null}</div>
       {sourcePreviewKind === "pdf" ? (
         <div className="receipt-source-preview-frame receipt-source-pdf-frame" data-preview-ready="true">
           <object data={sourcePreviewUrl} type="application/pdf" title="업로드한 영수증 PDF 원본 미리보기">
@@ -365,13 +366,13 @@ function ReceiptSourcePreview({
               const boxStyle = { left: `${x * 100}%`, bottom: `${y * 100}%`, width: `${width * 100}%`, height: `${height * 100}%`, pointerEvents: "none" as const };
               return label ? [
                 <span className={`receipt-source-box ${active ? "receipt-source-box-active" : ""}`} data-observation-id={observation.id} aria-hidden="true" key={`${observation.id}-box`} style={boxStyle} />,
-                <button className="receipt-source-hit-target" type="button" data-observation-id={observation.id} aria-label={`${label} 원본 위치 선택`} aria-describedby="receipt-source-preview-hint" key={`${observation.id}-hit`} style={{ position: "absolute", top: `${(1 - y - height / 2) * 100}%`, left: `${(x + width / 2) * 100}%`, width: 44, height: 44, padding: 0, border: 0, borderRadius: 0, background: "transparent", color: "transparent", cursor: "pointer", pointerEvents: "none", transform: "translate(-50%, -50%)", zIndex: 2 }} onClick={(event) => { event.stopPropagation(); onSelectObservation(observation.id); }} />,
+                <button className="receipt-source-hit-target" type="button" data-observation-id={observation.id} aria-label={`${label} 원본 위치 선택`} aria-pressed={active} aria-describedby="receipt-source-preview-hint" key={`${observation.id}-hit`} style={{ position: "absolute", top: `${(1 - y - height / 2) * 100}%`, left: `${(x + width / 2) * 100}%`, width: 44, height: 44, padding: 0, border: 0, borderRadius: 0, background: "transparent", color: "transparent", cursor: "pointer", pointerEvents: "none", transform: "translate(-50%, -50%)", zIndex: 2 }} onClick={(event) => { event.stopPropagation(); onSelectObservation(observation.id); }} />,
               ] : <span className={`receipt-source-box ${active ? "receipt-source-box-active" : ""}`} data-observation-id={observation.id} aria-hidden="true" key={observation.id} style={boxStyle} />;
             })}
           </div>
         </div>
       )}
-      <p id="receipt-source-preview-hint">{sourcePreviewKind === "pdf" ? "PDF는 상품 항목 위치를 자동으로 강조하지 않아요. 추출 결과와 원본을 함께 확인해 주세요." : interactiveObservationIds.size ? "상품 항목을 누르면 원본 위치를, 원본 영역을 누르면 해당 상품 수정을 열어요. 필요한 항목만 체크해 주세요." : reviewObservations.length ? "상품 항목을 누르면 원본에서 읽은 위치가 강조돼요. 읽어낸 내용을 원본과 대조한 뒤 필요한 항목만 체크해 주세요." : "읽어낸 내용을 원본과 대조한 뒤 필요한 항목만 체크해 주세요."} 원본 파일 자체는 재고 기록에 저장하지 않아요.</p>
+      <p id="receipt-source-preview-hint" aria-live="polite" aria-atomic="true">{sourcePreviewKind === "pdf" ? "PDF는 상품 항목 위치를 자동으로 강조하지 않아요. 추출 결과와 원본을 함께 확인해 주세요." : interactiveObservationIds.size ? "상품 항목을 누르면 원본 위치를, 원본 영역을 누르면 해당 상품 수정을 열어요. 필요한 항목만 체크해 주세요." : reviewObservations.length ? "원본 위치를 상품 항목에 자동으로 연결하지 못했어요. 추출 결과와 원본을 직접 대조해 주세요." : "읽어낸 내용을 원본과 대조한 뒤 필요한 항목만 체크해 주세요."} 원본 파일 자체는 재고 기록에 저장하지 않아요.</p>
     </div>
   );
 }
@@ -443,17 +444,21 @@ function ReceiptReview({
   const reviewRef = useRef<HTMLDivElement | null>(null);
   const sourcePreviewRef = useRef<HTMLDivElement | null>(null);
   const lineCardRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const productCandidateActionRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const initialReviewFocusHandledRef = useRef(false);
+  const [candidateAppliedLineId, setCandidateAppliedLineId] = useState<string | null>(null);
+  const [candidateUserEditedLineId, setCandidateUserEditedLineId] = useState<string | null>(null);
   const resumedFocusHandledRef = useRef(false);
   const initialSourceLineId = lines.find((line) => line.requiresReview && line.sourceObservationIds?.length)?.id ?? lines.find((line) => line.sourceObservationIds?.length)?.id ?? lines[0]?.id ?? null;
   const [editingIds, setEditingIds] = useState<string[]>(() => {
     const initialLine = lines.find((line) => line.requiresReview);
     return initialLine ? [initialLine.id] : [];
   });
+  const [userConfirmedLineIds, setUserConfirmedLineIds] = useState<string[]>([]);
   const [revealEditingId, setRevealEditingId] = useState<string | null>(null);
   const [activeSourceLineId, setActiveSourceLineId] = useState<string | null>(initialSourceLineId);
   const reviewCount = lines.filter((line) => selectedIds.includes(line.id)).length;
-  const selectedReviewCount = lines.filter((line) => selectedIds.includes(line.id) && line.requiresReview).length;
+  const selectedReviewCount = lines.filter((line) => selectedIds.includes(line.id) && line.requiresReview && !userConfirmedLineIds.includes(line.id)).length;
   const invalidSelectedLines = lines.filter((line) => selectedIds.includes(line.id) && receiptLineError(line));
   const activeSourceObservationIds = new Set(lines.find((line) => line.id === activeSourceLineId)?.sourceObservationIds ?? []);
   const activeSourceLineLabel = lines.find((line) => line.id === activeSourceLineId)?.name ?? null;
@@ -461,6 +466,10 @@ function ReceiptReview({
     for (const observationId of line.sourceObservationIds ?? []) labels[observationId] = line.name || "상품";
     return labels;
   }, {});
+  const productCandidateFocusLineId = lines.find((line) => {
+    const lookup = productNameLookups[line.id];
+    return lookup && lookup !== "loading" && lookup.candidates.length > 0;
+  })?.id ?? null;
 
   const revealSourcePreview = () => {
     window.requestAnimationFrame(() => {
@@ -492,6 +501,10 @@ function ReceiptReview({
       if (!target || target.hasAttribute("disabled")) return;
       target.scrollIntoView({ behavior: getMobileScrollBehavior(), block: "center" });
       target.focus({ preventScroll: true });
+      // Keep the review surface itself inside the sheet after centering the
+      // first unresolved line. The line owns focus, but the root must remain
+      // readable in the same viewport for desktop preview and narrow mobile.
+      reviewRef.current?.scrollIntoView({ behavior: getMobileScrollBehavior(), block: "nearest" });
       initialReviewFocusHandledRef.current = true;
     });
     return () => window.cancelAnimationFrame(frame);
@@ -547,11 +560,23 @@ function ReceiptReview({
   useEffect(() => {
     if (!revealEditingId || !editingIds.includes(revealEditingId)) return;
     const frame = window.requestAnimationFrame(() => {
-      lineCardRefs.current[revealEditingId]?.scrollIntoView({ behavior: getMobileScrollBehavior(), block: "nearest" });
+      const card = lineCardRefs.current[revealEditingId];
+      card?.scrollIntoView({ behavior: getMobileScrollBehavior(), block: "nearest" });
       setRevealEditingId(null);
     });
     return () => window.cancelAnimationFrame(frame);
   }, [editingIds, revealEditingId]);
+
+  useEffect(() => {
+    if (!productCandidateFocusLineId) return;
+    const frame = window.requestAnimationFrame(() => {
+      const action = productCandidateActionRefs.current[productCandidateFocusLineId];
+      if (!action || action.hasAttribute("disabled")) return;
+      action.scrollIntoView({ behavior: getMobileScrollBehavior(), block: "center" });
+      action.focus({ preventScroll: true });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [productCandidateFocusLineId, productNameLookups]);
 
   const toggleEditing = (id: string) => {
     const isOpening = !editingIds.includes(id);
@@ -559,16 +584,47 @@ function ReceiptReview({
     setRevealEditingId(isOpening ? id : null);
   };
 
+  const openFirstInvalidLine = () => {
+    const targetInvalidLine = invalidSelectedLines.find((line) => !editingIds.includes(line.id)) ?? invalidSelectedLines[0];
+    if (!targetInvalidLine) return;
+    keyboard.hide();
+    setActiveSourceLineId(targetInvalidLine.id);
+    setEditingIds([targetInvalidLine.id]);
+    setRevealEditingId(targetInvalidLine.id);
+  };
+
+  const handleLineChange = (id: string, changes: Partial<Pick<ReceiptLine, "name" | "quantity" | "unit" | "storage" | "storageLocationId">>) => {
+    setUserConfirmedLineIds((current) => current.includes(id) ? current : [...current, id]);
+    if (candidateAppliedLineId === id) {
+      setCandidateAppliedLineId(null);
+      setCandidateUserEditedLineId(id);
+    }
+    onChange(id, changes);
+  };
+
+  const confirmLine = (id: string) => {
+    setUserConfirmedLineIds((current) => current.includes(id) ? current : [...current, id]);
+    const nextLine = lines.find((line) => line.id !== id && selectedIds.includes(line.id) && line.requiresReview && !userConfirmedLineIds.includes(line.id));
+    if (!nextLine) return;
+    window.requestAnimationFrame(() => {
+      const target = reviewRef.current?.querySelector<HTMLElement>(`[data-line-id="${nextLine.id}"] .receipt-line-toggle`);
+      if (!target || target.hasAttribute("disabled")) return;
+      target.scrollIntoView({ behavior: getMobileScrollBehavior(), block: "center" });
+      target.focus({ preventScroll: true });
+    });
+  };
+
   return (
     <div ref={reviewRef} className="receipt-review">
       <div className="review-summary"><span className="review-file-icon"><FileTextIcon width={20} height={20} /></span><span><strong>{merchantName ?? source}</strong><small>{merchantName ? `${source} · ` : ""}{templateId && (templateConfidence ?? 0) > 0 ? `${receiptTemplateLabel(templateId)} · ` : ""}상품 후보 {lines.length}개 · 선택 {reviewCount}개{selectedReviewCount ? ` · 확인 필요 ${selectedReviewCount}개` : ""}</small></span><button type="button" onClick={() => { keyboard.hide(); onBack(); }} aria-label="영수증 다시 선택"><Cross2Icon width={17} height={17} /></button></div>
+      <div className="receipt-result-provenance" aria-label="영수증 자동 인식 상태"><strong>자동 인식 후보</strong><span>선택한 항목만 확인 후 반영</span></div>
       <div className="receipt-review-contract" role="status"><CheckIcon width={15} height={15} /><span><strong>반영 전 확인</strong><small>선택한 항목만 재고 lot으로 추가되고, 날짜는 포장지 확인 전까지 ‘확인 필요’로 남아요.</small></span></div>
       {sourcePreviewUrl && sourcePreviewKind ? <ReceiptSourcePreview previewRef={sourcePreviewRef} activeLineLabel={activeSourceLineLabel} sourcePreviewUrl={sourcePreviewUrl} sourcePreviewKind={sourcePreviewKind} reviewObservations={reviewObservations} activeObservationIds={activeSourceObservationIds.size ? [...activeSourceObservationIds] : []} observationLabels={observationLabels} onSelectObservation={selectSourceObservation} /> : null}
-      {resumedFromDraft ? <div className="receipt-resume-callout" role="status"><ReaderIcon width={16} height={16} /><span><strong>저장해 둔 검수 초안이에요</strong><small>원본 사진은 저장하지 않아서 미리보기 없이 상품 정보만 다시 확인해요. 반영 전까지 재고에는 저장되지 않아요.</small></span></div> : null}
+      {resumedFromDraft ? <div className="receipt-resume-callout" role="status"><ReaderIcon width={16} height={16} /><span><strong>저장해 둔 검수 초안이에요</strong><small>원본 사진은 저장하지 않아서 미리보기 없이 상품 정보만 다시 확인해요. 검수 상태도 이 화면에서 다시 확인한 뒤 반영해요.</small><small>반영 전까지 재고에는 저장되지 않아요.</small></span></div> : null}
       {qualityWarnings.length ? <div className="quality-callout"><InfoCircledIcon width={17} height={17} /><span><strong>{sourcePreviewKind === "pdf" ? "PDF 입력 참고" : "사진 품질 참고"}</strong><small>{qualityWarnings.join(" ")}</small></span></div> : null}
       <div className="review-callout"><InfoCircledIcon width={17} height={17} /><span><strong>애매한 항목은 한 번 더 확인해요</strong><small>상품명·수량·단위를 확인하거나 수정한 뒤, 체크된 항목만 내 식품 목록으로 이동합니다.</small></span></div>
       {receiptDraftId ? <div className={`receipt-enrichment-callout ${productEnrichmentError ? "receipt-enrichment-callout-error" : ""}`} role={productEnrichmentError ? "alert" : undefined}><span><strong>상품 정보 확인</strong><small>{productEnrichmentError || (productEnrichmentJob?.status === "succeeded" ? `상품 정보 후보 ${productEnrichmentJob.enriched_candidates}개를 확인했어요.` : productEnrichmentJob?.status === "in_flight" ? "상품 정보 후보를 확인하고 있어요." : productEnrichmentJob?.status === "queued" ? "상품 정보 확인을 기다리는 중이에요. 영수증 반영은 지금도 진행할 수 있어요." : productEnrichmentJob?.status === "dead_letter" ? "상품 정보 확인을 여러 번 시도했지만 실패했어요." : "상품명이 애매한 항목의 상품 정보를 더 확인할 수 있어요.")}</small></span>{productEnrichmentJob?.status === "dead_letter" ? <button type="button" onClick={onRetryProductEnrichment}>재시도</button> : <button type="button" disabled={Boolean(productEnrichmentJob)} onClick={onEnqueueProductEnrichment}>{productEnrichmentError ? "다시 시도" : productEnrichmentJob?.status === "succeeded" ? "확인 완료" : productEnrichmentJob?.status === "queued" || productEnrichmentJob?.status === "in_flight" ? "확인 대기 중" : "상품 정보 확인"}</button>}</div> : null}
-      {invalidSelectedLines.length ? <div className="receipt-validation-callout" role="alert"><InfoCircledIcon width={17} height={17} /><span><strong>반영 전 확인이 필요해요</strong><small>선택한 항목의 상품명·수량·단위를 올바르게 입력해 주세요.</small></span></div> : null}
+      {invalidSelectedLines.length ? <div className="receipt-validation-callout" role="alert"><InfoCircledIcon width={17} height={17} /><span><strong>반영 전 확인이 필요해요</strong><small>선택한 항목의 상품명·수량·단위를 올바르게 입력해 주세요.</small><button type="button" onPointerDown={(event) => event.preventDefault()} onClick={openFirstInvalidLine}>{invalidSelectedLines.length > 1 && editingIds.some((id) => invalidSelectedLines.some((line) => line.id === id)) ? "다음 확인 항목 열기" : "첫 확인 항목 열기"}</button></span></div> : null}
       <div className="receipt-lines">
         {lines.map((line) => {
           const checked = selectedIds.includes(line.id);
@@ -577,7 +633,7 @@ function ReceiptReview({
           const productLookup = productNameLookups[line.id];
           const receiptBarcodeLookup = barcodeLookups[line.id];
           return (
-            <div ref={(element) => { lineCardRefs.current[line.id] = element; }} className={`receipt-line-card ${checked ? "receipt-line-card-checked" : ""} ${editing ? "receipt-line-card-editing" : ""} ${reviewObservations.length && activeSourceLineId === line.id ? "receipt-line-card-source-active" : ""}`} style={editing ? { scrollMarginBottom: "96px" } : undefined} data-line-id={line.id} key={line.id}>
+            <div ref={(element) => { lineCardRefs.current[line.id] = element; }} className={`receipt-line-card ${checked ? "receipt-line-card-checked" : ""} ${editing ? "receipt-line-card-editing" : ""} ${checked && line.requiresReview && !userConfirmedLineIds.includes(line.id) ? "receipt-line-card-needs-confirmation" : ""} ${checked && line.requiresReview && userConfirmedLineIds.includes(line.id) ? "receipt-line-card-confirmed" : ""} ${reviewObservations.length && activeSourceLineId === line.id ? "receipt-line-card-source-active" : ""}`} style={editing ? { scrollMarginBottom: "96px" } : undefined} data-line-id={line.id} key={line.id}>
               <div className="receipt-line">
                 <button className="receipt-line-toggle" type="button" aria-pressed={checked} aria-label={`${line.name} ${formatReceiptLineDetail(line)}${line.requiresReview ? " 확인 필요" : ""}`} aria-describedby={`receipt-line-status-${line.id}`} onPointerDown={(event) => event.preventDefault()} onClick={() => { keyboard.hide(); setActiveSourceLineId(line.id); onToggle(line.id); }}>
                   <span className={`check-box ${checked ? "check-box-checked" : ""}`}>{checked ? <CheckIcon width={13} height={13} /> : null}</span>
@@ -588,23 +644,23 @@ function ReceiptReview({
                 {reviewObservations.length && line.sourceObservationIds?.length ? <button className="candidate-apply-button receipt-line-source-button" type="button" aria-label={`${line.name || "상품"} 원본 위치 보기`} aria-describedby="receipt-source-preview-hint" onPointerDown={(event) => event.preventDefault()} onClick={() => { keyboard.hide(); setActiveSourceLineId(line.id); revealSourcePreview(); }}>원본 보기</button> : null}
                 <button className="receipt-line-edit-button" type="button" aria-expanded={editing} aria-label={`${line.name || "상품"} 항목 ${editing ? "수정 닫기" : "수정"}`} onPointerDown={(event) => event.preventDefault()} onClick={() => { keyboard.hide(); setActiveSourceLineId(line.id); toggleEditing(line.id); }}>{editing ? "닫기" : "수정"}</button>
               </div>
-                  <span id={`receipt-line-status-${line.id}`} className="sr-only">{line.requiresReview ? "읽어낸 내용 확인 필요" : `자동 인식 신뢰도 ${Math.round(line.confidence * 100)}%`}</span>
+                  <span id={`receipt-line-status-${line.id}`} className="sr-only">{`${line.requiresReview ? userConfirmedLineIds.includes(line.id) ? "사용자 확인 완료" : "읽어낸 내용 확인 필요" : `자동 인식 신뢰도 ${Math.round(line.confidence * 100)}%`}${reviewObservations.length && activeSourceLineId === line.id ? " · 원본 위치 확인 중" : ""}`}</span>
               {editing ? (
                 <div className="receipt-line-editor">
                   <div className="receipt-line-editor-heading"><div><strong>반영 전 보정</strong><em>현재 항목</em></div><small>처음 읽어낸 내용: {line.rawName ?? line.name}</small></div>
-                  <label className="receipt-line-editor-field"><span>상품명</span><KeyboardInput className="app-input" value={line.name} autoComplete="off" spellCheck={false} aria-label="상품명" onChange={(event) => onChange(line.id, { name: event.target.value })} onBlur={() => keyboard.hide()} /></label>
+                  <label className="receipt-line-editor-field"><span>상품명</span><KeyboardInput className="app-input" value={line.name} autoComplete="off" spellCheck={false} aria-label="상품명" onChange={(event) => handleLineChange(line.id, { name: event.target.value })} onBlur={() => keyboard.hide()} /></label>
                   <div className="receipt-line-editor-grid">
-                    <label className="receipt-line-editor-field"><span>수량</span><KeyboardInput className="app-input" type="number" inputMode="decimal" min="0.001" step="0.001" value={line.quantity} aria-label="수량" onChange={(event) => onChange(line.id, { quantity: event.target.value })} onBlur={() => keyboard.hide()} /></label>
-                    <label className="receipt-line-editor-field"><span>단위</span><KeyboardInput className="app-input" value={line.unit} autoComplete="off" aria-label="단위" onChange={(event) => onChange(line.id, { unit: event.target.value })} onBlur={() => keyboard.hide()} /></label>
+                    <label className="receipt-line-editor-field"><span>수량</span><KeyboardInput className="app-input" type="number" inputMode="decimal" min="0.001" step="0.001" value={line.quantity} aria-label="수량" onChange={(event) => handleLineChange(line.id, { quantity: event.target.value })} onBlur={() => keyboard.hide()} /></label>
+                    <label className="receipt-line-editor-field"><span>단위</span><KeyboardInput className="app-input" value={line.unit} autoComplete="off" aria-label="단위" onChange={(event) => handleLineChange(line.id, { unit: event.target.value })} onBlur={() => keyboard.hide()} /></label>
                   </div>
-                  <div className="receipt-line-storage-field"><span>보관 위치</span><StoragePicker value={line.storage} locationId={line.storageLocationId} locations={storageLocations} label={`${line.name || "상품"} 보관 위치`} descriptionId={`receipt-storage-hint-${line.id}`} onChange={(storage, storageLocationId) => onChange(line.id, { storage, storageLocationId })} /><small id={`receipt-storage-hint-${line.id}`}>상품명 기준 추천이에요. 실제 구매 후 보관 위치를 확인해 주세요.</small></div>
+                  <div className="receipt-line-storage-field"><span>보관 위치</span><StoragePicker value={line.storage} locationId={line.storageLocationId} locations={storageLocations} label={`${line.name || "상품"} 보관 위치`} descriptionId={`receipt-storage-hint-${line.id}`} onChange={(storage, storageLocationId) => handleLineChange(line.id, { storage, storageLocationId })} /><small id={`receipt-storage-hint-${line.id}`}>상품명 기준 추천이에요. 실제 구매 후 보관 위치를 확인해 주세요.</small></div>
                   {line.barcode ? (
                     <div className="receipt-barcode-lookup" role="group" aria-label={`${line.name || "상품"} 영수증 바코드 상품 조회`}>
                       <div className="receipt-barcode-lookup-heading"><span><strong>영수증 바코드</strong><small>{line.barcode}</small></span><small>상품 식별자예요. 소비기한은 포장지 날짜로 확인해요.</small></div>
                       <button className="receipt-line-enrich-button" type="button" disabled={!mealApi.isConfigured || receiptBarcodeLookup === "loading"} onPointerDown={(event) => event.preventDefault()} onClick={() => onLookupBarcode(line)}>{receiptBarcodeLookup === "loading" ? "바코드 상품 조회 중" : mealApi.isConfigured ? "바코드로 상품 후보 조회" : "서버 연결 후 조회"}</button>
                       {receiptBarcodeLookup && receiptBarcodeLookup !== "loading" ? (
                         <div className={`receipt-product-lookup ${receiptBarcodeLookup.status === "matched" ? "" : "receipt-product-lookup-warning"}`} aria-live="polite">
-                          {receiptBarcodeLookup.candidates.length ? <>{receiptBarcodeLookup.candidates.map((candidate) => <div className="receipt-product-candidate" key={`${candidate.source}-${candidate.canonical_name}`}><span><strong>{candidate.canonical_name}</strong><small>{[candidate.brand, candidate.category, candidate.quantity_text].filter(Boolean).join(" · ") || "상품 기본 정보"}</small><small className="receipt-line-match-source">{productSourceLabel(candidate.source)} · 신뢰도 {Math.round(candidate.confidence * 100)}% · {productFreshnessLabel(candidate.source_freshness)} · {productProvenanceNote(candidate.provenance_note)}</small></span><button type="button" onPointerDown={(event) => event.preventDefault()} onClick={() => onApplyBarcodeCandidate(line.id, candidate)}>이 후보 적용</button></div>)}</> : null}
+                      {receiptBarcodeLookup.candidates.length ? <>{receiptBarcodeLookup.candidates.map((candidate) => <div className="receipt-product-candidate" key={`${candidate.source}-${candidate.canonical_name}`}><span><strong>{candidate.canonical_name}</strong><small>{[candidate.brand, candidate.category, candidate.quantity_text].filter(Boolean).join(" · ") || "상품 기본 정보"}</small><small className="receipt-line-match-source">{productSourceLabel(candidate.source)} · 신뢰도 {Math.round(candidate.confidence * 100)}% · {productFreshnessLabel(candidate.source_freshness)} · {productProvenanceNote(candidate.provenance_note)}</small></span><button className="candidate-apply-button" type="button" onPointerDown={(event) => event.preventDefault()} onClick={() => { onApplyBarcodeCandidate(line.id, candidate); setCandidateUserEditedLineId(null); setCandidateAppliedLineId(line.id); }}>상품 정보 적용</button></div>)}</> : null}
                           {receiptBarcodeLookup.warnings.map((warning, index) => <small key={`${index}-${warning}`}>{warning}</small>)}
                           {!receiptBarcodeLookup.candidates.length && !receiptBarcodeLookup.warnings.length ? <small>바코드 상품 후보를 찾지 못했어요.</small> : null}
                         </div>
@@ -614,18 +670,22 @@ function ReceiptReview({
                   <button className="receipt-line-enrich-button" type="button" disabled={!line.name.trim() || productLookup === "loading"} onPointerDown={(event) => event.preventDefault()} onClick={() => onLookupProductName(line)}>{productLookup === "loading" ? "상품 정보 후보를 찾는 중" : "상품 정보 후보 찾기"}</button>
                   {productLookup && productLookup !== "loading" ? (
                     <div className={`receipt-product-lookup ${productLookup.status === "matched" ? "" : "receipt-product-lookup-warning"}`} aria-live="polite">
-                      {productLookup.candidates.length ? <>{productLookup.candidates.map((candidate) => <div className="receipt-product-candidate" key={`${candidate.source}-${candidate.canonical_name}`}><span><strong>{candidate.canonical_name}</strong><small>{[candidate.brand, candidate.category, candidate.shelf_life_text ? `상품 정보 기준 기간 참고: ${candidate.shelf_life_text}` : ""].filter(Boolean).join(" · ")}</small><small className="receipt-line-match-source">{productSourceLabel(candidate.source)} · {productFreshnessLabel(candidate.source_freshness)} · {productProvenanceNote(candidate.provenance_note)}</small></span><button type="button" onPointerDown={(event) => event.preventDefault()} onClick={() => onApplyProductCandidate(line.id, candidate)}>이 후보 적용</button></div>)}{productLookup.warnings.map((warning, index) => <small key={`${index}-${warning}`}>{warning}</small>)}</> : <small>{productLookup.warnings[0] ?? "상품 정보 후보를 찾지 못했어요."}</small>}
+                      {productLookup.candidates.length ? <>{productLookup.candidates.map((candidate, index) => <div className="receipt-product-candidate" key={`${candidate.source}-${candidate.canonical_name}`}><span><strong>{candidate.canonical_name}</strong><small>{[candidate.brand, candidate.category, candidate.shelf_life_text ? `상품 정보 기준 기간 참고: ${candidate.shelf_life_text}` : ""].filter(Boolean).join(" · ")}</small><small className="receipt-line-match-source">{productSourceLabel(candidate.source)} · {productFreshnessLabel(candidate.source_freshness)} · {productProvenanceNote(candidate.provenance_note)}</small></span><button ref={index === 0 ? (element) => { productCandidateActionRefs.current[line.id] = element; } : undefined} className="candidate-apply-button" type="button" onPointerDown={(event) => event.preventDefault()} onClick={() => { onApplyProductCandidate(line.id, candidate); setCandidateUserEditedLineId(null); setCandidateAppliedLineId(line.id); }}>상품 정보 적용</button></div>)}{productLookup.warnings.map((warning, index) => <small key={`${index}-${warning}`}>{warning}</small>)}</> : <small>{productLookup.warnings[0] ?? "상품 정보 후보를 찾지 못했어요."}</small>}
                     </div>
                   ) : null}
-                  {line.matchCandidates?.filter((candidate) => candidate.source === "local_fixture" || candidate.source === "mfds_c005" || candidate.source === "mfds_i1250" || candidate.source === "open_food_facts").map((candidate) => <div className="receipt-product-candidate receipt-product-candidate-background" key={`background-${candidate.source}-${candidate.canonical_name}`}><span><strong>{candidate.canonical_name}</strong><small>{[candidate.brand, candidate.category, candidate.shelf_life_text ? `상품 정보 기준 기간 참고: ${candidate.shelf_life_text}` : ""].filter(Boolean).join(" · ")}</small><small className="receipt-line-match-source">{productSourceLabel(candidate.source)} · {productFreshnessLabel(candidate.source_freshness)} · {productProvenanceNote(candidate.provenance_note)}</small></span><button type="button" onPointerDown={(event) => event.preventDefault()} onClick={() => onApplyReceiptMatchCandidate(line.id, candidate)}>상품 정보 후보 적용</button></div>)}
+                  {line.matchCandidates?.filter((candidate) => candidate.source === "local_fixture" || candidate.source === "mfds_c005" || candidate.source === "mfds_i1250" || candidate.source === "open_food_facts").map((candidate) => <div className="receipt-product-candidate receipt-product-candidate-background" key={`background-${candidate.source}-${candidate.canonical_name}`}><span><strong>{candidate.canonical_name}</strong><small>{[candidate.brand, candidate.category, candidate.shelf_life_text ? `상품 정보 기준 기간 참고: ${candidate.shelf_life_text}` : ""].filter(Boolean).join(" · ")}</small><small className="receipt-line-match-source">{productSourceLabel(candidate.source)} · {productFreshnessLabel(candidate.source_freshness)} · {productProvenanceNote(candidate.provenance_note)}</small></span><button className="candidate-apply-button" type="button" onPointerDown={(event) => event.preventDefault()} onClick={() => { onApplyReceiptMatchCandidate(line.id, candidate); setCandidateUserEditedLineId(null); setCandidateAppliedLineId(line.id); }}>상품 정보 적용</button></div>)}
                   {error ? <p className="receipt-line-error" role="alert"><InfoCircledIcon width={14} height={14} />{error}</p> : null}
                 </div>
               ) : null}
+              {line.requiresReview && !userConfirmedLineIds.includes(line.id) ? <button className="receipt-line-confirm-button" type="button" aria-describedby={`receipt-line-status-${line.id}`} onPointerDown={(event) => event.preventDefault()} onClick={() => confirmLine(line.id)}>이 항목 확인했어요</button> : null}
+              {line.requiresReview && userConfirmedLineIds.includes(line.id) ? <span className="receipt-line-confirmed-badge" role="status" aria-live="polite" aria-atomic="true" aria-label="사용자 확인 완료"><CheckIcon width={12} height={12} /> 확인 완료</span> : null}
+              {candidateAppliedLineId === line.id ? <div className="receipt-review-contract receipt-candidate-applied" role="status" aria-live="polite"><CheckIcon width={15} height={15} /><span><strong>상품 정보를 적용했어요</strong><small>상품명·보관 기준 후보를 반영했어요. 포장지 날짜는 별도로 확인해 주세요.</small></span></div> : null}
+              {candidateUserEditedLineId === line.id ? <div className="receipt-review-contract receipt-candidate-user-edited" role="status" aria-live="polite"><ReaderIcon width={15} height={15} /><span><strong>후보 적용 후 사용자 값으로 수정했어요</strong><small>상품 후보 출처는 남아 있고, 현재 상품명·수량·단위·보관 위치는 사용자가 확인한 값이에요.</small></span></div> : null}
             </div>
           );
         })}
       </div>
-      <div className="receipt-review-submit-bar">{selectedReviewCount ? <small role="note" style={{ display: "block", marginBottom: 2, color: "var(--atelier-amber)", fontSize: 8, fontWeight: 760, lineHeight: 1.2, textAlign: "center" }}>확인 필요 {selectedReviewCount}개가 포함돼요. 항목을 열어 확인한 뒤 반영하세요.</small> : null}<button className="primary-sheet-button" type="button" disabled={reviewCount === 0 || invalidSelectedLines.length > 0} onPointerDown={(event) => event.preventDefault()} onClick={() => { keyboard.hide(); onSubmit(); }}><CheckIcon width={17} height={17} /> {reviewCount}개 항목 반영하기</button></div>
+      <div className={`receipt-review-submit-bar receipt-review-submit-bar-${selectedReviewCount ? "needs-confirmation" : reviewCount ? "ready" : "empty"}`} role="group" aria-label="영수증 검수 반영" data-review-state={selectedReviewCount ? "needs-confirmation" : reviewCount ? "ready" : "empty"}>{selectedReviewCount ? <small id="receipt-review-submit-hint" role="note" style={{ display: "block", marginBottom: 2, color: "var(--atelier-amber)", fontSize: 9, fontWeight: 760, lineHeight: 1.2, textAlign: "center" }}>확인 필요 {selectedReviewCount}개가 포함돼요. 항목을 열어 확인한 뒤 반영하세요.</small> : reviewCount ? <small id="receipt-review-ready-hint" role="status" style={{ display: "block", marginBottom: 2, color: "var(--atelier-pistachio)", fontSize: 9, fontWeight: 760, lineHeight: 1.2, textAlign: "center" }}>선택한 항목을 확인했어요. 이제 반영할 수 있어요.</small> : null}<button className="primary-sheet-button" type="button" aria-describedby={selectedReviewCount ? "receipt-review-submit-hint" : reviewCount ? "receipt-review-ready-hint" : undefined} disabled={reviewCount === 0 || invalidSelectedLines.length > 0} onPointerDown={(event) => event.preventDefault()} onClick={() => { keyboard.hide(); onSubmit(); }}><CheckIcon width={17} height={17} /> {reviewCount}개 항목 반영하기</button></div>
       <p className="sheet-footnote">영수증에는 보통 소비기한이 없어서, 날짜는 포장지 확인 전까지 ‘확인 필요’로 남겨요. 이 화면에서 수정한 상품명·수량·단위는 사용자 확인값으로 기록합니다.</p>
     </div>
   );
@@ -709,6 +769,7 @@ export default function AddFoodSheet({
   const [labelStorageHint, setLabelStorageHint] = useState<ApiStorageType | undefined>("refrigerated");
   const [labelDetectedStorageConditionText, setLabelDetectedStorageConditionText] = useState<string | undefined>("포장지에 냉장 보관 표시");
   const [labelProcessing, setLabelProcessing] = useState(false);
+  const [labelSubmitting, setLabelSubmitting] = useState(false);
   const [labelError, setLabelError] = useState("");
   const [labelPreviewUrl, setLabelPreviewUrl] = useState<string | null>(null);
   const labelPreviewUrlRef = useRef<string | null>(null);
@@ -919,7 +980,6 @@ export default function AddFoodSheet({
     if (!labelResult) return;
     const frame = window.requestAnimationFrame(() => {
       const action = labelResultActionRef.current;
-      action?.scrollIntoView({ behavior: getMobileScrollBehavior(), block: "center" });
       const nextTarget = action && !action.disabled
         ? action
         : !labelDetectedProductName.trim()
@@ -929,9 +989,11 @@ export default function AddFoodSheet({
             : !isCompleteLabelDate(labelDetectedDate)
               ? document.querySelector<HTMLElement>(".label-result-date-field input")
               : !labelDetectedStorage
-                ? document.querySelector<HTMLElement>(".label-result-card .storage-option")
-                : action;
+            ? document.querySelector<HTMLElement>(".label-result-card .storage-option")
+            : action;
+      nextTarget?.scrollIntoView({ behavior: getMobileScrollBehavior(), block: "center" });
       nextTarget?.focus({ preventScroll: true });
+      document.querySelector<HTMLElement>(".label-result-flow")?.scrollIntoView({ behavior: getMobileScrollBehavior(), block: "nearest" });
     });
     return () => window.cancelAnimationFrame(frame);
   }, [labelDateKind, labelDetectedDate, labelDetectedProductName, labelDetectedStorage, labelResult]);
@@ -1456,10 +1518,12 @@ export default function AddFoodSheet({
   };
 
   const submitLabel = () => {
+    if (labelSubmitting) return;
     const normalizedName = labelDetectedProductName.trim();
     if (!labelDateKind || !labelDetectedStorage || !normalizedName || !isCompleteLabelDate(labelDetectedDate)) return;
     if (labelLotAction === "correct" && !labelTargetFoodId) return;
     keyboard.hide();
+    setLabelSubmitting(true);
     onAddManual(createFood({
       lotAction: labelLotAction,
       targetFoodId: labelLotAction === "correct" ? labelTargetFoodId ?? undefined : undefined,
@@ -1494,7 +1558,7 @@ export default function AddFoodSheet({
 
   const submitManual = () => {
     const normalizedName = foodName.trim();
-    if (!normalizedName) return;
+    if (!normalizedName || manualQuantityInvalid) return;
     const dateCandidate = barcodeDateCandidate;
     keyboard.hide();
     onAddManual(createFood({
@@ -1548,6 +1612,8 @@ export default function AddFoodSheet({
 
   const barcodeHasResult = Boolean(barcodeLookup || barcodeParse || barcodeResult);
   const manualHasReview = Boolean(productProvenance || priorityInference);
+  const manualQuantityValue = Number.parseFloat(quantity);
+  const manualQuantityInvalid = quantity.trim() !== "" && (!Number.isFinite(manualQuantityValue) || manualQuantityValue <= 0);
   const intakeStep = mode === "receipt"
     ? receiptStage === "review" ? 2 : 1
     : mode === "barcode" ? barcodeHasResult ? 2 : 1
@@ -1585,6 +1651,7 @@ export default function AddFoodSheet({
             ref={(element) => { modeTabRefs.current[tabMode] = element; }}
             id={`add-mode-tab-${tabMode}`}
             className={`mode-tab ${mode === tabMode ? "mode-tab-active" : ""}`}
+            style={tabMode === "receipt" ? { position: "relative" } : undefined}
             type="button"
             role="tab"
             aria-selected={mode === tabMode}
@@ -1593,10 +1660,11 @@ export default function AddFoodSheet({
             onKeyDown={handleModeTabKeyDown}
             onClick={() => switchMode(tabMode)}
           >
-            <Icon width={16} height={16} />{label}
+            <Icon width={16} height={16} />{label}{tabMode === "receipt" ? <span aria-hidden="true" style={{ position: "absolute", top: 2, right: 3, color: "var(--meal-sage-dark)", fontSize: 7, fontWeight: 820, lineHeight: 1 }}>추천</span> : null}
           </button>
         ))}
       </div>
+      <p className="intake-method-hint"><strong>처음이라면 영수증</strong><span>여러 식품을 한 번에 읽어요</span><span>날짜만 필요하면 라벨</span></p>
 
       {!cameraTarget ? <div className={`intake-flow-rail intake-flow-step-${intakeStep}`} role="group" aria-label={`식품 추가 ${intakeStep}단계`}>
         <div className="intake-flow-rail-heading"><span><strong>{intakeStepTitle}</strong><small>{intakeStepDetail}</small></span><em>{intakeStep}/3</em></div>
@@ -1646,11 +1714,12 @@ export default function AddFoodSheet({
           <button className="secondary-sheet-button" type="button" onPointerDown={(event) => event.preventDefault()} onClick={() => void lookupBarcode(barcode)}><ReaderIcon width={17} height={17} /> 상품 후보 조회</button>
           <button className="secondary-sheet-button" type="button" onClick={() => { setBarcode("8801114167523"); setBarcodeParse(null); setBarcodeResult("풀무원 국산콩 두부 · 상품 후보 1개"); }}>예시 바코드 입력</button>
           {barcodeResult ? <div className={`result-callout ${barcodeLookup?.status === "provider_unavailable" ? "result-callout-warning" : ""}`} role="status" aria-live="polite"><CheckCircledIcon width={17} height={17} /><span><strong>{barcodeResult}</strong><small>소비기한은 포장지의 날짜를 촬영해 확인해 주세요.</small></span></div> : null}
-          {!mealApi.isConfigured && barcodeResult?.includes("상품 후보 1개") ? <div className="barcode-candidate-list" aria-label="바코드 상품 후보"><div className="barcode-candidate-card"><div className="barcode-candidate-copy"><strong>풀무원 국산콩 두부</strong><small>샘플 상품 후보 · 냉장 보관 기준</small><small>소비기한은 포장지 날짜로 확인해요.</small></div><button ref={barcodeCandidateActionRef} className="candidate-apply-button" type="button" onClick={applyDemoBarcodeCandidate}>이름·보관 기준 적용</button></div></div> : null}
+          {!mealApi.isConfigured && barcodeResult?.includes("상품 후보 1개") ? <div className="barcode-candidate-list" aria-label="바코드 상품 후보"><div className="barcode-candidate-heading"><strong>상품 정보 후보</strong><small>자동으로 찾은 값은 확인 후 적용해요</small></div><div className="barcode-candidate-card"><div className="barcode-candidate-copy"><strong>풀무원 국산콩 두부</strong><small>샘플 상품 후보 · 냉장 보관 기준</small><small>소비기한은 포장지 날짜로 확인해 주세요.</small></div><button ref={barcodeCandidateActionRef} className="candidate-apply-button" type="button" onClick={applyDemoBarcodeCandidate}>상품 정보 적용</button></div></div> : null}
           {barcodeProviderNotice ? <div className="barcode-provider-warning" role="status"><InfoCircledIcon width={16} height={16} /><span><strong>일부 상품 정보 확인 필요</strong><small>{barcodeProviderNotice}</small></span></div> : null}
           {barcodeDateCandidate ? <div className="barcode-date-candidate" role="group" aria-live="polite" aria-label="바코드 날짜 후보"><div><strong>{barcodeDateKindLabel(barcodeDateCandidate.kind)} {barcodeDateCandidate.value.replaceAll("-", ".")}</strong><small>바코드에서 읽은 날짜 후보{barcodeLookup?.candidates[0] ? " · 상품 후보와 함께 확인했어요." : " · 상품 후보를 별도로 확인해 주세요."}</small><small>포장지와 실제 lot를 확인한 뒤 날짜 후보로 반영할 수 있어요.</small></div><button className="candidate-apply-button" type="button" onClick={applyBarcodeDateCandidate}>상품·날짜를 입력에 반영</button></div> : null}
           {barcodeLookup?.candidates.length ? (
             <div className="barcode-candidate-list" aria-label="바코드 상품 후보" aria-live="polite">
+              <div className="barcode-candidate-heading"><strong>상품 정보 후보</strong><small>자동으로 찾은 값은 확인 후 적용해요</small></div>
               {barcodeLookup.candidates.map((candidate, index) => (
                 <div className="barcode-candidate-card" key={`${candidate.source}-${candidate.canonical_name}`}>
                   <div className="barcode-candidate-copy">
@@ -1661,7 +1730,7 @@ export default function AddFoodSheet({
                     {candidate.storage_hint ? <small>상품 정보 기준 보관 정보: {candidate.storage_hint === "frozen" ? "냉동" : candidate.storage_hint === "refrigerated" ? "냉장" : "실온"}</small> : null}
                     <small className="barcode-candidate-provenance">{productProvenanceNote(candidate.provenance_note)}</small>
                   </div>
-                  <button ref={index === 0 ? barcodeCandidateActionRef : undefined} className="candidate-apply-button" type="button" onClick={() => applyBarcodeCandidate(candidate)}>이름 채우기</button>
+                  <button ref={index === 0 ? barcodeCandidateActionRef : undefined} className="candidate-apply-button" type="button" onClick={() => applyBarcodeCandidate(candidate)}>상품 정보 적용</button>
                 </div>
               ))}
             </div>
@@ -1685,7 +1754,8 @@ export default function AddFoodSheet({
             {labelError ? <div className="result-callout result-callout-warning" role="alert"><InfoCircledIcon width={17} height={17} /><span><strong>{labelError}</strong><small>{labelDateKind ? "원본 라벨과 표시 날짜를 확인한 뒤 반영해 주세요." : labelResult ? "날짜 숫자는 후보로만 남겨두고, 의미를 선택하기 전에는 저장하지 않아요." : "날짜가 없는 면이라면 다른 면을 촬영하거나 직접 입력으로 이어갈 수 있어요."}</small></span>{!labelResult ? <button className="result-callout-action" type="button" onPointerDown={(event) => event.preventDefault()} onClick={continueWithManual}>직접 입력으로 계속</button> : null}</div> : null}
             {labelResult ? (
               <div className="label-result-flow">
-                <div className={`label-result-card ${!labelDateKind || !labelDetectedStorage ? "label-result-card-ambiguous" : ""}`}>
+                  <div className={`label-result-card ${!labelDateKind || !labelDetectedStorage ? "label-result-card-ambiguous" : ""}`}>
+                  <div className="label-result-provenance" aria-label="라벨 자동 인식 상태"><strong>자동 인식 후보</strong><span>저장 전 확인 필요</span></div>
                   <div className="label-review-contract" role="status" aria-live="polite" aria-atomic="true"><InfoCircledIcon width={15} height={15} /><span><strong>날짜 의미와 보관 위치를 확인하세요</strong><small>자동으로 읽은 숫자는 후보예요. 확인 후 반영을 눌러야 식품 기록에 저장됩니다.</small></span></div>
                   <div className="label-result-fields">
                     <label className="label-result-name-field"><span>상품명</span><KeyboardInput className="app-input" value={labelDetectedProductName} placeholder="상품명을 입력해 주세요" autoComplete="off" spellCheck={false} aria-label="라벨 상품명" onChange={(event) => { setLabelDetectedProductName(event.target.value); setLabelLotAction("create"); setLabelTargetFoodId(null); }} onBlur={() => keyboard.hide()} /></label>
@@ -1727,7 +1797,7 @@ export default function AddFoodSheet({
                   <span className={`confirmed-badge ${!labelDateKind || !labelDetectedStorage ? "review-badge" : ""}`}><CheckIcon width={13} height={13} /> {labelDateKind && labelDetectedStorage ? "표시 후보" : "추가 확인 필요"}</span>
                 </div>
                 <div className="receipt-review-submit-bar label-result-action-bar">
-                  <button ref={labelResultActionRef} className="primary-sheet-button label-result-action" type="button" disabled={!labelDateKind || !labelDetectedStorage || !labelDetectedProductName.trim() || !isCompleteLabelDate(labelDetectedDate) || (labelLotAction === "correct" && !labelTargetFoodId)} onPointerDown={(event) => { event.preventDefault(); submitLabel(); }} onClick={(event) => { if (event.detail === 0) submitLabel(); }}>{labelDateKind && labelDetectedStorage ? "확인 후 반영" : "날짜·보관 위치를 확인해 주세요"}</button>
+                  <button ref={labelResultActionRef} className="primary-sheet-button label-result-action" type="button" aria-busy={labelSubmitting} disabled={labelSubmitting || !labelDateKind || !labelDetectedStorage || !labelDetectedProductName.trim() || !isCompleteLabelDate(labelDetectedDate) || (labelLotAction === "correct" && !labelTargetFoodId)} onPointerDown={(event) => { event.preventDefault(); submitLabel(); }} onClick={(event) => { if (event.detail === 0) submitLabel(); }}>{labelSubmitting ? "반영 중" : labelDateKind && labelDetectedStorage ? "확인 후 반영" : "날짜·보관 위치를 확인해 주세요"}</button>
                 </div>
               </div>
             ) : null}
@@ -1737,13 +1807,16 @@ export default function AddFoodSheet({
 
       {mode === "manual" ? (
         <div className="input-flow manual-flow">
+          <div className="capture-visual compact"><PlusIcon width={25} height={25} /></div>
+          <h3>식품 정보를 직접 기록해요</h3>
+          <p className="manual-flow-intro">이름과 보관 위치만 먼저 남겨도 괜찮아요. 날짜는 나중에 포장지를 확인해 보완할 수 있어요.</p>
           <div className="manual-note"><InfoCircledIcon width={17} height={17} /><span>날짜가 없거나 신선식품이면 먼저 이름과 보관 위치만 기록해도 괜찮아요.</span></div>
           {productProvenance ? <div className="manual-product-provenance manual-source-confirmation" role="status"><ReaderIcon width={17} height={17} /><span><strong>바코드 상품 후보를 적용했어요</strong><small>{productSourceLabel(productProvenance.source)} · 신뢰도 {Math.round(productProvenance.confidence * 100)}% · {productFreshnessLabel(productProvenance.sourceFreshness)}{productProvenance.storageHint ? ` · 상품 기준 보관 정보 ${productProvenance.storageHint === "refrigerated" ? "냉장" : productProvenance.storageHint === "frozen" ? "냉동" : "실온"}` : ""}</small><small>{productProvenanceNote(productProvenance.note)}</small><small>상품명·수량·보관 위치를 확인한 뒤 식품으로 추가하세요.</small></span><em>후보 적용됨</em></div> : null}
+          {foodName.trim() ? <div className="receipt-review-submit-bar manual-submit-bar" style={{ position: "sticky", top: 0, bottom: "auto", zIndex: 5, marginTop: 0, marginBottom: 2, padding: "7px 0 8px" }}><button className="primary-sheet-button manual-submit" type="button" onPointerDown={(event) => { event.preventDefault(); submitManual(); }} onClick={(event) => { if (event.detail === 0) submitManual(); }} disabled={!foodName.trim() || manualQuantityInvalid}><PlusIcon width={17} height={17} /> 식품 추가하기</button>{manualQuantityInvalid ? <small role="alert" style={{ display: "block", marginTop: 4, color: "var(--atelier-coral)", fontSize: 9, lineHeight: 1.35, textAlign: "center" }}>수량은 0보다 큰 숫자로 입력해 주세요.</small> : <small role="note" style={{ display: "block", marginTop: 4, color: "var(--atelier-muted)", fontSize: 9, lineHeight: 1.35, textAlign: "center" }}>기본값 {quantity || "1개"} · {storage} 보관으로 바로 기록해요</small>}</div> : null}
           <label className="app-input-label" htmlFor="food-name-input">식품 이름</label>
           <KeyboardInput id="food-name-input" className="app-input" value={foodName} placeholder="예: 대파, 김치, 남은 카레" onChange={(event) => { setFoodName(event.target.value); setPriorityInference(null); setPriorityInferenceError(""); if (productProvenance) clearProductCandidate(); }} onBlur={() => keyboard.hide()} />
-          {foodName.trim() ? <div className="receipt-review-submit-bar manual-submit-bar" style={{ position: "sticky", top: 0, bottom: "auto", zIndex: 5, marginTop: 0, marginBottom: 2, padding: "7px 0 8px" }}><button className="primary-sheet-button manual-submit" type="button" onPointerDown={(event) => { event.preventDefault(); submitManual(); }} onClick={(event) => { if (event.detail === 0) submitManual(); }} disabled={!foodName.trim()}><PlusIcon width={17} height={17} /> 식품 추가하기</button><small role="note" style={{ display: "block", marginTop: 4, color: "var(--atelier-muted)", fontSize: 8, lineHeight: 1.35, textAlign: "center" }}>기본값 {quantity || "1개"} · {storage} 보관으로 바로 기록해요</small></div> : null}
           <label className="app-input-label" htmlFor="food-quantity-input">수량</label>
-          <KeyboardInput id="food-quantity-input" className="app-input" value={quantity} placeholder="예: 1팩" onChange={(event) => setQuantity(event.target.value)} onBlur={() => keyboard.hide()} />
+          <KeyboardInput id="food-quantity-input" className="app-input" value={quantity} placeholder="예: 1팩" aria-invalid={manualQuantityInvalid} onChange={(event) => setQuantity(event.target.value)} onBlur={() => keyboard.hide()} />
           <span className="app-input-label">보관 위치</span>
           <StoragePicker value={storage} locationId={storageLocationId} locations={storageLocations} onChange={(nextStorage, nextLocationId) => { setStorage(nextStorage); setStorageLocationId(nextLocationId); setPriorityInference(null); setPriorityInferenceError(""); }} />
           <div className="manual-note"><InfoCircledIcon width={17} height={17} /><span>표시 날짜가 없을 때는 상품명과 보관 위치로 먼저 확인할 순서를 계산할 수 있어요. 소비기한을 확정하는 기능은 아니에요.</span></div>

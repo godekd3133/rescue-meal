@@ -1141,13 +1141,13 @@
 
 .notification-row-copy small {
   color: var(--meal-muted);
-  font-size: 9px;
+  font-size: 10px;
   line-height: 1.4;
 }
 
 .notification-row-copy em {
   color: var(--meal-sage);
-  font-size: 8px;
+  font-size: 9px;
   font-style: normal;
   font-weight: 800;
 }
@@ -1664,7 +1664,7 @@
 
 .shopping-summary-kicker {
   color: var(--meal-sage);
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 850;
   letter-spacing: 0.14em;
 }
@@ -1681,7 +1681,7 @@
 .shopping-summary-copy small {
   overflow: hidden;
   color: var(--meal-muted);
-  font-size: 9px;
+  font-size: 10px;
   line-height: 1.25;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2859,7 +2859,7 @@
 .guest-transfer-note {
   margin: 0;
   color: var(--meal-muted);
-  font-size: 9px;
+  font-size: 10px;
   line-height: 1.45;
 }
 
@@ -2878,7 +2878,7 @@
 
 .guest-transfer-summary span {
   color: var(--meal-sage-dark);
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 750;
 }
 
@@ -3273,7 +3273,7 @@
 
 .notification-delivery-status small {
   color: var(--meal-muted);
-  font-size: 8px;
+  font-size: 9px;
   line-height: 1.4;
 }
 
@@ -3283,7 +3283,7 @@
   border-radius: 999px;
   background: #f2ebe2;
   color: #9a7b63;
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 800;
 }
 
@@ -4545,6 +4545,27 @@
   width: 100%;
 }
 
+.barcode-candidate-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 2px 2px 0;
+}
+
+.barcode-candidate-heading strong {
+  color: var(--meal-ink);
+  font-size: 11px;
+  font-weight: 820;
+}
+
+.barcode-candidate-heading small {
+  color: var(--meal-muted);
+  font-size: 9px;
+  line-height: 1.3;
+  text-align: right;
+}
+
 .barcode-candidate-card {
   display: flex;
   gap: 10px;
@@ -4692,7 +4713,7 @@
 
 .manual-product-provenance small {
   color: var(--meal-muted);
-  font-size: 9px;
+  font-size: 10px;
   line-height: 1.4;
 }
 
@@ -5096,6 +5117,42 @@
   background: #f4f7f0;
 }
 
+.receipt-line-card-needs-confirmation {
+  border-color: color-mix(in srgb, #c89551 42%, transparent);
+  box-shadow: inset 3px 0 0 #c89551;
+}
+
+.receipt-line-card-confirmed {
+  border-color: color-mix(in srgb, #7a9674 24%, transparent);
+}
+
+html[data-rescue-theme="dark"] .receipt-line-card-needs-confirmation {
+  border-color: color-mix(in srgb, #e6b86e 50%, transparent);
+  box-shadow: inset 3px 0 0 #e6b86e;
+}
+
+html[data-rescue-theme="dark"] .receipt-line-card-checked {
+  border-color: color-mix(in srgb, #b7d7a6 22%, var(--sheet-border));
+  background: color-mix(in srgb, #b7d7a6 6%, var(--sheet-surface));
+}
+
+html[data-rescue-theme="dark"] .receipt-line-card-confirmed {
+  border-color: color-mix(in srgb, #b7d7a6 30%, var(--sheet-border));
+  background: color-mix(in srgb, #b7d7a6 5%, var(--sheet-surface));
+}
+
+.receipt-line-card-source-active {
+  border-color: #e3b39b;
+  background: color-mix(in srgb, #f4d1c1 18%, #f4f7f0);
+  box-shadow: inset 3px 0 0 #dc8e6b, 0 0 0 1px rgba(220, 142, 107, 0.2);
+}
+
+html[data-rescue-theme="dark"] .receipt-line-card-source-active {
+  border-color: #efb497;
+  background: color-mix(in srgb, #efb497 9%, var(--sheet-surface));
+  box-shadow: inset 3px 0 0 #ef9b78, 0 0 0 1px rgba(239, 155, 120, 0.26);
+}
+
 .receipt-line {
   display: flex;
   align-items: center;
@@ -5340,19 +5397,6 @@
   color: #9b846d;
 }
 
-.receipt-product-candidate > button {
-  flex: 0 0 auto;
-  min-height: 30px;
-  padding: 0 8px;
-  border: 1px solid #b8cbb0;
-  border-radius: 8px;
-  background: #fbfdf9;
-  color: var(--meal-sage-dark);
-  font-size: 9px;
-  font-weight: 800;
-  white-space: nowrap;
-}
-
 .receipt-line-error {
   display: flex;
   gap: 5px;
@@ -5385,6 +5429,52 @@
 .receipt-validation-callout small {
   font-size: 10px;
   line-height: 1.45;
+}
+
+.receipt-validation-callout button {
+  justify-self: start;
+  min-height: 28px;
+  padding: 0 9px;
+  border: 1px solid color-mix(in srgb, #b8735e 38%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, #fff 48%, transparent);
+  color: #865b48;
+  font-size: 9px;
+  font-weight: 820;
+}
+
+.receipt-line-confirm-button {
+  min-height: 28px;
+  margin: 0 10px 8px auto;
+  padding: 0 9px;
+  border: 1px solid color-mix(in srgb, #7a9674 42%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, #fff 55%, transparent);
+  color: #5e795b;
+  font-size: 9px;
+  font-weight: 820;
+}
+
+.receipt-line-confirmed-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 24px;
+  margin: 0 10px 8px auto;
+  padding: 0 8px;
+  border: 1px solid color-mix(in srgb, #7a9674 34%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, #dcebd6 55%, transparent);
+  color: #587452;
+  font-size: 9px;
+  font-weight: 820;
+  white-space: nowrap;
+}
+
+html[data-rescue-theme="dark"] .receipt-line-confirmed-badge {
+  border-color: color-mix(in srgb, #b7d7a6 38%, transparent);
+  background: color-mix(in srgb, #b7d7a6 14%, transparent);
+  color: #c8e3bb;
 }
 
 .ocr-confidence {
@@ -6597,8 +6687,9 @@
 .recipe-provenance {
   margin: -6px 0 0;
   color: var(--meal-muted);
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 8px;
+  font-family: inherit;
+  font-weight: 650;
+  font-size: 10px;
   line-height: 1.4;
 }
 
@@ -7060,7 +7151,7 @@
 .recipe-shopping-note {
   margin: 0;
   color: var(--meal-muted);
-  font-size: 8px;
+  font-size: 9px;
   line-height: 1.45;
 }
 
@@ -7100,7 +7191,7 @@
 .shopping-sheet-kicker {
   margin: 0 0 4px;
   color: var(--meal-sage);
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 850;
   letter-spacing: 0.14em;
 }
@@ -7289,7 +7380,7 @@
 
 .shopping-sheet-copy small {
   color: var(--meal-muted);
-  font-size: 9px;
+  font-size: 10px;
 }
 
 .shopping-sheet-receive {
@@ -7302,7 +7393,7 @@
   border-radius: 8px;
   background: #f5f8f1;
   color: var(--meal-sage-dark);
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 800;
   white-space: nowrap;
 }
@@ -7341,7 +7432,7 @@
   align-items: flex-start;
   margin: 0;
   color: var(--meal-muted);
-  font-size: 8px;
+  font-size: 9px;
   line-height: 1.45;
 }
 
@@ -7461,7 +7552,7 @@
   align-items: flex-start;
   margin: 0;
   color: var(--meal-muted);
-  font-size: 8px;
+  font-size: 9px;
   line-height: 1.4;
 }
 
@@ -8895,7 +8986,7 @@
 .guidance-badge {
   padding: 4px 5px;
   border-radius: 6px;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 800;
 }
 
@@ -8961,6 +9052,20 @@
 .toast-action:focus-visible {
   outline: 2px solid #d6e8cb;
   outline-offset: 2px;
+}
+
+.toast.toast-retry {
+  border-color: color-mix(in srgb, var(--atelier-amber) 42%, rgba(255, 255, 255, 0.22));
+  background: color-mix(in srgb, var(--atelier-amber) 22%, rgba(49, 64, 46, 0.96));
+}
+
+.toast.toast-retry svg {
+  color: #ffd18d;
+}
+
+.toast.toast-retry .toast-action {
+  border-color: rgba(255, 209, 141, 0.58);
+  background: rgba(255, 209, 141, 0.16);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -10063,6 +10168,139 @@
   background: color-mix(in srgb, var(--atelier-surface) 60%, transparent);
 }
 
+.bottom-sheet .grocy-status-card[data-status="ok"],
+.bottom-sheet .grocy-worker-card[data-worker-state="ready"] {
+  border-color: color-mix(in srgb, var(--atelier-pistachio) 30%, var(--sheet-border));
+  background: color-mix(in srgb, var(--atelier-pistachio) 8%, var(--atelier-surface));
+}
+
+.bottom-sheet .grocy-status-card[data-status="unavailable"],
+.bottom-sheet .grocy-status-card[data-status="disabled"],
+.bottom-sheet .grocy-worker-card[data-worker-state="error"] {
+  border-color: color-mix(in srgb, var(--atelier-coral) 30%, var(--sheet-border));
+  background: color-mix(in srgb, var(--atelier-coral) 7%, var(--atelier-surface));
+}
+
+.bottom-sheet .grocy-status-card[data-status="ok"] .grocy-status-dot,
+.bottom-sheet .grocy-worker-card[data-worker-state="ready"] > span {
+  color: var(--atelier-pistachio);
+}
+
+.bottom-sheet .grocy-status-card[data-status="unavailable"] .grocy-status-dot,
+.bottom-sheet .grocy-status-card[data-status="disabled"] .grocy-status-dot,
+.bottom-sheet .grocy-worker-card[data-worker-state="error"] > span {
+  color: var(--atelier-coral);
+}
+
+.bottom-sheet [data-outbox-status="succeeded"] {
+  border-color: color-mix(in srgb, var(--atelier-pistachio) 24%, var(--sheet-border));
+  background: color-mix(in srgb, var(--atelier-pistachio) 5%, var(--atelier-surface));
+}
+
+.bottom-sheet [data-outbox-status="pending"],
+.bottom-sheet [data-outbox-status="in_flight"] {
+  border-color: color-mix(in srgb, var(--atelier-blue) 24%, var(--sheet-border));
+  background: color-mix(in srgb, var(--atelier-blue) 5%, var(--atelier-surface));
+}
+
+.bottom-sheet .grocy-product-task .grocy-save-button {
+  border-color: color-mix(in srgb, var(--atelier-pistachio) 38%, var(--sheet-border));
+  background: color-mix(in srgb, var(--atelier-pistachio) 12%, var(--atelier-surface));
+  color: var(--atelier-pistachio);
+}
+
+.bottom-sheet .grocy-reconciliation-actions .grocy-save-button {
+  border-color: color-mix(in srgb, var(--atelier-pistachio) 32%, var(--sheet-border));
+  background: color-mix(in srgb, var(--atelier-pistachio) 9%, var(--atelier-surface));
+  color: var(--atelier-pistachio);
+}
+
+.bottom-sheet .grocy-reconciliation-actions .grocy-retry-button {
+  border-color: color-mix(in srgb, var(--atelier-blue) 30%, var(--sheet-border));
+  background: color-mix(in srgb, var(--atelier-blue) 7%, var(--atelier-surface));
+  color: var(--atelier-blue);
+}
+
+.bottom-sheet .grocy-task-state-line {
+  display: flex;
+  min-width: 0;
+  gap: 7px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.bottom-sheet .grocy-task-state-badge {
+  flex: 0 0 auto;
+  padding: 3px 6px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 8px;
+  font-weight: 820;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.bottom-sheet .grocy-task-state-review {
+  color: var(--atelier-amber);
+  background: color-mix(in srgb, var(--atelier-amber) 9%, var(--atelier-surface));
+}
+
+.bottom-sheet .grocy-task-state-retry {
+  color: var(--atelier-coral);
+  background: color-mix(in srgb, var(--atelier-coral) 8%, var(--atelier-surface));
+}
+
+.bottom-sheet .grocy-success-stale {
+  border: 1px solid color-mix(in srgb, var(--atelier-amber) 34%, var(--sheet-border));
+  background: color-mix(in srgb, var(--atelier-amber) 8%, var(--atelier-surface));
+  color: var(--atelier-ink);
+}
+
+.bottom-sheet .grocy-success-stale > svg {
+  color: var(--atelier-amber);
+}
+
+.bottom-sheet .grocy-outbox-card[data-outbox-overall-state="attention"] {
+  border-color: color-mix(in srgb, var(--atelier-amber) 32%, var(--sheet-border));
+  background: color-mix(in srgb, var(--atelier-amber) 7%, var(--atelier-surface));
+}
+
+.bottom-sheet .grocy-outbox-card[data-outbox-overall-state="processing"],
+.bottom-sheet .grocy-outbox-card[data-outbox-overall-state="pending"] {
+  border-color: color-mix(in srgb, var(--atelier-blue) 28%, var(--sheet-border));
+  background: color-mix(in srgb, var(--atelier-blue) 6%, var(--atelier-surface));
+}
+
+.bottom-sheet .grocy-outbox-card[data-outbox-overall-state="clear"] {
+  border-color: color-mix(in srgb, var(--atelier-pistachio) 24%, var(--sheet-border));
+  background: color-mix(in srgb, var(--atelier-pistachio) 5%, var(--atelier-surface));
+}
+
+.bottom-sheet .grocy-outbox-card[data-outbox-overall-state="pending"] .grocy-process-button {
+  border-color: color-mix(in srgb, var(--atelier-blue) 38%, var(--sheet-border));
+  background: color-mix(in srgb, var(--atelier-blue) 12%, var(--atelier-surface));
+  color: var(--atelier-blue);
+}
+
+@media (max-width: 360px) {
+  .bottom-sheet .grocy-product-task-fields {
+    grid-template-columns: minmax(0, 1fr) 0.72fr 50px;
+  }
+
+  .bottom-sheet .grocy-reconciliation-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .bottom-sheet .grocy-reconciliation-actions .grocy-transaction-input {
+    grid-column: 1 / -1;
+  }
+
+  .bottom-sheet .grocy-task-state-badge {
+    padding-inline: 5px;
+    font-size: 7px;
+  }
+}
+
 .bottom-sheet .notification-preference-row,
 .bottom-sheet .notification-preference-toggle-row,
 .bottom-sheet .notification-delivery-status,
@@ -10903,7 +11141,7 @@
 .bottom-sheet .detail-remote-refresh small,
 .bottom-sheet .storage-mismatch-callout small {
   color: var(--atelier-muted);
-  font-size: 9px;
+  font-size: 10px;
   line-height: 1.45;
 }
 
@@ -10958,8 +11196,27 @@
 .bottom-sheet .food-provenance-copy > span,
 .bottom-sheet .inference-trace-heading small {
   color: var(--atelier-pistachio-deep);
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 800;
+}
+
+.bottom-sheet .food-provenance-copy .provenance-role-label {
+  display: inline-flex;
+  margin-left: 4px;
+  padding: 2px 5px;
+  border: 1px solid color-mix(in srgb, var(--atelier-pistachio) 26%, var(--sheet-border));
+  border-radius: 999px;
+  color: var(--atelier-pistachio);
+  font-size: 8px;
+  font-style: normal;
+  font-weight: 820;
+  line-height: 1.1;
+  vertical-align: 1px;
+}
+
+.bottom-sheet .product-provenance-card .provenance-role-label {
+  border-color: color-mix(in srgb, var(--atelier-blue) 30%, var(--sheet-border));
+  color: var(--atelier-blue);
 }
 
 .bottom-sheet .date-proof-card strong,
@@ -10976,7 +11233,7 @@
 .bottom-sheet .inference-trace-footnote,
 .bottom-sheet .detail-note {
   color: var(--atelier-muted);
-  font-size: 9px;
+  font-size: 10px;
   line-height: 1.45;
 }
 
@@ -10991,11 +11248,80 @@
   color: var(--atelier-blue);
 }
 
+/* Date evidence follows the same confidence language as provenance: a user
+   confirmation is a record, an estimate is a planning hint, and an unknown
+   date needs attention before it can guide a decision. */
+.bottom-sheet .date-proof-card.date-proof-user-confirmed {
+  border-color: color-mix(in srgb, var(--atelier-pistachio) 30%, var(--sheet-border));
+  background: color-mix(in srgb, var(--atelier-pistachio) 7%, var(--atelier-surface));
+}
+
+.bottom-sheet .date-proof-card.date-proof-user-confirmed .proof-icon {
+  background: color-mix(in srgb, var(--atelier-pistachio) 15%, transparent);
+  color: var(--atelier-pistachio);
+}
+
+.bottom-sheet .date-proof-card.date-proof-unknown {
+  border-color: color-mix(in srgb, var(--atelier-amber) 34%, var(--sheet-border));
+  background: color-mix(in srgb, var(--atelier-amber) 7%, var(--atelier-surface));
+}
+
+.bottom-sheet .date-proof-card.date-proof-unknown .proof-icon {
+  background: color-mix(in srgb, var(--atelier-amber) 16%, transparent);
+  color: var(--atelier-amber);
+}
+
+.bottom-sheet .date-proof-card.date-proof-estimated {
+  border-color: color-mix(in srgb, var(--atelier-blue) 26%, var(--sheet-border));
+  background: color-mix(in srgb, var(--atelier-blue) 6%, var(--atelier-surface));
+}
+
+.bottom-sheet .date-proof-card.date-proof-estimated .proof-icon {
+  background: color-mix(in srgb, var(--atelier-blue) 14%, transparent);
+  color: var(--atelier-blue);
+}
+
+.bottom-sheet .date-edit-button.date-edit-button-needed {
+  border-color: color-mix(in srgb, var(--atelier-amber) 40%, var(--sheet-border));
+  background: color-mix(in srgb, var(--atelier-amber) 8%, var(--atelier-surface));
+}
+
+.bottom-sheet .date-edit-button.date-edit-button-needed svg {
+  color: var(--atelier-amber);
+}
+
 .bottom-sheet .inference-trace-card {
   display: grid;
   gap: 9px;
   border-color: color-mix(in srgb, var(--atelier-pistachio) 20%, transparent);
   background: color-mix(in srgb, var(--atelier-pistachio) 6%, transparent);
+}
+
+/* Provenance uses semantic color roles: purchase evidence is the confirmed
+   record, product data is a reference candidate, and AI is a prioritization
+   hint. Keep the latter two from reading like user-confirmed facts. */
+.bottom-sheet .product-provenance-card {
+  border-color: color-mix(in srgb, var(--atelier-blue) 28%, var(--sheet-border));
+  background: color-mix(in srgb, var(--atelier-blue) 6%, var(--atelier-surface));
+}
+
+.bottom-sheet .product-provenance-card .food-provenance-icon {
+  background: color-mix(in srgb, var(--atelier-blue) 14%, transparent);
+  color: var(--atelier-blue);
+}
+
+.bottom-sheet .inference-trace-card {
+  border-color: color-mix(in srgb, var(--atelier-amber) 28%, var(--sheet-border));
+  background: color-mix(in srgb, var(--atelier-amber) 6%, var(--atelier-surface));
+}
+
+.bottom-sheet .inference-trace-card .inference-trace-icon {
+  background: color-mix(in srgb, var(--atelier-amber) 15%, transparent);
+  color: var(--atelier-amber);
+}
+
+.bottom-sheet .inference-trace-card .inference-trace-heading small {
+  color: var(--atelier-amber);
 }
 
 .bottom-sheet .inference-trace-heading {
@@ -11088,8 +11414,53 @@
   gap: 8px;
 }
 
+.bottom-sheet .detail-actions.detail-actions-review {
+  position: relative;
+  margin-top: 8px;
+  padding-top: 19px;
+  border-top: 1px solid color-mix(in srgb, var(--atelier-amber) 28%, var(--sheet-border));
+}
+
+.bottom-sheet .detail-actions.detail-actions-review::before {
+  position: absolute;
+  top: 0;
+  left: 0;
+  padding: 0 6px;
+  background: var(--atelier-surface);
+  color: var(--atelier-amber);
+  content: "안전 확인 후 기록";
+  font-size: 9px;
+  font-weight: 820;
+  letter-spacing: -0.02em;
+  transform: translateY(-50%);
+}
+
 .bottom-sheet .detail-actions > * {
   min-height: 45px;
+}
+
+.bottom-sheet .detail-actions .detail-consume-action {
+  border-color: color-mix(in srgb, var(--atelier-pistachio) 34%, var(--sheet-border-strong));
+  background: color-mix(in srgb, var(--atelier-pistachio) 8%, var(--atelier-surface-raised));
+  color: var(--atelier-ink);
+}
+
+/* A review-gated consume action is still available, but its amber treatment
+   makes the extra confirmation step visible before the user taps it. */
+.bottom-sheet .detail-actions .detail-consume-action-review {
+  border-color: color-mix(in srgb, var(--atelier-amber) 44%, var(--sheet-border-strong));
+  background: color-mix(in srgb, var(--atelier-amber) 10%, var(--atelier-surface-raised));
+  color: var(--atelier-ink);
+}
+
+.bottom-sheet .detail-actions .detail-consume-action-review:focus-visible,
+.bottom-sheet .detail-actions .detail-consume-action-review:hover {
+  border-color: color-mix(in srgb, var(--atelier-amber) 68%, var(--sheet-border-strong));
+  background: color-mix(in srgb, var(--atelier-amber) 16%, var(--atelier-surface-raised));
+}
+
+.bottom-sheet .detail-actions .detail-save-action:not(:disabled) {
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--atelier-blue) 15%, transparent);
 }
 
 /* Home density pass: the selected concept is a complete 393 x 852 mobile
@@ -12097,6 +12468,25 @@
 
 .shopping-summary-card > svg {
   color: var(--atelier-dim);
+}
+
+.shopping-summary-card[data-sync-focus="action_required"] {
+  border-color: color-mix(in srgb, var(--atelier-amber) 34%, var(--atelier-border));
+  background: color-mix(in srgb, var(--atelier-amber) 7%, var(--atelier-surface));
+}
+
+.shopping-summary-card[data-sync-focus="action_required"] .shopping-summary-icon {
+  background: color-mix(in srgb, var(--atelier-amber) 14%, transparent);
+}
+
+.shopping-summary-card[data-sync-focus="action_required"] .shopping-summary-icon,
+.shopping-summary-card[data-sync-focus="action_required"] .shopping-summary-kicker {
+  color: var(--atelier-amber);
+}
+
+.shopping-summary-card[data-sync-focus="queued"] {
+  border-color: color-mix(in srgb, var(--atelier-blue) 30%, var(--atelier-border));
+  background: color-mix(in srgb, var(--atelier-blue) 5%, var(--atelier-surface));
 }
 
 .trust-card {
@@ -13891,6 +14281,11 @@ html {
 }
 
 @media (max-width: 360px) {
+  .app-shell-preview .home-action-row-with-add,
+  .app-shell-native .home-action-row-with-add {
+    grid-template-columns: minmax(0, 1fr) 88px !important;
+  }
+
   .app-shell-preview .priority-card,
   .app-shell-native .priority-card {
     padding-top: 1px;
@@ -14053,7 +14448,7 @@ html[data-rescue-theme="dark"] .toast {
   --atelier-deep: #101419;
   --atelier-ink: #f5f3ee;
   --atelier-soft: #d6dee9;
-  --atelier-muted: #aab6c5;
+  --atelier-muted: #b6c0cc;
   --atelier-dim: #8291a5;
   --atelier-surface: #1b222b;
   --atelier-surface-raised: #232c36;
@@ -14194,6 +14589,20 @@ html[data-rescue-theme="dark"] .meal-home .priority-card:hover,
 html[data-rescue-theme="dark"] .meal-home .priority-card-accent,
 html[data-rescue-theme="dark"] .meal-home .priority-card-accent:hover {
   background: rgba(111, 141, 255, 0.08);
+}
+
+html[data-rescue-theme="dark"] .meal-home .food-subline,
+html[data-rescue-theme="dark"] .meal-home .food-meta-line,
+html[data-rescue-theme="dark"] .meal-home .date-source {
+  color: #b8c1d0;
+}
+
+html[data-rescue-theme="dark"] .meal-home .date-source-warning {
+  color: #ffad98;
+}
+
+html[data-rescue-theme="dark"] .meal-home .priority-date small {
+  color: #a9c4ff;
 }
 
 html[data-rescue-theme="light"] .meal-home .storage-fridge {
@@ -14850,7 +15259,7 @@ html[data-rescue-theme="dark"] .meal-home .connection-offline-old {
 
 .bottom-sheet .recipe-safety-summary-heading small {
   color: var(--atelier-muted);
-  font-size: 9px;
+  font-size: 10px;
   line-height: 1.4;
 }
 
@@ -14909,7 +15318,7 @@ html[data-rescue-theme="dark"] .meal-home .connection-offline-old {
 
 .bottom-sheet .recipe-safety-summary-list .recipe-safety-summary-item small {
   color: var(--atelier-muted);
-  font-size: 9px;
+  font-size: 10px;
   line-height: 1.42;
 }
 
@@ -14992,6 +15401,22 @@ html[data-rescue-theme="dark"] .meal-home .connection-offline-old {
   background: color-mix(in srgb, var(--atelier-coral) 9%, var(--sheet-surface));
 }
 
+.bottom-sheet .detail-danger-zone {
+  display: grid;
+  gap: 7px;
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px solid color-mix(in srgb, var(--atelier-coral) 18%, var(--sheet-border));
+}
+
+.bottom-sheet .detail-danger-zone::before {
+  content: "예외 처리";
+  color: color-mix(in srgb, var(--atelier-coral) 78%, var(--atelier-muted));
+  font-size: 9px;
+  font-weight: 820;
+  letter-spacing: 0.06em;
+}
+
 .bottom-sheet .discard-confirm {
   border-color: color-mix(in srgb, var(--atelier-coral) 34%, var(--sheet-border));
   background: color-mix(in srgb, var(--atelier-coral) 9%, var(--sheet-surface));
@@ -15016,7 +15441,7 @@ html[data-rescue-theme="dark"] .meal-home .connection-offline-old {
   border-radius: 999px;
   background: color-mix(in srgb, var(--atelier-blue) 14%, transparent);
   color: var(--atelier-blue);
-  font-size: 8px;
+  font-size: 9px;
   font-style: normal;
   font-weight: 820;
   white-space: nowrap;
@@ -15026,6 +15451,12 @@ html[data-rescue-theme="dark"] .meal-home .connection-offline-old {
   border-color: color-mix(in srgb, var(--atelier-pistachio) 34%, var(--sheet-border));
   background: color-mix(in srgb, var(--atelier-pistachio) 6%, var(--atelier-surface));
   box-shadow: inset 3px 0 var(--atelier-pistachio);
+}
+
+.bottom-sheet .receipt-line-card-editing.receipt-line-card-source-active {
+  border-color: color-mix(in srgb, var(--atelier-pistachio) 40%, var(--sheet-border));
+  background: color-mix(in srgb, var(--atelier-pistachio) 7%, var(--atelier-surface));
+  box-shadow: inset 3px 0 var(--atelier-pistachio), 0 0 0 1px color-mix(in srgb, var(--atelier-coral) 28%, transparent);
 }
 
 .bottom-sheet .receipt-line-card-editing .receipt-line-edit-button {
@@ -15051,10 +15482,31 @@ html[data-rescue-theme="dark"] .meal-home .connection-offline-old {
   box-shadow: 0 10px 22px color-mix(in srgb, var(--atelier-pistachio) 14%, transparent);
 }
 
-/* Label review shares the receipt footer treatment, but remains in normal
-   flow so its card fields stay visually before the commit action. */
+.bottom-sheet .receipt-review-submit-bar-needs-confirmation {
+  border-top-color: color-mix(in srgb, var(--atelier-amber) 34%, var(--sheet-border));
+}
+
+.bottom-sheet .receipt-review-submit-bar-ready {
+  border-top-color: color-mix(in srgb, var(--atelier-pistachio) 38%, var(--sheet-border));
+}
+
+.bottom-sheet .receipt-review-submit-bar-empty .primary-sheet-button {
+  box-shadow: none;
+}
+
+/* Label review keeps the commit decision attached to the viewport after
+   recognition. The result card remains before it in document order, while
+   the action stays reachable on short native screens. */
 .bottom-sheet .label-result-action-bar {
-  position: static;
+  position: sticky;
+  z-index: 5;
+  bottom: var(--device-safe-area-bottom, 0px);
+  margin-top: 4px;
+  padding: 8px 0 4px;
+  border-top: 1px solid var(--sheet-border);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--atelier-surface) 0%, transparent), color-mix(in srgb, var(--atelier-surface) 92%, transparent) 35%, var(--atelier-surface) 100%);
+  box-shadow: 0 -12px 22px color-mix(in srgb, var(--atelier-ink) 11%, transparent);
+  backdrop-filter: blur(14px);
 }
 
 .bottom-sheet .receipt-line-source-button {
@@ -15075,6 +15527,12 @@ html[data-rescue-theme="dark"] .meal-home .connection-offline-old {
   border: 1px solid var(--sheet-border);
   border-radius: 15px;
   background: color-mix(in srgb, var(--atelier-surface) 78%, transparent);
+}
+
+.bottom-sheet .notification-sync-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
 }
 
 .bottom-sheet .notification-summary-action {
@@ -15108,7 +15566,7 @@ html[data-rescue-theme="dark"] .meal-home .connection-offline-old {
 
 .bottom-sheet .notification-summary small {
   color: var(--atelier-muted);
-  font-size: 9px;
+  font-size: 10px;
   line-height: 1.45;
 }
 
@@ -15186,7 +15644,7 @@ html[data-rescue-theme="dark"] .meal-home .connection-offline-old {
 
 .bottom-sheet .shopping-sheet-progress-heading small {
   color: var(--atelier-muted);
-  font-size: 9px;
+  font-size: 10px;
   line-height: 1.45;
 }
 
@@ -15213,8 +15671,63 @@ html[data-rescue-theme="dark"] .meal-home .connection-offline-old {
   transition: width 180ms ease;
 }
 
+.bottom-sheet [data-history-sync-status] {
+  font-size: 9px !important;
+}
+
 .bottom-sheet .shopping-sheet-receive-panel {
   scroll-margin-block-end: calc(var(--device-safe-area-bottom, 0px) + 24px);
+}
+
+.bottom-sheet .shopping-sheet-receive-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0 0 10px;
+  padding: 0;
+  list-style: none;
+}
+
+.bottom-sheet .shopping-sheet-receive-steps li {
+  display: flex;
+  min-width: 0;
+  gap: 5px;
+  align-items: center;
+  padding-top: 5px;
+  border-top: 2px solid var(--sheet-border);
+  color: var(--atelier-dim);
+}
+
+.bottom-sheet .shopping-sheet-receive-steps li > span {
+  display: grid;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid var(--sheet-border-strong);
+  border-radius: 50%;
+  font-size: 8px;
+  font-weight: 820;
+}
+
+.bottom-sheet .shopping-sheet-receive-steps li > small {
+  overflow: hidden;
+  font-size: 8px;
+  font-weight: 760;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bottom-sheet .shopping-sheet-receive-steps .shopping-sheet-receive-step-complete,
+.bottom-sheet .shopping-sheet-receive-steps .shopping-sheet-receive-step-active {
+  border-top-color: var(--atelier-pistachio);
+  color: var(--atelier-pistachio);
+}
+
+.bottom-sheet .shopping-sheet-receive-steps .shopping-sheet-receive-step-complete > span,
+.bottom-sheet .shopping-sheet-receive-steps .shopping-sheet-receive-step-active > span {
+  border-color: var(--atelier-pistachio);
+  background: color-mix(in srgb, var(--atelier-pistachio) 14%, transparent);
 }
 
 .bottom-sheet .shopping-sheet-receive {
@@ -15233,7 +15746,16 @@ html[data-rescue-theme="dark"] .meal-home .connection-offline-old {
 .bottom-sheet .shopping-sheet-delete {
   min-width: 36px;
   min-height: 36px;
+  border: 1px solid color-mix(in srgb, var(--atelier-coral) 22%, var(--sheet-border));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--atelier-coral) 5%, var(--atelier-surface));
   color: var(--atelier-coral);
+}
+
+.bottom-sheet .shopping-sheet-delete:hover,
+.bottom-sheet .shopping-sheet-delete:focus-visible {
+  border-color: color-mix(in srgb, var(--atelier-coral) 44%, var(--sheet-border));
+  background: color-mix(in srgb, var(--atelier-coral) 10%, var(--atelier-surface));
 }
 
 /* Intake keeps one compact three-step rail across receipt, barcode, label,
@@ -15246,6 +15768,57 @@ html[data-rescue-theme="dark"] .meal-home .connection-offline-old {
   border: 1px solid var(--sheet-border);
   border-radius: 14px;
   background: color-mix(in srgb, var(--atelier-surface) 78%, transparent);
+}
+
+.bottom-sheet .intake-method-hint {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 7px 2px 0;
+  color: var(--atelier-text-muted);
+  font-size: 10px;
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.bottom-sheet .intake-method-hint strong {
+  flex: 0 0 auto;
+  color: var(--meal-sage-dark);
+  font-weight: 820;
+}
+
+.bottom-sheet .intake-method-hint span {
+  flex: 0 0 auto;
+}
+
+.bottom-sheet .intake-method-hint span::before {
+  content: "·";
+  margin-right: 7px;
+  color: var(--atelier-border-strong);
+}
+
+html[data-rescue-theme="dark"] .bottom-sheet .intake-method-hint strong {
+  color: #b8c7ff;
+}
+
+/* The receive result is a durable next-action surface, not a transient toast.
+   Keep its confirmation boundary visible on the dark sheet as well. */
+html[data-rescue-theme="dark"] .bottom-sheet .shopping-sheet-received {
+  border-color: color-mix(in srgb, var(--atelier-pistachio) 44%, var(--sheet-border));
+  background: color-mix(in srgb, var(--atelier-pistachio) 10%, var(--atelier-surface));
+}
+
+html[data-rescue-theme="dark"] .bottom-sheet .shopping-sheet-error button {
+  border-color: color-mix(in srgb, var(--atelier-coral) 48%, var(--sheet-border));
+  background: color-mix(in srgb, var(--atelier-coral) 12%, var(--atelier-surface));
+  color: var(--atelier-coral);
+}
+
+html[data-rescue-theme="dark"] .bottom-sheet .shopping-sheet-error button:hover,
+html[data-rescue-theme="dark"] .bottom-sheet .shopping-sheet-error button:focus-visible {
+  border-color: color-mix(in srgb, var(--atelier-coral) 74%, var(--sheet-border));
+  background: color-mix(in srgb, var(--atelier-coral) 20%, var(--atelier-surface));
 }
 
 .bottom-sheet .intake-flow-rail-heading {
@@ -15346,6 +15919,49 @@ html[data-rescue-theme="dark"] .meal-home .connection-offline-old {
   color: var(--atelier-pistachio);
 }
 
+.bottom-sheet .receipt-result-provenance {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 7px;
+  padding: 0 2px;
+}
+
+.bottom-sheet .receipt-result-provenance strong {
+  color: var(--atelier-ink);
+  font-size: 11px;
+  font-weight: 820;
+}
+
+.bottom-sheet .receipt-result-provenance span {
+  color: var(--atelier-coral);
+  font-size: 9px;
+  font-weight: 760;
+  text-align: right;
+}
+
+.bottom-sheet .label-result-provenance {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 7px;
+  padding: 0 2px;
+}
+
+.bottom-sheet .label-result-provenance strong {
+  color: var(--atelier-ink);
+  font-size: 11px;
+  font-weight: 820;
+}
+
+.bottom-sheet .label-result-provenance span {
+  color: var(--atelier-coral);
+  font-size: 9px;
+  font-weight: 760;
+}
+
 .bottom-sheet .receipt-review-contract > span,
 .bottom-sheet .label-review-contract > span {
   display: grid;
@@ -15367,12 +15983,119 @@ html[data-rescue-theme="dark"] .meal-home .connection-offline-old {
   line-height: 1.42;
 }
 
+.bottom-sheet .receipt-candidate-applied {
+  border-color: color-mix(in srgb, var(--atelier-pistachio) 32%, var(--sheet-border));
+  background: color-mix(in srgb, var(--atelier-pistachio) 7%, var(--atelier-surface));
+}
+
+.bottom-sheet .receipt-candidate-applied > svg {
+  color: var(--atelier-pistachio);
+}
+
+.bottom-sheet .receipt-candidate-user-edited {
+  border-color: color-mix(in srgb, var(--atelier-blue) 32%, var(--sheet-border));
+  background: color-mix(in srgb, var(--atelier-blue) 7%, var(--atelier-surface));
+}
+
+.bottom-sheet .receipt-candidate-user-edited > svg {
+  color: var(--atelier-blue);
+}
+
+html[data-rescue-theme="dark"] .bottom-sheet .receipt-candidate-applied > svg {
+  color: #b7d7a6;
+}
+
+html[data-rescue-theme="dark"] .bottom-sheet .receipt-candidate-user-edited > svg {
+  color: #a9c4ff;
+}
+
 .bottom-sheet .receipt-review,
 .bottom-sheet .label-result-card {
   scroll-margin-block: 12px calc(var(--device-safe-area-bottom, 0px) + 24px);
 }
 
 @media (max-width: 360px) {
+  .bottom-sheet .date-proof-card {
+    gap: 8px;
+    padding: 10px;
+  }
+
+  .bottom-sheet .date-proof-card strong {
+    font-size: 10px;
+  }
+
+  .bottom-sheet .date-proof-card small {
+    font-size: 9px;
+    line-height: 1.35;
+  }
+
+  .bottom-sheet .date-edit-button {
+    gap: 8px;
+    padding: 10px;
+  }
+
+  /* Keep sheet headings readable when a localized status title and its
+     secondary action compete for the same 320px row. The action remains a
+     real touch target while the title column is allowed to wrap naturally. */
+  .bottom-sheet .notification-sheet-heading,
+  .bottom-sheet .shopping-sheet-list-heading {
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .bottom-sheet .notification-sheet-heading > div,
+  .bottom-sheet .shopping-sheet-list-heading > span:first-child {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .bottom-sheet .notification-sheet-heading h3,
+  .bottom-sheet .shopping-sheet-list-heading strong {
+    overflow-wrap: anywhere;
+  }
+
+  .bottom-sheet .notification-read-all {
+    min-height: 36px;
+    padding-inline: 9px;
+  }
+
+  .bottom-sheet .shopping-sheet-syncing {
+    max-width: 42%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: right;
+  }
+
+  .bottom-sheet .notification-sync-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .bottom-sheet .intake-method-hint {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    overflow: visible;
+    white-space: normal;
+  }
+
+  .bottom-sheet .intake-method-hint span {
+    min-width: 0;
+    flex: 1 1 120px;
+  }
+
+  .bottom-sheet .receipt-line-confirm-button,
+  .bottom-sheet .receipt-line-confirmed-badge {
+    max-width: calc(100% - 18px);
+    margin-right: 8px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .bottom-sheet .receipt-result-provenance span,
+  .bottom-sheet .label-result-provenance span {
+    font-size: 8px;
+  }
+
   .bottom-sheet .intake-flow-rail {
     padding: 9px 10px;
   }

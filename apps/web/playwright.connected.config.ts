@@ -16,6 +16,10 @@ export default defineConfig({
   // not look like a product failure in a long single-worker suite.
   timeout: 30_000,
   expect: { timeout: 10_000 },
+  // The disposable connected API owns one workspace state per server. Keep
+  // repeated runs serial so parallel workers cannot cross-contaminate guest
+  // revisions/idempotency state and masquerade as product readback failures.
+  workers: 1,
   // One CI retry absorbs transient timing flakes in the live-API lane (e.g.
   // the intake sheet's 라벨 tab render) without hiding real regressions.
   retries: process.env.CI ? 1 : 0,

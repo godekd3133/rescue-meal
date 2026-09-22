@@ -86,6 +86,8 @@ export default function ShoppingListSheet({
   const shoppingItemRefs = useRef(new Map<string, HTMLButtonElement>());
   const receiveButtonRefs = useRef(new Map<string, HTMLButtonElement>());
   const initialFocusHandledRef = useRef(false);
+  const previousErrorRef = useRef(error);
+  const retryFocusRef = useRef(false);
   const pendingItemFocusRef = useRef<PendingItemFocus | null>(null);
   const pendingManualFocusRef = useRef<PendingManualFocus | null>(null);
   const previousNoticeRef = useRef(notice);
@@ -115,7 +117,13 @@ export default function ShoppingListSheet({
       initialFocusHandledRef.current = false;
       return;
     }
-    if (loading || mutating || recentlyReceivedFoodName || initialFocusHandledRef.current) return;
+    if (loading || mutating || recentlyReceivedFoodName || initialFocusHandledRef.current) {
+      // A retry starts a new read cycle. The previous error CTA may have
+      // consumed the initial-focus handoff, so re-arm it while loading for
+      // the refreshed row or empty-state action to receive focus.
+      if (loading) initialFocusHandledRef.current = false;
+      return;
+    }
     let disposed = false;
     let timer: number | undefined;
     let focusTimer: number | undefined;
@@ -128,6 +136,7 @@ export default function ShoppingListSheet({
         || !activeElement?.isConnected;
     };
     const findTarget = () => {
+      if (error) return document.querySelector<HTMLButtonElement>(".shopping-sheet-error button");
       const remainingItem = items.find((item) => !item.checked);
       if (remainingItem) return shoppingItemRefs.current.get(remainingItem.id) ?? null;
       if (items.length) return receiveButtonRefs.current.get(items[0].id) ?? null;
@@ -164,7 +173,7 @@ export default function ShoppingListSheet({
       disposed = true;
       cleanup();
     };
-  }, [initialFocus, items, loading, mutating, recentlyReceivedFoodName]);
+  }, [error, initialFocus, items, loading, mutating, recentlyReceivedFoodName]);
 
   useEffect(() => {
     const pending = pendingItemFocusRef.current;
@@ -199,11 +208,51 @@ export default function ShoppingListSheet({
 
   useEffect(() => {
     if (!recentlyReceivedFoodName) return;
+    let settleFrame: number | undefined;
+    let settleTimer: number | undefined;
+    const focusReceivedAction = () => receivedFoodActionRef.current?.focus({ preventScroll: true });
     const frame = window.requestAnimationFrame(() => {
-      receivedFoodActionRef.current?.focus({ preventScroll: true });
+      settleFrame = window.requestAnimationFrame(focusReceivedAction);
+      settleTimer = window.setTimeout(focusReceivedAction, 120);
+    });
+    return () => {
+      window.cancelAnimationFrame(frame);
+      if (settleFrame !== undefined) window.cancelAnimationFrame(settleFrame);
+      if (settleTimer !== undefined) window.clearTimeout(settleTimer);
+    };
+  }, [recentlyReceivedFoodName]);
+
+  useEffect(() => {
+    const previousError = previousErrorRef.current;
+    previousErrorRef.current = error;
+    if (!previousError || error || loading || mutating || !initialFocus) return;
+    const frame = window.requestAnimationFrame(() => {
+      const remainingItem = items.find((item) => !item.checked);
+      const target = remainingItem
+        ? shoppingItemRefs.current.get(remainingItem.id)
+        : items.length
+          ? receiveButtonRefs.current.get(items[0].id)
+          : document.querySelector<HTMLButtonElement>(".shopping-sheet-empty .primary-sheet-button, .shopping-sheet-manual-submit");
+      target?.focus({ preventScroll: true });
+      initialFocusHandledRef.current = true;
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [recentlyReceivedFoodName]);
+  }, [error, initialFocus, items, loading, mutating]);
+
+  useEffect(() => {
+    if (!retryFocusRef.current || loading || error || mutating) return;
+    const frame = window.requestAnimationFrame(() => {
+      const remainingItem = items.find((item) => !item.checked);
+      const target = remainingItem
+        ? shoppingItemRefs.current.get(remainingItem.id)
+        : items.length
+          ? receiveButtonRefs.current.get(items[0].id)
+          : document.querySelector<HTMLButtonElement>(".shopping-sheet-empty .primary-sheet-button, .shopping-sheet-manual-submit");
+      target?.focus({ preventScroll: true });
+      retryFocusRef.current = false;
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [error, items, loading, mutating]);
 
   useEffect(() => {
     const previousNotice = previousNoticeRef.current;
@@ -287,19 +336,19 @@ export default function ShoppingListSheet({
   };
 
   return (
-    <div className="shopping-sheet-content" aria-label="장보기 목록">
+    <div className="shopping-sheet-content" aria-label="장보기 목록" aria-busy={loading || mutating} data-received-food-name={recentlyReceivedFoodName || undefined}>
       <section className="shopping-sheet-hero" aria-labelledby="shopping-sheet-title">
         <span className="shopping-sheet-hero-icon"><ReaderIcon width={19} height={19} /></span>
         <div>
           <p className="shopping-sheet-kicker">장보기 목록</p>
-          <h3 id="shopping-sheet-title">{remainingCount ? `${remainingCount}개를 준비해요` : items.length ? "모두 구매했어요" : "장볼 재료가 없어요"}</h3>
-          <p>{remainingCount ? heroDescription : items.length ? "구매 완료한 항목은 재고에 반영할 수 있어요." : "식단을 저장하거나 필요한 물건을 직접 추가해 보세요."}</p>
+          <h3 id="shopping-sheet-title">{loading ? "장보기 목록을 확인하고 있어요" : error && !items.length ? "장보기 목록을 불러오지 못했어요" : remainingCount ? `${remainingCount}개를 준비해요` : items.length ? "모두 구매했어요" : "장볼 재료가 없어요"}</h3>
+          <p>{loading ? "저장한 식단과 직접 추가한 항목을 불러옵니다." : error && !items.length ? "기존 목록을 확인할 수 없어요. 연결을 확인한 뒤 다시 시도해 주세요." : remainingCount ? heroDescription : items.length ? "구매 완료한 항목은 재고에 반영할 수 있어요." : "식단을 저장하거나 필요한 물건을 직접 추가해 보세요."}</p>
         </div>
       </section>
 
       <section className={`shopping-sheet-progress${remainingCount ? " shopping-sheet-progress-active" : " shopping-sheet-progress-complete"}`} aria-label="장보기 진행 상황">
         <div className="shopping-sheet-progress-heading">
-          <span><strong>{loading && !items.length ? "장보기 목록을 확인하고 있어요" : remainingCount ? "장보기 진행 상황" : items.length ? "구매 완료 · 재고 반영 전" : "장보기 시작하기"}</strong><small>{loading && !items.length ? "저장한 식단과 직접 추가한 항목을 불러옵니다." : remainingCount ? `${remainingCount}개를 구매하면 재고에 반영할 수 있어요.` : items.length ? "구매한 식품을 재고에 넣으면 날짜와 보관 상태를 이어서 확인할 수 있어요." : "필요한 재료를 추가하면 여기에서 관리할 수 있어요."}</small></span>
+          <span><strong>{loading && !items.length ? "장보기 목록을 확인하고 있어요" : error && !items.length ? "다시 확인이 필요해요" : remainingCount ? "장보기 진행 상황" : items.length ? "구매 완료 · 재고 반영 전" : "장보기 시작하기"}</strong><small>{loading && !items.length ? "저장한 식단과 직접 추가한 항목을 불러옵니다." : error && !items.length ? "연결을 확인하고 목록을 다시 불러와 주세요." : remainingCount ? `${remainingCount}개를 구매하면 재고에 반영할 수 있어요.` : items.length ? "구매한 식품을 재고에 넣으면 날짜와 보관 상태를 이어서 확인할 수 있어요." : "필요한 재료를 추가하면 여기에서 관리할 수 있어요."}</small></span>
           <em>{loading && !items.length ? "확인 중" : items.length ? `${completedCount}/${items.length}` : "—"}</em>
         </div>
         {items.length ? <div className="shopping-sheet-progress-track" role="progressbar" aria-label="장보기 완료율" aria-valuemin={0} aria-valuemax={items.length} aria-valuenow={completedCount}><span style={{ width: `${progressPercent}%` }} /></div> : null}
@@ -310,7 +359,7 @@ export default function ShoppingListSheet({
         <div className="shopping-sheet-error" role="alert">
           <InfoCircledIcon width={16} height={16} />
           <span>{error}</span>
-          <button type="button" onClick={retryAction?.onRetry ?? onRefresh} disabled={loading || mutating}>{retryAction?.label ?? "다시 시도"}</button>
+          <button type="button" onClick={() => { retryFocusRef.current = true; (retryAction?.onRetry ?? onRefresh)(); }} disabled={loading || mutating}>{retryAction?.label ?? "다시 시도"}</button>
         </div>
       ) : null}
 
@@ -347,6 +396,7 @@ export default function ShoppingListSheet({
                     aria-label={itemLabel(item)}
                     aria-pressed={item.checked}
                     disabled={mutating}
+                    aria-busy={mutating}
                     onClick={() => {
                       pendingItemFocusRef.current = { itemId: item.id, index: items.findIndex((candidate) => candidate.id === item.id), mode: "stay", items };
                       onToggle(item);
@@ -359,7 +409,7 @@ export default function ShoppingListSheet({
                       {item.checked ? <small>구매 완료 · 재고 반영 전</small> : null}
                     </span>
                   </button>
-                  <div className="shopping-sheet-actions">
+                  <div className="shopping-sheet-actions" role="group" aria-label={`${item.canonical_name} 장보기 항목 행동`}>
                     <button
                       ref={(element) => {
                         if (element) receiveButtonRefs.current.set(item.id, element);
@@ -370,15 +420,17 @@ export default function ShoppingListSheet({
                       aria-label={`${item.canonical_name} 재고에 반영`}
                       aria-expanded={receivingItemId === item.id}
                       disabled={mutating}
+                      aria-busy={mutating}
                       onClick={() => receivingItemId === item.id ? cancelReceive() : beginReceive(item)}
                     >
-                      <ArchiveIcon width={13} height={13} /> 재고 반영
+                      <ArchiveIcon width={13} height={13} /> 재고에 반영
                     </button>
                     <button
                       className="shopping-sheet-delete"
                       type="button"
                       aria-label={`${item.canonical_name} 장보기 항목 삭제`}
                       disabled={mutating}
+                      aria-busy={mutating}
                       onClick={() => {
                         pendingItemFocusRef.current = { itemId: item.id, index: items.findIndex((candidate) => candidate.id === item.id), mode: "remove", items };
                         onDelete(item);
@@ -395,6 +447,11 @@ export default function ShoppingListSheet({
                     aria-label={`${item.canonical_name} 재고 반영`}
                     onSubmit={(event) => { event.preventDefault(); void submitReceive(item); }}
                   >
+                    <ol className="shopping-sheet-receive-steps" aria-label="구매 후 재고 반영 단계">
+                      <li className="shopping-sheet-receive-step-complete"><span>1</span><small>구매 완료</small></li>
+                      <li className="shopping-sheet-receive-step-active"><span>2</span><small>재고 반영</small></li>
+                      <li><span>3</span><small>날짜 확인</small></li>
+                    </ol>
                     <div className="shopping-sheet-receive-heading">
                       <strong>{item.canonical_name} 구매 내용 확인</strong>
                       <small>실제로 구매한 수량과 보관 위치를 확인해 주세요.</small>
@@ -437,11 +494,12 @@ export default function ShoppingListSheet({
                     <p className="shopping-sheet-receive-note"><InfoCircledIcon width={13} height={13} /> 소비기한은 자동 확정하지 않아요. 재고에 넣은 뒤 포장지 날짜를 확인해 주세요.</p>
                     {receiveError ? <p className="shopping-sheet-receive-error" role="alert">{receiveError}</p> : null}
                     <div className="shopping-sheet-receive-actions">
-                      <button className="shopping-sheet-receive-cancel" type="button" disabled={mutating} onClick={cancelReceive}>취소</button>
+                      <button className="shopping-sheet-receive-cancel" type="button" disabled={mutating} aria-busy={mutating} onClick={cancelReceive}>취소</button>
                       <button
                         className="shopping-sheet-receive-submit"
                         type="submit"
                         disabled={mutating}
+                        aria-busy={mutating}
                         onPointerDown={(event) => {
                           event.preventDefault();
                           void submitReceive(item);
@@ -456,10 +514,10 @@ export default function ShoppingListSheet({
           </div>
           <p className="shopping-sheet-note"><ArrowRightIcon width={13} height={13} /> 재고에 추가한 뒤 다시 동기화하면 보유한 재료는 자동으로 빠져요.</p>
         </section>
-      ) : (
+      ) : recentlyReceivedFoodName ? null : (
         <div className="shopping-sheet-state shopping-sheet-empty" role="status" style={{ flexWrap: "wrap" }}>
           <span className="shopping-sheet-state-icon"><CheckCircledIcon width={17} height={17} /></span>
-          <span><strong>아직 장보기 항목이 없어요</strong><small>식단에서 부족한 재료를 고르거나, 아래에서 필요한 물건을 직접 기록할 수 있어요.</small></span>
+          <span><strong>필요한 재료를 이어서 준비해요</strong><small>식단에서 부족한 재료를 고르거나, 아래에서 필요한 물건을 직접 기록할 수 있어요.</small></span>
           <div className="shopping-sheet-receive-actions" style={{ width: "100%", flexBasis: "100%" }}>
             <button className="primary-sheet-button" style={{ width: "auto", minHeight: 40, flex: "1 1 auto", padding: "0 10px", fontSize: 10 }} type="button" onClick={onOpenMeal}><ReaderIcon width={15} height={15} /> 식단에서 재료 고르기 <ArrowRightIcon width={14} height={14} /></button>
             <button className="secondary-sheet-button" style={{ width: "auto", minHeight: 40, flex: "0 0 auto", padding: "0 10px" }} type="button" onClick={onRefresh} disabled={loading}>새로 고침</button>
@@ -488,6 +546,7 @@ export default function ShoppingListSheet({
             className="shopping-sheet-manual-submit"
             type="submit"
             disabled={mutating}
+            aria-busy={mutating}
             onPointerDown={(event) => {
               event.preventDefault();
               void submitManualItem();

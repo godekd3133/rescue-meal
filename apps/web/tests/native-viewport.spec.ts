@@ -309,6 +309,9 @@ test("keeps detail review and storage cues across light and dark themes", async 
     await expect(dialog.locator(".detail-actions .primary-sheet-button")).toBeDisabled();
     const detailOrder = await dialog.locator(".detail-sheet-content").evaluate((element) => Array.from(element.children).map((child) => child.className));
     expect(detailOrder.indexOf("date-edit-button")).toBeGreaterThan(detailOrder.indexOf("date-proof-card"));
+    const provenanceIndex = detailOrder.indexOf("detail-source-group");
+    const inferenceIndex = detailOrder.indexOf("inference-trace-card");
+    if (provenanceIndex >= 0 && inferenceIndex >= 0) expect(provenanceIndex).toBeLessThan(inferenceIndex);
     await dialog.getByRole("button", { name: "냉동", exact: true }).click();
     await expect(dialog.locator(".detail-section")).toHaveClass(/detail-section-pending/);
     await expect(dialog.locator(".detail-save-pending")).toBeVisible();
@@ -387,6 +390,228 @@ test("keeps a direct add action available from the food tab", async ({ page }) =
   expect(target.height).toBeGreaterThanOrEqual(44);
   await addButton.click();
   await expect(page.getByRole("dialog", { name: "영수증으로 추가" })).toBeVisible();
+});
+
+test("restores the home first fold after moving between bottom navigation destinations", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 740 });
+  await page.goto("/");
+
+  const screen = page.locator("[data-testid=device-screen]");
+  const scroll = page.getByTestId("mobile-scroll");
+  const homeNav = page.getByRole("button", { name: "홈", exact: true });
+  const foodNav = page.getByRole("button", { name: "식품", exact: true });
+
+  await foodNav.click();
+  await expect(foodNav).toHaveAttribute("aria-current", "page");
+  await expect(homeNav).not.toHaveAttribute("aria-current", "page");
+  await expect.poll(() => page.locator(".inventory-section").evaluate((element) => {
+    const target = element.getBoundingClientRect();
+    const viewport = document.querySelector<HTMLElement>("[data-testid=device-screen]")?.getBoundingClientRect();
+    return viewport ? Math.abs(target.top - viewport.top) : Number.POSITIVE_INFINITY;
+  })).toBeLessThanOrEqual(5);
+
+  await homeNav.click();
+  await expect(homeNav).toHaveAttribute("aria-current", "page");
+  await expect(foodNav).not.toHaveAttribute("aria-current", "page");
+  await expect.poll(() => scroll.evaluate((element) => element.scrollTop)).toBe(0);
+  await expect(page.getByRole("heading", { name: "오늘도, 남은 재료부터" })).toBeVisible();
+  await expect.poll(() => page.getByRole("button", { name: "확인하고 오늘 식단 만들기" }).evaluate((element) => {
+    const action = element.getBoundingClientRect();
+    const nav = document.querySelector<HTMLElement>(".app-bottom-nav")?.getBoundingClientRect();
+    return nav ? action.bottom <= nav.top + 1 : false;
+  })).toBe(true);
+  await expect(screen).toBeVisible();
+});
+
+test("restores the pantry context after closing an inventory detail sheet", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 740 });
+  await page.goto("/");
+
+  const inventory = page.getByRole("region", { name: /내 식품 목록/ });
+  await page.getByRole("button", { name: "식품", exact: true }).click();
+  await expect(page.locator(".app-bottom-nav-item-active")).toHaveText("식품");
+
+  const row = inventory.locator(".inventory-row").first();
+  await expect(row).toBeVisible();
+  await row.click();
+
+  const detail = page.getByRole("dialog", { name: "시금치" });
+  await expect(detail).toBeVisible();
+  await detail.getByRole("button", { name: "닫기", exact: true }).click();
+
+  await expect(detail).toHaveCount(0);
+  await expect(page.locator(".app-bottom-nav-item-active")).toHaveText("식품");
+  await expect(inventory.getByRole("heading", { name: "내 식품 목록 7" })).toBeVisible();
+  await expect.poll(() => row.evaluate((element) => {
+    const screen = document.querySelector<HTMLElement>("[data-testid=device-screen]")?.getBoundingClientRect();
+    const navigation = document.querySelector<HTMLElement>(".app-bottom-nav")?.getBoundingClientRect();
+    const target = element.getBoundingClientRect();
+    return Boolean(screen && navigation && target.top >= screen.top - 1 && target.bottom <= navigation.top + 1);
+  })).toBe(true);
+  await expect(row).toBeFocused();
+});
+
+test("does not leak an unsaved storage edit after closing the detail sheet", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 740 });
+  await page.goto("/");
+
+  const inventory = page.getByRole("region", { name: /내 식품 목록/ });
+  await page.getByRole("button", { name: "식품", exact: true }).click();
+  const row = inventory.locator(".inventory-row").filter({ hasText: "시금치" }).first();
+  const originalRowText = await row.textContent();
+  await row.click();
+
+  const detail = page.getByRole("dialog", { name: "시금치" });
+  await detail.getByRole("button", { name: "냉동", exact: true }).click();
+  await expect(detail.locator(".detail-save-hint")).toContainText("저장하지 않고 닫으면");
+  await detail.getByRole("button", { name: "닫기", exact: true }).click();
+
+  await expect(detail).toHaveCount(0);
+  await expect.poll(() => row.textContent()).toBe(originalRowText);
+  await expect(row).toBeFocused();
+});
+
+test("keeps the updated storage state readable after a 320px detail save", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 740 });
+  await page.goto("/");
+
+  const inventory = page.getByRole("region", { name: /내 식품 목록/ });
+  await page.getByRole("button", { name: "식품", exact: true }).click();
+  const row = inventory.locator(".inventory-row").filter({ hasText: "시금치" }).first();
+  await row.click();
+
+  const detail = page.getByRole("dialog", { name: "시금치" });
+  await detail.getByRole("button", { name: "냉동", exact: true }).click();
+  await expect(detail.getByRole("button", { name: "냉동", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(detail.locator(".detail-save-hint")).toHaveText("저장하지 않고 닫으면 변경한 보관 상태는 반영되지 않아요.");
+  await detail.locator(".detail-actions .primary-sheet-button").click();
+
+  await expect(page.getByRole("status")).toHaveText("보관 상태를 저장했어요");
+  await expect(detail).toHaveCount(0);
+  await expect(inventory.getByRole("button", { name: /시금치 국내산 시금치 · 1팩.*확인 필요/ })).toBeVisible();
+  await expect(inventory.getByRole("button", { name: /시금치 국내산 시금치 · 1팩.*확인 필요/ })).toBeFocused();
+  await expect.poll(() => inventory.getByRole("button", { name: /시금치 국내산 시금치 · 1팩.*확인 필요/ }).evaluate((element) => {
+    const screen = document.querySelector<HTMLElement>("[data-testid=device-screen]")?.getBoundingClientRect();
+    const navigation = document.querySelector<HTMLElement>(".app-bottom-nav")?.getBoundingClientRect();
+    const target = element.getBoundingClientRect();
+    return Boolean(screen && navigation && target.top >= screen.top - 1 && target.bottom <= navigation.top + 1);
+  })).toBe(true);
+});
+
+test("keeps a confirmed date readable after saving from a 320px detail sheet", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 740 });
+  await page.goto("/");
+
+  const inventory = page.getByRole("region", { name: /내 식품 목록/ });
+  await page.getByRole("button", { name: "식품", exact: true }).click();
+  const row = inventory.getByRole("button", { name: /국산콩 두부 풀무원 · 1모/ });
+  await row.click();
+
+  const detail = page.getByRole("dialog", { name: "국산콩 두부" });
+  await detail.getByRole("button", { name: "포장지에서 확인한 날짜 입력" }).click();
+  const editor = detail.getByRole("group", { name: "확인한 날짜 입력" });
+  await expect(editor).toBeVisible();
+
+  const confirmedDate = new Date();
+  confirmedDate.setHours(12, 0, 0, 0);
+  confirmedDate.setDate(confirmedDate.getDate() + 10);
+  const confirmedDateValue = [confirmedDate.getFullYear(), confirmedDate.getMonth() + 1, confirmedDate.getDate()]
+    .map((value, index) => index === 0 ? String(value) : String(value).padStart(2, "0"))
+    .join("-");
+  const confirmedDateLabel = `${confirmedDate.getMonth() + 1}월 ${confirmedDate.getDate()}일`;
+
+  await editor.getByRole("button", { name: "소비기한", exact: true }).click();
+  await editor.getByRole("textbox", { name: "날짜" }).fill(confirmedDateValue);
+  await expect(editor.getByText(`선택한 날짜 · ${confirmedDateValue.replaceAll("-", ".")}`, { exact: true })).toBeVisible();
+  await editor.getByRole("button", { name: "확인 후 저장" }).click();
+
+  await expect(page.getByRole("status")).toContainText("국산콩 두부 소비기한을 사용자 확인으로 저장했어요");
+  await expect(detail).toHaveCount(0);
+  const updatedRow = inventory.getByRole("button", { name: new RegExp(`국산콩 두부 풀무원 · 1모 우선 · ${confirmedDateLabel}`) });
+  await expect(updatedRow).toBeVisible();
+  await expect(updatedRow).toBeFocused();
+  await expect.poll(() => updatedRow.evaluate((element) => {
+    const screen = document.querySelector<HTMLElement>("[data-testid=device-screen]")?.getBoundingClientRect();
+    const navigation = document.querySelector<HTMLElement>(".app-bottom-nav")?.getBoundingClientRect();
+    const target = element.getBoundingClientRect();
+    return Boolean(screen && navigation && target.top >= screen.top - 1 && target.bottom <= navigation.top + 1);
+  })).toBe(true);
+
+  await page.getByRole("button", { name: "홈", exact: true }).click();
+  await expect(page.locator(".app-bottom-nav-item-active")).toHaveText("홈");
+  await expect(page.getByRole("heading", { name: "오늘 먼저 확인할 식품 3" })).toBeVisible();
+  await expect(page.locator(".priority-card").filter({ hasText: "국산콩 두부" })).toContainText(confirmedDateLabel);
+  await expect.poll(() => page.getByTestId("mobile-scroll").evaluate((element) => element.scrollTop)).toBe(0);
+});
+
+test("returns focus to the date action after cancelling date review", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 740 });
+  await page.goto("/");
+  await page.getByRole("button", { name: "식품", exact: true }).click();
+  await page.getByRole("region", { name: /내 식품 목록/ }).getByRole("button", { name: /국산콩 두부 풀무원 · 1모/ }).click();
+
+  const detail = page.getByRole("dialog", { name: "국산콩 두부" });
+  const dateAction = detail.getByRole("button", { name: "포장지에서 확인한 날짜 입력" });
+  await dateAction.click();
+  const editor = detail.getByRole("group", { name: "확인한 날짜 입력" });
+  await expect(editor).toBeVisible();
+  await editor.getByRole("button", { name: "취소" }).click();
+  await expect(editor).toHaveCount(0);
+  await expect(dateAction).toBeFocused();
+  await expect.poll(() => dateAction.evaluate((element) => {
+    const screen = document.querySelector<HTMLElement>("[data-testid=device-screen]")?.getBoundingClientRect();
+    const target = element.getBoundingClientRect();
+    return Boolean(screen && target.top >= screen.top - 1 && target.bottom <= screen.bottom + 1);
+  })).toBe(true);
+});
+
+test("returns focus to product info action after cancelling product edit", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 740 });
+  await page.goto("/");
+  await page.getByRole("button", { name: "식품", exact: true }).click();
+  await page.getByRole("region", { name: /내 식품 목록/ }).getByRole("button", { name: /국산콩 두부 풀무원 · 1모/ }).click();
+
+  const detail = page.getByRole("dialog", { name: "국산콩 두부" });
+  const productInfoAction = detail.getByRole("button", { name: "상품 정보 수정" });
+  await productInfoAction.click();
+  const editor = detail.getByRole("group", { name: "상품 정보 수정" });
+  await editor.getByRole("textbox", { name: "상품명 수정" }).fill("임시 상품명");
+  await editor.getByRole("button", { name: "취소" }).click();
+
+  await expect(editor).toHaveCount(0);
+  await expect(productInfoAction).toBeFocused();
+  await expect(detail.locator(".detail-hero")).toContainText("국산콩 두부");
+});
+
+test("returns to the same notification row after mobile date review", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 740 });
+  await page.goto("/");
+
+  await page.getByRole("button", { name: /알림 확인/ }).click();
+  const notifications = page.getByRole("dialog", { name: "알림" });
+  const notification = notifications.getByRole("button", { name: "오늘 먼저 확인할 식품이에요: 시금치" });
+  await notification.click();
+
+  const detail = page.getByRole("dialog", { name: "시금치" });
+  await detail.getByRole("button", { name: "포장지에서 날짜 다시 확인" }).click();
+  const labelDialog = page.getByRole("dialog", { name: "라벨로 추가" });
+  await expect(labelDialog).toBeVisible();
+  await labelDialog.getByRole("button", { name: "샘플 라벨 인식" }).click();
+  await expect(labelDialog.getByRole("group", { name: "식품 추가 2단계" })).toContainText("날짜 의미와 보관 위치를 확인해요");
+  await labelDialog.getByRole("button", { name: "확인 후 반영" }).click();
+  await expect(detail).toBeVisible();
+  await detail.getByRole("button", { name: "닫기", exact: true }).click();
+
+  await expect(notifications).toBeVisible();
+  await expect(notification).toBeFocused();
+  await expect(notification).toHaveAttribute("data-notification-returned", "true");
+  await notifications.getByRole("button", { name: "닫기", exact: true }).click();
+  await page.getByRole("button", { name: "홈", exact: true }).click();
+  await expect(page.locator(".app-bottom-nav-item-active")).toHaveText("홈");
+  await expect(page.getByRole("heading", { name: "오늘 먼저 확인할 식품 3" })).toBeVisible();
+  await expect(page.locator(".trust-card")).toHaveAttribute("data-trust-state", "needs-review");
+  await expect(page.locator(".trust-card")).toContainText("AI는 소비기한을 확정하지 않아요");
+  await expect(page.getByRole("button", { name: /알림 확인/ })).toHaveAccessibleName(/읽지 않은 알림 2개/);
 });
 
 test("keeps the pantry anchor at the top when a search has no results", async ({ page }) => {
@@ -571,6 +796,70 @@ test("keeps a bottom sheet usable at 320px", async ({ page }) => {
   await expect(dialog.getByRole("button", { name: "샘플 영수증으로 시작" })).toBeVisible();
 });
 
+test("keeps the barcode candidate card and apply CTA inside a 320px sheet", async ({ page }) => {
+  await page.getByRole("button", { name: "식품 추가하기" }).click();
+  const receiptDialog = page.getByRole("dialog", { name: "영수증으로 추가" });
+  await receiptDialog.getByRole("tab", { name: "바코드" }).click();
+  const dialog = page.getByRole("dialog", { name: "바코드로 추가" });
+  const exampleBarcode = dialog.getByRole("button", { name: "예시 바코드 입력" });
+  await exampleBarcode.evaluate((element) => element.scrollIntoView({ block: "center" }));
+  await exampleBarcode.click();
+
+  const candidateCard = dialog.locator(".barcode-candidate-card");
+  const apply = dialog.getByRole("button", { name: "상품 정보 적용" });
+  await expect(candidateCard).toBeVisible();
+  await expect(apply).toBeFocused();
+
+  await expect.poll(() => page.evaluate(() => {
+    const read = (selector: string) => document.querySelector<HTMLElement>(selector)?.getBoundingClientRect() ?? null;
+    const card = read(".barcode-candidate-card");
+    const action = read(".barcode-candidate-card .candidate-apply-button");
+    const sheet = read(".bottom-sheet");
+    const screen = read("[data-testid=device-screen]");
+    const content = document.querySelector<HTMLElement>(".sheet-content");
+    if (!card || !action || !sheet || !screen || !content) return false;
+    return card.left >= sheet.left - 1
+      && card.right <= sheet.right + 1
+      && action.left >= sheet.left - 1
+      && action.right <= sheet.right + 1
+      && action.bottom <= screen.bottom + 1
+      && action.height >= 32
+      && content.scrollWidth <= content.clientWidth + 1;
+  }), { timeout: 2_500 }).toBe(true);
+});
+
+test("keeps the receipt confirmation badge inside a 320px sheet", async ({ page }) => {
+  await page.getByRole("button", { name: "식품 추가하기" }).click();
+  const receiptDialog = page.getByRole("dialog", { name: "영수증으로 추가" });
+  await receiptDialog.getByRole("button", { name: "샘플 영수증으로 시작" }).click();
+  const confirm = receiptDialog.getByRole("button", { name: "이 항목 확인했어요" });
+  await confirm.click();
+  const badge = receiptDialog.locator(".receipt-line-confirmed-badge");
+  await expect(badge).toBeVisible();
+  const metrics = await badge.evaluate((element) => {
+    const box = element.getBoundingClientRect();
+    const sheet = element.closest<HTMLElement>(".bottom-sheet")?.getBoundingClientRect();
+    return { left: box.left, right: box.right, sheetLeft: sheet?.left ?? 0, sheetRight: sheet?.right ?? 0, width: box.width };
+  });
+  expect(metrics.left).toBeGreaterThanOrEqual(metrics.sheetLeft - 1);
+  expect(metrics.right).toBeLessThanOrEqual(metrics.sheetRight + 1);
+  expect(metrics.width).toBeLessThanOrEqual(120);
+});
+
+test("keeps receipt review states legible in dark mode", async ({ page }) => {
+  await page.addInitScript(() => window.localStorage.setItem("rescue-meal.theme", "dark"));
+  await page.getByRole("button", { name: "식품 추가하기" }).click();
+  const dialog = page.getByRole("dialog", { name: "영수증으로 추가" });
+  await dialog.getByRole("button", { name: "샘플 영수증으로 시작" }).click();
+  const pendingCard = dialog.locator(".receipt-line-card-needs-confirmation");
+  const pendingColors = await pendingCard.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return { background: style.backgroundColor, border: style.borderTopColor };
+  });
+  expect(pendingColors.background).not.toBe("rgb(244, 247, 240)");
+  expect(pendingColors.border).not.toBe("rgba(0, 0, 0, 0)");
+});
+
 test("keeps the manual-food action reachable after entering a name", async ({ page }) => {
   await page.getByRole("button", { name: "식품 추가하기" }).click();
   const intakeDialog = page.getByRole("dialog", { name: "영수증으로 추가" });
@@ -645,6 +934,18 @@ test("keeps the label confirmation action reachable after recognition", async ({
     const actionBox = await action.boundingBox();
     return Boolean(screenBox && actionBox && actionBox.y >= screenBox.y && actionBox.y + actionBox.height <= screenBox.y + screenBox.height - 34 && actionBox.height >= 43.5);
   }, { timeout: 2_500 }).toBe(true);
+  await expect.poll(() => page.evaluate(() => {
+    const card = document.querySelector<HTMLElement>(".label-result-card");
+    const sheet = document.querySelector<HTMLElement>(".bottom-sheet");
+    const content = document.querySelector<HTMLElement>(".sheet-content");
+    if (!card || !sheet || !content) return false;
+    const cardBox = card.getBoundingClientRect();
+    const sheetBox = sheet.getBoundingClientRect();
+    return cardBox.left >= sheetBox.left - 1
+      && cardBox.right <= sheetBox.right + 1
+      && card.scrollWidth <= card.clientWidth + 1
+      && content.scrollWidth <= content.clientWidth + 1;
+  }), { timeout: 2_500 }).toBe(true);
   const order = await dialog.locator(".label-result-card").evaluate((card) => {
     const actionBar = card.parentElement?.querySelector(".label-result-action-bar");
     return Boolean(actionBar && (card.compareDocumentPosition(actionBar) & Node.DOCUMENT_POSITION_FOLLOWING));
@@ -653,6 +954,7 @@ test("keeps the label confirmation action reachable after recognition", async ({
 });
 
 test("opens the explicit receipt source review fixture and follows a source box to its line", async ({ page }) => {
+  await page.addInitScript(() => window.localStorage.setItem("rescue-meal.theme", "dark"));
   await page.goto("/?review=1&receipt_source_review=1");
   const dialog = page.getByRole("dialog", { name: "영수증 원본 대조" });
   await expect(dialog).toBeVisible();
@@ -686,6 +988,16 @@ test("opens the explicit receipt source review fixture and follows a source box 
   await expect(sourcePreview.getByRole("button", { name: "국산콩 두부 원본 위치 선택" })).toBeVisible();
   await expect(sourcePreview.getByRole("button", { name: "맛타리버섯 원본 위치 선택" })).toBeVisible();
   await expect(sourcePreview).toContainText("현재 항목 · 맛타리버섯");
+  await expect(sourcePreview.locator(".receipt-source-preview-heading small")).toContainText("원본 위치");
+  const mushroomSource = sourcePreview.getByRole("button", { name: "맛타리버섯 원본 위치 선택" });
+  const spinachSource = sourcePreview.getByRole("button", { name: "국내산 시금치 원본 위치 선택" });
+  await expect(mushroomSource).toHaveAttribute("aria-pressed", "true");
+  await expect(spinachSource).toHaveAttribute("aria-pressed", "false");
+  await spinachSource.press("Enter");
+  await expect(spinachSource).toHaveAttribute("aria-pressed", "true");
+  await expect(mushroomSource).toHaveAttribute("aria-pressed", "false");
+  await expect(sourcePreview).toContainText("현재 항목 · 국내산 시금치");
+  await expect(sourcePreview).toHaveAttribute("data-active-source-line", "국내산 시금치");
   await expect(sourcePreview.locator(".receipt-source-hit-target").first()).toHaveAttribute("aria-describedby", "receipt-source-preview-hint");
   const lineSourceButtons = dialog.getByRole("button", { name: /원본 위치 보기$/ });
   await expect(lineSourceButtons).toHaveCount(3);
@@ -699,12 +1011,19 @@ test("opens the explicit receipt source review fixture and follows a source box 
   expect(sourceFrame).toBeTruthy();
   expect(sourceFrame!.x).toBeGreaterThanOrEqual(0);
   expect(sourceFrame!.x + sourceFrame!.width).toBeLessThanOrEqual(321);
-  await expect.poll(() => sourcePreview.locator(".receipt-source-preview-frame").evaluate((element) => getComputedStyle(element).backgroundColor)).toBe("rgb(238, 241, 235)");
+  await expect.poll(() => sourcePreview.locator(".receipt-source-preview-frame").evaluate((element) => getComputedStyle(element).backgroundColor)).toBe("rgb(18, 26, 34)");
   await sourcePreview.getByRole("button", { name: "원본 확대" }).click();
   await expect(sourcePreview.getByRole("button", { name: "원본 축소" })).toHaveAttribute("aria-pressed", "true");
   const zoomedFrame = await sourcePreview.locator(".receipt-source-preview-frame").boundingBox();
   expect(zoomedFrame).toBeTruthy();
   expect(zoomedFrame!.height).toBeGreaterThan(sourceFrame!.height);
+  const tofuSource = sourcePreview.getByRole("button", { name: "국산콩 두부 원본 위치 선택" });
+  await tofuSource.press("Enter");
+  await expect(tofuSource).toHaveAttribute("aria-pressed", "true");
+  await expect(sourcePreview).toContainText("현재 항목 · 국산콩 두부");
+  await expect(sourcePreview).toHaveAttribute("data-active-source-line", "국산콩 두부");
+  const activeTofuBoxes = await sourcePreview.locator(".receipt-source-box-active").count();
+  expect(activeTofuBoxes).toBeGreaterThan(0);
   await expect.poll(() => page.evaluate(() => {
     const submit = document.querySelector<HTMLElement>(".receipt-review-submit-bar")?.getBoundingClientRect();
     const activeBoxes = Array.from(document.querySelectorAll<HTMLElement>(".receipt-source-box-active"), (element) => element.getBoundingClientRect());
@@ -716,12 +1035,25 @@ test("opens the explicit receipt source review fixture and follows a source box 
   await expect(spinachCard).toHaveClass(/receipt-line-card-editing/);
   await expect(spinachCard.getByRole("button", { name: "국내산 시금치 항목 수정 닫기" })).toBeVisible();
   await expect(spinachCard.getByRole("group", { name: "국내산 시금치 보관 위치" })).toHaveAttribute("aria-describedby", "receipt-storage-hint-receipt-spinach");
+  await expect(sourcePreview.getByRole("button", { name: "원본 축소" })).toBeVisible();
+  await sourcePreview.getByRole("button", { name: "원본 축소" }).click();
+  await expect(sourcePreview.getByRole("button", { name: "원본 확대" })).toHaveAttribute("aria-pressed", "false");
+  await expect(sourcePreview).toContainText("현재 항목 · 국내산 시금치");
+  await expect(sourcePreview).toHaveAttribute("data-active-source-line", "국내산 시금치");
+  await expect(sourcePreview.getByRole("button", { name: "국산콩 두부 원본 위치 선택" })).toHaveAttribute("aria-pressed", "false");
+  await spinachCard.getByRole("button", { name: "국내산 시금치 항목 수정 닫기" }).click();
+  await expect(sourcePreview).toContainText("현재 항목 · 국내산 시금치");
+  await expect(sourcePreview).toHaveAttribute("data-active-source-line", "국내산 시금치");
+  await expect(sourcePreview.getByRole("button", { name: "국내산 시금치 원본 위치 선택" })).toHaveAttribute("aria-pressed", "true");
   await dialog.getByRole("button", { name: "닫기", exact: true }).click();
   await expect(dialog).toHaveCount(0);
   await page.getByRole("button", { name: "영수증 원본 대조 다시 열기" }).click();
   const reopenedDialog = page.getByRole("dialog", { name: "영수증 원본 대조" });
   await expect(reopenedDialog).toBeVisible();
-  await expect(reopenedDialog.getByRole("region", { name: "영수증 원본 미리보기" })).toBeVisible();
+  const reopenedPreview = reopenedDialog.getByRole("region", { name: "영수증 원본 미리보기" });
+  await expect(reopenedPreview).toBeVisible();
+  await expect(reopenedPreview).toHaveAttribute("data-active-source-line", "맛타리버섯");
+  await expect(reopenedPreview.getByRole("button", { name: "원본 확대" })).toHaveAttribute("aria-pressed", "false");
 });
 
 test("keeps the source review fixture legible in dark mode", async ({ page }) => {
@@ -1077,7 +1409,8 @@ test("places detail primary actions directly after safety guidance", async ({ pa
   const dialog = page.getByRole("dialog", { name: "시금치" });
   await expect(dialog).toBeVisible();
   await expect(dialog.locator(".detail-actions")).toBeVisible();
-  await expect(dialog.locator(".detail-actions .secondary-sheet-button")).toContainText("먹었어요");
+  await expect(dialog.locator(".detail-actions .secondary-sheet-button")).toHaveText(/확인 후 먹었어요/);
+  await expect(dialog.locator(".detail-actions .secondary-sheet-button")).toHaveAttribute("aria-label", "날짜와 보관 상태를 확인한 뒤 먹었어요 기록");
   const followsSafetyGuidance = await dialog.locator(".date-review-callout").evaluate((node) => {
     const actions = node.parentElement?.querySelector(".detail-actions");
     return Boolean(actions && (node.compareDocumentPosition(actions) & Node.DOCUMENT_POSITION_FOLLOWING));

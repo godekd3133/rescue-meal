@@ -3282,3 +3282,1967 @@ final result: passed
 - 바코드 상품 후보가 생성된 뒤 후보 카드가 시트 하단에 남아 `이름·보관 기준 적용`을 찾기 위해 다시 스크롤해야 하던 흐름을 보정했습니다. 첫 후보의 적용 action을 시트 중앙으로 가져오고 포커스를 이동해 `입력 → 후보 확인 → 직접 확인 단계로 이동`을 한 번에 이어갑니다.
 - 데모 후보와 연결 모드의 실제 상품 후보 모두 같은 scroll/focus 계약을 사용하며, 후보가 없는 경고 응답에서는 기존 입력 위치와 recovery 흐름을 유지합니다. 후보 적용 후 직접 입력 화면으로 전환되는 기존 provenance·보관 기준 경계도 유지했습니다.
 - Fixture barcode flow: `1 passed`; connected barcode candidate flow: `1 passed`; full fixture/mobile lane: `61 passed + 3 skipped`; full native viewport lane: `36 passed`; production build: `765` Vite modules; bundle budget: `18` JS chunks, `1325.9KB` JS, `260.0KB` CSS; mobile runtime integrity: `28 protected files`; `git diff --check`: passed. Live 393px dark readback shows the candidate card and apply action together in the active sheet viewport with focus on the apply action.
+
+## Mobile receipt-review first-target focus pass — 2026-09-21
+
+- 샘플·신규 영수증 검수 결과에서 첫 `확인 필요` 항목을 자동으로 시트 중앙에 배치하고 해당 항목의 toggle row에 포커스를 이동했습니다. 펼쳐진 편집 영역은 그대로 유지하되 `KeyboardInput`을 직접 포커스하지 않아 모바일 키보드가 결과 화면을 덮지 않습니다.
+- 포커스된 row의 accessible name에 상품명·수량·금액·`확인 필요`가 함께 있어, 사용자는 첫 검수 대상임을 읽고 바로 상품명·수량·단위·보관 위치 편집으로 이동할 수 있습니다. 저장된 검수 초안의 기존 입력 focus contract는 별도로 유지합니다.
+- Fixture receipt review: `1 passed` (isolated test port `4492`); native receipt/label subset: `4 passed` (isolated test port `4493`); production build: `765` Vite modules; bundle budget: `18` JS chunks, `1326.4KB` JS, `260.0KB` CSS; mobile runtime integrity: `28 protected files`; `git diff --check`: passed. Live 393px dark readback shows the `맛타리버섯 · 확인 필요` row focused with the expanded editor visible and the sticky commit action still reachable. Existing unrelated `pc-supporter` process on port `4174` was left untouched.
+
+## Mobile label-review unresolved-field focus pass — 2026-09-21
+
+- 라벨 인식 결과에서 날짜 의미·상품명·표시 날짜·보관 위치 중 하나라도 미확정이면 비활성화된 하단 CTA를 먼저 보여주던 scroll 순서를 수정했습니다. 이제 실제로 해결해야 하는 첫 radio/input/storage control을 중앙에 배치하고 포커스합니다.
+- 모든 필드가 준비된 기존 샘플 결과는 `확인 후 반영` CTA를 계속 중앙에 배치하고 포커스하며, 완전하지 않은 결과만 해당 필드 focus 경로를 사용합니다. 날짜 의미 확인 전에는 소비기한으로 확정하지 않는 문구와 저장 경계는 유지됩니다.
+- Connected ambiguous-label review: `1 passed`; production build: `765` Vite modules; bundle budget: `18` JS chunks, `1326.4KB` JS, `260.0KB` CSS; mobile runtime integrity: `28 protected files`; `git diff --check`: passed.
+
+## Mobile receipt-product-candidate handoff focus pass — 2026-09-21
+
+- 영수증 검수에서 상품명 후보 조회가 완료되면 첫 `이 후보 적용` action을 현재 검수 항목의 중앙으로 가져오고 포커스를 이동합니다. 후보 카드가 편집 필드 아래에 추가돼도 다음 행동이 화면 밖으로 밀리지 않습니다.
+- 후보 적용 시 기존 사용자가 입력한 수량·단위·검수 상태를 유지하고, 상품명·상품 기준 보관 정보·provenance만 후보 값으로 갱신하는 기존 계약을 유지합니다.
+- Connected receipt correction + product candidate flow: `1 passed`; production build: `765` Vite modules; bundle budget: `18` JS chunks, `1326.8KB` JS, `260.0KB` CSS; mobile runtime integrity: `28 protected files`; `git diff --check`: passed.
+
+## Receipt candidate-apply confirmation pass — 2026-09-21
+
+- 상품 후보를 적용한 직후 후보 카드가 사라져 변경 결과가 불명확해지던 흐름을 보완했습니다. 현재 항목 안에 `상품 정보를 적용했어요` status를 남기고, 상품명·보관 기준은 후보를 반영했으며 포장지 날짜는 별도로 확인해야 한다는 다음 행동을 함께 보여줍니다.
+- 영수증 상품명 후보·영수증 바코드 후보·기존 매칭 후보의 적용 결과가 같은 confirmation language를 사용하며, 검수 상태와 사용자가 입력한 수량·단위는 그대로 유지됩니다.
+- Connected receipt correction + candidate confirmation: `1 passed`; production build: `765` Vite modules; bundle budget: `18` JS chunks, `1327.2KB` JS, `260.0KB` CSS; mobile runtime integrity: `28 protected files`; `git diff --check`: passed.
+
+## Candidate-provenance manual-edit distinction pass — 2026-09-21
+
+- 상품 후보 적용 후 사용자가 상품명·수량·단위·보관 위치를 수정하면 기존 confirmation 대신 `후보 적용 후 사용자 값으로 수정했어요` 상태를 보여줍니다.
+- 상품 후보 provenance는 기록에 남아 있지만 현재 표시값은 사용자가 확인·수정한 값이라는 점을 분리해, 후보 출처와 현재 사용자 결정이 섞여 읽히지 않도록 했습니다.
+- Connected receipt candidate → manual edit truthfulness: `1 passed`; production build: `765` Vite modules; bundle budget: `18` JS chunks, `1327.9KB` JS, `259.8KB` CSS; mobile runtime integrity: `28 protected files`; `git diff --check`: passed.
+
+## Provenance cross-surface parity readback pass — 2026-09-21
+
+- 연결 모드에서 provenance가 있는 식품 상세를 열었을 때 `상품 정보 출처` 카드가 후보 source, 신뢰도, 최신성, 상품 기준 보관 정보, 개별 포장 소비기한 비확정 경계를 함께 유지하는지 회귀 계약을 추가했습니다.
+- 홈의 provenance-backed priority entry와 상세의 `상품 출처 다시 확인` focus가 같은 출처 정보를 가리키는지 확인해, 입력 후보 화면에서 상세 화면으로 이동할 때 정보가 축약되거나 의미가 바뀌지 않게 했습니다.
+- Connected provenance detail parity: `1 passed`; mobile runtime integrity: `28 protected files`; `git diff --check`: passed.
+
+## Home safety-summary scope parity pass — 2026-09-21
+
+- 홈 안전 안내의 `확인 필요 N개` 문구에 `오늘 우선 식품 중` 범위를 명시해, priority scope와 전체 식품 목록의 확인 필요 count가 서로 다른데도 같은 숫자처럼 읽히던 ambiguity를 줄였습니다.
+- 전체 식품 목록의 `확인 필요 N개 · 날짜·보관 상태를 먼저 확인해요` 요약과 홈의 `오늘 우선 식품 중 N개는 ...` 안내가 서로 다른 scope를 설명하도록 맞췄습니다.
+- Fixture home/detail readback: `1 passed`; home axe audit: `1 passed`; production build: `765` Vite modules; bundle budget: `18` JS chunks, `1327.9KB` JS, `259.8KB` CSS; mobile runtime integrity: `28 protected files`; `git diff --check`: passed.
+
+## Connected notification-meal scope parity pass — 2026-09-21
+
+- 연결 모드에서 식단의 `사용 전 확인 2건`이 날짜 review·부족 재료 safety summary로 이어지고, 알림 센터의 외부 연동 count가 `확인 필요·처리 대기·반영 완료` 세 상태로 분리되는지 함께 재확인했습니다.
+- 식단 safety count는 조리 전 확인 범위로, 알림 count는 unread/task lifecycle 범위로 유지되어 같은 `확인 필요` 용어가 서로 다른 범위를 덮어쓰지 않습니다.
+- Connected date-review meal flow, storage-to-notification lifecycle, external-sync notification summary: `3 passed`; mobile runtime integrity: `28 protected files`; `git diff --check`: passed.
+
+## Offline/auth scope-boundary parity pass — 2026-09-21
+
+- 오프라인 캐시 화면은 `읽기 전용`과 `최근 동기화한 재고`를 connection pill·priority card·legend에 유지하고, 최신 상태로 오해할 수 있는 일반 connected count로 돌아가지 않는지 확인했습니다.
+- 캐시가 없는 offline 상태는 `최신 기록을 사용할 수 없음`과 `다시 연결` recovery를 분리하고, auth-required 상태는 `로그인 화면 열기`·`계정 연결이 만료됐어요`·workspace 자동 전환 없음 경계를 유지합니다.
+- Connected expired-session, offline empty recovery, offline stale snapshot, initial account-connection failure: `4 passed`; mobile runtime integrity: `28 protected files`; `git diff --check`: passed.
+
+## Offline meal-entry scope guard pass — 2026-09-21
+
+- 연결된 최신 재고가 없는 offline/auth-required 상태에서 하단 `식단` 탭을 눌러 stale 재료로 식단 sheet를 계산하지 않도록 진입을 차단했습니다.
+- offline 상태는 `최신 재고에 연결한 뒤 식단을 확인할 수 있어요`와 `다시 연결`, auth-required는 로그인 경로로 recovery를 안내하며, 이미 열린 식단 sheet의 정상 connected flow는 유지합니다.
+- Connected offline stale dashboard → bottom meal entry guard + reconnect recovery: `1 passed`; production build: `765` Vite modules; bundle budget: `18` JS chunks, `1328.3KB` JS, `259.8KB` CSS; mobile runtime integrity: `28 protected files`; `git diff --check`: passed.
+
+## Offline shopping-notification entry guard pass — 2026-09-21
+
+- offline/auth-required 상태에서 하단·헤더 진입으로 장보기 목록과 알림 sheet를 열어 stale 데이터를 수정하거나 읽음 처리하는 경로를 차단했습니다.
+- offline은 `다시 연결한 뒤 최신 장보기 목록/최신 알림을 확인할 수 있어요`와 `다시 연결` CTA를 사용하고, auth-required는 로그인·계정 연결 recovery로 분기합니다.
+- offline stale snapshot → meal/shopping/notification entry scope guard + reconnect recovery: `1 passed`; production build: `765` Vite modules; bundle budget: `18` JS chunks, `1329.1KB` JS, `259.8KB` CSS; mobile runtime integrity: `28 protected files`; `git diff --check`: passed.
+
+## Candidate-card visual anatomy parity pass — 2026-09-21
+
+- 영수증 후보 카드의 적용 버튼도 바코드 후보와 같은 `candidate-apply-button` anatomy를 사용하도록 통합했습니다. 동일한 `상품 정보 적용` 행동이 높이·패딩·radius·강조 수준까지 같은 시각 언어를 사용합니다.
+- 기존 영수증 전용 버튼 CSS를 제거해 중복 스타일을 줄였고, 후보 카드의 provenance·신뢰도 텍스트와 날짜 후보 CTA의 분리 구조는 유지했습니다.
+- Connected receipt candidate flow: `1 passed`; production build: `765` Vite modules; bundle budget: `18` JS chunks, `1327.3KB` JS, `259.8KB` CSS; mobile runtime integrity: `28 protected files`; `git diff --check`: passed.
+
+## Candidate-apply CTA vocabulary parity pass — 2026-09-21
+
+- 같은 상품 후보를 적용하는 CTA를 영수증·영수증 바코드·일반 바코드의 `이 후보 적용`·`이름 채우기`·`이름·보관 기준 적용`에서 `상품 정보 적용`으로 통일했습니다. 후보가 채우는 범위는 후보 카드의 보관 기준·provenance 정보로 계속 설명합니다.
+- 날짜 후보를 별도로 반영하는 `상품·날짜를 입력에 반영` CTA는 날짜 확정 경계가 다르므로 유지해, 상품 정보 적용과 날짜 후보 적용을 혼동하지 않게 했습니다.
+- Fixture barcode flow: `1 passed`; connected receipt candidate correction flow: `1 passed`; production build: `765` Vite modules; bundle budget: `18` JS chunks, `1326.8KB` JS, `260.0KB` CSS; mobile runtime integrity: `28 protected files`; `git diff --check`: passed.
+
+## Candidate-card visual anatomy parity pass — 2026-09-21
+
+- 영수증 상품 후보 버튼에도 바코드 후보와 같은 `candidate-apply-button` 공통 스타일을 적용해, 상품 후보 적용 CTA의 높이·패딩·radius·강조 수준을 통일했습니다.
+- 기존 영수증 전용 버튼 CSS를 제거해 중복 스타일을 줄였고, 좁은 화면에서 카드 본문과 CTA가 서로 다른 규칙으로 폭을 차지하지 않도록 했습니다. provenance·신뢰도·보관 기준 텍스트와 날짜 후보의 별도 CTA는 유지했습니다.
+- Production build: `765` Vite modules; bundle budget: `18` JS chunks, `1327.3KB` JS, `259.8KB` CSS; mobile runtime integrity: `28 protected files`; `git diff --check`: passed.
+
+## Native 320px candidate-card geometry pass — 2026-09-21
+
+- 320px native viewport에서 예시 바코드 후보 카드와 `상품 정보 적용` CTA의 좌우 경계·safe-area 하단·최소 touch height·시트 scroll width를 계약으로 추가했습니다.
+- 후보 포커스의 smooth scroll settle 이후 geometry를 측정해, 이동 중인 중간 프레임을 실패로 오인하지 않도록 했습니다. 최종 상태는 카드/CTA가 sheet와 screen 안에 있고 horizontal overflow가 없습니다.
+- Native barcode candidate geometry: `1 passed` (isolated test port `4493`); mobile runtime integrity: `28 protected files`; `git diff --check`: passed.
+
+## Connected 320px receipt-candidate density pass — 2026-09-21
+
+- 연결 모드 영수증 상품 후보 흐름을 실제 `320×740` viewport로 전환해, 긴 provenance 문구·후보 본문·`상품 정보 적용` CTA가 sheet 좌우 경계와 screen 하단 safe-area 안에 함께 들어오는지 검증했습니다.
+- 후보 focus와 smooth-scroll settle 이후 card/action bounding box 및 `.sheet-content` horizontal overflow를 측정하고, 이후 테스트 viewport를 `1100×1100`으로 복구해 기존 commit/readback flow도 유지했습니다.
+- Connected receipt candidate density + correction flow: `1 passed`; production build: `765` Vite modules; bundle budget: `18` JS chunks, `1327.3KB` JS, `259.8KB` CSS; mobile runtime integrity: `28 protected files`; `git diff --check`: passed.
+
+## Connected 320px multi-candidate density pass — 2026-09-21
+
+- 연결 모드 영수증 상품명 후보를 2개로 구성해, 긴 provenance·신뢰도·보관 기준 텍스트가 여러 카드에 반복돼도 각 카드와 각 `상품 정보 적용` CTA가 sheet 폭 안에 유지되는지 검증했습니다.
+- 첫 후보의 자동 focus/scroll과 두 번째 후보의 수직 누적은 분리해 유지하고, horizontal overflow만 차단해 좁은 화면에서도 후보를 순차적으로 확인할 수 있게 했습니다.
+- Connected multi-candidate receipt flow at `320×740`: `1 passed`; production build: `765` Vite modules; bundle budget: `18` JS chunks, `1327.3KB` JS, `259.8KB` CSS; mobile runtime integrity: `28 protected files`; `git diff --check`: passed.
+
+## Multi-candidate apply-confirmation density pass — 2026-09-21
+
+- 320px에서 첫 상품 후보를 적용한 뒤 후보 목록이 사라지고 `상품 정보를 적용했어요` confirmation이 남는 상태를 검증했습니다. confirmation card가 sheet 좌우를 넘지 않고 sticky 반영 CTA와 겹치지 않습니다.
+- 두 번째 후보가 있었던 이전 상태와 적용 후 상태를 분리해, 사용자가 적용 결과를 놓치지 않으면서도 다음 검수 항목으로 계속 이동할 수 있게 했습니다.
+- Connected multi-candidate apply confirmation at `320×740`: `1 passed`; mobile runtime integrity: `28 protected files`; `git diff --check`: passed.
+
+## Candidate-apply manual-edit truthfulness pass — 2026-09-21
+
+- 상품 후보 적용 후 사용자가 상품명·수량·단위·보관 위치를 직접 바꾸면 기존 `상품 정보를 적용했어요` confirmation을 제거하도록 보정했습니다. 후보 상태와 현재 사용자 수정값이 서로 다른데도 같은 성공 문구가 남는 정보 불일치를 막습니다.
+- 후보를 적용하고 아무것도 수정하지 않은 경우에는 기존 confirmation과 포장지 날짜 다음 행동을 유지합니다. 직접 수정이 시작되면 현재 입력값을 사용자가 다시 확인하는 흐름으로 전환합니다.
+- Connected receipt candidate apply → manual edit truthfulness flow: `1 passed`; production build: `765` Vite modules; bundle budget: `18` JS chunks, `1327.4KB` JS, `259.8KB` CSS; mobile runtime integrity: `28 protected files`; `git diff --check`: passed.
+
+## Native 320px label-result density pass — 2026-09-21
+
+- 320px native 라벨 결과에서 `label-result-card`가 sheet 좌우 경계를 넘지 않고, 카드 내부 horizontal overflow가 없으며, `확인 후 반영` action bar가 카드 다음 순서에 존재하는지 고정했습니다.
+- 날짜 의미·표시 날짜·보관 위치 선택 영역의 긴 설명이 카드 폭을 깨지 않는지와 기존 CTA safe-area 도달성 계약을 함께 측정합니다.
+- Native label result density + action reachability: `1 passed` (isolated test port `4493`); mobile runtime integrity: `28 protected files`; `git diff --check`: passed.
+
+## Offline notification-badge freshness pass — 2026-09-21
+
+- offline/auth-required 상태에서 이전 unread notification 숫자 badge가 최신 알림처럼 보이지 않도록 숨기고, header accessible name으로 `다시 연결 후 최신 알림 확인` 또는 `로그인 후 최신 알림 확인`을 전달합니다.
+- connected 상태에서는 기존 urgent/attention/info badge와 unread count를 그대로 유지하며, offline 상태에서는 최신성 경계를 우선 노출합니다.
+- Offline stale notification entry + badge suppression: `1 passed`; production build: `765` Vite modules; bundle budget: `18` JS chunks, `1329.1KB` JS, `259.8KB` CSS; mobile runtime integrity: `28 protected files`; `git diff --check`: passed.
+
+## Auth-required account-panel mutation boundary pass — 2026-09-21
+
+- 로그인 만료 상태에서 계정 sheet가 로그인 recovery 화면으로 수렴하고, 인증 전 `식품 기록 설정`·데이터 export·외부 연동 운영 panel을 mount하지 않는 계약을 추가했습니다.
+- 기존 workspace 기록을 자동 전환하지 않는 alert와 `로그인 화면 열기` action은 유지하면서, 인증 전 mutation surface 노출을 차단합니다.
+- Connected expired-session account boundary: `1 passed`; mobile runtime integrity: `28 protected files`; `git diff --check`: passed.
+
+## Authenticated guest-transfer scope pass — 2026-09-21
+
+- 인증 후 게스트 transfer preview가 식품·영수증·보관 기록·식단·장보기·알림 설정 등 가져올 scope를 먼저 보여주고, `게스트 기록 가져오기`와 `계정만 사용`을 분리하는지 확인했습니다.
+- 게스트 기록은 자동으로 계정 기록에 섞이지 않고, 기존 계정 workspace를 유지한 채 명시적 선택을 요구하는 현재 언어·focus contract를 유지합니다.
+- Connected registration guest-transfer preview: `1 passed`; mobile runtime integrity: `28 protected files`; `git diff --check`: passed.
+
+## Guest-transfer conflict recovery pass — 2026-09-21
+
+- 계정 workspace에 다른 기록이 있는 guest transfer conflict에서 자동 병합하지 않고 새 preview로 돌아가는 recovery를 재확인했습니다.
+- import 요청은 conflict 상태에서 실행되지 않으며, 새 preview의 `게스트 기록 가져오기`·`계정만 사용` 선택과 기존 account 기록 보호 경계를 유지합니다.
+- Connected guest-transfer conflict recovery: `1 passed`; mobile runtime integrity: `28 protected files`; `git diff --check`: passed.
+
+## Guest-transfer success next-action pass — 2026-09-21
+
+- 게스트 기록 import가 성공한 뒤 결과 toast에 `식품 목록 확인` action을 추가해, 성공 메시지를 읽고 바로 새 계정 workspace의 식품 목록으로 이동할 수 있게 했습니다.
+- 일반 로그인 성공 toast에는 불필요한 action을 추가하지 않고, guest transfer success message에만 next action을 연결해 정보 노출 수준을 상태별로 유지했습니다.
+- Connected guest-transfer preview/import: `1 passed`; production build: `765` Vite modules; bundle budget: `18` JS chunks, `1329.3KB` JS, `259.8KB` CSS; mobile runtime integrity: `28 protected files`; `git diff --check`: passed.
+
+## Guest-transfer next-action workspace readback pass — 2026-09-21
+
+- transfer 성공 toast의 `식품 목록 확인` action을 실제로 눌렀을 때 하단 navigation이 `식품`으로 바뀌고 inventory toolbar로 이동하는 next-action contract를 추가했습니다.
+- 결과 메시지 확인에서 끝나지 않고 새 계정 workspace의 식품 목록으로 이어지는 사용자의 다음 행동을 고정했습니다.
+- Connected guest-transfer success → 식품 목록 next action: `1 passed`; mobile runtime integrity: `28 protected files`; `git diff --check`: passed.
+
+## Accumulated fixture-mobile regression readback — 2026-09-21
+
+- 현재 source 기준 fixture/mobile 전체 lane을 다시 실행해 홈 scope copy, notification badge freshness, intake candidate CTA, receipt/label focus, meal, inventory, account, offline recovery를 함께 재확인했습니다.
+- Full fixture/mobile lane: `61 passed + 3 skipped`; the three skips remain the known production-runtime/Web Push environment lanes; runtime error console output is the intentional fixture failure case and its recovery test passed.
+
+## Accumulated native viewport regression readback — 2026-09-21
+
+- 현재 source 기준 native full lane을 다시 실행해 320px/393px fold, short-height, keyboard, safe-area, large text, reduced motion, contrast, light/dark, receipt/candidate/label, account, meal/detail focus contracts를 함께 재확인했습니다.
+- Full native viewport lane: `37 passed`; isolated native test port `4493`; mobile runtime integrity: `28 protected files`. 이 수치는 실제 iOS/Android device release acceptance를 대체하지 않지만 현재 native mobile runtime geometry·focus 계약은 모두 green입니다.
+
+## Guest-transfer zero-scope disclosure pass — 2026-09-21
+
+- 게스트 transfer preview의 `가져올 기록` chips에서 0건인 scope를 숨겨, 실제로 가져올 데이터와 선택 판단에 필요한 범위만 노출하도록 정리했습니다.
+- 식품·영수증·보관 기록·보관 위치·식단·장보기·입고·알림 설정 중 실제 값이 있는 항목만 표시하고, 모든 값이 0인 preview는 기존처럼 transfer panel을 열지 않습니다.
+- Connected registration guest-transfer preview + zero-scope disclosure: `1 passed`; production build: `765` Vite modules; bundle budget: `18` JS chunks, `1329.2KB` JS, `259.8KB` CSS; mobile runtime integrity: `28 protected files`; `git diff --check`: passed.
+
+## Accumulated connected browser/API regression readback — 2026-09-21
+
+- 현재 source 기준 connected 전체 lane을 다시 실행해 인증·게스트 transfer·알림·외부 sync·식품 입력·보관 위치·식단·recipe review 흐름을 함께 재확인했습니다.
+- Full connected lane: `140 passed`; 실행 시간 `6.2m`. 이번 결과는 실제 모바일 화면 자체의 device acceptance를 대신하지 않지만, 연결형 browser/API contract와 모바일 focus/action 흐름은 모두 green입니다.
+- In-app browser `http://127.0.0.1:4176/`에서 Rescue Meal 홈을 모바일 폭 기준으로 다시 열어, priority food → 식단 CTA → 식품 추가 → AI 경계 메시지 → inventory → bottom navigation 순서를 확인했습니다.
+
+## Mobile frontend open-state and production readback — 2026-09-21
+
+- In-app browser `http://127.0.0.1:4176/`의 Rescue Meal 홈을 다시 열고 390px 기준 접근성 트리에서 우선순위 식품 3개, `확인하고 오늘 식단 만들기`, `식품 추가`, AI 경계 메시지, 식품 목록, 하단 내비게이션의 노출 순서를 확인했습니다.
+- 라이트/다크모드 전환 컨트롤과 게스트 연결 상태·알림 진입점은 첫 화면 상단에서 유지되고, 홈의 주요 행동은 고정 하단 내비게이션과 겹치지 않는 현재 모바일 구조를 유지합니다.
+- Runtime integrity: `28 protected files`; production build: `765` Vite modules; bundle budget: `18` JS chunks, `1329.3KB` JS, `259.8KB` CSS; `git diff --check`: passed.
+
+## Native 320px home-action density pass — 2026-09-21
+
+- `320×740` native 화면에서 메인 식단 CTA와 보조 식품 추가 CTA가 나란히 놓일 때, 보조 CTA 폭을 `102px → 88px`로 줄여 메인 CTA의 설명 문장이 불필요하게 좁아지지 않도록 조정했습니다.
+- 고정 하단 내비게이션과의 수직 여백, 전체 document width, 기존 44px 터치 타깃 계약은 유지했습니다.
+- Focused native 320px home geometry: `1 passed`; production build: `765` Vite modules; bundle budget: `18` JS chunks, `1329.3KB` JS, `259.9KB` CSS; `git diff --check`: passed.
+
+## Dark-theme secondary-copy contrast pass — 2026-09-21
+
+- 다크모드의 보조 설명 텍스트 토큰을 `#aab6c5 → #b6c0cc`로 조정해 상태 설명·안내 문구의 읽기 우선순위를 높였습니다.
+- 제목, 경고 색상, 메인 CTA 색상과 레이아웃은 유지해 기존 정보 위계와 브랜드 포인트 컬러를 보존했습니다.
+- Focused native dark-theme regression: `3 passed`; production build: `765` Vite modules; bundle budget: `18` JS chunks, `1329.3KB` JS, `259.9KB` CSS; `git diff --check`: passed.
+
+## Added-food follow-up message clarity pass — 2026-09-21
+
+- 식품 추가 직후의 후속 action label을 `날짜·보관 확인`에서 `날짜·보관 상태 확인`으로 바꿔, 사용자가 상세 화면에서 확인해야 할 범위를 토스트 단계부터 명확히 알 수 있게 했습니다.
+- 기존 `상품·날짜 확인` 분기는 유지해 상품 후보 출처가 있는 식품과 일반 직접 입력 식품의 확인 범위를 구분했습니다.
+- Fixture intake follow-up: `2 passed`; connected intake/recovery/storage follow-up: `3 passed`; runtime integrity: `28 protected files`; production build: `765` Vite modules; bundle budget: `18` JS chunks, `1329.3KB` JS, `259.9KB` CSS.
+
+## Offline stale-time visibility pass — 2026-09-21
+
+- 오프라인 홈의 우선순위 상태 카드 kicker에 `최근 동기화 재고 · N분 전`을 추가해, 상단 연결 안내를 다시 읽지 않아도 카드 자체에서 데이터 freshness를 판단할 수 있게 했습니다.
+- 기존 읽기 전용 안내, `다시 연결` action, 식단·알림·장보기의 최신 데이터 guard는 변경하지 않았습니다.
+- Connected offline focused regression: `2 passed`; production build: `765` Vite modules; bundle budget: `18` JS chunks, `1329.3KB` JS, `259.9KB` CSS; `git diff --check`: passed.
+
+## Offline stale-time accessible-name pass — 2026-09-21
+
+- 상태 카드의 `aria-label`에도 `최근 동기화한 오늘 먼저 확인할 식품 N개 · N분 전`을 포함해, 시각적으로만 보이던 freshness 정보를 스크린 리더 사용자의 판단에도 연결했습니다.
+- visible kicker와 accessible name의 시간 표현을 같은 `formatDashboardCacheTime` 계약으로 묶어 두 표현이 어긋나지 않도록 했습니다.
+- Connected stale-dashboard focused regression: `1 passed`; runtime integrity: `28 protected files`; production build: `765` Vite modules; bundle budget: `18` JS chunks, `1329.3KB` JS, `259.9KB` CSS; `git diff --check`: passed.
+
+## Offline notification-count trust boundary pass — 2026-09-21
+
+- 연결이 끊긴 상태에서는 시각적 notification badge뿐 아니라 버튼 `aria-label`의 `읽지 않은 알림 N개`도 숨겨, 최신 상태로 확인되지 않은 숫자를 읽지 않도록 정리했습니다.
+- offline/auth-required 상태는 `다시 연결 후 최신 알림 확인` 또는 `로그인 후 최신 알림 확인`만 노출하고, 연결된 상태에서만 unread severity와 숫자 badge를 제공합니다.
+- Connected offline/recovery: `2 passed`; fixture notification: `2 passed`; production build: `765` Vite modules; bundle budget: `18` JS chunks, `1329.2KB` JS, `259.9KB` CSS; runtime integrity: `28 protected files`.
+
+## Offline stale-time speech clarity pass — 2026-09-21
+
+- offline 상태 카드의 accessible name을 `... 3개 · 5분 전`에서 `... 3개, 마지막 동기화 5분 전`으로 바꿔 스크린 리더가 식품 수와 freshness를 분리해 읽도록 했습니다.
+- 시각적 kicker의 짧은 표현은 유지하고, 접근성 이름만 의미 중심 문장으로 확장해 모바일 first-fold 밀도를 늘리지 않았습니다.
+- Connected stale-dashboard focused regression: `1 passed`; production build: `765` Vite modules; bundle budget: `18` JS chunks, `1329.3KB` JS, `259.9KB` CSS; runtime integrity: `28 protected files`.
+
+## Offline stale-copy action clarity pass — 2026-09-21
+
+- 오프라인 우선순위 카드의 본문을 `지금 확인하고...`에서 `최근 동기화 상태를 먼저 보고, 다시 연결한 뒤 오늘 식단을 계산해요.`로 분기해 실시간 데이터처럼 오해하지 않도록 했습니다.
+- 연결된 상태의 짧은 행동 문구와 온라인 식단 계산 흐름은 그대로 유지하고, stale snapshot에서만 읽기·재연결 경계를 명시합니다.
+- Connected stale-dashboard focused regression: `1 passed`; production build: `765` Vite modules; bundle budget: `18` JS chunks, `1329.4KB` JS, `259.9KB` CSS; runtime integrity: `28 protected files`.
+
+## Date-review next-priority action pass — 2026-09-21
+
+- 식품 상세에서 포장지 날짜를 사용자 확인으로 저장한 뒤, 우선순위 식품이 남아 있으면 toast에 `다음 우선 식품 확인` action을 제공합니다.
+- 기존 저장 직후 focus는 업데이트된 식품 행에 그대로 돌려주고, 사용자가 선택했을 때만 다음 우선 식품 상세로 이동하도록 해 자동 이동으로 맥락을 잃지 않게 했습니다.
+- Fixture date-review flow: `1 passed`; action click 후 다음 우선 식품 상세(`시금치`) readback까지 확인; `git diff --check`: passed.
+
+## Accumulated fixture/native regression after date-flow pass — 2026-09-21
+
+- 현재 source 기준 fixture/mobile 전체 lane을 다시 실행해 날짜 확인 후 다음 우선 식품 action, 알림 신뢰 경계, offline stale copy, receipt/label focus, meal, account 흐름을 함께 재확인했습니다.
+- Full fixture/mobile lane: `61 passed + 3 skipped`; skip 3건은 production runtime/Web Push 환경 lane이며, fixture render error console은 의도된 recovery fixture입니다.
+- Full native viewport lane: `37 passed`; 320px/393px fold, dark mode, focus, keyboard, safe-area, large text, contrast, receipt/label, account, meal/detail 계약이 모두 green입니다.
+
+## Connected date-next-action readback — 2026-09-21
+
+- 연결형 날짜 저장 경로에서도 성공 toast가 기존 저장 메시지를 유지하면서 다음 우선 식품 action을 추가할 수 있는 구조를 재확인했습니다.
+- dashboard refresh 실패 후에도 성공한 날짜 write를 화면에 남기는 connected recovery flow: `1 passed`; production build: `765` Vite modules; bundle budget: `18` JS chunks, `1329.6KB` JS, `259.9KB` CSS; runtime integrity: `28 protected files`.
+
+## Guest-transfer trust-copy legibility pass — 2026-09-21
+
+- 계정 연결 sheet의 핵심 안심 안내 `게스트 기록은 지금 그대로 남아요` 아래 설명을 `9px → 10px`로 올려, 자동 병합하지 않고 먼저 확인한다는 중요한 데이터 경계를 모바일에서도 읽기 쉽게 했습니다.
+- 320px 계정 sheet의 primary action 위치와 home-indicator 안전 영역은 그대로 유지했습니다.
+- Native account viewport: `2 passed`; fixture guest-workspace separation: `1 passed`; production build: `765` Vite modules; bundle budget: `18` JS chunks, `1329.6KB` JS, `259.9KB` CSS; runtime integrity: `28 protected files`.
+
+## Manual-intake default-value legibility pass — 2026-09-21
+
+- 직접 입력 sticky submit bar의 `기본값 1개 · 냉장 보관으로 바로 기록해요` 안내를 `8px → 9px`로 올려, 제출 전에 적용될 수량·보관 기본값을 더 쉽게 읽도록 했습니다.
+- submit action의 sticky 위치, 320px safe-area, 입력 완료 후 새 우선 식품 focus는 변경하지 않았습니다.
+- Native manual-intake viewport: `1 passed`; fixture manual-intake follow-up: `1 passed`; production build: `765` Vite modules; bundle budget: `18` JS chunks, `1329.6KB` JS, `259.9KB` CSS; runtime integrity: `28 protected files`.
+
+## Receipt-review warning legibility pass — 2026-09-21
+
+- 영수증 검수 sticky commit bar의 `확인 필요 N개가 포함돼요. 항목을 열어 확인한 뒤 반영하세요.` 안내를 `8px → 9px`로 올려, 반영 전 확인해야 할 항목이 제출 CTA에 묻히지 않도록 했습니다.
+- 검수 editor와 원본 receipt frame의 320px containment, sticky commit action 도달성은 유지했습니다.
+- Native receipt viewport: `2 passed`; fixture receipt selection: `1 passed`; production build: `765` Vite modules; bundle budget: `18` JS chunks, `1329.6KB` JS, `259.9KB` CSS; runtime integrity: `28 protected files`.
+
+## Intake-method recommendation cue pass — 2026-09-21
+
+- 식품 추가 방식 탭에서 기본 진입점인 영수증에만 접근성 이름을 바꾸지 않는 시각적 `추천` cue를 추가해, 네 가지 입력 방식의 선택 우선순위를 모바일에서 즉시 이해할 수 있게 했습니다.
+- 320px 탭 폭은 변경하지 않고 cue를 탭 내부에 겹쳐 배치했으며 `aria-hidden`으로 중복 음성 안내를 막았습니다.
+- Native 320px sheet: `1 passed`; visible primary-control naming: `1 passed`; production build: `765` Vite modules; bundle budget: `18` JS chunks, `1329.8KB` JS, `259.9KB` CSS; runtime integrity: `28 protected files`.
+
+## Intake-method recommendation accessibility lock — 2026-09-21
+
+- 영수증 탭의 `추천` cue는 시각적으로만 노출되고 `aria-hidden` 처리되어, 접근성 이름은 기존 `영수증`을 유지합니다.
+- 바코드·라벨·직접 입력 탭에는 추천 cue가 생기지 않는지 함께 고정해 입력 방식 간 우선순위가 의도치 않게 확장되지 않도록 했습니다.
+- Fixture modal/accessibility focused regression: `1 passed`; `git diff --check`: passed.
+
+## Saved-meal next-action legibility pass — 2026-09-21
+
+- 식단 저장 완료 후 표시되는 `다음: 사용량을 확인하고 조리 완료를 기록해 주세요` 또는 부족 재료 안내를 `9px → 10px`로 올려, 저장 이후의 다음 행동을 결과 카드 안에서 더 쉽게 읽도록 했습니다.
+- 식단 결과 first-fold, 저장 action, 조리 완료·skipped ingredient 흐름은 변경하지 않았습니다.
+- Native meal viewport: `2 passed`; fixture meal flow: `2 passed`; production build: `765` Vite modules; bundle budget: `18` JS chunks, `1329.8KB` JS, `259.9KB` CSS; runtime integrity: `28 protected files`.
+
+## Meal-provenance connection cue pass — 2026-09-21
+
+- 대표 식단 결과의 provenance를 `출처 · Rescue Meal 팀 작성 레시피`에서 `출처 · Rescue Meal 팀 작성 레시피 · 재료 100% 연결`처럼 확장해, 추천이 현재 보유 식품을 얼마나 활용했는지 첫 결과에서 바로 판단할 수 있게 했습니다.
+- 대체 메뉴·3일 식단에서 이미 사용하던 `재료 N% 연결` vocabulary와 맞춰 결과 간 비교 가능성을 높였습니다.
+- Fixture meal flow: `2 passed`; native meal first-fold: `1 passed`; production build: `765` Vite modules; bundle budget: `18` JS chunks, `1329.9KB` JS, `259.9KB` CSS; runtime integrity: `28 protected files`.
+
+## Connected meal-provenance readback — 2026-09-21
+
+- API-backed 대표 식단 결과의 출처·재료 연결률 표시가 연결형 planner에서도 유지되는지 확인했습니다.
+- Connected planner: API-backed save `1 passed`, 부족 재료 장보기 focus `1 passed`, lot date-review safety callout `1 passed`.
+- 이 검증은 연결형 response·저장·안전 안내 계약을 확인하며, 실제 음식 안전 판정이나 실기기 acceptance를 대신하지 않습니다.
+
+## Meal-provenance readability pass — 2026-09-21
+
+- 식단 결과의 출처·재료 연결률 문구가 기존 `8px`로 너무 작아, `10px`로 올려 추천 근거가 첫 결과에서 읽히도록 했습니다.
+- 10px 조정 후에도 식단 결과 first-fold와 저장 후 완료 action 위치가 유지되는지 확인했습니다.
+- Native meal viewport: `2 passed`; fixture meal flow: `1 passed`; production build: `765` Vite modules; bundle budget: `18` JS chunks, `1329.9KB` JS, `259.9KB` CSS; runtime integrity: `28 protected files`.
+
+## Meal-provenance tone pass — 2026-09-21
+
+- provenance 문구의 `ui-monospace` 서체를 기본 본문 서체로 바꾸고 weight를 보강해, `출처 · 레시피 · 재료 연결률`이 개발 로그가 아니라 생활형 신뢰 정보로 읽히도록 조정했습니다.
+- 연결률 텍스트와 recipe first-fold 위치는 그대로 유지했습니다.
+- Native meal first-fold: `1 passed`; fixture meal flow: `1 passed`; production build: `765` Vite modules; bundle budget: `18` JS chunks, `1329.9KB` JS, `259.9KB` CSS; runtime integrity: `28 protected files`.
+
+## Meal-safety explanation legibility pass — 2026-09-21
+
+- `사용 전 확인` summary와 날짜·알레르기·부족 재료 개별 설명을 `9px → 10px`로 올려, 위험 판단에 필요한 본문이 제목과 action에 묻히지 않도록 했습니다.
+- compact safety guidance의 larger-text scroll reachability와 meal first-fold는 유지했습니다.
+- Native safety/meal viewport: `2 passed`; fixture meal flow: `1 passed`; production build: `765` Vite modules; bundle budget: `18` JS chunks, `1329.9KB` JS, `259.9KB` CSS; runtime integrity: `28 protected files`.
+
+## Shopping-sync note legibility pass — 2026-09-21
+
+- 식단 내부 장보기 목록의 `재고에 추가한 뒤 같은 식단을 다시 동기화하면 보유한 재료는 목록에서 자동으로 빠져요.` 설명을 `8px → 9px`로 올려 구매 완료와 재고 반영의 관계를 읽기 쉽게 했습니다.
+- 320px 주요 sheet containment, meal first-fold, 부족 재료 장보기 focus 흐름은 유지했습니다.
+- Native meal/sheet viewport: `2 passed`; connected shopping focus: `1 passed`; production build: `765` Vite modules; bundle budget: `18` JS chunks, `1329.9KB` JS, `259.9KB` CSS; runtime integrity: `28 protected files`.
+
+## Shopping-progress explanation legibility pass — 2026-09-21
+
+- 장보기 진행 상태의 보조 설명(`N개를 구매하면 재고에 반영할 수 있어요`, 구매 완료 후 재고 반영 안내)을 `9px → 10px`로 올려 숫자와 다음 행동을 더 쉽게 읽도록 했습니다.
+- 320px 주요 sheet containment와 connected 입고·보관 반영 흐름은 유지했습니다.
+- Native 320px sheet: `1 passed`; connected shopping receive: `1 passed`; production build: `765` Vite modules; bundle budget: `18` JS chunks, `1329.9KB` JS, `259.9KB` CSS; runtime integrity: `28 protected files`.
+
+## Shopping-action and sync-note legibility pass — 2026-09-21
+
+- 장보기 항목의 `재고에 반영` CTA와 하단 자동 동기화 note를 `8px → 9px`로 올려, 구매 완료 후 재고 반영 행동과 목록 자동 제거 규칙을 더 쉽게 읽도록 했습니다.
+- 320px 주요 sheet containment, 부족 재료 장보기 focus, connected 입고·보관 반영 흐름은 유지했습니다.
+- Native sheet geometry: `1 passed`; connected planner/shopping flows: `2 passed`; production build: `765` Vite modules; bundle budget: `18` JS chunks, `1329.9KB` JS, `259.9KB` CSS; runtime integrity: `28 protected files`.
+
+## Dark-theme shopping-safety note pass — 2026-09-21
+
+- 장보기 입고 패널의 `소비기한은 자동 확정하지 않아요. 포장지 날짜를 확인해 주세요.` 안전 문구를 `8px → 9px`로 올려 dark/light sheet 모두에서 데이터 경계를 읽기 쉽게 했습니다.
+- Native light/dark detail cues와 320px sheet geometry: `2 passed`; connected shopping receive: `1 passed`; production build: `765` Vite modules; bundle budget: `18` JS chunks, `1329.9KB` JS, `259.9KB` CSS; runtime integrity: `28 protected files`.
+- 첫 connected 실행은 webServer 준비 timeout으로 종료됐고 동일 focused test 재실행에서 `1 passed`로 회복됐습니다.
+
+## Accumulated fixture/native readback after shopping dark-mode pass — 2026-09-21
+
+- Fixture/mobile 전체: `61 passed + 3 skipped`; skip은 production runtime/Web Push 환경 lane이며, 의도된 fixture error-boundary console은 recovery test에서 통과했습니다.
+- Native viewport 전체: `37 passed`; 320px/393px, dark mode, large text, contrast, keyboard, safe-area, receipt/label, meal, shopping, account, detail 흐름을 재확인했습니다.
+- Native 재실행은 직전 사용자 중단으로 남은 4493 webServer를 피하기 위해 격리 포트 `4494`에서 수행했습니다.
+
+## Shopping-sheet entry-label legibility pass — 2026-09-21
+
+- 장보기 sheet 상단 `장보기 목록` kicker를 `8px → 9px`로 올려, sheet 진입점이 진행 상태·CTA와 같은 모바일 가독성 기준으로 읽히도록 했습니다.
+- dark/light detail cues와 320px 주요 sheet containment: `2 passed`; production build: `765` Vite modules; bundle budget: `18` JS chunks, `1329.9KB` JS, `259.9KB` CSS; runtime integrity: `28 protected files`.
+
+## Shopping-row source legibility pass — 2026-09-21
+
+- 장보기 항목 row의 수량·출처 보조 정보(`직접 추가 · 식단 1개`, 구매 수량 등)를 `9px → 10px`로 올려, 목록에서 구매 판단에 필요한 정보를 더 쉽게 읽도록 했습니다.
+- connected shopping queue·receive flow: `2 passed`; production build: `765` Vite modules; bundle budget: `18` JS chunks, `1329.9KB` JS, `259.9KB` CSS; runtime integrity: `28 protected files`.
+
+## Shopping-action vocabulary parity pass — 2026-09-21
+
+- 장보기 row의 visible CTA를 `재고 반영`에서 `재고에 반영`으로 바꿔, 기존 접근성 label·입고 form·다음 행동 문구와 동일한 action language를 사용하도록 정리했습니다.
+- Connected shopping queue·receive flows: `2 passed`; production build: `765` Vite modules; bundle budget: `18` JS chunks, `1329.9KB` JS, `259.9KB` CSS; runtime integrity: `28 protected files`.
+
+## Home shopping-summary readability pass — 2026-09-21
+
+- 홈의 `장보기 목록` summary card 보조 설명을 `9px → 10px`로 올려, sheet 내부와 동일하게 남은 수량·구매 완료·재고 반영 안내가 읽히도록 했습니다.
+- 홈 primary controls naming·shopping queue 진입 흐름은 유지했습니다.
+- Fixture home controls: `2 passed`; connected shopping queue: `1 passed`; production build: `765` Vite modules; bundle budget: `18` JS chunks, `1329.9KB` JS, `259.9KB` CSS; runtime integrity: `28 protected files`.
+
+## Home shopping-summary label parity pass — 2026-09-21
+
+- 홈 장보기 summary의 `장보기 목록` kicker를 `8px → 9px`로 올려 sheet 내부 kicker와 동일한 진입 label 기준을 적용했습니다.
+- 홈 shopping summary 진입과 connected queue mutation은 유지했습니다.
+- Fixture home controls: `2 passed`; connected shopping queue: `1 passed`; production build: `765` Vite modules; bundle budget: `18` JS chunks, `1329.9KB` JS, `259.9KB` CSS; runtime integrity: `28 protected files`.
+
+## Notification-summary readability pass — 2026-09-21
+
+- 알림 sheet summary의 unread·전체 개수 및 처리 상태 보조 문구를 `9px → 10px`로 올려, 알림 우선순위 판단 정보를 장보기·식단 summary와 동일한 가독성 기준으로 맞췄습니다.
+- Fixture notification flows: `2 passed`; connected date-reminder/external-sync notification flows: `2 passed`; production build: `765` Vite modules; bundle budget: `18` JS chunks, `1329.9KB` JS, `259.9KB` CSS; runtime integrity: `28 protected files`.
+
+## Notification-status-chip legibility pass — 2026-09-21
+
+- 알림 row의 외부 연동 상태 chip(`처리 대기`, `반영 완료`, `확인 필요`)을 `8px → 9px`로 올려 row-level priority와 summary의 상태 정보를 같은 기준으로 읽도록 했습니다.
+- Fixture notification: `2 passed`; connected external-sync notification flows: `2 passed`; production build: `765` Vite modules; bundle budget: `18` JS chunks, `1329.9KB` JS, `259.9KB` CSS; runtime integrity: `28 protected files`.
+
+## Notification-row message legibility pass — 2026-09-21
+
+- 알림 row 본문 메시지를 `9px → 10px`로 올려, 날짜·외부 연동 알림의 설명을 상태 chip·summary와 함께 읽을 수 있도록 했습니다.
+- Fixture notification flows: `2 passed`; connected date-reminder/external-sync flows: `2 passed`; production build: `765` Vite modules; bundle budget: `18` JS chunks, `1329.9KB` JS, `259.9KB` CSS; runtime integrity: `28 protected files`.
+
+## Notification-row metadata legibility pass — 2026-09-21
+
+- 알림 row 하단 metadata(알림 종류·severity·생성 시각)를 `8px → 9px`로 올려, 상태 chip·본문과 함께 읽을 수 있도록 row 내부 정보 위계를 마무리했습니다.
+- Fixture notification: `2 passed`; connected date-reminder/external-sync flows: `2 passed`; production build: `765` Vite modules; bundle budget: `18` JS chunks, `1329.9KB` JS, `259.9KB` CSS; runtime integrity: `28 protected files`.
+
+## Notification-sync summary chip legibility pass — 2026-09-21
+
+- 알림 센터 상단 외부 연동 요약 chip의 상태 label(`확인 필요`, `처리 대기`, `반영 완료`)을 `8px → 9px`로 올려 row-level 상태 chip과 동일한 가독성 기준을 적용했습니다.
+- Fixture notification: `2 passed`; connected external-sync flows: `2 passed`; production build: `765` Vite modules; bundle budget: `18` JS chunks, `1329.9KB` JS, `259.9KB` CSS; runtime integrity: `28 protected files`.
+
+## Notification-unread section hierarchy pass — 2026-09-21
+
+- 읽지 않은 알림과 기존 기록을 나누는 `확인할 알림` section label을 `9px → 10px`로 올려, summary·row·상태 chip과 일관된 priority hierarchy를 만들었습니다.
+- Fixture notification: `2 passed`; connected date reminder: `1 passed`; production build: `765` Vite modules; bundle budget: `18` JS chunks, `1329.9KB` JS, `259.9KB` CSS; runtime integrity: `28 protected files`.
+
+## Notification-summary first-action pass — 2026-09-21
+
+- unread 알림이 있을 때 summary card에 `첫 알림 보기` action을 추가해, 요약을 읽은 뒤 목록을 직접 찾지 않고 첫 번째 unread row로 바로 이동할 수 있게 했습니다.
+- summary는 기존 region semantics를 유지하고, action은 row focus·scroll context만 이동시킵니다.
+- Fixture notification summary/return flow: `2 passed`; production build: `765` Vite modules; bundle budget: `18` JS chunks, `1330.5KB` JS, `260.0KB` CSS; runtime integrity: `28 protected files`.
+
+## Connected notification first-action readback — 2026-09-21
+
+- `첫 알림 보기` summary action 추가 후 connected 날짜 reminder·외부 sync·외부 inventory settings notification flows가 기존 detail/return contract를 유지하는지 재확인했습니다.
+- Connected notification flows: `3 passed`; runtime integrity: `28 protected files`; `git diff --check`: passed.
+
+## Connected first-unread action contract lock — 2026-09-21
+
+- `첫 알림 보기` summary action이 connected date reminder에서도 첫 unread row focus로 이동한 뒤 기존 notification → food detail → return flow를 유지하는지 고정했습니다.
+- Connected date reminder with first-unread action: `1 passed`; fixture notification flow: `1 passed`; `git diff --check`: passed.
+
+## First-unread action legibility pass — 2026-09-21
+
+- 알림 summary의 `첫 알림 보기` action을 `9px → 10px`로 올려 summary count·unread section·row 상태와 동일한 모바일 hierarchy를 적용했습니다.
+- Fixture notification: `1 passed`; connected date reminder: `1 passed`; production build: `765` Vite modules; bundle budget: `18` JS chunks, `1330.5KB` JS, `260.0KB` CSS; runtime integrity: `28 protected files`.
+
+## Guidance safety-copy legibility pass — 2026-09-21
+
+- guidance sheet의 상태 경고 본문 `냄새·색·포장 팽창 등이 있으면...`에 `10px`를 명시해 browser/OS 기본 small 축소로 핵심 safety copy가 작아지지 않도록 했습니다.
+- 주요 모바일 surface naming·guidance entry flow: `1 passed`; production build: `765` Vite modules; bundle budget: `18` JS chunks, `1329.9KB` JS, `259.9KB` CSS; runtime integrity: `28 protected files`.
+
+## Guidance-evidence badge legibility pass — 2026-09-21
+
+- guidance row의 근거 badge(`확인됨`, `사용자`, `추정`)를 `9px → 10px`로 올려, 설명 본문과 같은 기준으로 근거 유형이 읽히도록 했습니다.
+- guidance entry/detail return flow: `2 passed`; production build: `765` Vite modules; bundle budget: `18` JS chunks, `1329.9KB` JS, `259.9KB` CSS; runtime integrity: `28 protected files`.
+
+## Notification-to-detail return contract lock — 2026-09-21
+
+- 알림에서 날짜 확인이 필요한 식품을 열고 `포장지에서 날짜 다시 확인` 라벨 flow를 거친 뒤 상세를 닫았을 때, 알림 sheet와 원래 notification row focus로 복귀하는 cross-surface regression을 추가했습니다.
+- Fixture notification → detail → label review → notification return: `1 passed`; `git diff --check`: passed.
+
+## Notification-context date-save message pass — 2026-09-21
+
+- 알림에서 식품 상세로 들어온 상태에서 날짜를 저장하면 성공 message에 `알림으로 돌아왔어요`를 덧붙여, 저장 결과와 복귀 context를 한 번에 안내하도록 분기했습니다.
+- 홈·식품 목록에서 날짜를 저장할 때의 기존 message는 유지해 context별 정보 노출을 구분했습니다.
+- Fixture notification return + inventory date save: `2 passed`; production build: `765` Vite modules; bundle budget: `18` JS chunks, `1330.0KB` JS, `259.9KB` CSS; runtime integrity: `28 protected files`.
+
+## Notification-label-review return readback — 2026-09-21
+
+- 알림에서 날짜 확인 필요 식품을 열어 `포장지에서 날짜 다시 확인` → 샘플 라벨 반영 → 상세 닫기까지 수행해 원래 notification row focus 복귀를 실제 flow로 확인했습니다.
+- 라벨 반영은 direct date editor가 아닌 식품 추가 mutation path를 사용하므로, 해당 경로의 기존 `식품 목록에 추가했어요` message를 유지했습니다.
+- Fixture notification → label review → return: `1 passed`; production build: `765` Vite modules; bundle budget: `18` JS chunks, `1330.0KB` JS, `259.9KB` CSS; runtime integrity: `28 protected files`.
+
+## Date-save context boundary lock — 2026-09-21
+
+- 일반 홈·식품 목록 날짜 저장에는 `알림으로 돌아왔어요`가 붙지 않고, 알림 context 날짜 저장에서만 context message가 붙는 boundary를 regression으로 고정했습니다.
+- Fixture notification-context + normal date-save flows: `2 passed`; `git diff --check`: passed.
+
+## Product-provenance candidate legibility pass — 2026-09-21
+
+- 바코드 상품 후보 적용 후 표시되는 출처·신뢰도·보관 기준 안내를 `9px → 10px`로 올려, 저장 전 사용자 확인값과 후보 정보를 더 쉽게 구분하도록 했습니다.
+- Native barcode/manual-intake geometry: `2 passed`; fixture barcode/manual-intake flow: `2 passed`; production build: `765` Vite modules; bundle budget: `18` JS chunks, `1330.0KB` JS, `259.9KB` CSS; runtime integrity: `28 protected files`.
+
+## Product-provenance applied-badge legibility pass — 2026-09-21
+
+- 바코드 상품 후보 provenance 카드의 `후보 적용됨` 상태 badge를 `8px → 9px`로 올려, 본문 출처·신뢰도 정보와 적용 상태가 함께 읽히도록 했습니다.
+- Native barcode candidate geometry: `1 passed`; fixture barcode flow: `1 passed`; production build: `765` Vite modules; bundle budget: `18` JS chunks, `1330.0KB` JS, `259.9KB` CSS; runtime integrity: `28 protected files`.
+
+## Food-detail date-proof readability pass — 2026-09-21
+
+- 식품 상세의 date-proof·food provenance·opened-state·detail note 설명을 `9px → 10px`로 올려, 날짜 출처와 사용자 확인 경계를 더 쉽게 읽도록 했습니다.
+- Native light/dark detail cues: `2 passed`; fixture date-warning/user-confirmed detail flows: `2 passed`; production build: `765` Vite modules; bundle budget: `18` JS chunks, `1330.0KB` JS, `259.9KB` CSS; runtime integrity: `28 protected files`.
+
+## Food-detail date-source label parity pass — 2026-09-21
+
+- 식품 상세 date-proof의 출처 label(`포장지 표시`, `사용자 확인`, `추정`)을 `9px → 10px`로 올려 날짜 설명 본문과 동일한 신뢰 정보 위계를 적용했습니다.
+- Native light/dark detail + date-recheck routing: `2 passed`; fixture date-warning/user-confirmed detail: `2 passed`; production build: `765` Vite modules; bundle budget: `18` JS chunks, `1330.0KB` JS, `259.9KB` CSS; runtime integrity: `28 protected files`.
+
+## Storage-mismatch safety-copy legibility pass — 2026-09-21
+
+- 식품 상세의 포장지 보관조건과 현재 위치 mismatch 설명을 `9px → 10px`로 올려, 날짜와 실제 보관 상태가 다를 때 확인해야 할 safety copy를 더 쉽게 읽도록 했습니다.
+- Native light/dark detail cues: `1 passed`; connected storage-condition mismatch: `1 passed`; production build: `765` Vite modules; bundle budget: `18` JS chunks, `1330.0KB` JS, `259.9KB` CSS; runtime integrity: `28 protected files`.
+
+## Guest-transfer scope legibility pass — 2026-09-21
+
+- 게스트 transfer sheet의 가져올 기록 scope chip과 자동 병합 방지 note를 `9px → 10px`로 올려, 계정 연결 전에 데이터 범위와 보호 경계를 더 쉽게 읽도록 했습니다.
+- Native account viewport: `2 passed`; fixture guest-workspace separation: `1 passed`; production build: `765` Vite modules; bundle budget: `18` JS chunks, `1330.0KB` JS, `259.9KB` CSS; runtime integrity: `28 protected files`.
+
+## Food-history sync-status legibility pass — 2026-09-21
+
+- 식품 상세 history의 외부 sync 상태 pill(`대기`, `반영 완료`, `실패`)을 `8px → 9px`로 올려 기록 안에서 sync lifecycle을 읽기 쉽게 했습니다.
+- Connected storage readback/notification lifecycle: `2 passed`; production build: `765` Vite modules; bundle budget: `18` JS chunks, `1330.0KB` JS, `260.0KB` CSS; runtime integrity: `28 protected files`.
+
+## Account-transfer contract readback — 2026-09-21
+
+- 게스트 transfer scope copy를 보강한 뒤 계정 연결 sheet의 게스트 workspace separation, password recovery focus, native first-fold, home-indicator safe-area를 재확인했습니다.
+- Fixture account flows: `2 passed`; native account viewport: `2 passed`; runtime integrity: `28 protected files`; `git diff --check`: passed.
+
+## Push-delivery status legibility pass — 2026-09-21
+
+- 계정 sheet의 푸시 전달 상태 설명과 `준비됨/대기` badge를 `8px → 9px`로 올려, 연결 전·설정 화면에서도 알림 delivery 상태를 읽기 쉽게 했습니다.
+- Native account viewport: `2 passed`; fixture account separation: `1 passed`; production build: `765` Vite modules; bundle budget: `18` JS chunks, `1330.0KB` JS, `260.0KB` CSS; runtime integrity: `28 protected files`.
+
+## Full connected regression after accumulated mobile polish — 2026-09-21
+
+- 전체 connected lane `140개`를 실행했습니다. 첫 pass는 `128 passed / 12 transient timeout failures`였고, 동일한 12개를 `--last-failed`로 재실행해 `12 passed`로 회복했습니다.
+- 최종 connected evidence: `140/140 passed`; 실패했던 항목은 shopping receive, storage retry, receipt replay, account re-auth/delete/reset, notification, guest transfer, custom storage 흐름이며 재실행에서 모두 green이었습니다.
+- 첫 pass의 실패는 30초 동기화·focus·sheet transition timeout 형태였고, 재실행에서 assertion 회귀로 재현되지 않았습니다. fixture error console은 기존 의도된 error-boundary fixture입니다.
+
+## Mobile theme-toggle state announcement pass — 2026-09-21
+
+- 모바일 헤더의 테마 토글 accessible name을 단순한 전환 명령에서 `현재 라이트모드, 다크모드로 전환` / `현재 다크모드, 라이트모드로 전환`으로 바꿔 현재 상태와 다음 동작을 한 번에 안내합니다. 시각적으로 아이콘만 보이는 모바일 헤더에서도 스크린리더와 자동화 트리의 상태가 일치합니다.
+- Fixture theme toggle: `1 passed`; runtime integrity: `28 protected files`; 기존 4174 포트 점유로 인해 실행 중인 4176 Vite 서버를 재사용해 검증했습니다.
+
+## Mobile intake-method guidance pass — 2026-09-21
+
+- 식품 추가 시트의 네 가지 입력 탭 아래에 `처음이라면 영수증`, `여러 식품을 한 번에 읽어요`, `날짜만 필요하면 라벨` 안내를 추가해 모바일 첫 진입에서 추천 경로와 대체 경로의 차이를 즉시 이해하도록 했습니다.
+- 기존 `추천` 시각 cue, 탭 accessible name, 키보드 포커스 계약은 유지했습니다.
+- Mobile fixture modal semantics/focus: `1 passed`; runtime integrity: `28 protected files`; production build: `765` Vite modules; bundle: `18` JS chunks, `266.75KB` CSS; `git diff --check`: passed.
+
+## Narrow mobile intake-sheet fit pass — 2026-09-21
+
+- 320px native viewport에서 추천 안내가 추가된 식품 추가 시트를 포함해 주요 native sheet의 좌우 경계와 interactive control overflow를 다시 확인했습니다.
+- Native viewport major-sheet fit: `1 passed`; `NATIVE_RUNTIME_TEST_PORT=4494`; 320px dialog scroll width와 interactive out-of-bounds 모두 허용 범위 내였습니다.
+
+## Manual-intake purpose copy pass — 2026-09-21
+
+- 직접 입력 첫 화면에 `식품 정보를 직접 기록해요` heading과 `이름과 보관 위치만 먼저 남겨도 괜찮아요. 날짜는 나중에 포장지를 확인해 보완할 수 있어요.` 설명을 추가해, 자동 인식 방식과 직접 기록 방식의 역할 차이를 명확히 했습니다.
+- Manual intake focus/priority follow-up: `1 passed`; runtime integrity: `28 protected files`; production build: `765` Vite modules; `git diff --check`: passed.
+
+## Barcode-candidate provenance heading pass — 2026-09-21
+
+- 바코드 결과 목록에 `상품 정보 후보`와 `자동으로 찾은 값은 확인 후 적용해요` 헤더를 추가해, 상품 후보와 사용자가 직접 확인·저장하는 값을 모바일 결과 화면에서 분리해 읽도록 했습니다.
+- Barcode lookup/focus/apply flow: `1 passed`; runtime integrity: `28 protected files`; production build: `765` Vite modules; bundle CSS: `267.06KB`; `git diff --check`: passed.
+
+## Label-candidate provenance heading pass — 2026-09-21
+
+- 라벨 결과 카드 상단에 `자동 인식 후보`와 `저장 전 확인 필요` 상태를 추가해, OCR 숫자 후보와 사용자가 의미·날짜·보관 위치를 확인한 뒤 저장되는 값의 경계를 바코드 결과와 같은 패턴으로 맞췄습니다.
+- Label candidate-confirm-save flow: `1 passed`; runtime integrity: `28 protected files`; production build: `765` Vite modules; bundle CSS: `267.40KB`; `git diff --check`: passed.
+- 해당 회귀에서 기존의 넓은 `role=status` 선택자가 확인 계약과 저장 toast를 동시에 잡는 문제도 확인해, 결과 검증을 `.toast`로 좁혔습니다.
+
+## Receipt-candidate provenance heading pass — 2026-09-21
+
+- 영수증 검수 상단에 `자동 인식 후보`와 `선택한 항목만 확인 후 반영` 상태를 추가해 여러 상품 후보를 다루는 화면에서도 자동 인식값과 실제 재고 반영 경계를 먼저 안내하도록 했습니다.
+- Receipt selected-candidate commit flow: `1 passed`; runtime integrity: `28 protected files`; production build: `765` Vite modules; bundle CSS: `267.77KB`; `git diff --check`: passed.
+- 기존 검수 테스트의 넓은 `role=status` 선택자도 저장 결과 `.toast`로 좁혀, 상단 확인 계약과 저장 완료 메시지를 구분하도록 정리했습니다.
+
+## Receipt candidate-state color parity pass — 2026-09-21
+
+- 영수증 검수 카드에서 후보 적용 완료 상태는 피스타치오, 후보 적용 후 사용자 수정 상태는 블루 계열로 분리해, 자동 후보와 사용자 확인값의 차이를 텍스트·색상 이중 채널로 전달합니다.
+- Connected receipt correction/commit flow: `1 passed` (40.1s); runtime integrity: `28 protected files`; production build: `765` Vite modules; bundle CSS: `268.33KB`; `git diff --check`: passed.
+
+## Candidate-state dark and narrow viewport pass — 2026-09-21
+
+- 후보 적용 완료 아이콘은 다크모드에서 밝은 피스타치오, 사용자 수정 아이콘은 밝은 블루로 보정하고, 360px 이하에서는 상태 보조 문구를 8px로 줄여 카드와 겹치지 않게 했습니다.
+- Native dark source-review and 320px major-sheet fit: `2 passed`; runtime integrity: `28 protected files`; production build: `765` Vite modules; bundle CSS: `268.62KB`; `git diff --check`: passed.
+
+## Receipt-submit review announcement pass — 2026-09-21
+
+- 영수증 검수에서 선택 항목 중 확인 필요 항목이 있을 때 하단 경고 note와 `반영하기` CTA를 `aria-describedby`로 연결해, 시각·스크린리더 모두 반영 전 확인 경계를 함께 전달하도록 했습니다.
+- Receipt selected-candidate commit and announcement contract: `1 passed`; runtime integrity: `28 protected files`; production build: `765` Vite modules; bundle CSS: `268.62KB`; `git diff --check`: passed.
+
+## Receipt first-invalid-item action pass — 2026-09-21
+
+- 영수증 반영이 막힌 경우 validation callout에 `첫 확인 항목 열기` CTA를 추가해 첫 오류 상품 카드로 바로 이동·편집할 수 있게 했습니다. 기존 반영 차단과 오류 메시지는 유지합니다.
+- Receipt OCR correction flow with first-invalid action: `1 passed`; runtime integrity: `28 protected files`; production build: `765` Vite modules; bundle CSS: `268.81KB`; `git diff --check`: passed.
+
+## Receipt sequential-invalid-item action pass — 2026-09-21
+
+- 여러 확인 필요 항목이 있을 때 현재 편집 중인 항목을 제외한 다음 오류 항목을 우선 열도록 `첫 확인 항목 열기` 동작을 순차 탐색으로 확장하고, 다중 오류 상태에서는 CTA를 `다음 확인 항목 열기`로 바꿨습니다.
+- Existing OCR correction plus first-invalid navigation: `1 passed`; runtime integrity: `28 protected files`; production build: `765` Vite modules; `git diff --check`: passed.
+
+## Receipt review completion-state pass — 2026-09-21
+
+- 사용자가 오류 항목의 상품명·수량·단위·보관 위치를 실제로 변경하면 원본 OCR의 `requiresReview`와 별개로 사용자 확인 완료 상태를 추적하도록 했습니다.
+- 확인 전에는 `확인 필요 N개` 안내를 유지하고, 모두 수정하면 `선택한 항목을 확인했어요. 이제 반영할 수 있어요.` 상태와 CTA 설명으로 즉시 전환합니다.
+- Receipt OCR correction and completion feedback: `1 passed`; runtime integrity: `28 protected files`; production build: `765` Vite modules; `git diff --check`: passed.
+
+## Receipt explicit-confirm action pass — 2026-09-21
+
+- OCR 후보를 수정하지 않고 원본과 대조해 그대로 사용할 때도 각 확인 필요 항목의 `이 항목 확인했어요` 액션으로 명시적 검수를 남길 수 있게 했습니다.
+- 명시적 확인 후에는 수정 없이도 `확인 필요` 안내가 완료 상태로 바뀌고 반영 CTA의 accessible description도 ready hint로 전환됩니다.
+- Unchanged OCR explicit-confirm flow: `1 passed`; runtime integrity: `28 protected files`; production build: `765` Vite modules; bundle CSS: `269.00KB`; `git diff --check`: passed.
+
+## Receipt confirmed-item persistence cue pass — 2026-09-21
+
+- 명시적으로 확인한 OCR 항목에 `확인 완료` 배지를 남겨 스크롤 후에도 이미 검수한 항목을 식별할 수 있게 했습니다.
+- 일반 테마에서는 피스타치오 상태 배지, 다크모드에서는 밝은 피스타치오 대비로 유지합니다.
+- Unchanged OCR explicit-confirm plus badge: `1 passed`; runtime integrity: `28 protected files`; production build: `765` Vite modules; bundle CSS: `269.38KB`; `git diff --check`: passed.
+
+## Receipt confirmed-state accessibility label pass — 2026-09-21
+
+- `확인 완료` 배지에 `role=status`와 `aria-label=사용자 확인 완료`를 추가해 후보 적용·사용자 수정 상태가 함께 존재해도 확인 완료 상태를 접근성 트리에서 명확히 식별할 수 있게 했습니다.
+- Explicit-confirm badge accessible contract: `1 passed`; runtime integrity: `28 protected files`; production build: `765` Vite modules; `git diff --check`: passed.
+
+## Receipt confirmed-badge narrow viewport pass — 2026-09-21
+
+- 360px 이하에서 `확인 완료` 배지와 확인 CTA에 최대 폭·ellipsis 규칙을 추가해 후보 적용·사용자 수정 상태가 함께 있어도 카드 폭을 밀어내지 않도록 했습니다.
+- Native 320px confirmation-badge bounds: `1 passed`; runtime integrity: `28 protected files`; production build: `765` Vite modules; bundle CSS: `269.55KB`; `git diff --check`: passed.
+
+## Receipt pending-review visual priority pass — 2026-09-21
+
+- 아직 확인하지 않은 OCR 카드에 앰버 inset outline, 확인 완료 카드에 중립 피스타치오 outline을 추가해 긴 목록에서 남은 검수 항목이 먼저 보이도록 했습니다.
+- Native 320px confirmation-badge bounds: `1 passed`; fixture pending-to-confirmed class transition: `1 passed`; runtime integrity: `28 protected files`; production build: `765` Vite modules; bundle CSS: `269.82KB`; `git diff --check`: passed.
+
+## Receipt pending-review scope correction — 2026-09-21
+
+- 미선택한 `requiresReview` 영수증 항목이 현재 반영 대상처럼 강조되지 않도록 pending/confirmed 카드 상태 class를 `checked` 선택 상태와 결합했습니다.
+- Explicit-confirm flow regression: `1 passed`; runtime integrity: `28 protected files`; production build: `765` Vite modules; `git diff --check`: passed.
+
+## Receipt deselect-reselect confirmation persistence pass — 2026-09-21
+
+- 사용자가 확인 완료한 항목을 잠시 선택 해제했다가 다시 선택해도 확인 완료 상태와 ready hint를 유지하고, 다시 pending 검수를 요구하지 않도록 확인했습니다.
+- Deselect/reselect explicit-confirm flow: `1 passed`; runtime integrity: `28 protected files`; production build: `765` Vite modules; `git diff --check`: passed.
+
+## Receipt draft fresh-confirmation boundary pass — 2026-09-21
+
+- 저장된 영수증 검수 초안을 다시 열 때 원본 미리보기 없이 상품 정보만 재확인하는 기존 경계를 유지하고, 검수 상태도 재확인해야 한다는 안내를 추가했습니다. 화면을 닫기 전의 로컬 `확인 완료` 상태를 서버 확정값처럼 복원하지 않습니다.
+- Connected stored-receipt-draft resume: `1 passed` (44.2s); runtime integrity: `28 protected files`; production build: `765` Vite modules; `git diff --check`: passed.
+
+## Receipt draft resume focus-safety pass — 2026-09-21
+
+- 저장된 검수 초안을 다시 열었을 때 첫 확인 필요 항목의 toggle에 자동 포커스가 유지되고, sheet content viewport 안에 실제로 보이는지 확인해 재개 안내와 행동 진입점을 연결했습니다.
+- Connected draft-resume focus/visibility: `1 passed` (46.3s); runtime integrity: `28 protected files`; production build: `765` Vite modules; `git diff --check`: passed.
+
+## Receipt sequential-confirm focus handoff pass — 2026-09-21
+
+- 확인 필요 항목의 `이 항목 확인했어요`를 누르면 남은 선택·미확인 항목의 카드 toggle로 자동 스크롤·포커스하도록 연결했습니다. 마지막 항목이면 ready hint만 남기고 포커스를 빼앗지 않습니다.
+- Existing explicit-confirm final-item flow: `1 passed`; runtime integrity: `28 protected files`; production build: `765` Vite modules; `git diff --check`: passed.
+
+## Receipt confirmed-state accessibility parity pass — 2026-09-21
+
+- `확인 완료` 배지와 카드의 숨김 `aria-describedby` 상태 문구를 `사용자 확인 완료`로 동기화해, 시각 상태와 스크린리더 상태가 더 이상 `읽어낸 내용 확인 필요`로 엇갈리지 않게 했습니다.
+- Explicit-confirm accessibility parity: `1 passed`; runtime integrity: `28 protected files`; production build: `765` Vite modules; `git diff --check`: passed.
+
+## Receipt confirmed-state live announcement pass — 2026-09-21
+
+- `확인 완료` badge에 `aria-live=polite`와 `aria-atomic=true`를 추가해 동적 확인 상태 전환을 스크린리더가 한 덩어리의 상태로 읽도록 했습니다.
+- Explicit-confirm live announcement contract: `1 passed`; runtime integrity: `28 protected files`; production build: `765` Vite modules; `git diff --check`: passed.
+
+## Receipt confirm-action context parity pass — 2026-09-21
+
+- `이 항목 확인했어요` 버튼을 해당 카드의 `receipt-line-status`에 `aria-describedby`로 연결해, 확인 액션 포커스 시 현재 OCR 후보 상태를 함께 이해하도록 했습니다.
+- Explicit-confirm action context contract: `1 passed`; runtime integrity: `28 protected files`; production build: `765` Vite modules; `git diff --check`: passed.
+
+## Connected draft focus-context parity pass — 2026-09-21
+
+- 저장된 검수 초안 재개 시 자동 포커스된 첫 toggle이 `receipt-line-status`를 `aria-describedby`로 참조하고, 접근성 설명 `읽어낸 내용 확인 필요`가 실제 연결돼 있는지 확인했습니다.
+- Connected draft focus/accessibility context: `1 passed` (24.2s); runtime integrity: `28 protected files`; production build: `765` Vite modules; `git diff --check`: passed.
+
+## Receipt review-state dark-surface pass — 2026-09-21
+
+- 다크모드에서 확인 필요 카드의 앰버 edge와 확인 완료 카드의 피스타치오 surface를 별도 보정해 light 전용 checked background가 남지 않도록 했습니다.
+- Native dark receipt-review state legibility: `1 passed`; runtime integrity: `28 protected files`; production build: `765` Vite modules; bundle CSS: `270.19KB`; `git diff --check`: passed.
+
+## Receipt source-preview emphasis precedence pass — 2026-09-21
+
+- 원본 위치를 열어 확인하는 카드에서는 source-preview 강조를 pending/confirmed 상태보다 우선하도록 border와 inset edge를 재정의해, 원본 대조 중인 항목이 명확히 보이게 했습니다.
+- Connected receipt source-preview plus correction flow: `1 passed` (39.8s); runtime integrity: `28 protected files`; production build: `765` Vite modules; bundle CSS: `270.34KB`; `git diff --check`: passed.
+
+## Receipt source-preview surface emphasis pass — 2026-09-21
+
+- source-active 영수증 카드에 약한 coral tint를 추가해 border/inset뿐 아니라 배경에서도 원본 대조 중인 항목을 식별할 수 있게 했습니다. 다크모드에서는 낮은 강도의 coral surface로 보정합니다.
+- Connected source-preview/correction flow: `1 passed` (39.8s); runtime integrity: `28 protected files`; production build: `765` Vite modules; bundle CSS: `270.51KB`; `git diff --check`: passed.
+
+## Receipt source-editing precedence pass — 2026-09-21
+
+- 원본 영역 선택으로 상품 수정이 열린 상태에서는 editing의 피스타치오 입력 강조를 주 상태로 유지하고, source-preview는 coral outer ring으로 보조해 입력 중 상태가 원본 강조에 묻히지 않도록 했습니다.
+- Connected source-selection/editing flow: `1 passed` (43.0s); runtime integrity: `28 protected files`; production build: `765` Vite modules; bundle CSS: `270.87KB`; `git diff --check`: passed.
+
+## Receipt source-editing precedence readback — 2026-09-21
+
+- source-active와 editing 상태를 함께 유지하면서 editing의 피스타치오 주 강조와 source-preview coral 보조 ring을 적용했습니다. focus 자동 이동은 기존 검수 계약과 후속 enrichment lifecycle에 영향을 주지 않도록 추가하지 않았습니다.
+- Connected source-preview/correction flow: `1 passed` (38.6s); runtime integrity: `28 protected files`; production build: `765` Vite modules; bundle CSS: `270.87KB`; `git diff --check`: passed.
+
+## Receipt source-active accessibility context pass — 2026-09-21
+
+- source-active 카드의 숨김 상태 설명에 `원본 위치 확인 중`을 추가해, 시각적 coral 강조와 스크린리더 설명이 같은 source-preview 맥락을 전달하도록 했습니다.
+- Connected source-preview/correction/accessibility flow: `1 passed` (42.6s); runtime integrity: `28 protected files`; production build: `765` Vite modules; `git diff --check`: passed.
+
+## Receipt source-hit target state parity pass — 2026-09-21
+
+- 원본 위치 선택 hit target에 `aria-pressed`를 추가해 active source observation box의 시각 상태와 접근성 상태를 동기화했습니다.
+- Connected source observation/correction flow: `1 passed` (37.6s); runtime integrity: `28 protected files`; production build: `765` Vite modules; bundle CSS: `270.87KB`; `git diff --check`: passed.
+
+## Receipt multi-observation pressed-state contract pass — 2026-09-21
+
+- 같은 상품 line에 연결된 여러 원본 observation은 하나의 active source line으로 함께 강조되므로, 각 hit target의 `aria-pressed=true`가 시각 source box active 상태와 일치하는지 확인했습니다.
+- Connected multi-observation source/correction flow: `1 passed` (37.6s); runtime integrity: `28 protected files`; production build: `765` Vite modules; `git diff --check`: passed.
+
+## Connected receipt state-precedence readback — 2026-09-21
+
+- 연결형 영수증에서 후보 적용 후 사용자 수정 상태가 나타날 때 `확인 완료` badge가 접근성 label `사용자 확인 완료`로 함께 노출되고, 사용자 수정 상태와 충돌하지 않는지 확인했습니다.
+- Connected receipt correction/state readback: `1 passed` (38.1s); runtime integrity: `28 protected files`; production build: `765` Vite modules; `git diff --check`: passed.
+
+## Receipt source-observation count context pass — 2026-09-21
+
+- source preview heading에 `원본 위치 N곳 확인 중`을 추가해 같은 상품에 여러 observation이 연결된 경우 대조 범위를 즉시 이해하도록 했습니다. 기존 `현재 항목 · 상품명` accessible text prefix는 유지했습니다.
+- Connected multi-observation source/correction context: `1 passed` (42.6s); runtime integrity: `28 protected files`; production build: `765` Vite modules; `git diff --check`: passed.
+
+## Native source-observation count context pass — 2026-09-21
+
+- 320px native source-review fixture에서도 source preview header의 `원본 위치 N곳 확인 중` 문구가 기존 상품명 context와 함께 노출되는지 확인했습니다.
+- Native explicit receipt source review: `1 passed` (3.9s); runtime integrity: `28 protected files`; production build: `765` Vite modules; `git diff --check`: passed.
+
+## Receipt active-source-count DOM contract pass — 2026-09-21
+
+- source preview region에 `data-active-source-count`를 추가해 현재 active line에 연결된 원본 observation 수를 DOM 계약으로 명시했습니다. 이후 multi-line fixture에서 active count 교체를 직접 검증할 수 있습니다.
+- Connected active-source-count contract: `1 passed` (36.6s); runtime integrity: `28 protected files`; production build: `765` Vite modules; `git diff --check`: passed.
+
+## Receipt active-source-line DOM contract pass — 2026-09-21
+
+- source preview region에 `data-active-source-line`을 추가해 active observation count와 함께 현재 상품 line context를 DOM에서 직접 검증할 수 있게 했습니다. 화면·접근성 문구는 그대로 유지합니다.
+- Connected active-source-line context: `1 passed` (43.6s); runtime integrity: `28 protected files`; production build: `765` Vite modules; `git diff --check`: passed.
+
+## Receipt stale-active-line guard pass — 2026-09-21
+
+- 실제 active observation이 0개인 경우 stale `activeLineLabel`이 `data-active-source-line`에 남지 않도록 count와 line context를 결합했습니다. source preview의 header·DOM contract가 동일한 active 범위를 가리킵니다.
+- Connected source/correction regression: `1 passed` (38.3s); runtime integrity: `28 protected files`; production build: `765` Vite modules; `git diff --check`: passed.
+
+## Receipt PDF no-observation context pass — 2026-09-21
+
+- PDF 원본처럼 observation 위치가 없는 source preview에서는 `data-active-source-count=0`, `data-active-source-line=""`을 유지하고 PDF 위치 자동 강조 불가 안내를 함께 노출하도록 계약을 확인했습니다.
+- Fixture PDF source-review fallback: `1 passed` (1.5s); runtime integrity: `28 protected files`; production build: `765` Vite modules; `git diff --check`: passed.
+
+## Receipt unmapped-observation fallback copy pass — 2026-09-21
+
+- 이미지 영수증에 OCR review observation은 있지만 상품 line에 연결된 label이 하나도 없는 경우를 PDF와 구분해, `원본 위치를 상품 항목에 자동으로 연결하지 못했어요. 추출 결과와 원본을 직접 대조해 주세요.` 안내를 사용하도록 fallback copy를 정리했습니다.
+- Existing PDF source-review regression: `1 passed` (1.4s); runtime integrity: `28 protected files`; production build: `765` Vite modules; `git diff --check`: passed.
+
+## Native cross-line source-transition pass — 2026-09-21
+
+- 기존 native source-review fixture의 시금치·두부·맛타리버섯 서로 다른 상품 line을 활용해 맛타리버섯에서 시금치로 source selection을 이동시키고, 이전 hit target의 `aria-pressed`, header 상품명, `data-active-source-line`이 새 line context로 교체되는지 확인했습니다.
+- Native cross-line source transition: `1 passed` (5.4s); runtime integrity: `28 protected files`; production build: `765` Vite modules; `git diff --check`: passed.
+
+## Native dark cross-line source-transition pass — 2026-09-21
+
+- 동일 native source-review fixture를 다크모드로 실행해 맛타리버섯에서 국내산 시금치로 source selection을 전환하고, 이전/새 hit target pressed 상태·header 상품명·`data-active-source-line`을 함께 확인했습니다.
+- Native dark cross-line transition: `1 passed` (4.4s); runtime integrity: `28 protected files`; production build: `765` Vite modules; `git diff --check`: passed.
+
+## Native zoomed cross-line source-transition pass — 2026-09-21
+
+- 320px 다크 native source preview를 확대한 상태에서 맛타리버섯/시금치 context 이후 국산콩 두부 observation으로 이동해 header·`data-active-source-line`·pressed 상태·active box 존재를 함께 확인했습니다.
+- Native zoomed cross-line transition: `1 passed` (5.1s); runtime integrity: `28 protected files`; production build: `765` Vite modules; `git diff --check`: passed.
+
+## Native zoom-collapse source-state persistence pass — 2026-09-21
+
+- 확대 상태에서 시금치/두부 source context를 전환한 뒤 상품 수정 화면으로 이동하고 원본을 축소해도 새 상품 line header·`data-active-source-line`·pressed 상태가 유지되는지 확인했습니다.
+- Native zoom-collapse source persistence: `1 passed` (7.1s); runtime integrity: `28 protected files`; production build: `765` Vite modules; `git diff --check`: passed.
+
+## Native source-edit-close context restoration pass — 2026-09-21
+
+- 확대 source preview에서 상품 line을 전환하고 수정 화면을 연 뒤 수정 닫기를 수행해도 마지막 상품의 header·`data-active-source-line`·source hit target pressed 상태가 유지되는지 확인했습니다.
+- Native source-edit-close restoration: `1 passed` (6.8s); runtime integrity: `28 protected files`; production build: `765` Vite modules; `git diff --check`: passed.
+
+## Native source-preview reopen context persistence pass — 2026-09-21
+
+- source preview를 닫았다가 다시 열 때 기본 line으로 초기화하지 않고 마지막 active 상품 line인 `맛타리버섯` context를 복원하는 실제 동작을 확인했습니다. 사용자가 검수하던 원본 위치를 다시 찾지 않아도 되는 정책입니다.
+- Native source-preview reopen persistence: `1 passed` (7.3s); runtime integrity: `28 protected files`; production build: `765` Vite modules; `git diff --check`: passed.
+
+## Native source-preview reopen zoom-reset pass — 2026-09-21
+
+- source preview 재개 시 마지막 active 상품 line은 복원하지만 확대 상태는 안전한 기본값으로 돌아와 `원본 확대`/ `aria-pressed=false`를 제공하는 정책을 확인했습니다.
+- Native source-preview reopen zoom reset: `1 passed` (6.6s); runtime integrity: `28 protected files`; production build: `765` Vite modules; `git diff --check`: passed.
+
+## Source-preview reopen focus boundary audit — 2026-09-21
+
+- source preview 재개 시 active 상품 context와 zoom reset은 복원되지만, 현재 컴포넌트가 닫힘·재개 사이에 유지되는 구조라 active hit target 자동 focus는 추가하지 않았습니다. 포커스를 억지로 이동하지 않고 기존 dialog focus 계약을 보존하는 경계로 남겼습니다.
+- Native context/zoom regression after focus audit: `1 passed` (7.2s); runtime integrity: `28 protected files`; production build: `765` Vite modules; `git diff --check`: passed.
+
+## Receipt source-preview mode DOM contract pass — 2026-09-21
+
+- source preview region에 `data-source-preview-mode`을 추가해 이미지·PDF 입력 유형을 DOM에서 직접 식별할 수 있게 했습니다. PDF fallback은 `pdf`, active count `0`, active line 빈 값 계약을 함께 유지합니다.
+- Fixture PDF source mode contract: `1 passed` (1.6s); runtime integrity: `28 protected files`; production build: `765` Vite modules; `git diff --check`: passed.
+
+## Receipt source-preview fallback live-copy pass — 2026-09-21
+
+- source preview hint paragraph에 `aria-live=polite`, `aria-atomic=true`를 추가해 mapped image·unmapped image·PDF fallback 안내가 상태 전환 시 보조기술에도 한 덩어리로 전달되도록 했습니다.
+- Fixture PDF fallback live-copy contract: `1 passed` (1.5s); runtime integrity: `28 protected files`; production build: `765` Vite modules; `git diff --check`: passed.
+
+## Image unmapped-observation fixture pass — 2026-09-21
+
+- 실제 이미지 source-review fixture에서 OCR observations는 유지하되 상품 line mapping을 제거한 `receipt_source_unmapped=1` 경로를 추가했습니다.
+- 이 상태는 `data-source-preview-mode=image`, active count `0`, active line 빈 값, hit target `0개`, `원본 위치를 상품 항목에 자동으로 연결하지 못했어요` 안내를 함께 검증합니다.
+- Image unmapped fallback fixture: `1 passed` (1.9s); runtime integrity: `28 protected files`; production build: `765` Vite modules; `git diff --check`: passed.
+
+## Image unmapped manual-line-recovery pass — 2026-09-21
+
+- unmapped image 상태에서도 상품 line의 수동 수정 editor가 열리고, source preview는 `data-active-source-count=0`, `data-active-source-line=""`을 유지해 원본 mapping fallback과 line 보정을 분리했습니다.
+- Image unmapped manual recovery: `1 passed` (1.6s); runtime integrity: `28 protected files`; production build: `765` Vite modules; `git diff --check`: passed.
+
+## Image unmapped manual-commit-readiness pass — 2026-09-21
+
+- unmapped image line editor에서 상품명을 사용자 값으로 보정하면 source mapping count/line은 `0/empty`로 유지하면서도 receipt review ready hint로 전환되는 것을 확인했습니다.
+- Image unmapped manual correction/readiness: `1 passed` (2.0s); runtime integrity: `28 protected files`; production build: `765` Vite modules; `git diff --check`: passed.
+
+## Image unmapped manual-deselect-reselect pass — 2026-09-21
+
+- unmapped image line을 사용자 값으로 보정한 뒤 선택 해제·재선택해도 ready hint는 유지되고 source mapping fallback의 count/line `0/empty` 계약은 변하지 않는지 확인했습니다.
+- Image unmapped deselect/reselect readiness: `1 passed` (2.2s); runtime integrity: `28 protected files`; production build: `765` Vite modules; `git diff --check`: passed.
+
+## Image unmapped manual-commit end-to-end pass — 2026-09-21
+
+- unmapped image 상태에서 상품 line을 수동 보정한 뒤 `3개 항목 반영하기`를 실행해 검수 완료 toast까지 도달하는 end-to-end 흐름을 확인했습니다. source mapping fallback `0/empty`는 반영 전까지 유지됩니다.
+- Image unmapped manual correction/commit: `1 passed` (2.0s); runtime integrity: `28 protected files`; production build: `765` Vite modules; `git diff --check`: passed.
+
+## Image unmapped inventory-readback pass — 2026-09-21
+
+- unmapped image에서 사용자 보정 상품명으로 반영한 뒤 toast뿐 아니라 `내 식품 목록`에 `새송이버섯` line이 실제 표시되는 readback까지 확인했습니다.
+- Image unmapped correction/inventory readback: `1 passed` (3.2s); runtime integrity: `28 protected files`; production build: `765` Vite modules; `git diff --check`: passed.
+
+## Receipt batch-readback follow-up boundary pass — 2026-09-21
+
+- unmapped image 수동 보정 후 receipt batch 반영은 완료 toast와 inventory readback까지 제공하지만, 단건 manual-add처럼 `toast-action`으로 날짜 확인까지 자동 연결하지 않는 현재 계약을 확인했습니다.
+- Image unmapped correction/inventory readback remains: `1 passed` (2.8s); 후속 날짜 action은 receipt batch UX 개선 후보로 별도 범위를 유지합니다.
+
+## Receipt batch follow-up lifecycle safety pass — 2026-09-21
+
+- batch 반영 직후 local `lineFoods`를 detail sheet에 바로 전달하는 후속 CTA는 authoritative inventory readback 이전에 stale detail이 열릴 수 있어 적용하지 않았습니다. 현재는 완료 toast + inventory readback 계약을 유지합니다.
+- Image unmapped correction/inventory readback: `1 passed` (2.8s); runtime integrity: `28 protected files`; production build: `765` Vite modules; `git diff --check`: passed.
+
+## API receipt authoritative follow-up action pass — 2026-09-21
+
+- API receipt commit의 authoritative `commit.inventory` readback 이후에만 날짜 미확인 첫 식품의 `날짜·보관 상태 확인` CTA를 생성하도록 연결했습니다. external sync attention이 있으면 기존 `연동 상태 확인` action을 우선합니다.
+- Connected receipt correction flow: `1 passed` (37.3s); runtime integrity: `28 protected files`; production build: `765` Vite modules; `git diff --check`: passed.
+
+## Receipt follow-up priority selection pass — 2026-09-21
+
+- API receipt commit readback의 날짜 미확인 식품 후보를 배열 순서가 아니라 `priority` 오름차순으로 정렬해 첫 `날짜·보관 상태 확인` CTA가 실제 소비 우선순위 식품을 가리키도록 보강했습니다.
+- Connected receipt correction flow: `1 passed` (38.3s); runtime integrity: `28 protected files`; production build: `765` Vite modules; `git diff --check`: passed.
+
+## Receipt follow-up deterministic tie-break pass — 2026-09-21
+
+- priority가 같은 날짜 미확인 식품의 후속 CTA 대상이 서버 배열 순서에 흔들리지 않도록 `priority → 이름(ko) → id` deterministic sort를 추가했습니다.
+- Connected receipt correction flow: `1 passed` (36.4s); runtime integrity: `28 protected files`; production build: `765` Vite modules; `git diff --check`: passed.
+
+## Receipt follow-up inventory-return focus boundary pass — 2026-09-21
+
+- batch 후속 날짜 action이 `openDetail(food, "inventory")` 경로를 사용해 기존 inventory return context capture/restore 계약을 재사용하는지 source·build 기준으로 확인했습니다.
+- Source check: `captureInventoryReturnContext`와 `openDetail` inventory path 유지; runtime integrity: `28 protected files`; `git diff --check`: passed; production build: `765` Vite modules.
+
+## Connected receipt authoritative-follow-up fixture pass — 2026-09-21
+
+- 외부 sync attention이 없는 별도 connected fixture에서 receipt commit 응답에 날짜 미확인 inventory를 반환하도록 구성했습니다.
+- authoritative readback 이후 `날짜·보관 상태 확인` toast action이 생성되고, 클릭 시 해당 식품 detail의 `포장지에서 확인한 날짜 입력` focus로 진입하는 end-to-end 흐름을 확인했습니다.
+- Connected authoritative receipt follow-up: `1 passed` (26.3s); runtime integrity: `28 protected files`; production build: `765` Vite modules; `git diff --check`: passed.
+
+## Connected receipt follow-up date-save pass — 2026-09-21
+
+- authoritative inventory readback으로 열린 날짜 review detail에서 소비기한과 날짜를 선택해 실제 date-assertion PATCH를 수행하고, 사용자 확인 소비기한 저장 toast까지 이어지는 end-to-end 흐름을 확인했습니다.
+- Connected receipt commit/readback/date-save: `1 passed` (21.3s); runtime integrity: `28 protected files`; production build: `765` Vite modules; `git diff --check`: passed.
+
+## Connected receipt date-save inventory-return-focus pass — 2026-09-21
+
+- receipt authoritative follow-up detail에서 날짜를 저장한 뒤 detail이 닫히고 원래 inventory row가 다시 focus되는 return lifecycle을 연결했습니다.
+- inventory return context가 scroll만 복원하던 gap을 row focus까지 복원하도록 보강했습니다.
+- Connected receipt commit/readback/date-save/return-focus: `1 passed` (31.9s); runtime integrity: `28 protected files`; production build: `765` Vite modules; `git diff --check`: passed.
+
+## Inventory return-focus no-offset safe-area pass — 2026-09-21
+
+- inventory return context에 이전 row offset이 없는 fallback에서는 대상 row를 viewport 중앙으로 reveal한 뒤 focus하도록 보강해 320px/safe-area에서 화면 밖 focus가 남지 않게 했습니다.
+- runtime integrity: `28 protected files`; production build: `765` Vite modules; bundle CSS: `270.87KB`; `git diff --check`: passed.
+
+## Manual quantity validation parity pass — 2026-09-21
+
+- 직접 입력 수량이 `0`, 음수, 숫자로 해석되지 않는 값이면 빠른 추가 CTA를 disabled로 만들고 `수량은 0보다 큰 숫자로 입력해 주세요.` alert를 노출하도록 보강했습니다. 빈 값은 기존 기본값 `1개` 정책을 유지합니다.
+- Fixture manual intake focus regression: `1 passed` (5.8s); live dark-mode AX state에서 quantity `0`과 disabled CTA/alert를 확인; runtime integrity: `28 protected files`; production build: `765` Vite modules; `git diff --check`: passed.
+
+## Native manual-intake first-action reachability pass — 2026-09-21
+
+- 320px native viewport에서 식품 이름을 입력하면 `식품 추가하기` action bar가 이름 입력 바로 아래에 남아 첫 sheet viewport에서 보이도록 배치 순서를 조정했습니다. 수량·보관 위치 입력을 먼저 요구하지 않으면서도 기존 수량 검증과 sticky 동작은 유지합니다.
+- 기존 native viewport 전체 회귀에서 해당 경로가 실패한 뒤, 단일 재현 테스트 `keeps the manual-food action reachable after entering a name`: `1 passed` (2.5s); 기존 전체 native run: `38 passed, 1 failed` (수정 전 재현); runtime integrity: `28 protected files`.
+
+## Narrow intake guidance wrapping pass — 2026-09-21
+
+- 360px 이하 시트에서 입력 방식 안내가 한 줄 고정 및 overflow clipping으로 잘릴 수 있던 정보 노출 계약을 확인했습니다. 좁은 폭에서만 안내를 줄바꿈하고 각 안내 문장이 남은 폭을 사용하도록 조정해 `영수증·라벨·직접 입력` 선택 기준을 계속 읽을 수 있게 했습니다.
+- Native narrow-sheet regression subset: `4 passed` (8.3s); runtime integrity: `28 protected files`.
+
+## Dark home priority metadata contrast pass — 2026-09-21
+
+- 다크모드 홈 우선순위 카드의 식품 보조 정보·보관 메타·날짜 출처가 기본 `dim` 토큰에 묻히지 않도록 홈 범위에서만 밝은 중립색으로 승격했습니다. 날짜 경고와 표시 날짜는 각각 coral/blue 의미색을 유지하면서 읽기 대비를 보강했습니다.
+- Native dark/contrast regression subset: `3 passed` (6.8s); runtime integrity: `28 protected files`.
+
+## Priority-card action description pass — 2026-09-21
+
+- 홈 우선순위 식품 카드의 시각적 chevron만으로 상세 진입 의도를 전달하던 경계를 보완해, 각 카드에 `식품 상세 정보를 열어 날짜와 보관 상태를 확인해요.` 설명을 연결했습니다. 기존 accessible name과 포커스 복귀 계약은 유지합니다.
+
+## Detail consume safety context pass — 2026-09-21
+
+- 날짜 확인 또는 보관 상태 재확인이 필요한 식품의 `먹었어요` 버튼에 시각적 문구를 중복하지 않고 접근성 설명을 연결했습니다. 확인창 진입 전에 `날짜와 보관 상태를 확인한 뒤 ...` 맥락을 읽어 주어, 버튼 라벨은 기존 테스트·사용자 습관과 호환되면서 행동의 전제는 명확해졌습니다.
+
+## Detail action grouping pass — 2026-09-21
+
+- 상세 하단 행동을 `식품 기록 행동` 그룹으로 노출하고, 소비 기록(`먹었어요`)과 재고 상태 수정(`변경 저장`)에 전용 클래스·시각 표면을 부여했습니다. 소비 행동은 pistachio 계열의 보조 surface, 실제 저장 가능한 변경은 blue shadow로 구분해 두 행동의 결과 차이를 빠르게 인지할 수 있게 했습니다.
+- Native detail action regression: `3 passed` (6.5s); runtime integrity: `28 protected files`.
+
+## Detail destructive-action boundary pass — 2026-09-21
+
+- `폐기 기록`을 소비·상태 수정과 같은 행동 행에서 분리해 `예외 처리` 그룹으로 감쌌습니다. coral 계열의 얇은 구분선과 라벨로 실수 가능성이 높은 행동임을 알리고, 기존 확인 단계·부분 폐기·inventory row focus 복귀는 유지했습니다.
+- Prototype discard regression: `2 passed` (5.6s).
+
+## Shopping-list exception-action boundary pass — 2026-09-21
+
+- 장보기 항목의 `재고에 반영`과 삭제 아이콘을 하나의 행동 그룹으로 묶되, 삭제 버튼에는 coral outline/surface와 focus 상태를 부여해 구매 흐름을 끊는 예외 행동임을 구분했습니다. 항목별 행동 그룹 accessible label도 추가했습니다.
+- Connected shopping mutation regression: `2 passed` (36.5s).
+
+## Receipt review commit-state boundary pass — 2026-09-21
+
+- 영수증 고정 반영 바에 `needs-confirmation / ready / empty` 상태 계약과 접근성 그룹 라벨을 추가했습니다. 확인 필요 상태는 amber 상단 경계, 반영 가능 상태는 pistachio 경계, 선택 없음 상태는 그림자 없는 비활성 표면으로 구분해 자동 인식 후보 → 사용자 확인 → 재고 반영 단계를 명확히 했습니다.
+- Native receipt subset: `3 passed` (6.2s); prototype receipt regression: `10 passed` (18.6s).
+
+## Shopping receive step-rail pass — 2026-09-21
+
+- 구매 완료 후 장보기 항목을 재고로 옮기는 패널에 `구매 완료 → 재고 반영 → 날짜 확인` 3단계 rail을 추가했습니다. 현재 단계와 완료 단계를 pistachio로 표시하고, 재고 반영 뒤 날짜 확인이 남는다는 정보 경계를 구매 입력 직전에 노출합니다.
+- Connected receive flow: `1 passed` (32.2s).
+
+## Shopping receive next-action handoff pass — 2026-09-21
+
+- 서버 readback이 성공하고 inventory lot이 생성된 장보기 반영 성공 toast에도 `날짜·보관 상태 확인` action을 연결했습니다. toast action은 최근 반영된 식품 detail로 진입해 포장지 날짜 확인 CTA를 이어서 사용할 수 있고, readback 실패 시 기존 `최신 재고 확인` action 계약을 유지합니다.
+
+## Shopping receive return-context compatibility pass — 2026-09-21
+
+- 장보기 성공 toast의 `날짜·보관 상태 확인` action은 기존 `식품 상세 확인` 버튼과 동일한 inventory detail 진입 계약을 재사용하도록 유지했습니다. 상세 날짜 저장 후 inventory row focus 복귀를 보존해 기존 진입점의 복귀 기대를 깨지 않습니다.
+
+## Notification detail-entry intent pass — 2026-09-21
+
+- 알림에서 식품 상세로 진입할 때도 홈·inventory 카드와 동일하게 날짜 확인 필요 상태는 날짜 CTA, 상품 출처만 검토할 상태는 provenance CTA를 초기 focus 대상으로 계산하도록 맞췄습니다. 알림 읽음 처리 중 원격 변경이 발생해도 알림 센터 복귀/focus 계약은 유지했습니다.
+- Demo notification flow: `1 passed` (4.8s); connected queued-notification refresh flow: `1 passed` (41.0s).
+
+## Notification date-save action precedence pass — 2026-09-21
+
+- 알림에서 날짜를 저장한 경우에는 알림 센터의 원래 row focus 복귀를 primary outcome으로 두고, 홈용 `다음 우선 식품 확인` toast action은 노출하지 않도록 분기했습니다. 홈·inventory 진입에서 저장한 경우에는 기존 다음 우선 식품 action을 유지합니다.
+- Notification date review return regression: `1 passed` (6.6s).
+
+## Notification focus-scope isolation pass — 2026-09-21
+
+- 알림 센터의 `첫 알림 보기`와 외부 연동 상태 요약 focus target을 전역 document가 아닌 현재 notification sheet 내부로 제한했습니다. force-mounted/숨겨진 다른 sheet의 stale row가 focus를 가로채지 않도록 범위를 고정했습니다.
+
+## Connected notification sync-focus isolation pass — 2026-09-21
+
+- 외부 연동 lifecycle 요약의 `확인 필요 / 처리 대기 / 반영 완료` 버튼이 현재 열린 알림 sheet 내부의 해당 row로만 이동하는지 connected fixture에서 확인했습니다. 각 상태 count/label과 row focus 복귀가 함께 유지됩니다.
+- Connected notification sync lifecycle: `1 passed` (28.1s).
+
+## Account external-sync focus-scope isolation pass — 2026-09-21
+
+- 계정의 외부 재고 연동 패널도 outbox 상세·상품 연결 작업·완료 작업 focus 탐색을 전역 document가 아닌 현재 패널 내부로 제한했습니다. force-mounted 다른 계정/알림 surface의 동일한 data attribute가 focus를 가로채지 않도록 알림 센터와 동일한 scope 계약을 적용했습니다.
+- Connected notification sync lifecycle after account-panel scope change: `1 passed` (25.1s).
+
+## Account external-sync semantic-surface pass — 2026-09-21
+
+- 계정 외부 재고 연동 상태 카드와 outbox 작업 표면을 알림 센터와 같은 의미색으로 맞췄습니다. 연결됨/정상은 pistachio, 연결 확인 필요·서버 설정 필요·worker 오류는 coral, 처리 대기·처리 중은 blue, 반영 완료는 pistachio surface로 노출합니다.
+- Connected external-sync settings entry: `1 passed` (19.1s).
+
+## Account external-sync action hierarchy pass — 2026-09-22
+
+- 계정 외부 연동 작업의 primary action을 상태 의미에 맞게 분리했습니다. 상품 연결과 `반영됨` 확인은 pistachio 진행 surface, `미반영·재시도`는 blue 복구 surface로 구분해 연결·확인·복구 행동을 혼동하지 않게 했습니다.
+- Connected external-sync settings entry after action styling: `1 passed` (31.1s).
+
+## Account external-sync task-state badge pass — 2026-09-22
+
+- reconciliation 작업에는 `확인 필요`, dead-letter 작업에는 `재시도 대기` 상태 배지를 추가하고, 각각의 행동 그룹 accessible label을 연결했습니다. 사용자가 버튼을 읽기 전에 작업의 현재 상태와 필요한 복구 강도를 먼저 파악할 수 있도록 했습니다.
+- Connected external-sync settings entry after task-state labeling: `1 passed` (29.1s).
+
+## Account external-sync overall-action state pass — 2026-09-22
+
+- 외부 동기화 요약 카드에 `attention / processing / pending / clear` 상태 계약을 추가했습니다. 확인이 필요한 작업은 amber, 처리 중·대기는 blue, 대기 없음·최근 완료는 pistachio로 surface를 맞추고, `지금 동기화`를 pending 상태의 primary action으로 강조했습니다.
+- Connected external-sync settings entry after overall-state styling: `1 passed` (44.2s).
+
+## Account external-sync transition-action pass — 2026-09-22
+
+- outbox 요약 카드의 상태 전이와 primary action을 connected fixture에서 확인했습니다. 상품 매핑 저장 후 `pending`/`지금 동기화`, 동기화 완료 후 `clear`/최근 반영 완료, 완료 작업 detail focus 복귀가 한 흐름으로 유지됩니다.
+- Connected mapping notification → mapping → sync → completed detail focus: `1 passed` (28.7s).
+
+## Account external-sync retry-focus handoff pass — 2026-09-22
+
+- dead-letter 재시도 또는 reconciliation의 `미반영·재시도`가 성공해 작업이 pending으로 돌아오면, 새로 활성화된 `지금 동기화` 버튼으로 focus를 넘기도록 보강했습니다. 실패 목록에 focus가 남아 다음 행동을 찾기 어려워지는 문제를 줄였습니다.
+- Connected dead-letter requeue flow: `1 passed` (20.0s).
+
+## Account external-sync retry-error focus pass — 2026-09-22
+
+- 외부 연동 재시도·reconciliation mutation이 다시 실패하면 현재 계정 연동 패널 안의 `다시 시도`/`최신 상태 확인` action으로 focus를 자동 이동하도록 보강했습니다. 다른 sheet의 동일한 오류 action은 탐색하지 않습니다.
+- Connected dead-letter requeue flow after retry-focus guard: `1 passed` (27.1s).
+
+## Account-to-notification return boundary audit — 2026-09-22
+
+- 외부 연동 상태 요약에서 알림 → 계정 설정으로 진입한 뒤, 작업 상태를 확인하고 계정 panel을 닫으면 원래 notification row와 상태 summary가 유지되는지 재검증했습니다. account 내부 focus scope와 notification 복귀 focus가 함께 깨지지 않습니다.
+- Connected notification lifecycle + account return subset: `2 passed` (44.9s).
+
+## Account external-sync narrow-mobile layout pass — 2026-09-22
+
+- 360px 이하 모바일 시트에서 상품 연결 입력·상태 배지·reconciliation action이 서로 밀리지 않도록 compact grid와 badge typography를 추가했습니다. 상태 의미와 action target은 유지하면서 좁은 폭의 입력/버튼 경계를 보강했습니다.
+- Connected mapping notification → account task focus regression: `1 passed` (26.4s).
+
+## Native full-lane account-layout audit — 2026-09-22
+
+- 계정 외부 연동 narrow-mobile compact layout 변경이 다른 native sheet의 safe-area·sticky action·focus 계약에 영향을 주지 않는지 전체 native lane으로 재검증했습니다.
+- Native viewport suite: `39 passed` (1.2m).
+
+## Account external-sync reopen-focus pass — 2026-09-22
+
+- protected BottomSheet runtime을 수정하지 않고, 앱 소유 `GrocyIntegrationPanel`의 마지막 focused outbox ref를 활용해 account panel이 다시 active가 될 때 마지막 작업 상세/상품 연결 task로 focus를 복원하도록 보강했습니다. 최초 진입이나 일반 account 진입에는 stale focus를 강제로 적용하지 않습니다.
+- Connected external-sync entry + mapping-task focus regression: `2 passed` (33.2s); runtime integrity: `28 protected files`.
+
+## Account external-sync stale-reopen guard pass — 2026-09-22
+
+- account reopen 시 마지막 focused outbox가 그 사이 `반영 완료`로 바뀌었다면 완료 작업에 stale focus를 다시 주지 않고, 현재 pending/blocked/reconciliation/dead-letter 등 actionable 작업을 우선 탐색하도록 보강했습니다. 알림에서 명시적으로 선택한 완료 작업의 직접 진입 focus는 유지합니다.
+- Connected completed-outbox direct entry + mapping-task focus regression: `2 passed` (34.2s).
+
+## Account external-sync actionable-focus priority pass — 2026-09-22
+
+- reopen 시 마지막 작업이 완료된 경우의 fallback을 서버 배열 순서가 아니라 `blocked → reconciliation_required → dead_letter → pending → in_flight` 우선순위로 정렬했습니다. 사용자가 가장 먼저 개입해야 하는 상태를 먼저 focus합니다.
+- Connected completed-outbox direct entry + mapping-task focus regression after priority ordering: `2 passed` (32.7s).
+
+## Notification external-sync actionable-order parity pass — 2026-09-22
+
+- 알림 센터의 외부 연동 요약 focus도 계정 panel과 같은 actionable ordering을 사용하도록 맞췄습니다. `처리 대기` 요약에서는 queued를 processing보다 먼저 focus하고, 현재 열린 notification sheet 내부의 row만 탐색합니다.
+- Connected notification sync lifecycle after ordering parity: `1 passed` (34.1s).
+
+## Home external-sync summary parity pass — 2026-09-22
+
+- 홈 외부 연동 summary가 `확인 필요 → 처리 대기 → 처리 중` 상태를 분리해 표시하고, `data-sync-focus`로 알림 센터의 첫 focus 상태를 명시하도록 보강했습니다. 처리 중만 있을 때도 대기 문구를 잘못 보여주지 않고 `처리 중`으로 안내합니다.
+- Connected home → notification external-sync lifecycle: `1 passed` (34.0s).
+
+## Home external-sync semantic-surface pass — 2026-09-22
+
+- 홈 외부 연동 summary의 `data-sync-focus` 상태에 따라 확인 필요는 amber surface, 대기·처리 중은 blue surface로 시각 구분했습니다. 홈에서도 알림·계정 설정과 동일한 상태 의미를 첫 화면에서 전달합니다.
+- Connected home → notification external-sync lifecycle after surface styling: `1 passed` (30.1s).
+
+## Home cross-device readback audit — 2026-09-22
+
+- dashboard workspace invalidation이 `syncDashboard`를 통해 inventory와 notification을 함께 readback하는 경로를 재검증했습니다. 다른 기기 변경 후 홈 재고가 갱신되고, 동일한 refresh cycle에서 홈 외부 연동 summary가 stale 상태로 남지 않는 구조를 확인했습니다.
+- Connected home cross-device dashboard revision: `1 passed` (41.8s).
+
+## Home external-sync accessible-state contract pass — 2026-09-22
+
+- 홈 외부 연동 summary에 상태별 count data attribute와 명시적 accessible name을 추가했습니다. 스크린리더에서도 `확인 필요/처리 대기/처리 중` 상태와 `알림 센터에서 상태 확인` 다음 행동을 한 번에 읽을 수 있습니다.
+- Connected home → notification external-sync lifecycle after accessible contract: `1 passed` (30.2s).
+
+## Cross-surface sync-count metadata parity pass — 2026-09-22
+
+- 홈 summary, notification summary, account outbox summary에 동일한 count metadata 계열을 추가했습니다. attention/queued-processing/applied 또는 unread count를 DOM data contract로 노출해 QA·접근성·후속 automation이 같은 상태 모델을 읽을 수 있게 했습니다.
+- Home accessibility audit: `1 passed` (1.9s); connected notification sync lifecycle: `1 passed` (26.9s).
+
+## Cross-surface sync-count connected assertion pass — 2026-09-22
+
+- connected fixture에서 홈 summary의 focus/count metadata와 notification summary의 attention/waiting/applied count metadata가 동일한 sync fixture를 반영하는지 assertion으로 고정했습니다.
+- Connected home → notification metadata parity: `1 passed` (32.4s).
+
+## Account outbox metadata connected parity pass — 2026-09-22
+
+- 동일한 blocked mapping fixture에서 account outbox summary의 `attention / pending / processing / applied` metadata를 직접 assertion했습니다. product task가 blocked 목록의 부분집합이어도 attention count를 중복 합산하지 않도록 count 의미를 정리했습니다.
+- Connected mapping notification → account outbox metadata/focus: `1 passed` (40.5s).
+
+## Account outbox applied-transition metadata pass — 2026-09-22
+
+- blocked mapping을 저장·동기화한 뒤 outbox summary가 `attention 1 → clear`, `pending 0 유지`, `applied 1`로 전이하는 connected assertion을 추가했습니다. 완료 history와 overall state metadata가 같은 readback을 반영하는지 고정했습니다.
+- Connected mapping blocked → pending → succeeded metadata/focus: `1 passed` (33.8s).
+
+## Account sync workspace-readback handoff pass — 2026-09-22
+
+- account `지금 동기화`·reconciliation·dead-letter 재시도 성공 후 account outbox refresh만 수행하던 경계를 보완해, parent workspace readback callback으로 dashboard·notifications도 같은 mutation lifecycle에서 갱신하도록 연결했습니다. account 내부 상태와 홈/알림 상태가 stale하게 분리되지 않도록 했습니다.
+- Connected mapping notification → account task/readback flow: `1 passed` (32.7s).
+
+## Account sync workspace-readback failure boundary pass — 2026-09-22
+
+- account outbox mutation은 성공했지만 parent dashboard/notification readback이 실패하는 경우를 별도 상태로 안내하도록 보강했습니다. account의 durable outbox 성공은 유지하면서 `홈·알림 최신 상태는 다시 연결한 뒤 확인` 경계를 notice에 추가합니다.
+- Connected mapping + dead-letter mutation regression after readback boundary: `2 passed` (30.3s).
+
+## Account workspace-readback inline retry action pass — 2026-09-22
+
+- parent dashboard/notification readback이 실패한 경우 account 외부 연동 notice에 `최신 상태 확인` action을 직접 노출하도록 연결했습니다. 재시도 성공 시 stale 안내 상태를 해제하고 account mutation 결과와 홈/알림 readback을 다시 맞춥니다.
+- Connected mapping + dead-letter mutation regression after inline readback retry action: `2 passed` (26.3s).
+
+## Account reopen-focus priority pass — 2026-09-22
+
+- account 재오픈 시 명시적인 outbox focus 요청이 있으면 작업 focus를 우선하고, stale workspace readback 안내만 남은 경우에는 `최신 계정 설정 확인` action으로 focus를 이동하도록 보강했습니다. 사용자가 먼저 처리해야 할 outbox 작업을 stale 안내가 덮어쓰지 않습니다.
+- Connected external-sync entry + mapping task focus: `2 passed` (45.5s).
+
+## Account stale-readback semantic-surface pass — 2026-09-22
+
+- account mutation 성공과 parent workspace readback 실패를 녹색 성공 surface와 혼동하지 않도록 `grocy-success-stale`를 amber 확인 필요 surface로 분리했습니다. `최신 상태 확인` action과 함께 stale 경계를 시각적으로 전달합니다.
+- Connected mapping task/focus regression after stale surface styling: `1 passed` (29.1s).
+
+## Account workspace-readback retry in-flight guard pass — 2026-09-22
+
+- account notice의 `최신 상태 확인` action에 readback in-flight guard를 추가했습니다. 빠른 연속 클릭 시 dashboard/notification readback을 중복 dispatch하지 않고, 진행 중에는 버튼을 `최신 상태 확인 중`으로 전환합니다.
+- Connected mapping + dead-letter mutation regression after readback guard: `2 passed` (43.0s).
+
+## Account stale-readback recovery transition fixture pass — 2026-09-22
+
+- connected fixture에서 dashboard readback 첫 시도를 503으로 실패시키고, account notice의 `최신 상태 확인`으로 재시도해 stale 문구가 제거되는 amber→normal 전이를 고정했습니다. 명시적 최신화 action을 누른 뒤에는 완료 detail focus를 강제로 다시 빼앗지 않고 사용자의 현재 focus를 보존합니다.
+- Connected mapping stale-readback recovery transition: `1 passed` (46.4s).
+
+## Account external-sync error-recovery variant pass — 2026-09-22
+
+- Grocy 상품 매핑 persistence 첫 시도를 실패시키고 retry action으로 두 번째 시도를 성공시키는 기존 connected fixture를 재실행해, 오류 notice·retry action·매핑 성공 후 대기 상태 복귀가 유지되는지 확인했습니다.
+- Connected Grocy mapping failure → retry recovery: `1 passed` (35.9s).
+
+## Account-to-home applied cross-surface transition pass — 2026-09-22
+
+- 하나의 connected fixture에서 blocked mapping을 동기화한 뒤 account outbox를 `clear/applied 1`로 전환하고, notification row를 `applied`로 확인한 다음 홈 external-sync summary가 제거되는 전이를 assertion했습니다.
+- Connected account → notification applied → home summary removal: `1 passed` (37.9s).
+
+## Notification sync rapid-selection regression pass — 2026-09-22
+
+- 외부 연동 summary에서 `처리 대기`를 선택한 직후 `반영 완료`를 연속 선택하는 interaction을 회귀 테스트로 고정했습니다. 마지막 선택 상태의 row focus가 유지되고 이전 focus 요청이 남지 않습니다.
+- Connected notification sync lifecycle with rapid summary selection: `1 passed` (29.4s).
+
+## Notification sheet duplicate-refresh guard pass — 2026-09-22
+
+- notification sheet가 이미 열려 있고 readback 중일 때 홈/알림 trigger를 반복해도 최신 `syncFocus`만 갱신하고 동일 notification refresh 요청을 중복 생성하지 않도록 guard를 추가했습니다. 최초 진입과 loading 종료 후 refresh는 기존 동작을 유지합니다.
+- Connected notification sync lifecycle after duplicate-refresh guard: `1 passed` (20.0s).
+
+## Account external-sync mutation duplicate-guard pass — 2026-09-22
+
+- `지금 동기화`, 오래된 작업 확인, reconciliation, dead-letter 재시도 handler 자체에 in-flight guard를 추가했습니다. disabled UI를 우회하는 pointer/keyboard 중복 이벤트에서도 같은 외부 mutation이 중복 dispatch되지 않도록 보강했습니다.
+- Connected mapping focus + dead-letter requeue regression: `2 passed` (27.3s).
+
+## Date-assertion mutation duplicate-guard pass — 2026-09-22
+
+- 날짜 저장 mutation에 `foodId:date:kind` 단위 in-flight key를 추가해 같은 식품·날짜·날짜 의미의 빠른 중복 저장을 차단했습니다. 다른 날짜/다른 식품 작업은 독립적으로 유지하고, 성공·실패·demo 경로에서 key를 해제합니다.
+- Notification date review regression after guard: `1 passed` (7.0s).
+
+## Receipt-commit mutation duplicate-guard pass — 2026-09-22
+
+- 영수증 반영에 draft ID 또는 source/line 식별자 기반 in-flight key를 추가해 같은 영수증 검수 결과의 빠른 중복 반영을 차단했습니다. demo·connected 성공/실패/retry 경로에서 key를 해제하고, 서버 idempotency key 계약은 그대로 유지합니다.
+- Prototype receipt commit regression: `2 passed` (7.3s); runtime integrity: `28 protected files`.
+
+## Manual-food mutation duplicate-guard pass — 2026-09-22
+
+- 직접 입력·라벨·바코드에서 공통으로 사용하는 manual food mutation에 food ID 기반 in-flight key를 추가했습니다. 같은 식품 추가 dispatch는 차단하고, demo·connected 성공/실패/retry 경로에서 key를 해제합니다.
+- Prototype receipt/manual intake regression: `2 passed` (9.2s).
+
+## Retry-toast semantic-surface pass — 2026-09-22
+
+- `다시 시도` action이 포함된 toast에만 retry 상태 class/data attribute와 amber 계열 surface를 적용했습니다. 성공/정보 toast와 복구가 필요한 오류 toast를 메시지·색상·action 위계에서 구분합니다.
+- Connected date persistence retry regression: `1 passed` (20.6s).
+
+## Toast atomic-live announcement pass — 2026-09-22
+
+- 전역 toast에 `aria-live="polite"`와 `aria-atomic="true"`를 명시해 메시지와 retry action이 성공·실패·재시도 상태로 바뀔 때 전체 toast를 하나의 announcement 단위로 전달하도록 보강했습니다.
+- Home accessibility audit after toast live contract: `1 passed` (1.8s).
+
+## Notification unread-focus after sync-state selection pass — 2026-09-22
+
+- 외부 연동 상태 summary를 여러 번 선택한 뒤에도 `첫 번째 읽지 않은 알림으로 이동`이 sync state focus와 섞이지 않고 unread row를 정확히 선택하는지 connected 회귀를 추가했습니다.
+- Connected notification lifecycle with rapid sync selection + unread focus: `1 passed` (36.6s).
+
+## Native mobile shell live-preview and full viewport regression pass — 2026-09-22
+
+- 웹 쉘과 모바일 쉘을 분리해 `http://127.0.0.1:4177/`에서 실제 네이티브 모바일 화면을 다시 열었습니다. 393px 첫 화면에서 상태 요약 → 우선 식품 → 식단 CTA → 식품 추가 → 하단 메뉴 순서를 라이트·다크모드로 확인했습니다.
+- Native full viewport lane: `39 passed` (1.2m). 320px/393px fold, short-height, keyboard, safe-area, large text, reduced motion, contrast, light/dark theme, receipt/camera, detail and sheet focus contracts가 현재 source 기준으로 모두 green입니다.
+- 이번 결과는 브라우저 기반 모바일 쉘 회귀 증거이며, 실제 iOS/Android 기기별 release acceptance를 대체하지 않습니다.
+
+## Native bottom-navigation context restoration pass — 2026-09-22
+
+- 320px에서 홈 → 식품 → 홈으로 이동할 때 하단 네비의 `aria-current`와 실제 active state가 함께 바뀌고, 식품 목록은 viewport 상단에 정렬되며 홈 복귀 시 scroll top과 첫 화면 CTA 위치가 복원되는 계약을 추가했습니다.
+- Native bottom-navigation context restoration: `1 passed` (2.0s). 기존 320px safe-area·CTA containment 계약은 그대로 유지합니다.
+
+## Native inventory-detail return-context pass — 2026-09-22
+
+- 320px 식품 탭에서 재고 row를 열고 상세 sheet를 닫은 뒤에도 식품 탭 active state를 유지하고, 원래 row가 screen과 하단 navigation 사이의 안전 영역에 다시 보이며 row focus를 복원하는 계약을 추가했습니다.
+- Native inventory detail return context: `1 passed` (4.2s). 상세 review action과 홈·식품 전환 focus 계약은 분리된 기존 테스트로 유지합니다.
+
+## Native detail-save state readback pass — 2026-09-22
+
+- 320px 식품 상세에서 보관 위치를 냉동으로 변경해 저장한 뒤 sheet를 닫고, 성공 status·업데이트된 재고 row·row focus·safe-area containment가 함께 유지되는 계약을 추가했습니다. 저장 결과를 toast만으로 끝내지 않고 목록의 durable state로 다시 읽을 수 있게 고정했습니다.
+- Native detail storage save/readback: `1 passed` (3.8s).
+
+## Native confirmed-date readback pass — 2026-09-22
+
+- 320px 식품 상세에서 사용자가 확인한 소비기한을 입력·저장한 뒤 상세 sheet가 닫히고, 성공 status·목록의 갱신 날짜·row focus·safe-area containment가 함께 유지되는 계약을 추가했습니다.
+- 같은 흐름에서 홈으로 이동해 우선순위 카드에도 `N월 N일` 고객 노출 포맷으로 갱신 날짜가 유지되고, home active state와 scroll top이 복원되는 cross-surface readback을 함께 고정했습니다.
+- Native confirmed-date detail → home readback: `1 passed` (3.9s). 날짜 저장 결과를 transient toast에만 의존하지 않고 목록과 홈의 durable label로 다시 확인할 수 있습니다.
+
+## Native notification-date review return pass — 2026-09-22
+
+- 320px 알림 row에서 시금치 상세 → 라벨 날짜 재확인 → 상세 복귀 → sheet 닫기 흐름을 연결했습니다. 알림 센터가 닫히지 않은 상태에서 원래 notification row로 focus가 돌아오고 `data-notification-returned` 상태가 남는 계약을 추가했습니다.
+- Native notification date review return: `1 passed` (7.2s). 모바일에서 날짜 확인 후 사용자가 알림 목록의 다음 맥락을 잃지 않습니다.
+
+## Native mobile full-lane regression after cross-surface readback — 2026-09-22
+
+- 홈·식품·상세·날짜·알림 cross-surface readback 계약을 추가한 뒤 네이티브 전체 lane을 다시 실행했습니다. 기존 320px/393px fold, short-height, keyboard, safe-area, large text, reduced motion, contrast, light/dark, receipt/camera, sheet focus 계약도 함께 재확인했습니다.
+- Native full viewport lane: `44 passed` (1.4m); mobile runtime integrity: `28 protected files`; `git diff --check`: passed.
+
+## Native notification-read versus safety-review boundary pass — 2026-09-22
+
+- 알림을 열어 읽음 상태가 `3개 → 2개`로 줄어도, 실제 날짜·보관 상태 확인이 완료되지 않은 식품은 홈의 우선순위 `3개`와 `needs-review` 안전 안내를 유지하는 계약을 추가했습니다. 알림 read state를 안전 확인 완료로 오해하지 않도록 cross-surface 상태 경계를 고정했습니다.
+- Native notification read → home safety boundary: `1 passed` (8.4s). `AI는 소비기한을 확정하지 않아요` 경계 문구도 홈에서 계속 노출됩니다.
+
+## Production build after mobile cross-surface contracts — 2026-09-22
+
+- 모바일 날짜·알림·홈 readback 계약을 포함한 현재 source를 production build로 재검증했습니다.
+- `npm run build`: TypeScript + Vite `765 modules`, `18` JS chunks, CSS `279.54KB`, sites build preparation passed; `check:runtime`: `28 protected files`.
+
+## Connected date persistence recovery readback pass — 2026-09-22
+
+- 연결형 날짜 저장의 첫 persistence 실패 → `다시 시도` 성공 경로와, 성공 write 직후 dashboard readback이 실패해도 저장 결과를 detail에서 보존하는 stale-readback 경계를 재실행했습니다.
+- Connected date confirmation recovery + dashboard refresh failure: `2 passed` (27.2s). Demo 모바일의 read/unread·safety boundary와 connected persistence failure boundary를 서로 섞지 않고 유지합니다.
+
+## Connected mutation dashboard-notification readback pass — 2026-09-22
+
+- 보관 상태 mutation 성공 뒤 dashboard inventory와 notifications를 함께 다시 읽어 홈 priority card가 최신 storage state를 표시하고, 이전 stale mismatch 알림이 제거되는 전이를 재확인했습니다.
+- 외부 sync lifecycle fixture에서 같은 mutation이 `처리 대기` 상태로 notification에 이어지는 경로도 함께 확인했습니다.
+- Connected dashboard + notification readback and sync lifecycle: `2 passed` (33.2s).
+
+## Connected mobile readback containment pass — 2026-09-22
+
+- 같은 connected 보관 상태 readback fixture를 `320×740` viewport로 실행해 홈 priority 갱신·dashboard/notification readback을 모바일에서도 확인했습니다. 외부 재고 대기 toast가 모바일 screen 좌우와 fixed bottom navigation 위에 함께 containment 되는 geometry assertion을 추가했습니다.
+- Connected 320px dashboard + notification readback: `1 passed` (29.3s).
+
+## Connected mobile external-sync lifecycle pass — 2026-09-22
+
+- `320×740` connected viewport에서 보관 mutation 이후 notification 상태가 `처리 대기 → 반영 완료`로 전환되는 동안 sync summary가 screen 좌우를 넘지 않고, 완료 시 summary와 row가 같은 `반영 완료` 상태를 노출하는 계약을 추가했습니다.
+- Connected 320px external-sync lifecycle: `1 passed` (31.4s).
+
+## Connected mobile applied-to-home summary cleanup pass — 2026-09-22
+
+- `반영 완료` 상태를 notification summary와 row에서 확인한 뒤 알림을 닫고 홈으로 돌아오면, 홈 external-sync summary가 stale하게 남지 않고 제거되는 최종 전이를 `320×740` fixture에 추가했습니다.
+- Connected mobile applied → home summary cleanup: `1 passed` (1.3m). 최초 connected server 기동 지연 후 server listen을 확인하고 재실행한 결과입니다.
+
+## Applied-state surface ownership review — 2026-09-22
+
+- `반영 완료` 이후 홈 summary를 계속 유지하는 대신, transient toast와 notification history가 완료 결과를 소유하고 홈의 action summary는 제거하는 현재 정보 노출 구조를 재확인했습니다. 완료 상태를 처리 대기처럼 계속 노출하지 않아 stale action surface를 만들지 않습니다.
+- 320px connected lifecycle fixture에서 notification summary/row의 `반영 완료` readback과 홈 summary 제거를 함께 assertion했습니다.
+
+## Connected cross-surface state cluster regression pass — 2026-09-22
+
+- 날짜 저장 stale-readback, 보관 mutation dashboard/notification 동시 readback, 외부 sync lifecycle, blocked mapping notification focus를 하나의 connected 실행군으로 재실행해 상태 전이가 서로 간섭하지 않는지 확인했습니다.
+- Connected cross-surface state cluster: `4 passed` (1.6m).
+
+## Connected shopping receive mount-continuity recovery pass — 2026-09-22
+
+- receive 성공 후 `최신 재고 확인` readback 과정에서 sheet subtree가 교체되더라도 `recentlyReceivedFood` 결과와 `shopping-sheet-received` notice를 다시 hydrate하고, 장보기 surface를 유지하도록 보강했습니다. 중복 empty state는 숨기고 직접 추가·식품 상세 CTA를 함께 유지합니다.
+- Connected shopping receive authoritative readback + mount continuity: `1 passed` (1.5m). notice·상품명·다음 행동·식품 상세 전환까지 최종 fixture에서 확인했습니다.
+
+## Connected planner dashboard-request ownership pass — 2026-09-22
+
+- full connected lane에서 cold-start 직후 planner sheet 진입 시 dashboard request count가 한 번 증가한 후보를 단독 fixture로 재실행했습니다. `/api/dashboard` payload와 `/api/dashboard/revision` probe를 분리해 세고, 초기 dashboard settle window 이후 planner preview 전이를 측정하도록 fixture를 보강했습니다.
+- Connected planner preview dashboard ownership: `1 passed` (1.3m). planner preview 진입 자체가 dashboard payload를 invalidate하지 않는 현재 contract를 확인했고 source 변경 없이 유지했습니다.
+
+## Native full-lane after shopping-sheet mount continuity — 2026-09-22
+
+- shopping receive readback의 notice/state 보존과 sheet surface 복귀를 적용한 뒤 native 전체 lane을 재실행했습니다. 320px/393px fold, short-height, keyboard, safe-area, large text, reduced motion, contrast, light/dark, receipt/camera, detail and sheet focus 계약을 함께 재확인했습니다.
+- Native full viewport lane: `44 passed` (4.6m); mobile runtime integrity: `28 protected files`; `git diff --check`: passed.
+
+## Connected planner + shopping state-cluster pass — 2026-09-22
+
+- planner preview의 dashboard payload ownership과 shopping receive의 readback/mount continuity를 하나의 connected worker 실행군으로 재검증했습니다. planner의 revision probe가 shopping mutation surface에 영향을 주지 않고, shopping readback이 planner dashboard contract를 오염시키지 않는지 함께 확인했습니다.
+- Connected planner + shopping state cluster: `2 passed` (2.2m).
+
+## Web/prototype runtime lane timing review — 2026-09-22
+
+- 격리 포트 `4197`에서 fixture/web/prototype/accessibility lane `67 tests`를 전체 실행했습니다. 최근 Rescue Meal state/readback 변경과 직접 연결된 주요 home, detail, intake, notification, meal 흐름은 계속 통과했습니다.
+- 실행 결과: `61 passed`, `3 failed`, `3 skipped`. 남은 실패는 Carousel momentum settling, visible-control naming 순회 중 select transition, receipt-review viewport settling assertion으로 분리됐으며, connected/native 제품 계약 실패로 분류하지 않고 단독 재현 대상으로 남겼습니다.
+- 이 lane은 현재 source의 일반 web surface 회귀 증거이며, 이번 결과만으로 전체 web lane green을 주장하지 않습니다.
+
+## Web runtime timing-failure isolation pass — 2026-09-22
+
+- Carousel momentum failure를 단독 실행해 `1 passed` (15.9s)로 확인했습니다. 구현 회귀보다 gesture settling timing flake로 분리했습니다.
+- Visible primary-control naming failure는 단독 실행에서도 guidance sheet Escape close timing에서 재현됐고, receipt review viewport failure와 함께 별도 UI transition audit 대상으로 유지합니다. connected/native readback 계약과는 분리했습니다.
+
+## Receipt review root viewport containment pass — 2026-09-22
+
+- 샘플 영수증이 lines를 채운 뒤 첫 확인 필요 항목을 center로 reveal할 때 review root 자체가 sheet content 위로 밀릴 수 있던 문제를 보강했습니다. 첫 unresolved line focus는 유지하고, 이후 review root를 `nearest`로 재정렬해 root·sticky commit action·현재 focus가 같은 viewport 계약 안에 남도록 했습니다.
+- Receipt review selected-candidate flow after viewport containment fix: `1 passed` (15.4s).
+
+## Label result root viewport containment pass — 2026-09-22
+
+- label 결과에서 다음 행동을 center reveal한 뒤 result root가 sheet viewport 밖으로 밀릴 수 있던 동일한 intake geometry 경계를 보강했습니다. action focus는 유지하고 `.label-result-flow`를 `nearest`로 재정렬합니다.
+- Label candidate readback after viewport containment fix: `1 passed` (20.9s).
+
+## Web full-lane after intake viewport fixes — 2026-09-22
+
+- receipt/label result root containment 수정 이후 격리 web runtime lane `67 tests`를 다시 실행했습니다. receipt/label viewport failures는 사라졌고, 현재 결과는 `61 passed`, `3 failed`, `3 skipped`입니다.
+- 남은 실패는 Carousel momentum settling, visible-control transition timing, notification row focus timing으로 분리됐습니다. connected/native contracts와 app-owned intake viewport contracts는 계속 green입니다.
+
+## Dark shopping-success semantic contrast pass — 2026-09-22
+
+- dark bottom sheet에서 장보기 성공 notice가 transient toast와 섞이지 않고 durable next-action surface로 읽히도록 피스타치오 border/background contrast override를 추가했습니다. 공통 semantic token과 성공·다음 행동 위계는 light mode와 동일하게 유지합니다.
+- Production build after dark success surface pass: `765 modules`, CSS `279.78KB`; runtime integrity: `28 protected files`.
+
+## Native 393px live visual readback pass — 2026-09-22
+
+- native shell `4203`에서 실제 `393px` preview를 라이트·다크모드로 캡처해 첫 fold를 확인했습니다. 상태 요약 → 우선 식품 3건 → 오늘 식단 CTA → 식품 추가 → 안전 안내 → 하단 홈·식품·식단 순서가 유지되고, 상단 action rail·주요 CTA·fixed navigation이 safe-area를 침범하지 않았습니다.
+- Visual readback은 source/test evidence와 별도로 현재 live preview의 화면 밀도와 theme contrast를 확인한 결과이며, 실제 iOS/Android release acceptance를 대체하지 않습니다.
+
+## Demo notification return-focus ownership pass — 2026-09-22
+
+- demo food 알림에서 상세 sheet로 이동했다가 알림 센터로 돌아올 때 `notificationReturnFocusId`만 설정되어 이전 active element가 focus 조건을 막을 수 있던 경계를 보강했습니다. food notification return에도 강제 settle focus ownership을 적용했습니다.
+- Demo notification detail → row focus return: `1 passed` (16.0s).
+
+## Guidance sheet close-and-naming isolation pass — 2026-09-22
+
+- full web lane에서 guidance Escape close가 timeout된 후보를 단독 재실행해 `1 passed` (32.7s)로 확인했습니다. visible control naming과 guidance close ownership은 현재 source에서 유지하고, full-lane transition timing 변동으로 분리했습니다.
+
+## Desktop web-shell boundary pass — 2026-09-22
+
+- 모바일 고도화 변경 이후 desktop web surface를 별도 `4205` port에서 재확인했습니다. phone simulator chrome이 없는 real web shell과 outer runtime dark theme propagation을 함께 검증했습니다.
+- Web surface lane: `2 passed` (30.3s). app-owned mobile visual layer가 desktop shell boundary를 침범하지 않습니다.
+
+## Native mobile interaction contract spot-check — 2026-09-22
+
+- 기존 fixture port `4174`가 사용 중이라 실행 중인 서버를 재사용하거나 중단하지 않고, native 전용 격리 port `4208`에서 핵심 모바일 계약만 단독 검증했습니다.
+- `keeps the native home inside a 320px viewport`, `keeps detail review and storage cues across light and dark themes`, `settles sheet motion immediately when reduced motion is requested`, `keeps primary controls at a 44px touch target`: `4 passed` (28.8s).
+- 이번 spot-check은 전체 native lane을 대체하지 않으며, 현재 모바일 첫 화면의 폭 containment·theme 전환·reduced-motion·터치 타깃 계약이 동시에 유지된다는 추가 증거로 기록합니다.
+
+## Web visible-control audit race isolation — 2026-09-22
+
+- 전체 prototype lane에서 visible control 이름을 순회하던 검사가 sheet transition 중 locator를 하나씩 재해결하면서 DOM 교체를 기다리는 timing failure를 냈습니다. 제품 assertion이나 접근성 이름 누락이 아니라 검사 consumer의 순회 방식 문제였고, 현재 DOM snapshot을 한 번에 수집하도록 helper를 바꿔 transition 중 stale locator 재접근을 제거했습니다.
+- Isolated visible-control audit after snapshot collection: `1 passed` (27.6s). 실제 surface별 control 이름 검사는 유지하면서 race만 제거했습니다.
+
+## Prototype lane after visible-control snapshot hardening — 2026-09-22
+
+- visible control 이름 검사를 현재 DOM snapshot 기반으로 바꾼 뒤 격리 port `4213`에서 prototype 전체 `52 tests`를 재실행했습니다. fixture 전용 render-error 로그는 의도된 recovery 테스트의 expected signal입니다.
+- Prototype lane: `52 passed` (4.4m). home, theme, account, notification, intake, receipt/label, detail, inventory, meal, recovery surface를 포함한 현재 app-owned prototype 계약을 모두 통과했습니다.
+
+## Connected notification return-focus after empty readback — 2026-09-22
+
+- 식품 상세가 열린 동안 원격 읽음/재고 readback으로 알림 목록이 빈 상태가 되는 경로에서, 기존 알림 row가 사라져도 알림 요약으로 focus를 회수하도록 보강했습니다. detail return 시 focus ownership을 명시하고, empty notification state가 commit된 다음 summary를 재집중합니다.
+- Isolated failing contract after fix: `1 passed` (1.4m).
+- Connected notification return-focus cluster: `4 passed` (1.5m). date reminder, provenance history, queued refresh, storage mutation/readback convergence 경로를 함께 통과했습니다.
+
+## Connected external-inventory return-focus cluster — 2026-09-22
+
+- 알림에서 외부 재고 설정으로 이동하는 경로, 반영 완료 outbox 상세, mapping blocked task, dead-letter 재큐잉, stale in-flight 결정, 장보기 cross-device refresh를 하나의 connected cluster로 재검증했습니다.
+- Connected external-inventory cluster: `6 passed` (1.9m). 외부 sync 상태가 갱신되어도 settings/outbox task의 재진입 focus와 장보기 목록의 refresh contract가 함께 유지됩니다.
+
+## Connected planner-to-intake decision cluster — 2026-09-22
+
+- 식단에서 부족 재료를 장보기로 넘기는 3일 action, 확인된 부족 재료의 checked shopping list 반영, 알레르기 선호 저장 후 재계산, allocated lot 날짜 검토, 포장일과 소비기한 분리, 만료 인쇄일의 라벨 재확인 후 detail 복귀를 함께 검증했습니다.
+- Connected planner/intake cluster: `6 passed` (2.0m). 사용자에게 표시하는 날짜 의미와 다음 행동의 경계가 planner·shopping·label/detail 흐름 사이에서 유지됩니다.
+
+## Native 393px dark receipt-intake visual readback — 2026-09-22
+
+- live native preview `4203`의 393px dark surface에서 식품 추가 sheet를 직접 확인했습니다. 제목·설명 → 영수증/바코드/라벨/직접 입력 탭 → 1/3 intake rail → 카메라·사진 선택 CTA → 샘플 영수증 action → PDF fallback 안내 순서가 한 화면의 작업 흐름으로 읽혔고, sticky close/CTA가 safe-area를 침범하지 않았습니다.
+- 이번 시각 검토에서는 긴 안내문이 CTA를 밀어내거나 dark surface에서 semantic contrast가 무너지는 문제가 관찰되지 않아 source 변경 없이 유지했습니다. 실제 device release acceptance를 대체하지 않는 live preview evidence입니다.
+
+## Native 393px dark home hierarchy readback — 2026-09-22
+
+- live native preview `4203`의 현재 dark home을 다시 캡처해 헤더 action rail, greeting, 우선 확인 summary, 3개 priority card, meal CTA/add-food pair, fixed bottom navigation의 순서를 확인했습니다.
+- summary의 숫자와 상태 legend가 첫 시선에서 읽히고, 날짜 확인 필요 항목은 coral emphasis, 일반 먼저 사용 항목은 amber/neutral hierarchy로 구분됩니다. meal CTA가 하단 navigation 위에 고정되어 핵심 행동이 가려지지 않는 상태를 유지했습니다.
+
+## Native label result CTA viewport containment — 2026-09-22
+
+- native `320px` label recognition에서 결과 카드 action bar가 normal flow에 남아 확정 CTA가 sheet의 safe-area 하단 밖으로 밀리는 문제를 재현했습니다. receipt review와 같은 sticky viewport treatment로 전환해 결과 정보는 document order를 유지하면서 `확인 후 반영` action을 짧은 화면에서도 reachable하게 보강했습니다.
+- Failing label viewport contract after fix: `1 passed` (17.0s).
+- Label/source-review narrow viewport cluster after fix: `8 passed` (57.7s). barcode candidate, receipt badge, dark review, label confirmation, source focus/zoom, 320px·393px source frame containment을 함께 통과했습니다.
+
+## Native full-lane after label sticky action — 2026-09-22
+
+- label result action bar를 sticky viewport treatment로 바꾼 뒤 native 전체 lane을 재실행해 receipt editor의 sticky commit bar, keyboard/focus, safe-area, short-height, large-text, reduced-motion, light/dark, detail return 경계가 서로 충돌하지 않는지 확인했습니다.
+- Native full viewport lane: `44 passed` (3.5m). 모바일 runtime integrity와 기존 320px/393px contracts를 유지하면서 label CTA containment 수정이 다른 sheet geometry를 깨뜨리지 않았습니다.
+
+## Connected label correction readback timing isolation — 2026-09-22
+
+- label correction cluster에서 한 차례 notification refresh count가 10초 내 2회에 도달하지 않은 후보를 단독 재실행했습니다. mutation response, dashboard readback, date/storage identity, detail rendering은 이미 같은 실행에서 통과했고, 단독 재실행에서는 notification refresh convergence까지 `1 passed` (1.4m)로 확인됐습니다.
+- 현재 evidence는 label correction product contract의 실패보다 초기 dashboard/readback channel timing 변동으로 분류합니다. source를 임의로 지연시키지 않고, full connected lane에서 반복되는지 별도 관찰 대상으로 유지합니다.
+
+## Connected label notification readback ownership fix — 2026-09-22
+
+- 반복 실행에서 label correction 후 notification refresh가 누락되는 경로가 `2회 중 1회` 재현됐습니다. dashboard coalescing만으로 dependent notification read model을 갱신하던 것이 원인이어서, manual-food/label correction mutation boundary가 dashboard sync 후 notification refresh 완료까지 명시적으로 기다리도록 ownership을 보강했습니다.
+- Fix verification: 동일 테스트 `2 passed` (1.6m); label connected cluster `4 passed` (1.3m). 날짜 identity·보관 조건·기존 lot identity와 notification empty readback이 함께 수렴합니다.
+
+## Connected receipt/storage dependent-surface convergence — 2026-09-22
+
+- label correction에서 정리한 mutation readback ownership을 receipt commit과 storage mutation 경로에 대입해 비교 검증했습니다. dashboard readback 이후 notification 상태와 date-review follow-up이 먼저 stale 상태로 남지 않는지 확인했습니다.
+- Connected convergence cluster: `3 passed` (1.4m). storage dashboard+notifications, external sync lifecycle, authoritative receipt inventory/date-review follow-up이 현재 source contract에서 함께 수렴합니다.
+
+## Connected receipt-queue/planner-shopping convergence — 2026-09-22
+
+- receipt review queue cross-device refresh, planner 부족 재료의 3일 shopping action, confirmed missing ingredients의 checked list 반영, shopping cross-device refresh, confirmed storage receive readback을 하나의 connected cluster로 확인했습니다.
+- Connected queue/planner/shopping cluster: `5 passed` (1.5m). 현재 receipt summary·meal plan·shopping list 간 cross-device/readback contract에서 stale surface가 재현되지 않아 source 변경 없이 유지했습니다.
+
+## Connected workspace-draft refresh boundary — 2026-09-22
+
+- open planner의 cross-device meal-plan refresh, explicit reload 전 local choice 보존, account settings local draft 보존, guest stale boundary, 다른 탭의 open notification refresh, custom storage location revision probe를 함께 검증했습니다.
+- Connected workspace-draft cluster: `6 passed` (1.6m). remote revision은 명시된 surface에만 stale/refresh 신호를 전달하고, 사용자가 편집 중인 planner/account draft를 암묵적으로 덮어쓰지 않습니다.
+
+## Offline reconnect and workspace-boundary cluster — 2026-09-22
+
+- expired session의 조용한 workspace 전환 방지, offline dashboard의 수동 reconnect action, 마지막 성공 snapshot의 stale 표시, workspace switch 시 receipt review summary 격리 경계를 함께 검증했습니다.
+- Connected offline/workspace cluster: `4 passed` (1.1m). 오프라인 상태에서 stale data와 최신 data가 섞이지 않고, 재인증이 필요한 경우 사용자가 명시적으로 다음 행동을 선택하게 됩니다.
+
+## Offline mutation recovery cluster — 2026-09-22
+
+- 장보기 목록 실패가 홈 dashboard를 오염시키지 않는 경계, 장보기 retry, 날짜 확인 retry, storage mutation idempotency retry, storage persistence failure recovery, offline manual reconnect action을 묶어 검증했습니다.
+- Connected offline/mutation recovery cluster: `6 passed` (1.4m). 실패 시 기존 상태와 입력 문맥을 유지하고, retry는 동일 mutation contract로 재시도하며, offline 상태에서는 저장 완료처럼 오인시키지 않습니다.
+
+## Account reconnect presentation boundary — 2026-09-22
+
+- account connection 중 기존 workspace를 먼저 숨기는 pending 상태, 연결 실패 시 reconnect recovery, dashboard reconnect 성공 후 cleared workspace presentation 복구를 connected 환경에서 검증했습니다. native에서는 login action first-sheet containment과 guest primary action safe-area도 함께 확인했습니다.
+- Connected reconnect cluster: `3 passed` (1.1m); native account viewport cluster: `2 passed` (16.5s). 기존 workspace가 pending/error 상태에서 노출되지 않고, 성공한 workspace만 다시 Home read model에 들어옵니다.
+
+## Shopping empty-state language and return-flow pass — 2026-09-22
+
+- 마지막 장보기 항목을 삭제했을 때 hero의 `장볼 재료가 없어요`와 하위 empty-state의 `아직 장보기 항목이 없어요`가 중복 노출되던 문제를 확인했습니다. 하위 상태를 `필요한 재료를 이어서 준비해요`로 바꿔 현재 상태 요약과 다음 행동 안내를 분리했습니다.
+- connected shopping home flow after copy update: `2 passed` (35.8s, repeat-each=2). 장보기 empty-state, 직접 추가·삭제, 식단으로 이동 후 장보기 return 흐름을 함께 재확인했습니다.
+
+## Native full-lane after shopping empty-state language — 2026-09-22
+
+- 장보기 empty-state copy 변경 이후 전체 native lane을 재실행했습니다. 320px/393px fold, short-height, detail, account, meal, receipt/label, source review, keyboard, safe-area, large text, reduced motion, contrast, light/dark 계약을 함께 확인했습니다.
+- Native full viewport lane: `44 passed` (2.8m). 장보기 문구 변경이 기존 native geometry·focus·CTA contract를 침범하지 않았습니다.
+
+## Prototype full-lane after shopping language — 2026-09-22
+
+- 장보기 empty-state copy와 label/readback 누적 변경 이후 prototype 전체 lane을 재실행했습니다. fixture 전용 render-error 로그는 recovery surface가 의도적으로 발생시키는 expected signal입니다.
+- Prototype full lane: `52 passed` (3.2m). home, theme, account, notification, intake, receipt/label, detail, inventory, meal, recovery surface가 최신 source에서 함께 green입니다.
+
+## Web shell boundary after mobile refinement — 2026-09-22
+
+- 장보기 empty-state와 label/readback 누적 변경 이후 web surface를 별도 port `4246`에서 재확인했습니다. phone simulator chrome이 없는 real web shell과 outer runtime dark theme propagation을 함께 검증했습니다.
+- Web surface lane: `2 passed` (10.7s). mobile visual layer가 desktop shell boundary를 침범하지 않습니다.
+
+## Web shell boundary after accumulated focus/readback refinement — 2026-09-22
+
+- accumulated focus/readback, dark state, notification/account, shopping and receipt refinements 이후 web surface를 별도 port `4321`에서 재확인했습니다.
+- Web shell lane: `2 passed` (7.3s). phone simulator chrome 분리와 outer dark theme propagation이 최신 source에서도 유지됩니다.
+
+## Final web-shell baseline before long-navigation fixture — 2026-09-22
+
+- accumulated native focus/readback, busy semantics, toast lifecycle, and cross-surface return changes 이후 web shell을 별도 port `4322`에서 재확인했습니다.
+- Web baseline: `2 passed` (8.3s); mobile runtime integrity: `28 protected files`; `git diff --check`: passed.
+
+## Prototype long sheet-navigation fixture — 2026-09-22
+
+- demo Home에서 notification → food detail → notification row → account sheet → Home 순서로 실제 연속 sheet navigation fixture를 추가했습니다.
+- Long sheet navigation contract: `1 passed` (7.3s). 각 close 이후 최신 유효 trigger와 row focus가 복귀하고, account close가 notification context를 덮지 않습니다.
+
+## Prototype long sheet-navigation with meal context — 2026-09-22
+
+- notification → food detail → notification row → account → Home → meal sheet 순서로 long fixture를 확장했습니다. account와 meal sheet를 닫은 뒤 각 trigger focus가 복귀하는지 확인했습니다.
+- Extended long navigation contract: `1 passed` (9.0s). notification/detail/account/meal context가 누적되어도 마지막 유효 trigger focus를 유지합니다.
+
+## Prototype long-navigation integrity checkpoint — 2026-09-22
+
+- notification date review exact-row return, extended notification/detail/account/meal long navigation, generic modal focus restoration을 최신 source에서 함께 재실행했습니다.
+- Prototype long-navigation checkpoint: `3 passed` (17.9s); mobile runtime integrity: `28 protected files`; `git diff --check`: passed.
+
+## Prototype long-navigation dark narrow reduced-motion — 2026-09-22
+
+- notification → food detail → notification row → account → meal sequence를 `320x740`, dark theme, reduced-motion 조건으로 실행했습니다.
+- Dark narrow long-navigation contract: `1 passed` (5.2s). 각 sheet close 후 trigger focus와 마지막 유효 context가 접근성 환경에서도 유지됩니다.
+
+## Long-navigation return ownership recheck — 2026-09-22
+
+- prototype long sheet navigation과 connected external settings/applied outbox/other-tab notification refresh를 같은 verification cycle에서 재실행했습니다.
+- Long-navigation return recheck: prototype `1 passed` (9.0s), connected `3 passed` (41.3s). 마지막 유효 notification/account/outbox context와 focus가 최신 readback 이후에도 유지됩니다.
+
+## Shopping loading hero state refinement — 2026-09-22
+
+- shopping list가 아직 비어 있는 초기 loading 순간에도 hero가 `장볼 재료가 없어요`를 먼저 말하던 경계를 수정했습니다. 이제 loading 중에는 `장보기 목록을 확인하고 있어요`와 데이터 로딩 설명을 먼저 노출해 empty와 loading을 의미상 분리합니다.
+- Connected shopping state cluster after refinement: `4 passed` (1.2m). item mutation, cross-device refresh, sheet-local failure, retry action 흐름을 모두 재확인했습니다.
+
+## Shopping error hero state refinement — 2026-09-22
+
+- shopping fetch가 실패해 `items`가 비어 있을 때 empty hero가 먼저 보이던 경계를 수정했습니다. 이제 error가 empty보다 우선해 `장보기 목록을 불러오지 못했어요`와 연결 확인/retry 의미를 노출하고, progress 영역도 `다시 확인이 필요해요`로 동기화합니다.
+- Shopping mutation/error regression cluster after refinement: `3 passed` (41.3s). 정상 item mutation과 sheet-local failure/retry 흐름을 함께 통과했습니다.
+
+## Shopping error hierarchy contract coverage — 2026-09-22
+
+- shopping fetch failure fixture에 hero heading `장보기 목록을 불러오지 못했어요`와 progress state `다시 확인이 필요해요`를 직접 검증하는 assertion을 추가했습니다. retry action만 존재하는지보다 error meaning이 empty와 분리되어 노출되는지를 contract로 고정했습니다.
+- Error hierarchy regression cluster: `2 passed` (32.9s). dashboard 연결 유지와 item mutation retry 흐름도 함께 통과했습니다.
+
+## Shopping error retry-focus refinement — 2026-09-22
+
+- error 상태로 shopping sheet가 열릴 때 empty-state action보다 `다시 시도` CTA를 먼저 focus하도록 조정했습니다. 실패 원인을 읽은 직후 복구 action으로 이어지는 keyboard/assistive-tech 흐름을 명시했습니다.
+- Error retry-focus contract: `1 passed` (51.8s). error hero/progress hierarchy, alert, retry CTA focus, connected dashboard 유지가 함께 통과했습니다.
+
+## Shopping retry success focus readback — 2026-09-22
+
+- retry가 error CTA에 focus된 뒤 성공 응답으로 새 shopping row가 들어오는 경우, 이전 error focus cycle이 남아 row focus를 막던 lifecycle 경계를 수정했습니다. retry click을 명시적으로 기록하고 loading 종료 후 remaining row 또는 empty action으로 focus를 넘깁니다.
+- Retry error-to-success focus contract: `1 passed` (44.9s). error CTA focus → retry → authoritative row readback → row focus 순서를 확인했습니다.
+
+## Native full-lane after shopping retry focus — 2026-09-22
+
+- shopping retry success focus lifecycle을 추가한 뒤 native 전체 lane을 재실행했습니다. detail/receipt/label/source review/keyboard/safe-area/large-text/reduced-motion/light-dark geometry와 focus contract를 함께 확인했습니다.
+- Native full viewport lane: `44 passed` (2.7m). retry focus 보강이 다른 mobile sheet의 focus·viewport contract를 침범하지 않았습니다.
+
+## Shopping mutation-chain focus convergence — 2026-09-22
+
+- shopping retry 성공 후 row focus, direct add/delete, cross-device refresh defer, 구매 완료 후 `식품 상세 확인` CTA focus를 하나의 mutation chain으로 재검증했습니다. receive readback CTA는 render/readback timing을 고려해 frame + bounded settle focus로 보강했습니다.
+- Connected shopping mutation chain: `4 passed` (41.3s). retry/readback/direct mutation/receive CTA focus가 현재 source에서 함께 수렴합니다.
+
+## Dark shopping error CTA contrast refinement — 2026-09-22
+
+- dark bottom sheet에서 shopping error panel은 semantic coral token으로 바뀌었지만 retry button이 light-mode 배경/텍스트 토큰을 일부 상속하던 경계를 확인했습니다. dark 전용 coral outline, surface fill, hover/focus-visible contrast를 추가해 error message와 복구 CTA의 hierarchy를 맞췄습니다.
+- Production build after dark error CTA pass: `765 modules`, CSS `280.82KB`; runtime integrity `28 protected files`.
+
+## Dark shopping success/error semantic cluster — 2026-09-22
+
+- dark error retry CTA contrast override 이후 success received CTA와 error/retry/mutation/readback 흐름을 함께 connected 환경에서 재검증했습니다. 피스타치오 success next-action과 coral recovery action이 상태 의미에 맞게 분리되고, shopping mutation contract는 유지됩니다.
+- Connected dark-state semantic cluster: `4 passed` (1.0m). home shopping mutation, receive readback CTA, list fetch failure retry, item mutation retry를 모두 통과했습니다.
+
+## External-sync semantic hierarchy parity check — 2026-09-22
+
+- shopping의 success/error semantic language를 notification external-sync lifecycle과 account stale in-flight decision 상태에 대조했습니다. action-required/queued/applied 상태와 외부 반영 여부 결정 CTA가 기존 notification/account contract에서 유지됩니다.
+- External-sync parity cluster: `3 passed` (40.5s). notification lifecycle summary, applied outbox focus, stale in-flight explicit decision을 함께 통과했습니다.
+
+## Narrow notification sync-summary layout refinement — 2026-09-22
+
+- notification external-sync summary가 inline 3열 고정이라 320px에서 `확인 필요·처리 대기·반영 완료` 라벨이 압축될 수 있던 경계를 수정했습니다. 일반 viewport는 3열을 유지하고 `max-width: 360px`에서는 2열로 재배치해 label/count 판독성을 확보합니다.
+- Connected notification/external-sync cluster after layout change: `3 passed` (49.3s). lifecycle summary, external settings entry, applied outbox focus contract를 유지합니다.
+
+## Account outbox narrow-action parity check — 2026-09-22
+
+- account outbox의 dead-letter retry, blocked mapping task focus, stale in-flight explicit decision action group을 320px 대응 CSS와 함께 점검했습니다. 기존 reconciliation action grid와 max-width 360px column compression이 action label을 유지하도록 이미 분리되어 있어 source 변경 없이 유지했습니다.
+- Connected outbox decision cluster: `3 passed` (38.3s). blocked task focus, dead-letter requeue, stale in-flight decision contract를 통과했습니다.
+
+## Account outbox 320px reconciliation layout — 2026-09-22
+
+- 360px 이하에서 외부 작업 번호 input과 두 reconciliation action이 한 줄에서 압축되던 layout을 수정했습니다. input은 full-width row로 분리하고 `반영됨`·`미반영·재시도`를 2열 action row로 배치해 좁은 화면에서도 label과 touch target을 보존합니다.
+- Connected outbox regression after layout change: `3 passed` (47.7s). mapping, dead-letter retry, stale in-flight decision contract를 유지합니다.
+
+## Account outbox 320px connected viewport contract — 2026-09-22
+
+- Grocy blocked mapping fixture를 실제 Playwright viewport `320x740`으로 실행해 account sheet의 mapping/outbox surface가 narrow action layout과 함께 동작하는지 확인했습니다.
+- Connected 320px account contract: `1 passed` (44.1s). blocked mapping task, location setup, action labels와 outbox focus 흐름이 좁은 viewport에서도 유지됩니다.
+
+## Account reconciliation keyboard/layout contract — 2026-09-22
+
+- stale in-flight reconciliation fixture를 실제 `320x740` viewport에서 실행하고 외부 작업 번호 입력 후 두 action button의 visibility, viewport containment, CSS min-height/tap-target contract를 확인했습니다. transformed preview의 visual rect scale과 CSS touch target을 분리해 검증하도록 assertion을 정리했습니다.
+- Connected 320px reconciliation keyboard/layout contract: `1 passed` (33.2s).
+
+## Account reconciliation keyboard tab-order contract — 2026-09-22
+
+- 320px stale in-flight reconciliation fixture에서 외부 작업 번호 input에 입력한 뒤 `Tab` 이동이 `반영됨` action으로 이어지는지, action 실행 후 readback이 유지되는지 검증했습니다.
+- Connected 320px keyboard tab-order contract: `1 passed` (43.3s). input → primary reconciliation action → authoritative success readback 순서를 유지합니다.
+
+## Account reconciliation dual-action tab-order contract — 2026-09-22
+
+- 320px stale in-flight reconciliation에서 input → `반영됨` → `미반영·재시도` → `반영됨` 역방향 복귀 순서를 keyboard로 직접 검증했습니다. primary action 실행 이후 busy/readback 상태도 기존 contract를 유지합니다.
+- Connected dual-action tab-order contract: `1 passed` (1.0m).
+
+## Account reconciliation busy-state accessibility contract — 2026-09-22
+
+- account reconciliation의 `반영됨`·`미반영·재시도` buttons가 busy 중 disabled text만 바뀌고 상태 의미를 보조기기에 명시하지 않던 경계를 보강했습니다. 두 action에 `aria-busy`를 연결해 저장/재시도 진행 상태를 semantic attribute로 노출합니다.
+- Connected busy/readback regression: `2 passed` (49.3s). dead-letter retry와 stale in-flight decision/readback 흐름을 유지합니다.
+
+## Notification retry busy-state accessibility parity — 2026-09-22
+
+- notification retry action에도 account reconciliation과 동일한 `aria-busy` semantic을 연결했습니다. 현재는 notification 목록 GET/loading lifecycle에서 action busy 상태를 명시하고, read-persistence retry/readback focus는 별도 settle contract로 관리합니다.
+
+## Notification local retry-busy ownership — 2026-09-22
+
+- notification read retry의 POST busy 상태를 parent GET loading과 분리해 NotificationSheet 내부 local state로 소유하도록 보강했습니다. retry button이 사라지는 순간에도 `알림 읽음 상태를 저장하는 중이에요` status를 유지하고 authoritative readback에서 종료합니다.
+- Notification local retry-busy cluster: `3 passed` (27.3s). unread retry gate, date detail return, external-sync lifecycle을 함께 통과했습니다.
+
+## Shopping mutation busy-state accessibility parity — 2026-09-22
+
+- shopping item toggle, receive, delete action들이 `mutating`으로 disabled되지만 assistive-tech busy semantic이 없던 경계를 보강했습니다. 핵심 item/receive/delete buttons에 `aria-busy`를 연결해 notification/account recovery와 같은 상태 언어를 사용합니다.
+- Connected shopping mutation cluster after parity update: `4 passed` (30.2s). home mutation, receive readback, sheet-local failure, item retry 흐름을 유지합니다.
+
+## Sheet-root busy semantic parity — 2026-09-22
+
+- shopping sheet root에 loading/mutating `aria-busy`, notification sheet root에 loading `aria-busy`를 추가해 개별 action뿐 아니라 surface 전체의 진행 상태를 보조기기에 노출하도록 보강했습니다.
+- Connected root-busy regression cluster: `3 passed` (38.3s). shopping mutation/receive와 notification read retry contract를 유지합니다.
+
+## Account sheet-root busy semantic parity — 2026-09-22
+
+- AccountSheet root content에 session checking, auth busy, remote refresh busy를 반영하는 `aria-busy`를 추가해 panel-level busy와 surface-level busy semantic을 맞췄습니다.
+- Connected account busy regression cluster: `3 passed` (42.4s). mapping, dead-letter retry, stale in-flight decision/readback contract를 유지합니다.
+
+## Shopping manual/receive busy-state parity — 2026-09-22
+
+- shopping manual direct-add submit과 receive panel submit/cancel action에도 `aria-busy={mutating}`를 연결해 item toggle/receive/delete와 동일한 mutation busy semantic으로 맞췄습니다.
+- Connected shopping recovery after parity update: `4 passed` (34.3s). home mutation, receive readback, sheet-local failure, item retry 흐름을 유지합니다.
+
+## Shopping receive close-mid-request recovery — 2026-09-22
+
+- shopping receive POST를 gate한 상태에서 sheet를 닫고, 응답 release 후 shopping sheet를 재진입하는 controlled fixture를 추가했습니다. received notice와 `식품 상세 확인` CTA가 다시 mount되고 CTA focus가 복원되는지 확인했습니다.
+- Close-mid-request receive contract: `1 passed` (26.8s). mutation 중 sheet close 이후 readback notice/focus가 유실되지 않습니다.
+
+## Shopping root busy transition contract — 2026-09-22
+
+- receive POST를 gate한 close-mid-request fixture에서 shopping sheet root의 `aria-busy=true`를 직접 확인하고, 응답 release/reopen 후 `aria-busy=false`와 received CTA focus를 함께 확인했습니다.
+- Shopping root busy transition: `1 passed` (31.8s).
+
+## Notification detail close-mid-readback repeat — 2026-09-22
+
+- notification read mutation과 queued remote refresh가 진행되는 동안 food detail로 이동한 뒤 돌아오는 흐름, storage mutation 중 detail readback 흐름을 `repeat-each=2`로 실행했습니다.
+- Notification detail close/readback repeat: `4 passed` (41.0s). detail close 이후 notification row/context focus와 dashboard/notification readback이 독립적으로 수렴합니다.
+
+## Account outbox close/readback repeat isolation — 2026-09-22
+
+- blocked mapping focus, dead-letter requeue, stale in-flight reconciliation을 `repeat-each=2`, `workers=1`로 실행해 account outbox의 action/readback focus가 이전 attempt나 다른 surface context를 끌고 오지 않는지 확인했습니다.
+- Account outbox close/readback repeat: `6 passed` (44.2s). 두 실행 모두 mapping/requeue/reconciliation state와 focus context가 독립적으로 수렴합니다.
+
+## Cross-surface local busy-state cluster — 2026-09-22
+
+- shopping item retry, notification read retry, account dead-letter requeue, stale in-flight reconciliation을 같은 serial connected run에서 실행했습니다.
+- Cross-surface busy cluster: `4 passed` (34.8s). disabled/aria-busy, retry focus, readback success, reconciliation decision이 세 surface에서 서로 간섭하지 않습니다.
+- Notification/external-sync regression after parity update: `2 passed` (40.9s). unread retention retry와 external lifecycle summary contract를 유지합니다.
+
+## Grocy retry/stale-refresh busy-state parity — 2026-09-22
+
+- account Grocy error retry와 workspace readback stale refresh action에도 `disabled` + `aria-busy` semantic을 연결해 notification/reconciliation과 동일한 접근성 busy contract로 맞췄습니다.
+- Connected account/outbox regression after parity update: `3 passed` (1.1m). blocked mapping, dead-letter retry, stale in-flight decision/readback 흐름을 유지합니다.
+
+## Notification retry focus ownership parity — 2026-09-22
+
+- notification error가 발생했을 때 active element가 body/close context인 경우 retry CTA로 focus를 handoff하도록 보강했습니다. 이미 notification row를 명확히 조작 중인 경우에는 기존 row focus를 덮어쓰지 않습니다.
+- Connected notification focus cluster: `3 passed` (56.5s). unread read-persistence retry, date reminder detail return, external-sync lifecycle을 함께 통과했습니다.
+
+## Notification retry focus priority correction — 2026-09-22
+
+- read persistence failure에서 active notification row가 연결되어 있어도 복구 action이 필요한 경우 retry CTA가 우선 focus되어야 하는 경계를 확인했습니다. 조건부 guard를 제거해 notification error retry가 항상 focus를 reclaim하도록 조정했습니다.
+- Connected notification focus regression after correction: `3 passed` (1.0m). unread retry focus, date detail return, external-sync lifecycle을 함께 통과했습니다.
+
+## Notification retry readback focus settlement — 2026-09-22
+
+- retry action을 누른 직후 error가 먼저 clear되고 readback notification row가 늦게 rerender되는 경계에서 one-frame focus가 소실되던 문제를 확인했습니다. bounded 1.2s settle focus로 최신 row/summary를 반복 재집중해 retry readback focus를 안정화했습니다.
+- Connected notification readback focus cluster: `3 passed` (48.9s). unread retry→read row, date detail return, external-sync lifecycle을 함께 통과했습니다.
+
+## Native full-lane after notification retry settlement — 2026-09-22
+
+- notification retry readback의 bounded focus settle 변경 이후 native 전체 lane을 재실행했습니다. notification date review, detail return, receipt/label intake, keyboard, safe-area, reduced-motion, large-text, dark/light geometry를 함께 확인했습니다.
+- Native full viewport lane: `44 passed` (2.5m). notification recovery focus 변경이 다른 mobile sheet contract를 침범하지 않았습니다.
+
+## Notification retry multi-attempt settlement — 2026-09-22
+
+- notification read persistence failure → retry → read row focus 흐름을 `repeat-each=2`로 재실행해 bounded settle timer가 다음 attempt에 남지 않는지 확인했습니다.
+- Notification retry multi-attempt contract: `2 passed` (43.6s). 두 실행 모두 retry CTA focus와 readback row focus가 동일하게 수렴했습니다.
+
+## Account outbox multi-attempt recovery settlement — 2026-09-22
+
+- dead-letter requeue와 stale in-flight reconciliation을 각각 `repeat-each=2`로 실행해 account retry/readback 상태가 이전 attempt의 timer나 focus를 끌고 오지 않는지 확인했습니다.
+- Account outbox multi-attempt contract: `4 passed` (47.8s). requeue와 explicit decision/readback이 각 실행에서 독립적으로 수렴합니다.
+
+## Cross-surface storage notification readback ownership fix — 2026-09-22
+
+- storage mutation이 dashboard readback만 기다리고 notification read model을 암묵적 fire-and-forget에 맡기던 경계를 재현했습니다. storage mutation sync boundary를 별도 ownership으로 분리해 dashboard 이후 notification refresh 완료까지 명시적으로 대기하도록 보강했습니다.
+- Cross-surface storage/notification cluster: `4 passed` (1.2m). storage readback, external sync attention, external settings entry, open food detail notification convergence가 함께 통과합니다.
+
+## Mutation dependent-surface collision cluster — 2026-09-22
+
+- receipt queue cross-device refresh, storage mutation dashboard+notification readback, authoritative receipt date-review follow-up, manual-food idempotency retry, manual-food failure recovery를 하나의 connected cluster로 실행했습니다.
+- Mutation dependent-surface cluster: `5 passed` (47.7s). receipt summary, dashboard, notification, manual-food retry read models가 서로 cancel/overwrite하지 않는 현재 ownership을 확인했습니다.
+
+## Cross-surface receipt follow-up at 320px — 2026-09-22
+
+- authoritative receipt commit → inventory readback → date-review follow-up 경로를 connected `320x740` viewport에서 실행해 toast, follow-up CTA, sheet return이 narrow boundary를 넘지 않는지 확인했습니다.
+- Connected 320px receipt follow-up contract: `1 passed` (29.6s). receipt mutation/readback ownership과 narrow mobile presentation을 함께 유지합니다.
+
+## Cross-surface manual-food/storage recovery at 320px — 2026-09-22
+
+- manual food idempotency retry, manual food persistence failure retry, storage mutation dashboard+notification readback을 connected `320x740` 조건에서 함께 검증했습니다.
+- Connected 320px manual/storage recovery cluster: `3 passed` (1.0m). toast, retry action, inventory focus, notification readback이 narrow mutation 흐름에서 함께 수렴합니다.
+
+## Cross-surface toast-action focus chain — 2026-09-22
+
+- expired printed-date의 label recheck→detail 복귀, storage sync attention→external settings, detail mutation→notification lifecycle, queued notification→food detail navigation을 하나의 focus/context cluster로 검증했습니다.
+- Connected toast/action return cluster: `4 passed` (45.3s). toast action을 통한 detail/account/notification 전환과 원래 context return contract가 현재 source에서 함께 유지됩니다.
+
+## Cross-surface mutation sequence at 320px — 2026-09-22
+
+- receipt follow-up, storage readback, manual-food idempotency/failure recovery를 connected `320x740` 조건에서 묶어 재검증했습니다. toast action, retry, detail/account/notification return context가 연속 mutation에서도 충돌하지 않는지 확인했습니다.
+- Cross-surface 320px mutation cluster: `3 passed` (1.0m). narrow toast/focus/readback 흐름이 receipt·storage·manual-food에서 일관됩니다.
+
+## Live 393px dark state-hierarchy readback — 2026-09-22
+
+- native live preview `4264`에서 393px dark Home을 직접 캡처해 summary, priority list, meal CTA/add-food pair, bottom navigation의 상태 hierarchy를 확인했습니다. summary의 coral/amber/blue state dots와 main meal CTA가 서로 경쟁하지 않고 읽혔습니다.
+- account outbox와 notification sync summary는 live preview에서 직접 진입할 수 있는 fixture state가 없어 source/CSS와 connected contract로 대조했고, 좁은 viewport column rules 및 action state semantics는 별도 QA cluster로 유지했습니다. 실제 account-backed device acceptance를 대체하지 않는 visual evidence입니다.
+
+## Account outbox multi-state action cluster — 2026-09-22
+
+- blocked product mapping, dead-letter requeue, stale in-flight explicit decision, custom storage location management를 함께 검증해 outbox action group이 상태 갱신 중에도 잘못된 작업을 덮어쓰지 않는지 확인했습니다.
+- Connected account/outbox cluster: `4 passed` (56.2s). mapping, retry, reconciliation, custom location readback contract를 모두 유지합니다.
+
+## Toast lifecycle cross-surface regression — 2026-09-22
+
+- manual food success focus, storage sync attention → external settings action, receipt date-review follow-up, manual food failure retry를 묶어 toast/action lifecycle이 stale action을 남기지 않는지 검증했습니다.
+- Toast lifecycle cluster: `4 passed` (manual fixture `9.0s` + connected cluster `3 passed` in `54.9s`). 각 mutation 결과의 action label과 다음 sheet context가 현재 결과에 맞게 교체됩니다.
+
+## Async late-response state ownership spot-check — 2026-09-22
+
+- receipt intake의 older upload late response와 planner cross-device revision 중 local choice 보존을 함께 실행해 async 결과 순서 역전이 최신 toast/read model/local draft를 덮어쓰지 않는지 확인했습니다.
+- Async ownership spot-check: `2 passed` (29.5s). newest upload와 explicit planner reload ownership이 현재 source에서 유지됩니다.
+
+## Stale notification long-journey recovery — 2026-09-22
+
+- stale food notification의 최신 inventory recovery, queued notification refresh 중 food detail 진입, remote worker mutation 후 linked sync history refresh를 하나의 timing cluster로 재실행했습니다.
+- Stale notification recovery cluster: `3 passed` (29.6s). stale recovery와 detail readback이 최신 state를 보존하며 focus/context를 덮어쓰지 않습니다.
+
+## Stale recovery toast-action ownership — 2026-09-22
+
+- 연결된 식품이 사라진 stale notification의 `최신 재고 확인` action과 expired printed date의 label recheck→detail action을 함께 실행했습니다.
+- Stale action ownership cluster: `2 passed` (38.9s). 잘못된 food detail을 열지 않고, 현재 상태에 맞는 최신 inventory/detail recovery action만 실행됩니다.
+
+## Controlled stale-recovery action/readback race — 2026-09-22
+
+- `최신 재고 확인` action 직후 dashboard GET을 의도적으로 gate해 사용자의 recovery action이 readback보다 먼저 실행되는 경계를 만들었습니다. gate release 후 최신 Home/inventory presentation과 action ownership을 확인했습니다.
+- Controlled stale-recovery race: `1 passed` (41.1s). 사용자 action이 delayed remote readback에 의해 취소되거나 잘못된 detail로 전환되지 않습니다.
+
+## Async toast/retry repeat isolation audit — 2026-09-22
+
+- receipt late-response와 storage sync attention은 parallel repeat에서도 통과했지만, manual-food retry는 shared disposable workspace를 사용하는 `repeat-each=2` parallel 실행에서 workspace conflict 후보가 발생했습니다. 동일 테스트를 `workers=1`로 반복해 `2 passed` (34.2s)로 재확인했습니다.
+- 이 결과는 제품 retry contract보다 test worker workspace isolation 경계로 분리하고, source 변경 없이 기록합니다. connected mutation tests의 repeat evidence는 단일 worker 기준으로 해석합니다.
+
+## Manual-food authoritative-row focus settlement — 2026-09-22
+
+- manual-food idempotency retry에서 authoritative inventory row는 도착했지만 dashboard/notification readback rerender가 단일 focus handoff를 덮을 수 있는 경계를 재현했습니다. pending added-food focus를 bounded 1s settle cycle로 보강해 최신 inventory row를 재집중하도록 수정했습니다.
+- 단독 manual-food retry verification: `1 passed` (36.8s). parallel repeat에서 관찰된 workspace/readback timing 변동은 product failure가 아닌 harness/response timing 후보로 별도 분리합니다.
+
+## Manual-food sheet-close focus ownership fix — 2026-09-22
+
+- intake sheet close button이 정상적인 mutation return trigger인데 pending added-food focus effect가 이를 다른 interaction으로 오판해 focus intent를 지우던 경계를 수정했습니다. sheet close button을 expected focus context로 허용했습니다.
+- Dark/narrow manual-food retry repeat after fix: `2 passed` (54.2s). authoritative inventory row focus가 두 attempt에서 안정적으로 수렴합니다.
+
+## Sheet-close ownership parity for receipt/label intake — 2026-09-22
+
+- manual-food에서 sheet-close button을 정상적인 mutation return context로 허용한 뒤 receipt editor/label result/source review의 keyboard·commit·focus contract를 대조했습니다.
+- Native receipt/label focus cluster: `5 passed` (29.3s); prototype receipt/label cluster: `4 passed` (28.2s). sticky commit action, source focus, label confirmation, bottom-sheet keyboard containment이 모두 유지됩니다.
+
+## Sheet-close ownership parity for account/notification — 2026-09-22
+
+- account login sheet first viewport, notification date review exact-row return, generic Bottom Sheet modal semantics/keyboard focus를 receipt/label close ownership과 대조했습니다.
+- Native account/notification close cluster: `3 passed` (33.6s); prototype modal/notification cluster: `3 passed` (13.8s). sheet close trigger가 기존 context focus를 잘못 덮지 않습니다.
+
+## Cross-surface accumulated return-context cluster — 2026-09-22
+
+- external-sync notification → account settings, storage mutation → open notification/food detail, remote worker mutation → linked sync history, other-tab workspace mutation → open notification center를 하나의 connected return-context cluster로 검증했습니다.
+- Accumulated return-context cluster: `4 passed` (40.0s). 마지막 유효 sheet context와 linked readback focus가 여러 remote mutation 경로에서 유지됩니다.
+
+## Notification-to-account return context at 320px — 2026-09-22
+
+- external-sync notification → account external inventory settings와 applied notification → completed outbox detail을 connected `320x740` viewport에서 실행했습니다.
+- Connected 320px notification/account return cluster: `2 passed` (23.9s). 좁은 sheet stack에서도 external settings entry와 completed outbox focus가 유지됩니다.
+
+## Notification-to-account dark return context — 2026-09-22
+
+- external-sync notification → account settings와 applied notification → completed outbox detail을 `320x740` dark theme으로 실행해 상태 color, action contrast, focus return을 함께 검증했습니다.
+- Connected 320px dark notification/account cluster: `2 passed` (36.6s). dark semantic state와 좁은 sheet return contract가 함께 유지됩니다.
+
+## Dark 320px long sheet-navigation sequence — 2026-09-22
+
+- expired label recheck→detail, storage sync attention→external settings, external-sync notification→settings, applied notification→outbox detail을 모두 `320x740` dark 조건으로 실행했습니다.
+- Dark 320px long-navigation cluster: `4 passed` (38.7s). 여러 sheet 전환 뒤 state color, toast/action, focus return ownership이 마지막 유효 context를 유지합니다.
+
+## Dark 320px reduced-motion return sequence — 2026-09-22
+
+- external-sync notification → account settings와 applied notification → outbox detail을 dark `320x740` + `prefers-reduced-motion: reduce` 조건에서 실행했습니다.
+- Reduced-motion return cluster: `2 passed` (35.8s). animation settling 없이도 settings/detail entry, focus return, state color hierarchy가 유지됩니다.
+
+## Long notification-account-food history sequence — 2026-09-22
+
+- applied notification → account outbox timeline → linked food detail → storage history evidence expand/collapse → remote worker readback까지 이어지는 기존 long sequence를 dark/narrow/reduced-motion 조건에서 재검증했습니다.
+- Applied notification long sequence: connected focus/readback contract passed. outbox evidence summary, food history highlight, remote succeeded state, and summary focus return이 한 세션에서 유지됩니다.
+
+## Applied outbox long-sequence repeatability — 2026-09-22
+
+- applied notification → outbox timeline → linked food history → evidence expand/collapse → remote worker readback sequence를 `repeat-each=2`, `workers=1`로 반복 실행했습니다.
+- Applied outbox repeat contract: `2 passed` (40.5s). 두 실행 모두 evidence focus, queued→succeeded readback, summary return ownership을 독립적으로 유지합니다.
+
+## Applied outbox failure-to-success recovery repeat — 2026-09-22
+
+- applied outbox evidence sequence, dead-letter requeue, stale in-flight explicit decision을 `repeat-each=2`, `workers=1`, reduced-motion 조건으로 함께 실행했습니다.
+- Outbox failure-to-success recovery: `6 passed` (54.7s). failure/requeue/decision/readback가 각 attempt에서 독립적으로 수렴하고 evidence focus와 timeline ownership이 유지됩니다.
+
+## Cross-surface notification/account recovery isolation — 2026-09-22
+
+- notification read retry, applied notification outbox detail, dead-letter requeue, stale in-flight decision을 같은 serial connected run에서 교차 실행했습니다.
+- Cross-surface recovery isolation: `4 passed` (48.7s). notification settle focus/readback timer가 account outbox action ownership을 침범하지 않고, account recovery가 이후 notification context를 오염시키지 않습니다.
+
+## Shopping-notification-account serial recovery isolation — 2026-09-22
+
+- shopping receive readback, notification unread retry/readback, account dead-letter requeue를 같은 serial connected session에서 연속 실행했습니다.
+- Serial three-surface recovery: `3 passed` (40.1s). shopping received CTA focus, notification retry settle, account requeue focus/readback이 서로 간섭하지 않습니다.
+
+## Dark 320px three-surface recovery — 2026-09-22
+
+- shopping receive, notification unread retry, account dead-letter requeue를 `320x740` + dark + reduced-motion 조건으로 같은 connected session에서 실행했습니다.
+- Dark 320px three-surface recovery: `3 passed` (37.3s). success/retry/requeue semantic colors, focus settle, readback ownership이 세 surface에서 함께 유지됩니다.
+
+## Dark 320px full mutation journey after focus ownership fix — 2026-09-22
+
+- manual-food sheet-close focus ownership 보강 이후 receipt·storage·manual-food·shopping·notification 다섯 mutation flow를 최신 source에서 다시 실행했습니다.
+- Dark 320px full mutation journey: `5 passed` (53.5s). 다섯 surface의 toast, focus, sheet return, dashboard/notification/inventory readback이 현재 implementation에서 함께 수렴합니다.
+
+## Native full-lane after cross-surface focus ownership — 2026-09-22
+
+- manual-food sheet-close ownership, notification retry readback settle, storage sync dependent refresh 누적 변경 이후 native 전체 lane을 재실행했습니다.
+- Native full viewport lane: `44 passed` (2.0m). 320px/393px geometry, dark/light, keyboard, reduced-motion, safe-area, receipt/label/detail/notification/account focus contract가 모두 유지됩니다.
+
+## Connected worker workspace isolation hardening — 2026-09-22
+
+- repeat-each 실행에서 disposable connected API workspace가 parallel worker 사이에 섞이지 않도록 `playwright.connected.config.ts`에 `workers: 1`을 명시했습니다. 일반 connected 실행과 반복 실행 모두 동일한 serial workspace contract를 사용합니다.
+- Manual-food retry repeat after harness hardening: `2 passed` (44.0s, `repeat-each=2`). 이전에 parallel에서 관찰된 workspace conflict 없이 두 attempt가 독립적으로 통과했습니다.
+
+## Serial full mutation journey baseline — 2026-09-22
+
+- serial connected harness에서 shopping receive, storage dashboard+notification readback, receipt date-review follow-up, notification retry/readback, manual-food idempotency retry를 하나의 representative cluster로 실행했습니다.
+- Serial full mutation journey baseline: `5 passed` (58.5s). receipt·storage·manual·shopping·notification read models가 하나의 disposable workspace에서 연속으로 수렴합니다.
+
+## Serial full mutation journey at 320px — 2026-09-22
+
+- shopping receive와 notification retry fixture까지 `320x740` viewport로 확장해 receipt·storage·manual·shopping·notification representative journey를 모두 narrow condition에서 실행했습니다.
+- Serial 320px mutation journey: `5 passed` (1.2m). toast, focus, sheet return, dashboard/notification/inventory readback이 좁은 viewport에서도 함께 수렴합니다.
+
+## Serial 320px mutation stress repeat — 2026-09-22
+
+- receipt·storage·manual-food·shopping·notification representative journey를 `repeat-each=2`, `workers=1`, `320x740` 조건으로 실행해 실패→retry→성공 상태가 교차해도 마지막 mutation의 toast/action/focus/readback만 남는지 확인했습니다.
+- Serial 320px mutation stress: `10 passed` (1.5m). 두 반복 모두 stale action, 이전 focus, workspace collision 없이 수렴했습니다.
+
+## Toast action consumption contract — 2026-09-22
+
+- manual food success toast의 `날짜·보관 상태 확인` action을 detail sheet로 소비한 뒤 이전 toast action이 남지 않는지 assertion을 추가했습니다.
+- Prototype toast action consumption: `1 passed` (12.4s). action click 후 detail focus와 toast action cleanup이 함께 유지됩니다.
+
+## Toast action async consumption repeatability — 2026-09-22
+
+- manual food success toast action을 detail로 소비한 뒤 늦은 async state update가 이전 action을 다시 mount하지 않는지 `repeat-each=2`로 실행했습니다.
+- Toast async consumption contract: `2 passed` (14.1s). 두 실행 모두 action cleanup과 detail focus가 독립적으로 수렴했습니다.
+
+## Rapid toast replacement action cluster — 2026-09-22
+
+- date confirmation retry, storage sync attention, receipt date-review follow-up, manual food failure retry를 묶어 현재 toast/action message와 callback이 같은 mutation 결과를 가리키는지 검증했습니다.
+- Rapid toast replacement cluster: `4 passed` (1.0m). 빠른 상태 교체에서도 이전 action label/closure가 다음 mutation 결과에 남지 않습니다.
+
+## Prototype toast-action replacement spot-check — 2026-09-22
+
+- manual food focus, date-warning safety review, user-confirmed reminder reopen 흐름을 fixture lane에서 다시 실행해 toast와 다음 action이 이전 상태의 action을 유지하지 않는지 확인했습니다.
+- Prototype toast-action spot-check: `3 passed` (12.5s).
+
+## Narrow sheet heading hierarchy — 2026-09-22
+
+- 320px 모바일에서 알림/장보기 시트의 긴 제목과 보조 액션이 같은 행에서 충돌하지 않도록 제목 열을 유연하게 감싸고, `모두 읽음` 액션의 최소 터치 높이와 장보기 동기화 상태의 말줄임을 추가했습니다.
+- Native narrow sheet spot-check: `4 passed` (16.4s). 알림 헤더, 알림 복귀, 바텀시트 키보드 포커스, 주요 시트 320px containment가 유지됩니다.
+- Runtime/build: `check:runtime` passed (28 protected files), production build passed (765 modules).
+
+## Review-gated consume action messaging — 2026-09-22
+
+- 날짜·보관 상태 재확인이 필요한 식품 상세에서 일반 `먹었어요` 문구를 `확인 후 먹었어요`로 분리하고, 동일한 의미의 접근성 이름과 안전 안내 연결을 추가했습니다.
+- 해당 상태에서만 amber semantic treatment를 적용해 추가 확인 단계가 버튼을 누르기 전에 보이도록 했습니다. 일반 소비 기록과 변경 저장 흐름은 유지했습니다.
+- Native detail action regression: `1 passed` (5.5s); runtime/build passed (28 protected files, 765 modules).
+
+## Safety-to-action visual bridge — 2026-09-22
+
+- 날짜·보관 상태 재확인이 필요한 상세 화면에서 하단 기록 액션 그룹에 `안전 확인 후 기록` 연결 라벨과 amber 경계를 추가했습니다. 긴 상세 콘텐츠를 읽은 뒤에도 마지막 행동의 전제조건이 끊기지 않도록 했습니다.
+- Native detail cluster: `3 passed` (6.2s). 안전 안내 뒤 액션 순서, 날짜 재확인 포커스, 320px safe-area 위치를 유지합니다.
+- Runtime/build/diff: 28 protected files passed, 765 modules built, `git diff --check` passed.
+
+## Provenance confidence hierarchy — 2026-09-22
+
+- 상세 화면의 구매 출처·상품 정보 출처·AI 소비 우선순위 근거가 모두 동일한 녹색 계열로 읽히던 문제를 분리했습니다. 구매 출처는 확인된 기록으로 유지하고, 상품 정보 후보는 blue, AI 우선순위는 amber로 표현해 참고 정보가 확정 사실처럼 보이지 않도록 했습니다.
+- Native provenance/readability cluster: `7 passed` (13.8s). light/dark detail review, receipt review, large text, compact safety guidance, action order, 320px safe-area가 모두 유지됩니다.
+- Runtime/build/diff: 28 protected files passed, 765 modules built, `git diff --check` passed.
+
+## Confirmed-record-first provenance order — 2026-09-22
+
+- 상세 화면의 참고 출처 그룹을 AI 소비 우선순위 근거보다 먼저 배치해, 사용자가 확인한 구매 기록을 참고용 후보/AI 힌트보다 먼저 읽도록 정리했습니다.
+- Native provenance order cluster: `3 passed` (13.9s). light/dark detail review에서 출처 순서, 영수증 검토 가독성, 320px 주요 시트 containment가 유지됩니다.
+- Runtime/build/diff: 28 protected files passed, 765 modules built, `git diff --check` passed.
+
+## Provenance role labels — 2026-09-22
+
+- 구매 출처와 상품 정보 출처의 첫 줄에 각각 `확인된 기록`과 `참고 후보` 역할 라벨을 추가해 카드 본문을 읽기 전에도 정보의 확정 정도를 파악할 수 있게 했습니다.
+- Native provenance readability spot-check: `3 passed` (12.3s). light/dark detail review, receipt review legibility, 320px sheet containment를 유지합니다.
+- Runtime/build/diff: 28 protected files passed, 765 modules built, `git diff --check` passed.
+
+## Date evidence confidence states — 2026-09-22
+
+- 날짜 근거 카드에 `user-confirmed`, `unknown`, `estimated`, `printed` 상태 클래스를 명시적으로 연결했습니다. 사용자 확인값은 확정 기록 톤, 미확인은 amber 주의 톤, AI 기반 우선순위는 blue 참고 톤으로 분리해 직접 입력값과 미확인 상태가 같은 무게로 보이지 않게 했습니다.
+- Native date/detail cluster: `9 passed` (29.1s). light/dark detail review, 320px date save, confirmed date readability, notification return, large text, safety action order, safe-area contract가 유지됩니다.
+- Runtime/build/diff: 28 protected files passed, 765 modules built, `git diff --check` passed.
+
+## Date-state action messaging — 2026-09-22
+
+- 날짜 상태별 진입 액션을 분리했습니다. 사용자 확인값은 `확인한 알림 날짜 수정`, 미확인 날짜는 `확인하지 못한 날짜 입력`, 기존 추정/표시 날짜는 기존 포장지 확인 흐름을 유지합니다.
+- `unknown` 진입 버튼에는 amber treatment를 추가해 확인이 필요한 상태에서 다음 행동이 자연스럽게 이어지도록 했습니다.
+- Native date/action cluster: `9 passed` (27.8s). 320px 저장, 사용자 확인 날짜, 알림 복귀, 큰 글씨, 안전 액션 순서, safe-area contract가 유지됩니다.
+- Runtime/build/diff: 28 protected files passed, 765 modules built, `git diff --check` passed.
+
+## Narrow date evidence density — 2026-09-22
+
+- 320px 날짜 카드에 상태 접근성 이름을 연결하고, 카드/입력 액션의 보조 문구와 패딩을 좁은 화면에서만 압축해 핵심 날짜와 다음 행동이 먼저 보이도록 했습니다.
+- Native date density cluster: `10 passed` (26.2s). 320px 저장·복귀·안전 액션·큰 글씨·safe-area가 유지됩니다.
+- Runtime/build/diff: 28 protected files passed, 765 modules built, `git diff --check` passed.
+
+## Date editor cancel focus return — 2026-09-22
+
+- 날짜 편집을 취소할 때 상세 시트가 현재 스크롤 위치를 잃거나 포커스를 브라우저 기본 위치로 넘기지 않도록, 날짜 입력 액션을 다시 노출하고 `nearest` 스크롤·포커스 복귀를 연결했습니다.
+- Date editor return regression: `1 passed` (6.3s). 320px에서 편집기 취소 후 날짜 입력 버튼 focus와 화면 내 위치가 함께 유지됩니다.
+- Runtime/build/diff: 28 protected files passed, 765 modules built, `git diff --check` passed.
+
+## Product provenance cancel focus parity — 2026-09-22
+
+- 상품 출처 재확인에서 삭제 확인을 취소할 때 원래 `상품 출처 다시 확인` 액션으로 `nearest` 스크롤·포커스를 복귀시키는 계약을 날짜 편집 취소 흐름과 맞췄습니다.
+- Detail focus parity cluster: `3 passed` (13.2s). light/dark detail review, date editor cancel return, 320px major sheet containment가 유지됩니다.
+- Runtime/build/diff: 28 protected files passed, 765 modules built, `git diff --check` passed.
+
+## Product provenance cancel regression — 2026-09-22
+
+- 상품 출처 삭제 확인에서 `취소`를 누르면 원래 `상품 출처 다시 확인` 액션으로 `nearest` 스크롤·포커스를 복귀시키도록 구현했습니다. 날짜 편집 취소와 동일한 보조 편집 복귀 규칙입니다.
+- Detail parity cluster: `3 passed` (13.2s). light/dark detail review, date editor cancel return, 320px major sheet containment이 최신 소스에서 유지됩니다.
+- Runtime/build/diff: 28 protected files passed, 765 modules built, `git diff --check` passed.
+
+## Label review lazy-load retry context — 2026-09-22
+
+- 상세에서 라벨 검토를 여는 lazy chunk 로딩이 실패한 뒤 토스트의 재시도로 다시 열 때 `returnSheet="detail"`을 보존하도록 수정했습니다. 이전에는 재시도 경로에서 인자가 빠져 독립 입력 화면으로 열릴 수 있었습니다.
+- Native detail/intake cluster: `8 passed` (28.8s). detail review, storage save, confirmed date, date cancel focus, notification return, barcode, label confirmation, review-required routing이 최신 소스에서 유지됩니다.
+- Runtime/build/diff: 28 protected files passed, 765 modules built, `git diff --check` passed.
+
+## Storage mutation status semantics — 2026-09-22
+
+- 보관 위치·개봉 상태 변경 시 `저장 필요 · ...` 상태를 `aria-live="polite"`로 노출하고, 저장 버튼 접근성 이름에도 변경 항목을 포함했습니다. 기존 날짜 검토/토스트 `role="status"`와 중복되지 않도록 status role은 추가하지 않았습니다.
+- Native storage action cluster: `4 passed` (12.7s). 320px 저장 readback, 큰 글씨 action bounds, 안전 액션 순서, safe-area 위치가 유지됩니다.
+- Runtime/build/diff: 28 protected files passed, 765 modules built, `git diff --check` passed.
+
+## Unsaved storage change disclosure — 2026-09-22
+
+- 보관 위치·개봉 상태를 바꾼 뒤 아직 저장하지 않은 상태에서는 액션 바 아래에 `저장하지 않고 닫으면 변경한 보관 상태는 반영되지 않아요.`를 amber note로 노출했습니다. 부모까지 draft 상태를 올리는 큰 구조 변경 없이, 현재 닫기 동작의 손실 가능성을 사용자에게 명확히 알립니다.
+- Native storage action cluster: `5 passed` (15.1s). 320px storage save readback, camera safe-area, large-text bounds, safety action order, food-detail safe-area가 유지됩니다.
+- Runtime/build/diff: 28 protected files passed, 765 modules built, `git diff --check` passed.
+
+## Unsaved storage disclosure regression — 2026-09-22
+
+- 320px 보관 위치 변경 테스트에 저장 전 손실 안내 문구를 고정해, 변경 상태에서 안내가 노출되는 계약을 회귀 방지 항목으로 추가했습니다.
+- Storage disclosure spot-check: `1 passed` (4.7s). 냉동 변경 후 안내 노출과 저장 후 기존 readback/focus가 함께 유지됩니다.
+
+## Unsaved storage close isolation — 2026-09-22
+
+- 320px에서 보관 위치를 변경하고 저장하지 않은 채 상세를 닫는 경로를 추가 검증했습니다. 식품 목록 행 텍스트가 원래 값으로 유지되고, 목록 포커스가 해당 행으로 복귀해 draft 값이 readback에 섞이지 않습니다.
+- Storage close isolation cluster: `2 passed` (7.1s). unsaved close와 saved readback을 같은 native lane에서 함께 확인했습니다.
+- Runtime/build/diff: 28 protected files passed, 765 modules built, `git diff --check` passed.
+
+## Product info editor cancel focus parity — 2026-09-22
+
+- 상품명·브랜드·분류 편집을 취소할 때 원래 `상품 정보 수정` 액션으로 `nearest` 스크롤·포커스를 복귀시키도록 날짜 편집·상품 출처 확인과 같은 보조 편집 규칙을 적용했습니다.
+- Native detail regression cluster: `5 passed` (12.9s). detail review, storage save, large-text action bounds, safety action order, 320px safe-area가 유지됩니다.
+- Runtime/build/diff: 28 protected files passed, 765 modules built, `git diff --check` passed.
+
+## Product info cancel and persistence parity — 2026-09-22
+
+- 320px native fixture에 상품 정보 편집 취소 회귀를 추가했습니다. 임시 상품명을 입력해도 취소 후 원래 상품명과 `상품 정보 수정` 액션 포커스가 유지됩니다.
+- Connected product-info/provenance cluster: `2 passed` (48.3s). 저장 실패 retry와 출처 삭제 성공/readback 실패 경계가 최신 구현에서 유지됩니다.
+- Native cancel regression: `1 passed` (5.4s).
+
+## Product info readback ordering verification — 2026-09-22
+
+- Connected 상품 정보 persistence flow를 최신 소스에서 재실행해 저장 후 상세 hero의 상품명·브랜드·수량·보관 상태·날짜 근거가 함께 최신값으로 보이고, 상품 정보 변경 이력과 닫은 뒤 priority card까지 같은 readback을 사용하는지 확인했습니다.
+- Connected printed-date/provenance readback: `1 passed` (30.8s). 날짜 의미, 상품 후보 출처, 변경 이력, 저장 후 priority 표시가 서로 오래된 값을 섞지 않습니다.
+- Previous connected product-info/provenance cluster remains `2 passed` (48.3s).
+
+## Product info cross-surface readback parity — 2026-09-22
+
+- 저장 후 상세를 닫은 뒤 priority card뿐 아니라 inventory row에도 최신 상품명이 표시되고, 이전 상품명이 목록에 남지 않는 assertion을 추가했습니다.
+- Connected cross-surface readback: `1 passed` (33.8s). 상세 hero·변경 이력·priority card·inventory row가 최신 상품 정보로 함께 수렴합니다.
+
+## Product info save busy semantics — 2026-09-22
+
+- 상품 정보 편집 그룹과 저장 버튼에 `aria-busy`를 연결해 저장 중 입력 비활성화와 서버 persistence 상태가 동일한 접근성 신호를 갖도록 했습니다.
+- Connected product-info cluster: `2 passed` (43.5s). 저장 후 cross-surface readback과 persistence failure retry가 최신 구현에서 유지됩니다.
+- Runtime/build/diff: 28 protected files passed, 765 modules built, `git diff --check` passed.
+
+## Product provenance mutation busy semantics — 2026-09-22
+
+- 상품 출처 삭제 mutation에 food 단위 in-flight 상태를 추가해 동일 식품의 중복 삭제 요청을 차단했습니다. 확인 영역에는 `aria-busy`와 `지우는 중` 문구를 연결하고 취소/삭제 버튼을 요청 중 비활성화했습니다.
+- Connected provenance mutation cluster: `2 passed` (41.2s). persistence failure retry와 dashboard refresh 실패 후 성공 readback이 유지됩니다.
+- Runtime/build/diff: 28 protected files passed, 765 modules built, `git diff --check` passed.
+
+## Label commit busy semantics — 2026-09-22
+
+- 라벨 결과의 `확인 후 반영` 액션에 제출 중 상태를 추가해 parent manual-food mutation이 시작되면 중복 제출을 막고 `반영 중` 문구와 `aria-busy`를 노출합니다. 기존 parent가 즉시 상세/목록 readback을 소유하는 구조는 유지했습니다.
+- Native label cluster: `3 passed` (6.6s). dark receipt review, label confirmation reachability, camera permission recovery safe-area가 유지됩니다.
+- Runtime/build/diff: 28 protected files passed, 765 modules built, `git diff --check` passed.
