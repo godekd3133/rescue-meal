@@ -396,7 +396,7 @@ test("notification date review returns to the exact notification row after savin
   const detail = page.getByRole("dialog", { name: "시금치" });
   await expect(detail).toBeVisible();
   await detail.getByRole("button", { name: "포장지에서 날짜 다시 확인" }).click();
-  const labelDialog = page.getByRole("dialog", { name: "라벨로 추가" });
+  const labelDialog = page.getByRole("dialog", { name: "날짜 다시 확인" });
   await expect(labelDialog).toBeVisible();
   await labelDialog.getByRole("button", { name: "샘플 라벨 인식" }).click();
   await expect(labelDialog.getByRole("group", { name: "식품 추가 2단계" })).toContainText("날짜 의미와 보관 위치를 확인해요");
@@ -570,8 +570,8 @@ test("manual food intake returns focus to the newly added priority food", async 
   const addedDetail = page.getByRole("dialog", { name: "대파" });
   await expect(addedDetail).toBeVisible();
   await expect(page.locator(".toast-action")).toHaveCount(0);
-  await expect(addedDetail.getByRole("button", { name: "포장지에서 확인한 날짜 입력" })).toBeFocused();
-  await addedDetail.getByRole("button", { name: "포장지에서 확인한 날짜 입력" }).click();
+  await expect(addedDetail.getByTestId("date-confirmation-action")).toBeFocused();
+  await addedDetail.getByTestId("date-confirmation-action").click();
   const dateEditor = addedDetail.getByRole("group", { name: "확인한 날짜 입력" });
   await dateEditor.getByRole("button", { name: "소비기한", exact: true }).click();
   await dateEditor.getByRole("textbox", { name: "날짜" }).fill("2099-01-01");
@@ -652,12 +652,14 @@ test("receipt review can explicitly confirm unchanged OCR candidates", async ({ 
   const confirmButtons = page.getByRole("button", { name: "이 항목 확인했어요" });
   await expect(confirmButtons).toHaveCount(1);
   await expect(page.locator(".receipt-line-card-needs-confirmation")).toHaveCount(1);
+  await expect(page.locator(".receipt-line-card-needs-confirmation")).toHaveAttribute("data-receipt-review-state", "needs_confirmation");
   await expect(confirmButtons).toHaveAttribute("aria-describedby", /receipt-line-status-/);
   while (await confirmButtons.count()) {
     await confirmButtons.first().click();
   }
   await expect(page.locator(".receipt-line-confirmed-badge")).toHaveCount(1);
   await expect(page.locator(".receipt-line-card-confirmed")).toHaveCount(1);
+  await expect(page.locator(".receipt-line-card-confirmed")).toHaveAttribute("data-receipt-review-state", "user_confirmed");
   await expect(page.locator(".receipt-line-confirmed-badge")).toContainText("확인 완료");
   await expect(page.locator(".receipt-line-confirmed-badge")).toHaveAttribute("aria-label", "사용자 확인 완료");
   await expect(page.locator(".receipt-line-confirmed-badge")).toHaveAttribute("aria-live", "polite");
@@ -921,6 +923,8 @@ test("label date remains a candidate until the user confirms it", async ({ page 
   await expect(page.locator(".label-review-contract")).toContainText("날짜 의미와 보관 위치를 확인하세요");
   await expect(page.locator(".label-result-provenance")).toContainText("자동 인식 후보");
   await expect(page.locator(".label-result-provenance")).toContainText("저장 전 확인 필요");
+  await expect(page.locator(".label-result-card")).toHaveAttribute("data-date-state", "actual_printed");
+  await expect(page.locator(".label-result-card")).toHaveAttribute("data-date-confirmation", "candidate");
   await expect.poll(() => page.locator(".label-result-card").evaluate((element) => {
     const content = element.closest<HTMLElement>(".sheet-content");
     if (!content) return false;
@@ -1061,12 +1065,15 @@ test("detail save stays quiet until a storable food state changes", async ({ pag
 });
 
 test("date-warning food separates safety review from the consume record", async ({ page }) => {
+  await expect(page.locator(".inventory-row").filter({ hasText: "시금치" }).first()).toHaveAttribute("data-date-state", "actual_printed");
   await page.locator(".priority-card").first().click();
   const dialog = page.getByRole("dialog", { name: "시금치" });
+  await expect(dialog.locator(".date-proof-card")).toHaveClass(/date-proof-printed/);
+  await expect(dialog.locator(".date-proof-card")).toHaveAttribute("data-date-state", "actual_printed");
 
-  await dialog.getByRole("button", { name: "먹었어요", exact: true }).click();
+  await dialog.locator(".detail-consume-action-review").click();
   const confirmation = dialog.getByRole("alert");
-  await expect(confirmation).toContainText("조리 전 확인이 필요해요");
+  await expect(confirmation).toContainText("먹은 기록을 남기기 전에 확인해 주세요");
   await expect(confirmation).toContainText("안전 여부를 판정하지 않아요");
   await expect(confirmation.getByRole("button", { name: "돌아가기" })).toBeFocused();
   await confirmation.getByRole("button", { name: "확인했어요 · 먹었어요 기록" }).click();
@@ -1082,6 +1089,8 @@ test("user-confirmed date detail exposes the date without repeating the source l
   const dialog = page.getByRole("dialog", { name: "닭가슴살" });
   const dateProof = dialog.locator(".date-proof-card");
 
+  await expect(dateProof).toHaveClass(/date-proof-user-confirmed/);
+  await expect(dateProof).toHaveAttribute("data-date-state", "user_confirmed");
   await expect(dateProof.locator("span").first()).toHaveText("사용자 확인");
   await expect(dateProof.locator("strong")).toHaveText("9월 6일");
   await expect(dateProof.locator("small")).toHaveText("사용자 입력");

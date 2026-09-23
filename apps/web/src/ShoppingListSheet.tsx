@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ArchiveIcon, ArrowRightIcon, CheckCircledIcon, Cross2Icon, InfoCircledIcon, ReaderIcon } from "@radix-ui/react-icons";
 import { KeyboardInput, useKeyboard } from "./mobile/Keyboard";
-import { getMobileScrollBehavior } from "./mobile/scroll";
+import { getMobileScrollBehavior, revealAndFocus } from "./mobile/scroll";
 import type { ApiShoppingListItem, ApiStorageLocation, ApiStorageType } from "./mealApi";
 
 const shouldAutoFocusReceiveQuantity = ((import.meta.env.VITE_APP_SHELL as string | undefined)?.trim().toLowerCase() ?? "web") === "native";
@@ -210,7 +210,7 @@ export default function ShoppingListSheet({
     if (!recentlyReceivedFoodName) return;
     let settleFrame: number | undefined;
     let settleTimer: number | undefined;
-    const focusReceivedAction = () => receivedFoodActionRef.current?.focus({ preventScroll: true });
+    const focusReceivedAction = () => revealAndFocus(receivedFoodActionRef.current, { block: "nearest" });
     const frame = window.requestAnimationFrame(() => {
       settleFrame = window.requestAnimationFrame(focusReceivedAction);
       settleTimer = window.setTimeout(focusReceivedAction, 120);
@@ -354,7 +354,7 @@ export default function ShoppingListSheet({
         {items.length ? <div className="shopping-sheet-progress-track" role="progressbar" aria-label="장보기 완료율" aria-valuemin={0} aria-valuemax={items.length} aria-valuenow={completedCount}><span style={{ width: `${progressPercent}%` }} /></div> : null}
       </section>
 
-      {notice ? <div className="shopping-sheet-refresh-notice" role="status"><CheckCircledIcon width={15} height={15} /><span>{notice}</span></div> : null}
+      {notice ? <div className="shopping-sheet-refresh-notice" data-readback-state="notice" role="status"><CheckCircledIcon width={15} height={15} /><span>{notice}</span></div> : null}
       {error ? (
         <div className="shopping-sheet-error" role="alert">
           <InfoCircledIcon width={16} height={16} />
@@ -364,7 +364,7 @@ export default function ShoppingListSheet({
       ) : null}
 
       {recentlyReceivedFoodName && onOpenReceivedFood ? (
-        <div className="receipt-review-contract shopping-sheet-received" role="status" aria-live="polite">
+        <div className="receipt-review-contract shopping-sheet-received" data-readback-state="confirmed" role="status" aria-live="polite">
           <CheckCircledIcon width={15} height={15} />
           <span><strong>재고에 반영했어요</strong><small>{recentlyReceivedFoodName} · 다음: 포장지 날짜와 보관 상태를 확인해 주세요.</small></span>
           <button ref={receivedFoodActionRef} className="primary-sheet-button" type="button" onPointerDown={(event) => event.preventDefault()} onClick={onOpenReceivedFood}>식품 상세 확인</button>
@@ -445,6 +445,7 @@ export default function ShoppingListSheet({
                     className="shopping-sheet-receive-panel"
                     ref={receivePanelRef}
                     aria-label={`${item.canonical_name} 재고 반영`}
+                    aria-busy={mutating}
                     onSubmit={(event) => { event.preventDefault(); void submitReceive(item); }}
                   >
                     <ol className="shopping-sheet-receive-steps" aria-label="구매 후 재고 반영 단계">
@@ -491,7 +492,7 @@ export default function ShoppingListSheet({
                         </div>
                       </div>
                     </div>
-                    <p className="shopping-sheet-receive-note"><InfoCircledIcon width={13} height={13} /> 소비기한은 자동 확정하지 않아요. 재고에 넣은 뒤 포장지 날짜를 확인해 주세요.</p>
+                    <p className="shopping-sheet-receive-note"><InfoCircledIcon width={13} height={13} /> 소비기한은 자동 확정하지 않아요. 재고에 넣은 뒤 포장지 날짜와 보관 상태를 확인해 주세요.</p>
                     {receiveError ? <p className="shopping-sheet-receive-error" role="alert">{receiveError}</p> : null}
                     <div className="shopping-sheet-receive-actions">
                       <button className="shopping-sheet-receive-cancel" type="button" disabled={mutating} aria-busy={mutating} onClick={cancelReceive}>취소</button>
@@ -519,8 +520,8 @@ export default function ShoppingListSheet({
           <span className="shopping-sheet-state-icon"><CheckCircledIcon width={17} height={17} /></span>
           <span><strong>필요한 재료를 이어서 준비해요</strong><small>식단에서 부족한 재료를 고르거나, 아래에서 필요한 물건을 직접 기록할 수 있어요.</small></span>
           <div className="shopping-sheet-receive-actions" style={{ width: "100%", flexBasis: "100%" }}>
-            <button className="primary-sheet-button" style={{ width: "auto", minHeight: 40, flex: "1 1 auto", padding: "0 10px", fontSize: 10 }} type="button" onClick={onOpenMeal}><ReaderIcon width={15} height={15} /> 식단에서 재료 고르기 <ArrowRightIcon width={14} height={14} /></button>
-            <button className="secondary-sheet-button" style={{ width: "auto", minHeight: 40, flex: "0 0 auto", padding: "0 10px" }} type="button" onClick={onRefresh} disabled={loading}>새로 고침</button>
+            <button className="primary-sheet-button" style={{ width: "auto", minHeight: 44, flex: "1 1 auto", padding: "0 10px", fontSize: 10 }} type="button" onClick={onOpenMeal}><ReaderIcon width={15} height={15} /> 식단에서 재료 고르기 <ArrowRightIcon width={14} height={14} /></button>
+            <button className="secondary-sheet-button" style={{ width: "auto", minHeight: 44, flex: "0 0 auto", padding: "0 10px" }} type="button" onClick={onRefresh} disabled={loading}>새로 고침</button>
           </div>
         </div>
       )}

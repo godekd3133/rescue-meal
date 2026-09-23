@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { CameraIcon, CheckIcon, Cross2Icon, InfoCircledIcon, UploadIcon } from "@radix-ui/react-icons";
+import { revealAndFocus } from "./mobile/scroll";
 
 export type CaptureFileHandler = (file: File) => void | Promise<void>;
 
@@ -171,7 +172,7 @@ export default function CameraCapture({ title, detail, onFile, onCancel }: Camer
       const target = status === "unavailable"
         ? document.querySelector<HTMLElement>(".camera-capture-fallback-actions .camera-library-fallback")
         : captureButtonRef.current;
-      target?.focus({ preventScroll: true });
+      revealAndFocus(target);
     }, 120);
     return () => window.clearTimeout(timer);
   }, [status]);

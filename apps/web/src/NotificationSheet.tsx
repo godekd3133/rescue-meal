@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { BellIcon, CheckCircledIcon, ChevronRightIcon, InfoCircledIcon } from "@radix-ui/react-icons";
 import type { ApiNotification } from "./mealApi";
 import { orderNotifications } from "./notificationOrdering";
+import { externalSyncLifecycleColor, externalSyncLifecycleLabel } from "./externalSyncPresentation";
 
 function formatNotificationTime(value: string) {
   const parsed = new Date(value);
@@ -39,18 +40,11 @@ function notificationSyncState(notification: ApiNotification): NotificationSyncS
 }
 
 function notificationSyncStateLabel(state: NotificationSyncState) {
-  if (state === "queued") return "처리 대기";
-  if (state === "processing") return "반영 중";
-  if (state === "applied") return "반영 완료";
-  return "확인 필요";
+  return externalSyncLifecycleLabel(state);
 }
 
 function notificationSyncTone(state: NotificationSyncState) {
-  const color = state === "action_required"
-    ? "var(--atelier-coral)"
-    : state === "applied"
-      ? "var(--atelier-pistachio)"
-      : "var(--atelier-blue)";
+  const color = externalSyncLifecycleColor(state);
   return {
     color,
     borderColor: `color-mix(in srgb, ${color} 25%, var(--sheet-border))`,
@@ -84,7 +78,7 @@ export default function NotificationSheet({
   onSelect: (notification: ApiNotification) => void;
   onReadAll: () => void;
   returnFocusNotificationId?: string | null;
-  initialSyncFocus?: "action_required" | "queued" | null;
+  initialSyncFocus?: "action_required" | "queued" | "processing" | null;
   onSyncFocusHandled?: () => void;
 }) {
   const unreadCount = notifications.filter((notification) => notification.read_at === null).length;
@@ -98,6 +92,7 @@ export default function NotificationSheet({
   const focusSummaryAfterReadAllRef = useRef(false);
   const [returnedNotificationId, setReturnedNotificationId] = useState<string | null>(null);
   const [retryBusy, setRetryBusy] = useState(false);
+  const [readAllBusy, setReadAllBusy] = useState(false);
   const summaryTitle = loading
     ? "알림을 확인하고 있어요"
     : unreadUrgentCount
@@ -130,11 +125,11 @@ export default function NotificationSheet({
     return state === "queued" || state === "processing";
   }).length;
   const syncAppliedCount = syncNotifications.filter((notification) => notificationSyncState(notification) === "applied").length;
-  const syncNotificationTarget = (state: "action_required" | "queued" | "applied") => {
+  const syncNotificationTarget = (state: "action_required" | "queued" | "processing" | "applied") => {
     const candidates = orderedNotifications
       .filter((notification) => {
         const current = notificationSyncState(notification);
-        return state === "queued" ? current === "queued" || current === "processing" : current === state;
+        return state === "queued" ? current === "queued" : current === state;
       })
       .sort((left, right) => {
         if (state !== "queued") return 0;
@@ -146,7 +141,7 @@ export default function NotificationSheet({
     return Array.from(notificationSheetRef.current?.querySelectorAll<HTMLElement>("[data-notification-id]") ?? [])
       .find((element) => element.dataset.notificationId === targetId) ?? null;
   };
-  const focusSyncState = (state: "action_required" | "queued" | "applied") => {
+  const focusSyncState = (state: "action_required" | "queued" | "processing" | "applied") => {
     const target = syncNotificationTarget(state);
     if (!target) return;
     target.scrollIntoView({ behavior: "auto", block: "center" });
@@ -158,7 +153,6 @@ export default function NotificationSheet({
     const frame = window.requestAnimationFrame(() => {
       const target = syncNotificationTarget(initialSyncFocus);
       if (!target) return;
-      target.scrollIntoView({ behavior: "auto", block: "center" });
       target.focus({ preventScroll: true });
       onSyncFocusHandled?.();
     });
@@ -170,7 +164,7 @@ export default function NotificationSheet({
     const syncStateLabel = syncState ? notificationSyncStateLabel(syncState) : null;
     const displayTitle = notificationDisplayTitle(notification);
     return (
-    <button className={`notification-row ${notification.read_at ? "notification-row-read" : ""}`} type="button" key={notification.id} data-notification-id={notification.id} data-notification-returned={returnedNotificationId === notification.id ? "true" : undefined} style={returnedNotificationId === notification.id ? { boxShadow: "inset 0 0 0 2px color-mix(in srgb, var(--atelier-pistachio) 62%, transparent)", background: "color-mix(in srgb, var(--atelier-pistachio) 7%, var(--atelier-surface))" } : undefined} onClick={() => handleSelect(notification)} aria-label={`${displayTitle}: ${notification.canonical_name}`} aria-describedby={`notification-status-${notification.id}`}>
+    <button className={`notification-row notification-row-${notification.severity} ${notification.read_at ? "notification-row-read" : ""}`} type="button" key={notification.id} data-notification-id={notification.id} data-notification-returned={returnedNotificationId === notification.id ? "true" : undefined} style={returnedNotificationId === notification.id ? { boxShadow: "inset 0 0 0 2px color-mix(in srgb, var(--atelier-pistachio) 62%, transparent)", background: "color-mix(in srgb, var(--atelier-pistachio) 7%, var(--atelier-surface))" } : undefined} onClick={() => handleSelect(notification)} aria-label={`${displayTitle}: ${notification.canonical_name}`} aria-describedby={`notification-status-${notification.id}`}>
       <span className={`notification-row-icon notification-severity-${notification.severity}`} style={notificationTone(notification.severity)}><BellIcon width={15} height={15} /></span>
       <span className="notification-row-copy"><span className="notification-row-title" style={{ display: "flex", minWidth: 0, gap: 6, alignItems: "flex-start" }}><strong style={{ display: "-webkit-box", minWidth: 0, flex: "1 1 auto", overflow: "hidden", WebkitBoxOrient: "vertical", WebkitLineClamp: 2, whiteSpace: "normal" }}>{displayTitle}</strong>{syncState ? <span className="notification-state" data-notification-sync-state={syncState} style={{ ...notificationSyncTone(syncState), flex: "0 0 auto", padding: "3px 6px", border: "1px solid currentColor", borderRadius: 999, fontSize: 9, fontWeight: 820, lineHeight: 1.2, whiteSpace: "nowrap" }}>{syncStateLabel}</span> : null}</span><small>{notification.message}</small><em style={{ color: notificationTone(notification.severity).color }}>{notificationKindLabel(notification.kind)} · {syncStateLabel ?? notificationSeverityLabel(notification.severity)} · {formatNotificationTime(notification.created_at)}</em></span>
       <span id={`notification-status-${notification.id}`} className="sr-only">{notification.read_at ? "읽음" : "읽지 않음"}</span>
@@ -188,7 +182,9 @@ export default function NotificationSheet({
   }, [unreadCount]);
 
   const handleReadAll = () => {
+    if (readAllBusy) return;
     focusSummaryAfterReadAllRef.current = true;
+    setReadAllBusy(true);
     onReadAll();
   };
 
@@ -223,6 +219,11 @@ export default function NotificationSheet({
   }, [error, notifications, retryBusy]);
 
   useEffect(() => {
+    if (!readAllBusy) return;
+    if (error || unreadCount === 0) setReadAllBusy(false);
+  }, [error, readAllBusy, unreadCount]);
+
+  useEffect(() => {
     const previousError = previousErrorRef.current;
     previousErrorRef.current = error;
     if (!previousError || error || loading) return;
@@ -254,23 +255,23 @@ export default function NotificationSheet({
     <div ref={notificationSheetRef} className="notification-sheet" aria-busy={loading}>
       <div className="notification-sheet-heading">
         <div><p className="section-kicker">알림 센터</p><h3>{unreadCount ? <>확인이 필요한 알림 <span>{unreadCount}</span></> : "알림 기록"}</h3></div>
-        {unreadCount ? <button className="notification-read-all" type="button" onClick={handleReadAll}>모두 읽음</button> : null}
+        {unreadCount ? <button className="notification-read-all" type="button" disabled={readAllBusy} aria-busy={readAllBusy} onClick={handleReadAll}>{readAllBusy ? "읽는 중" : "모두 읽음"}</button> : null}
       </div>
       <section ref={summaryRef} className={`notification-summary${unreadCount ? " notification-summary-action" : " notification-summary-clear"}`} data-unread-count={unreadCount} data-unread-urgent-count={unreadUrgentCount} data-sync-attention-count={syncAttentionCount} data-sync-waiting-count={syncWaitingCount} data-sync-applied-count={syncAppliedCount} style={summaryCleared ? { borderColor: "color-mix(in srgb, var(--atelier-pistachio) 30%, var(--sheet-border))", background: "color-mix(in srgb, var(--atelier-pistachio) 8%, var(--atelier-surface))" } : undefined} tabIndex={-1} aria-label="알림 요약" aria-live="polite" aria-atomic="true">
         <span className="notification-summary-icon">{summaryCleared ? <CheckCircledIcon width={16} height={16} /> : <BellIcon width={16} height={16} />}</span>
         <span><strong>{summaryTitle}</strong><small>{summaryDetail}</small></span>
-        {unreadCount ? <button type="button" aria-label="첫 번째 읽지 않은 알림으로 이동" onClick={focusFirstUnread} style={{ flex: "0 0 auto", minHeight: 32, padding: "0 8px", border: "1px solid currentColor", borderRadius: 9, background: "transparent", color: "var(--atelier-pistachio)", font: "inherit", fontSize: 10, fontWeight: 820, whiteSpace: "nowrap" }}>첫 알림 보기</button> : null}
+        {unreadCount ? <button type="button" aria-label="첫 번째 읽지 않은 알림으로 이동" onClick={focusFirstUnread} style={{ flex: "0 0 auto", minHeight: 44, padding: "0 8px", border: "1px solid currentColor", borderRadius: 9, background: "transparent", color: "var(--atelier-pistachio)", font: "inherit", fontSize: 10, fontWeight: 820, whiteSpace: "nowrap" }}>첫 알림 보기</button> : null}
         <em>{summaryCountLabel}</em>
       </section>
-      {syncNotifications.length ? <div className="notification-sync-summary" role="status" aria-label="외부 재고 연동 상태">
+      {syncNotifications.length ? <div className="notification-sync-summary" role="status" aria-label={`외부 재고 연동 상태 · 확인 필요 ${syncAttentionCount}건 · 처리 대기 ${syncWaitingCount}건 · 반영 완료 ${syncAppliedCount}건`}>
         {([
           ["action_required", "확인 필요", syncAttentionCount],
           ["queued", "처리 대기", syncWaitingCount],
           ["applied", "반영 완료", syncAppliedCount],
-        ] as const).map(([state, label, count]) => <button className="notification-sync-summary-item" type="button" data-notification-sync-summary={state === "queued" ? "waiting" : state} key={state} disabled={count === 0} aria-label={`${label} ${count}건${count ? " · 해당 알림으로 이동" : ""}`} onClick={() => focusSyncState(state)} style={{ ...notificationSyncTone(state), display: "flex", minWidth: 0, gap: 4, alignItems: "center", justifyContent: "space-between", padding: "8px 9px", border: "1px solid currentColor", borderRadius: 11, font: "inherit", textAlign: "left", cursor: count ? "pointer" : "default", opacity: count ? 1 : 0.55 }}><small style={{ minWidth: 0, overflow: "hidden", color: "var(--atelier-muted)", fontSize: 9, fontWeight: 760, textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{label}</small><strong style={{ flex: "0 0 auto", color: "currentColor", fontSize: 13, fontWeight: 850 }}>{count}</strong></button>)}
+        ] as const).map(([state, label, count]) => <button className="notification-sync-summary-item" type="button" data-notification-sync-summary={state === "queued" ? "waiting" : state} key={state} disabled={count === 0} aria-label={`${label} ${count}건${count ? " · 해당 알림으로 이동" : ""}`} onClick={() => focusSyncState(state)} style={{ ...notificationSyncTone(state), display: "flex", minWidth: 0, minHeight: 44, gap: 4, alignItems: "center", justifyContent: "space-between", padding: "8px 9px", border: "1px solid currentColor", borderRadius: 11, font: "inherit", textAlign: "left", cursor: count ? "pointer" : "default", opacity: count ? 1 : 0.72 }}><small style={{ minWidth: 0, overflow: "hidden", color: "var(--atelier-muted)", fontSize: 9, fontWeight: 760, textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{label}</small><strong style={{ flex: "0 0 auto", color: "currentColor", fontSize: 13, fontWeight: 850 }}>{count}</strong></button>)}
       </div> : null}
       {notice ? <div className="notification-refresh-notice" role="status"><CheckCircledIcon width={15} height={15} /><span>{notice}</span></div> : null}
-      {error ? <div className="account-error notification-error" role="alert"><InfoCircledIcon width={15} height={15} /><span>{error}</span>{retryAction ? <button ref={notificationRetryRef} className="account-error-action" type="button" disabled={loading || retryBusy} aria-busy={loading || retryBusy} onClick={() => { setRetryBusy(true); notificationRetryReadbackRef.current = true; retryAction.onRetry(); }}>{retryAction.label}</button> : null}</div> : null}
+      {error ? <div className="account-error notification-error" data-readback-state={retryAction ? "stale" : undefined} role="alert"><InfoCircledIcon width={15} height={15} /><span>{error}</span>{retryAction ? <button ref={notificationRetryRef} className="account-error-action" type="button" disabled={loading || retryBusy} aria-busy={loading || retryBusy} onClick={() => { setRetryBusy(true); notificationRetryReadbackRef.current = true; retryAction.onRetry(); }}>{retryAction.label}</button> : null}</div> : null}
       {retryBusy && !retryAction ? <div className="notification-refresh-notice" role="status" aria-live="polite"><InfoCircledIcon width={15} height={15} /><span>알림 읽음 상태를 저장하는 중이에요.</span></div> : null}
       {loading ? <div className="notification-loading" role="status">알림을 불러오는 중이에요.</div> : notifications.length ? (
         <div className="notification-list">

@@ -28,6 +28,88 @@
   - evidence/design-qa-2026-09-11/06-notifications-sheet.png
 - Capture summary: evidence/design-qa-2026-09-11/capture-summary.json
 
+## Release smoke matrix — 2026-09-22
+
+Use this matrix as the repeatable verification entrypoint for subsequent UI/UX polish. Each lane has a distinct proof scope; a passing narrow lane must not be treated as proof for the full product loop.
+
+| Lane | Authoritative command | Proof scope | Latest evidence |
+| --- | --- | --- | --- |
+| Runtime/build | `npm run check:runtime && npm run build && git diff --check` | protected mobile runtime, TypeScript/Vite build, whitespace/diff integrity | 28 protected files; 765 modules; passed |
+| Native full | `npx playwright test --config=playwright.native.config.ts tests/native-viewport.spec.ts --workers=1` | 320/393px geometry, sheets, safe-area, keyboard, dark/light, reduced-motion, touch targets | 47 passed |
+| Prototype flow | `npx playwright test --config=playwright.config.ts tests/prototype.spec.ts --workers=1` | fixture UX, toast/focus, notification/detail, intake and local readback | latest focused clusters passed |
+| Connected parity | `npx playwright test --config=playwright.connected.config.ts tests/connected-prototype.spec.ts --workers=1` | API-backed mutation, retry, idempotency, read models, workspace/cross-tab state | latest representative suites passed |
+| Dark narrow recovery | connected tests with explicit `320x740` + dark/reduced-motion init | dark semantic state, retry/action contrast, focus settling, external settings/outbox | 3 passed representative cluster |
+| Serial stress | add `--repeat-each=2 --workers=1` to the connected representative grep | workspace isolation, stale action/focus/readback leakage across repeated runs | 20 passed full product loop; 10 passed dark account/meal stress |
+
+### Package script aliases
+
+- `npm run test:smoke:runtime` — runtime integrity + production build + `git diff --check`
+- `npm run test:smoke:native` — native viewport lane, one worker
+- `npm run test:smoke:connected` — connected prototype lane, one worker
+- `npm run test:smoke:product-loop` — receipt/account/notification/meal/shopping representative parity lane
+- `npm run test:smoke:dark` — dark/reduced-motion notification, receipt isolation, shopping receive representative lane
+
+### Smoke ordering
+
+1. Run runtime/build before browser lanes.
+2. Run native full after CSS/layout or mobile interaction changes.
+3. Run focused connected mutation lanes after producer/consumer or persistence changes.
+4. Run the serial stress lane after changing shared toast, focus, workspace, or cross-surface readback behavior.
+5. Record only evidence-backed results below; mark unrun lanes explicitly rather than inferring release readiness.
+
+## Latest evidence index — 2026-09-22
+
+Use this index before reading the append-only refinement log below. It points to the strongest current evidence; older entries remain historical context and must not override these results.
+
+| Question | Authoritative command | Latest result |
+| --- | --- | --- |
+| Does protected mobile runtime/build still pass? | `npm run test:smoke:runtime` | passed; 766 modules; `git diff --check` clean |
+| Does the complete native mobile lane pass? | `npm run test:smoke:native` | `50 passed (1.7m)` |
+| Does the complete API-backed connected lane pass? | `npm run test:smoke:connected` | `143 passed (6.2m)` |
+| Do core product mutation/readback flows pass quickly? | `npm run test:smoke:product-loop` | `10 passed (1.1m)` |
+| Do dark/reduced-motion sync and receipt flows pass? | `npm run test:smoke:dark` | `5 passed (30.2s)` |
+| Do workspace-sensitive flows survive repetition? | `npm run test:smoke:workspace` | `6 passed (43.9s)` |
+
+Release evidence gate: a smoke run is behaviorally passed when `status` is `passed`; it is release-ready only when the same summary reports `artifactRetained: true`. A stdout-only pass remains valid behavior evidence but is not an archived release artifact unless the CI log collector explicitly preserves the JSON line.
+
+The full connected lane previously had a transition-race cascade. The close interaction now waits for the detail sheet to settle; the clean rerun above is the current release evidence. If a future full lane fails, classify the first failure separately from any later server-unavailable cascade before changing product code.
+
+### Change-impact smoke routing
+
+| Change area | Minimum lane | Escalate to |
+| --- | --- | --- |
+| `prototype.css`, mobile geometry, safe-area, touch target | native full | connected dark if semantic state styles changed |
+| `NotificationSheet`, `AccountSheet`, focus/ARIA contract | focused connected lifecycle + native focus cluster | connected full when workspace/readback changes |
+| `MealPlanSheet`, `ShoppingListSheet`, mutation/readback | product loop | connected full when API producer/consumer changes |
+| `Prototype.tsx`, workspace sync, cross-tab revision | connected mutation/readback cluster | connected full + workspace repeat |
+| `completedOutboxHandoff.ts`, smoke runner/validator | contract/unit lane + runtime smoke | full aggregate when release workflow or runtime wiring changes |
+
+This table selects the minimum proof lane; it never upgrades a narrow pass into a full release claim.
+
+Package alias: `npm run test:smoke:focus` runs the native focus/backdrop/keyboard cluster and the connected notification/detail focus cluster together.
+
+Package alias: `npm run test:smoke:mutation-focus` combines the focus cluster with product-loop mutation/readback checks. Latest evidence: native focus `7 passed (13.4s)`, connected focus `3 passed (32.8s)`, product-loop `10 passed (1.1m)`.
+
+Package alias: `npm run test:smoke:mutation-focus` runs focus cluster + product loop for combined UI focus and producer/consumer mutation changes. A transient workspace-gate timing failure was isolated and passed on single-test rerun (`1 passed`, `28.3s`); do not treat the composite attempt's 9/10 result as a full release failure.
+
+### Smoke artifact storage contract
+
+- Local review: `SMOKE_SUMMARY_OUTPUT="$PWD/artifacts/smoke-summary.json" npm run test:smoke:all`
+- CI review: set `SMOKE_SUMMARY_OUTPUT` to the CI-provided absolute artifact path.
+- Relative output paths are rejected to prevent accidental cwd/worktree artifacts.
+- In `CI` without `SMOKE_SUMMARY_OUTPUT`, the runner emits an explicit artifact-retention warning while preserving the smoke exit status.
+- `SMOKE_REQUIRE_RELEASE_READY=1` converts missing artifact retention from a warning into a non-zero release gate.
+- With no `SMOKE_SUMMARY_OUTPUT`, the runner is stdout-only and creates no artifact file.
+- The JSON contains `status` and per-lane `label`, `script`, `status`, `elapsedSeconds`, and optional `exitCode` fields.
+- It also includes `artifactRetained`, so CI can distinguish a passed smoke from a passed smoke whose summary was not archived.
+- It includes `releaseReady`, which is true only when the aggregate passed and the artifact was actually retained.
+- It includes `runnerVersion` and ISO `generatedAt` metadata so archived summaries can be compared across runner changes and stale evidence can be identified.
+- Validator accepts only supported `runnerVersion` values; unknown runner contracts are rejected rather than treated as current evidence.
+- Runner version migration requires updating the supported-version set and its contract tests together; unsupported summaries print the current supported version list.
+- Unsupported-version validator output also prints the migration checklist so the next required updates are actionable at the CLI.
+- `artifactRetained: true` is emitted only after the file write succeeds; write failure emits a false summary before exiting non-zero.
+- Set `SMOKE_VALIDATE_OUTPUT=1` to run the schema validator automatically after writing the artifact.
+
 ## Capture normalization
 
 - App CSS viewport: 393 x 852
@@ -5246,3 +5328,1734 @@ final result: passed
 - 라벨 결과의 `확인 후 반영` 액션에 제출 중 상태를 추가해 parent manual-food mutation이 시작되면 중복 제출을 막고 `반영 중` 문구와 `aria-busy`를 노출합니다. 기존 parent가 즉시 상세/목록 readback을 소유하는 구조는 유지했습니다.
 - Native label cluster: `3 passed` (6.6s). dark receipt review, label confirmation reachability, camera permission recovery safe-area가 유지됩니다.
 - Runtime/build/diff: 28 protected files passed, 765 modules built, `git diff --check` passed.
+
+## Label commit failure retry parity — 2026-09-22
+
+- connected label 반영 fixture에 manual-food persistence 실패→retry 계약을 추가했습니다. 라벨 입력은 parent manual-food mutation으로 닫히고, 실패 시 명시적 retry toast가 노출되며 재시도 요청이 동일 idempotency key를 사용합니다.
+- Connected label retry regression: `1 passed` (26.5s). actual printed date 결과에서 불필요한 후속 날짜 action을 기대하지 않고, 성공 toast와 idempotency/readback 경계만 검증합니다.
+
+## Label retry unique-item readback boundary — 2026-09-22
+
+- 라벨 상품명을 기존 재고와 충돌하지 않는 고유값으로 바꾼 상태에서도 실패→retry→성공 toast와 동일 idempotency key 계약을 재검증했습니다.
+- Connected label retry regression: `1 passed` (30.2s). connected dashboard fixture가 새 항목을 priority surface에 포함하지 않는 범위는 제외하고, manual-food mutation/readback 경계만 검증했습니다.
+
+## Label busy regression across prototype flows — 2026-09-22
+
+- `labelSubmitting` 추가 이후 prototype lane에서 라벨 후보 확인 전 상태, lot 선택, 상세에서 라벨 검토 후 알림 행 복귀를 재실행했습니다.
+- Prototype label cluster: `3 passed` (11.5s). 후보 상태 고지, lot 선택, label commit 후 notification return focus가 유지됩니다.
+
+## Product provenance retry busy parity — 2026-09-22
+
+- 상품 출처 persistence failure alert의 `다시 시도`에도 동일 mutation busy 상태를 연결해 retry 중 버튼을 잠그고 `다시 시도 중` 문구·`aria-busy`를 노출합니다.
+- Connected provenance retry/readback: `1 passed` (32.6s). 첫 삭제 실패 후 retry와 성공 write/dashboard refresh 실패 경계가 유지됩니다.
+- Runtime/build/diff: 28 protected files passed, 765 modules built, `git diff --check` passed.
+
+## Product info retry busy parity — 2026-09-22
+
+- 상품 정보 persistence failure alert에도 `aria-busy`, retry 버튼 disabled, `다시 시도 중` 문구를 연결해 상품 출처 retry와 동일한 실패 복구 semantics를 적용했습니다.
+- Connected product-info retry: `1 passed` (40.1s). 실패 후 상세 유지·입력값/재시도 계약이 최신 구현에서 유지됩니다.
+- Runtime/build/diff: 28 protected files passed, 765 modules built, `git diff --check` passed.
+
+## Date persistence retry boundary — 2026-09-22
+
+- 날짜 저장은 상세 alert가 아니라 parent가 시트를 닫은 뒤 전역 retry toast를 소유하는 mutation 경계임을 확인했습니다. 상세 구조를 억지로 변경하지 않고 기존 toast retry/readback 계약을 최신 소스에서 재검증했습니다.
+- Connected date cluster: `2 passed` (38.1s). persistence failure retry와 성공 write/dashboard refresh 실패 readback이 유지됩니다.
+- Runtime/build/diff: 28 protected files passed, 765 modules built, `git diff --check` passed.
+
+## Global retry toast busy semantics — 2026-09-22
+
+- 시트를 닫은 뒤 parent가 소유하는 `다시 시도` toast action에 실행 중 상태를 추가했습니다. retry CTA는 요청 중 disabled/`aria-busy`가 되고 `다시 시도 중`으로 바뀌며, 결과 toast/action 교체 또는 action 제거 시 busy가 초기화됩니다.
+- Connected retry cluster: `2 passed` (52.1s). 날짜 persistence retry와 manual-food retry가 최신 global toast 동작에서 유지됩니다.
+- Runtime/build/diff: 28 protected files passed, 765 modules built, `git diff --check` passed.
+
+## Home priority follow-up focus intent — 2026-09-22
+
+- 새 식품 follow-up CTA가 `openDetail()`의 기본 consume intent를 설정한 뒤 별도 render에서 date intent를 덮어쓰던 구조를 명시적 `intentOverride`로 정리했습니다. home priority follow-up은 한 번의 상태 결정으로 `date-review`를 전달합니다.
+- Prototype follow-up focus cluster: `3 passed` (15.5s). notification date return, home priority food follow-up, food-tab inventory row follow-up이 모두 유지됩니다.
+- Runtime/build/diff: 28 protected files passed, 765 modules built, `git diff --check` passed.
+
+## Detail intent override parity — 2026-09-22
+
+- home priority follow-up에 명시적 `date-review` intent를 전달한 뒤 provenance-backed home entry와 abstained inventory review를 대조했습니다. 날짜 검토와 상품 출처 검토가 서로의 auto-focus를 침범하지 않도록 DOM 관계 assertion도 구조 기반으로 정리했습니다.
+- Connected intent cluster: `2 passed` (43.3s). provenance review focus와 unknown-date review action ordering이 최신 소스에서 유지됩니다.
+
+## Long return-context intent isolation — 2026-09-22
+
+- notification·food detail·provenance history·storage readback을 연속으로 이동하는 long sequence를 최신 소스에서 재검증했습니다. 각 return context와 detail intent가 다음 surface로 잔류하지 않는지 확인했습니다.
+- Prototype long navigation: `1 passed` (8.6s).
+- Connected return/readback cluster: `3 passed` (44.4s). provenance history exact-row return, queued notification → food detail refresh, storage mutation/notification convergence가 유지됩니다.
+
+## Dark narrow reduced-motion return coverage — 2026-09-22
+
+- dark/320px/reduced-motion 조건에서 receipt review, source review, major sheet containment, sheet motion settling을 재검증했습니다.
+- Connected reduced-motion notification cluster: `2 passed` (30.9s). external-sync notification → settings, applied notification → completed outbox detail focus가 유지됩니다.
+- Native accessibility cluster: `4 passed` (9.7s). dark contrast, 320px geometry, reduced-motion settling이 함께 유지됩니다.
+
+## Retry toast visual busy treatment — 2026-09-22
+
+- 전역 retry toast action의 `aria-busy` 상태에 cursor/opacity/inset emphasis를 추가해 light/dark toast override에서도 요청 중인 CTA가 시각적으로 잠긴 상태로 읽히도록 했습니다.
+- Prototype toast/focus cluster: `3 passed` (13.1s). manual intake priority focus, inventory-row focus, date confirmation follow-up이 유지됩니다.
+- Runtime/build/diff: 28 protected files passed, 765 modules built, `git diff --check` passed.
+
+## Retry toast narrow dark geometry — 2026-09-22
+
+- 320x740 dark connected manual-food failure fixture에 retry toast geometry assertion을 추가했습니다. retry toast가 device screen 좌우를 넘지 않고 하단 navigation 위 safe-area를 유지하는지 확인합니다.
+- Connected retry geometry: `1 passed` (36.5s). failure toast/action과 retry readback이 함께 유지됩니다.
+
+## Native full-lane safe-area regression repair — 2026-09-22
+
+- Native full lane에서 발견된 두 회귀를 수정했습니다. 320px notification `모두 읽음` action은 44px touch target으로 복구했고, 361px 이상·짧은 높이 detail sheet는 카드 간 gap만 8px로 압축해 44px toggle과 home-indicator safe-area를 모두 유지합니다.
+- Focused native repair cluster: `4 passed` (14.5s). notification narrow reachability, light/dark detail, 44px touch targets, food detail safe-area가 통과합니다.
+- Previous full-lane result: `45 passed`, 발견된 2건을 수정 후 focused repair cluster 통과.
+- Runtime/build/diff: 28 protected files passed, 765 modules built, `git diff --check` passed.
+
+## Native full-lane after safe-area repair — 2026-09-22
+
+- safe-area/gap 수정 이후 native 전체 lane을 재실행했습니다. 320px/393px geometry, 44px touch targets, dark/light, keyboard containment, reduced-motion, receipt/label/detail/notification/account focus를 모두 포함합니다.
+- Native full viewport lane: `47 passed` (1.6m). 이전에 발견된 2건의 safe-area/touch regression이 전체 조건에서 해소됐습니다.
+
+## Connected long mutation journey — 2026-09-22
+
+- notification date mark/read, provenance history return, queued notification → food detail, storage mutation readback, cross-tab workspace notification refresh를 하나의 representative connected cluster로 재실행했습니다.
+- Connected long journey: `5 passed` (35.5s). stale focus, stale notification action, storage readback, cross-tab refresh가 다음 전환으로 누수되지 않습니다.
+
+## Connected long mutation journey repeatability — 2026-09-22
+
+- 동일한 notification/detail/storage/cross-tab long journey를 `repeat-each=2`, `workers=1`로 반복 실행했습니다.
+- Serial connected stress: `10 passed` (50.7s). 두 번째 실행에서도 첫 실행의 toast action, focus context, workspace/readback 상태가 남지 않았습니다.
+
+## Connected detail mutation retry stress — 2026-09-22
+
+- 상품 정보 저장 실패, 상품 출처 삭제 retry, 날짜 저장 retry, 라벨 반영 retry를 `repeat-each=2`, `workers=1`로 연속 실행했습니다.
+- Detail mutation retry stress: `8 passed` (52.1s). 각 실행에서 busy/action/readback 상태가 다음 mutation으로 누수되지 않고, idempotency/retry 계약이 독립적으로 수렴합니다.
+
+## Connected mutation-to-cross-tab journey — 2026-09-22
+
+- 상품 정보·상품 출처·날짜·라벨 retry mutation 뒤 notification date/provenance/detail/storage/cross-tab journey를 같은 serial connected run에서 연속 실행했습니다.
+- Combined connected journey: `9 passed` (59.3s). 상세 mutation의 busy/action/readback 상태가 notification, storage, 다른 tab workspace readback으로 누수되지 않았습니다.
+
+## Dark 320px mutation/readback representative journey — 2026-09-22
+
+- dark `320x740` + reduced-motion 조건에서 notification read retry, external-sync notification → account settings, applied notification → outbox detail을 연속 대표 시나리오로 검증했습니다.
+- Dark narrow connected journey: `3 passed` (55.4s). retry busy/action, reduced-motion focus settling, external state colors, outbox detail focus가 함께 유지됩니다.
+
+## Detail retry action visual parity — 2026-09-22
+
+- 상품 정보·상품 출처 error retry 버튼에 toast retry와 동일한 busy 시각 계층(cursor/opacity/inset emphasis)을 적용했습니다.
+- Connected detail retry cluster: `2 passed` (29.4s). 상품 정보 persistence failure와 상품 출처 retry/readback이 최신 스타일/semantics에서 유지됩니다.
+- Runtime/build/diff: 28 protected files passed, 765 modules built, `git diff --check` passed.
+
+## Busy action contrast/accessibility coverage — 2026-09-22
+
+- retry action busy 시각 스타일 추가 후 high-contrast token, dark receipt/source review, 44px touch target을 재검증했습니다.
+- Native contrast cluster: `4 passed` (10.7s).
+- Connected dark 320px notification cluster: `3 passed` (37.5s). retry/action contrast, reduced-motion focus settling, external settings/outbox focus가 유지됩니다.
+
+## Keyboard retry focus contract — 2026-09-22
+
+- 상품 정보 persistence failure retry button의 idle `aria-busy="false"` contract와 notification retry action의 initial focus/readback를 connected keyboard-oriented fixture에서 재검증했습니다.
+- Keyboard retry cluster: `2 passed` (27.6s). retry action focus가 유지되고 busy/readback transition 이후 detail/notification context가 복귀됩니다.
+
+## Retry error action focus-visible parity — 2026-09-22
+
+- `account-error-action`에 surface-independent `:focus-visible` outline을 추가해 web/native bottom-sheet 외부 alert에서도 keyboard focus 위치가 동일하게 보이도록 했습니다.
+- Connected focus/retry cluster: `2 passed` (42.1s). 상품 정보 retry와 notification retry readback이 유지됩니다.
+- Runtime/build/diff: 28 protected files passed, 765 modules built, `git diff --check` passed.
+
+## Retry error action touch/focus sizing — 2026-09-22
+
+- `account-error-action`에 retry 전용 최소 36px 높이를 추가해 keyboard focus ring과 모바일 touch 영역을 보강했습니다. primary 44px control baseline과는 분리해 장황한 alert 레이아웃 증가는 피했습니다.
+- Native touch/dark detail cluster: `3 passed` (16.4s). detail light/dark, receipt dark, 44px primary controls가 유지됩니다.
+- Runtime/build/diff: 28 protected files passed, 765 modules built, `git diff --check` passed.
+
+## Retry keyboard focus contract clarification — 2026-09-22
+
+- retry error actions use programmatic focus restoration after mutation failure, so Playwright's `:focus-visible` pseudo-class is not a valid proxy for keyboard modality in this fixture. Kept the authoritative `toBeFocused`/retry readback contract and removed the over-specific pseudo-class assertion.
+- Connected focus/retry cluster: `2 passed` (41.6s). product-info retry and notification retry focus/readback remain stable.
+
+## Keyboard Enter retry activation — 2026-09-22
+
+- notification retry와 상품 정보 retry를 실제 `Enter` 키 activation으로 실행하도록 connected fixture를 강화했습니다. 단순 mouse click이 아니라 포커스된 retry control의 keyboard activation과 busy/readback 결과를 검증합니다.
+- Keyboard Enter retry cluster: `2 passed` (52.5s). notification read retry와 product-info persistence retry가 키보드 입력에서도 동일하게 수렴합니다.
+
+## Retry Tab/focus containment coverage — 2026-09-22
+
+- retry alert 이후 native bottom-sheet keyboard containment와 source-review Tab ordering을 함께 재검증했습니다. retry/error action이 sheet focus trap을 깨지 않고 기존 readback focus 계약을 유지합니다.
+- Native keyboard cluster: `2 passed` (4.4s).
+- Connected retry/readback cluster: `2 passed` (32.2s). product-info retry와 notification retry가 좁은 화면에서도 수렴합니다.
+
+## Native full-lane after keyboard/focus polish — 2026-09-22
+
+- retry error action 36px sizing, focus-visible parity, toast busy visual treatment, safe-area repair 누적 후 native 전체 lane을 재실행했습니다.
+- Native full viewport lane: `47 passed` (1.6m). 320px/393px, dark/light, keyboard, reduced-motion, 44px touch target, safe-area, detail/notification/account/receipt/label 흐름이 모두 유지됩니다.
+
+## Account notification settings success readback — 2026-09-22
+
+- Account notification preference save의 producer가 `setNotice`를 호출하지만 consumer JSX가 없던 결함을 발견해 `role="status"` 성공 notice를 추가했습니다.
+- Account connected regression: `2 passed` (24.2s). notification preference retry 성공 readback과 custom storage location flow가 모두 수렴합니다.
+- Runtime/build/diff: 28 protected files passed, 765 modules built, `git diff --check` passed.
+
+## Account notification save busy parity — 2026-09-22
+
+- 알림 설정 retry alert에 `loading || saving` 상태를 연결해 저장 재시도 중 버튼 잠금·`aria-busy`·`확인 중` 문구를 노출하면서도 성공 notice consumer/readback를 유지했습니다.
+- Account notification/storage cluster: `2 passed` (24.4s). 알림 설정 성공 notice와 custom storage location flow가 최신 busy semantics에서 수렴합니다.
+
+## Account guest-transfer primary busy parity — 2026-09-22
+
+- Guest workspace transfer retry primary action에 `aria-busy`를 연결해 notification save/password/reset/export와 동일한 primary mutation signal을 적용했습니다.
+- Account primary busy cluster: `2 passed` (40.8s). notification save와 guest transfer retry focus/readback가 유지됩니다.
+- Runtime/build/diff: 28 protected files passed, 765 modules built, `git diff --check` passed.
+
+## Dark Account primary busy repeatability — 2026-09-22
+
+- dark `320x740` notification preference save와 guest workspace transfer retry를 `repeat-each=2`, `workers=1`로 반복 실행했습니다.
+- Dark Account primary stress: `4 passed` (33.1s). busy labels, retry focus, notice/readback가 두 workspace 실행에서 독립적으로 수렴합니다.
+
+## Account notification primary save busy signal — 2026-09-22
+
+- 알림 설정 primary save button에 `aria-busy={saving}`를 추가해 error retry뿐 아니라 정상 save 진행 상태도 동일한 accessibility signal을 갖도록 했습니다.
+- Account notification/storage regression: `2 passed` (25.6s). 저장 성공 notice와 custom storage readback이 유지됩니다.
+- Runtime/build/diff: 28 protected files passed, 765 modules built, `git diff --check` passed.
+
+## Dark Account notification cross-surface parity — 2026-09-22
+
+- dark `320x740` account notification preference save/retry와 notification center unread/read retry를 serial로 교차 검증했습니다.
+- Dark notification parity: `2 passed` (30.0s). 설정 성공 notice가 notification unread/read 상태나 retry focus를 오염시키지 않습니다.
+
+## Account storage retry busy parity — 2026-09-22
+
+- 보관 위치 error retry에 `aria-busy`, disabled, `확인 중` 문구를 추가해 계정 설정 notice/readback 및 상세 retry와 동일한 busy semantics를 적용했습니다.
+- Account settings/storage cluster: `2 passed` (28.8s). 알림 설정 성공 notice와 custom storage location flow가 유지됩니다.
+
+## Dark 320px AccountSheet surface parity — 2026-09-22
+
+- 알림 설정 저장/재시도, custom storage location, receipt privacy erasure, account deletion retry를 dark `320x740` 조건으로 함께 실행했습니다.
+- Dark AccountSheet cluster: `4 passed` (33.2s). busy/error/notice 상태와 account panel readback이 좁은 dark viewport에서 충돌하지 않습니다.
+
+## Dark AccountSheet repeatability — 2026-09-22
+
+- 알림 설정 저장 notice, custom storage location, receipt privacy erasure, account deletion retry를 `repeat-each=2`, `workers=1`로 반복 실행했습니다.
+- Dark AccountSheet stress: `8 passed` (35.2s). 두 번째 실행에서도 busy/error/notice/readback 상태와 dark 320px geometry가 첫 workspace에 오염되지 않았습니다.
+
+## Account-to-notification/detail cross-surface recovery — 2026-09-22
+
+- receipt privacy erasure, notification read retry, account deletion retry 뒤 external inventory settings와 completed outbox detail로 이어지는 cross-surface 흐름을 하나의 serial run에서 검증했습니다.
+- Account-to-detail recovery cluster: `5 passed` (33.7s). Account retry state/toast/focus가 notification, settings, outbox detail로 누수되지 않습니다.
+
+## Account surface readback parity — 2026-09-22
+
+- Account notification success notice consumer 추가 이후 계정 설정/보관 위치/외부 inventory settings/outbox detail/export/error surface를 하나의 connected cluster로 재검증했습니다.
+- Account connected cluster: `6 passed` (31.2s). 설정 저장 notice, redacted export, rate-limit error, external settings, completed outbox focus, custom storage location readback이 모두 유지됩니다.
+
+## Connected final parity representative suite — 2026-09-22
+
+- native full lane 이후 connected latest source에서 상품 정보·상품 출처·날짜·라벨 retry, notification read/open, provenance history return, queued detail refresh, storage readback, cross-tab refresh를 함께 재실행했습니다.
+- Connected parity suite: `10 passed` (49.5s). native focus/safe-area contracts와 connected mutation/readback contracts가 최신 변경에서 함께 유지됩니다.
+
+## Keyboard reverse-order retry coverage — 2026-09-22
+
+- native bottom-sheet에서 `Tab` 24회와 `Shift+Tab` 24회 역방향 순환을 검증하고, connected stale in-flight decision에서는 transaction input → applied → retry → Shift+Tab applied 순서를 검증했습니다.
+- Native reverse focus cluster: `2 passed` (5.5s).
+- Connected decision focus cluster: `1 passed` (41.1s). retry/error action이 다음 focusable control과 역방향 focus order를 깨지 않습니다.
+
+## Account producer-consumer audit — 2026-09-22
+
+- AccountSheet의 `setNotice`/`setError`/retryAction producer와 JSX consumer를 전수 대조했습니다. 알림 설정 notice consumer 누락은 보완됐고, password/reset/export/storage/privacy/Grocy/outbox/remote-refresh surface에는 대응 role/status/alert consumer가 존재합니다.
+- Account connected readback cluster: `6 passed` (31.2s). 추가 미매핑 notice consumer는 발견되지 않았습니다.
+
+## Account export primary busy parity — 2026-09-22
+
+- workspace export primary action에 `aria-busy={busy}`를 연결해 민감 데이터 파일 생성 중 상태를 password/reset/notification save와 동일한 accessibility signal로 통일했습니다.
+- Account export/error cluster: `3 passed` (25.9s). redacted export, rate limit, audit persistence failure가 유지됩니다.
+- Runtime/build/diff: 28 protected files passed, 765 modules built, `git diff --check` passed.
+
+## Native smoke script reproducibility — 2026-09-22
+
+- `npm run test:smoke:native` package alias를 실제 실행해 native full viewport lane을 재현했습니다.
+- Smoke alias result: `47 passed` (1.6m). package script가 runtime config와 one-worker native lane을 정확히 연결합니다.
+
+## Connected smoke audit and copy-contract repair — 2026-09-22
+
+- `npm run test:smoke:connected` full lane을 실행해 143개 중 141개가 통과했고, 2건은 최신 unknown-date action/MealPlan empty copy와 이전 test expectation의 불일치로 분리됐습니다.
+- 두 copy-contract regression을 최신 UX 문구에 맞게 수정한 뒤 재실행: `2 passed` (47.7s).
+- Full connected lane evidence: 141 passed in the full run + 2 repaired targeted tests passed. 제품 동작 결함이 아닌 최신 copy contract 동기화 문제였습니다.
+
+## Connected smoke alias final pass — 2026-09-22
+
+- stable semantic date/empty/source selectors와 AccountSheet notice/retry parity 누적 이후 `npm run test:smoke:connected`를 최신 source에서 재실행했습니다.
+- Connected smoke alias: `143 passed` (6.3m). API-backed planner, receipt, label, inventory, storage, account, notification, Grocy, recipe-review, barcode, manual-food, workspace/account transition 전체 lane이 통과했습니다.
+
+## Release smoke runtime after latest UI polish — 2026-09-22
+
+- Account notice/retry parity, MealPlan empty selector, date/source semantic selectors 누적 이후 `npm run test:smoke:runtime`을 재실행했습니다.
+- Runtime smoke: check/runtime 28 protected files, production build 765 modules, `git diff --check` 모두 통과.
+
+## Product loop smoke alias reproducibility — 2026-09-22
+
+- `npm run test:smoke:product-loop` package alias를 실제 실행했습니다.
+- Product loop smoke: `10 passed` (1.2m). receipt/label/account/notification/meal/shopping 대표 cross-surface lane이 고정 명령으로 재현됩니다.
+
+## Dark smoke alias reproducibility — 2026-09-22
+
+- `npm run test:smoke:dark` package alias를 실제 실행했습니다.
+- Dark smoke: `5 passed` (32.3s). receipt workspace isolation, shopping receive readback, notification retry, external settings, completed outbox focus가 dark/reduced-motion fixture에서 재현됩니다.
+
+## Stable semantic date-action selectors — 2026-09-22
+
+- 날짜 입력 action에 `data-testid="date-confirmation-action"`을 추가해 copy 변경과 focus/readback 테스트를 분리했습니다. unknown-date wording이 바뀌어도 action identity locator는 유지됩니다.
+- Targeted connected date/search/receipt follow-up cluster: `3 passed` (31.9s). inventory search, abstained review, receipt commit date follow-up이 stable semantic target으로 수렴합니다.
+
+## Stable semantic meal-shopping empty selector — 2026-09-22
+
+- MealPlan 내부 shopping empty state에 `data-testid="meal-shopping-empty"`를 추가해 사용자-facing empty copy가 변경되어도 empty state identity 테스트가 유지되도록 했습니다.
+- Connected planner/shopping regression: `2 passed` (35.5s). empty state와 shopping queue mutation이 최신 UI copy와 stable target을 함께 유지합니다.
+- Runtime/build/diff: 28 protected files passed, 765 modules built, `git diff --check` passed.
+
+## Stable semantic receipt/label preview selectors — 2026-09-22
+
+- receipt source preview에 `data-testid="receipt-source-preview"`, label result flow에 `data-testid="label-result-flow"`를 추가해 source/candidate surface identity를 사용자 copy와 분리했습니다.
+- Native receipt/label preview cluster: `5 passed` (12.3s). label confirmation, source review, dark legibility, narrow containment, keyboard focus order가 유지됩니다.
+- Runtime/build/diff: 28 protected files passed, 765 modules built, `git diff --check` passed.
+
+## Account retry message parity — 2026-09-22
+
+- receipt privacy retry와 account remote-refresh action에 `aria-busy`와 진행 상태 전달을 추가해 상세/notification/Grocy retry와 동일한 busy language를 적용했습니다.
+- Account external/readback cluster: `4 passed` (29.4s). redacted export, export rate limit, external settings, completed outbox detail이 최신 AccountSheet에서 유지됩니다.
+- Runtime/build/diff: 28 protected files passed, 765 modules built, `git diff --check` passed.
+
+## Account deletion retry busy parity — 2026-09-22
+
+- 고위험 계정 삭제 persistence retry에 `aria-busy`, disabled, `다시 시도 중` 문구를 추가해 account deletion의 재시도 상태를 다른 mutation retry와 통일했습니다.
+- Account deletion cluster: `2 passed` (40.1s). explicit confirmation과 typed retry payload/readback이 유지됩니다.
+- Runtime/build/diff: 28 protected files passed, 765 modules built, `git diff --check` passed.
+
+## Account deletion retry focus return — 2026-09-22
+
+- 계정 삭제 persistence failure가 발생하면 retry button으로 `nearest` 스크롤·포커스를 복귀시키도록 고위험 action focus ownership을 추가했습니다.
+- Account deletion focus cluster: `2 passed` (23.8s). explicit confirmation, retry payload, retry action readback이 최신 AccountSheet에서 유지됩니다.
+
+## Guest transfer retry focus settling — 2026-09-22
+
+- guest workspace transfer retry panel의 단일 RAF focus를 bounded retry focus로 보강해 BottomSheet transition/focus trap settling 이후에도 `다시 확인` action으로 복귀시키도록 했습니다.
+- Connected guest-transfer focus regression: `1 passed` (22.6s). retry panel focus와 transfer summary readback이 유지됩니다.
+- Runtime/build/diff: 28 protected files passed, 765 modules built, `git diff --check` passed.
+
+## Dark narrow guest transfer focus — 2026-09-22
+
+- guest workspace transfer retry focus를 dark `320x740` 조건으로 실행해 BottomSheet transition, retry focus, transfer summary readback을 함께 검증했습니다.
+- Dark guest transfer regression: `1 passed` (24.4s). retry action focus가 좁은 dark account surface에서도 안정적으로 settle됩니다.
+
+## Dark guest-to-receipt workspace parity — 2026-09-22
+
+- dark guest workspace transfer retry와 receipt review workspace isolation을 하나의 serial run으로 연속 실행했습니다.
+- Dark guest/receipt cluster: `2 passed` (36.8s). guest retry focus와 receipt source/draft workspace isolation이 서로 교차 오염되지 않습니다.
+
+## Guest/receipt/label workspace repeatability — 2026-09-22
+
+- receipt workspace isolation, label correction identity/readback, guest transfer retry focus를 `repeat-each=2`, `workers=1`로 반복 실행했습니다.
+- Guest/receipt/label stress: `6 passed` (44.9s). 두 번째 실행에서도 workspace/source/draft/identity/focus 상태가 첫 실행을 상속하지 않았습니다.
+
+## Guest transfer retry focus repeat repair — 2026-09-22
+
+- guest transfer retry focus가 BottomSheet focus trap에 두 번째 실행에서 덮이는 경쟁을 재현하고, target focus 이후 bounded settle interval을 추가했습니다.
+- Workspace smoke alias: `6 passed` (58.4s). 두 실행 모두 receipt/label workspace isolation과 guest retry focus가 안정적으로 수렴합니다.
+- Runtime/build/diff: 28 protected files passed, 765 modules built, `git diff --check` passed.
+
+## Account sensitive-action recovery parity — 2026-09-22
+
+- password reset failure는 입력값 유지·입력 필드 focus 복귀, expired reset은 새 비밀번호 field focus 복귀, export rate-limit/audit failure는 파일 미생성 alert, account deletion failure는 retry focus/payload를 유지하는 surface별 복구 계약을 대조했습니다.
+- Sensitive account recovery cluster: `5 passed` (30.0s). 각 action이 공통 retry를 억지로 사용하지 않고 자신의 위험도에 맞는 next action을 제공합니다.
+
+## Dark narrow sensitive recovery coverage — 2026-09-22
+
+- password reset request failure와 expired reset link recovery를 dark `320x740` 조건으로 실행해 입력 field focus, alert, primary action safe-area를 함께 검증했습니다.
+- Dark narrow recovery cluster: `2 passed` (42.1s). 입력 보존·focus 복귀·alert/action geometry가 유지됩니다.
+
+## Dark narrow account sensitive action coverage — 2026-09-22
+
+- receipt privacy erasure와 account deletion persistence retry를 dark `320x740` 조건으로 재실행해 민감 alert/retry action geometry와 safe-area를 확인했습니다.
+- Dark account action cluster: `2 passed` (24.3s). 개인정보 erasure boundary와 계정 삭제 retry payload/readback이 유지됩니다.
+
+## Dark account-to-detail recovery journey — 2026-09-22
+
+- product-info retry, receipt privacy erasure, notification read retry, account deletion retry, password reset failure를 하나의 serial connected run에서 연속 실행했습니다.
+- Dark account recovery journey: `5 passed` (33.2s). 계정 action 상태가 다음 detail/notification mutation과 섞이지 않고, 입력·retry payload·focus/readback이 독립적으로 유지됩니다.
+
+## Dark account recovery repeatability — 2026-09-22
+
+- product-info retry, receipt privacy erasure, notification read retry, account deletion retry, password reset failure을 `repeat-each=2`, `workers=1`로 반복 실행했습니다.
+- Dark account recovery stress: `10 passed` (53.4s). 두 번째 실행에서도 계정 action, focus, retry payload, readback이 첫 workspace 상태를 상속하지 않았습니다.
+
+## Account-to-meal/shopping cross-surface journey — 2026-09-22
+
+- account notification preference save, planner missing-ingredient shopping action, home shopping queue, shopping receive close-mid-request readback, shopping retry를 하나의 serial connected run에서 연속 검증했습니다.
+- Account-to-meal/shopping cluster: `5 passed` (43.7s). account readback 이후 planner/shopping focus, receive notice, retry action이 stale 상태 없이 수렴합니다.
+
+## Meal/shopping viewport and reduced-motion parity — 2026-09-22
+
+- meal first sheet, meal completion action, major sheet containment, reduced-motion settling과 planner/shopping/receive/retry connected flows를 교차 검증했습니다.
+- Native meal/shopping cluster: `4 passed` (14.3s).
+- Connected meal/shopping cluster: `4 passed` (30.5s). Account 이후 meal/shopping safe-area, focus, receive notice, retry action이 함께 유지됩니다.
+
+## Account-to-meal/shopping latest parity — 2026-09-22
+
+- notification preference save, planner missing-ingredient action, home shopping queue, close-mid-request receive readback, shopping mutation retry를 최신 AccountSheet/ShoppingList/MealPlan 소스에서 재실행했습니다.
+- Latest meal/shopping cluster: `5 passed` (31.0s). account settings readback 이후 meal/shopping focus·notice·retry가 stale 상태 없이 유지됩니다.
+
+## Receipt/label intake-to-detail parity — 2026-09-22
+
+- stored receipt resume, account workspace switch isolation, ambiguous label review, receipt line correction, authoritative receipt commit → detail date-review follow-up을 connected cluster로 검증했습니다.
+- Intake/detail cluster: `5 passed` initially, then receipt commit follow-up after updated unknown-date action copy: `1 passed` (28.5s). draft/source/readback/focus가 최신 문구와 함께 유지됩니다.
+
+## Receipt/label workspace boundary latest parity — 2026-09-22
+
+- stored receipt draft resume, account workspace switch isolation, ambiguous label review, receipt line correction, authoritative receipt commit → detail date-review follow-up을 최신 소스에서 재실행했습니다.
+- Receipt/label connected cluster: `5 passed` (54.0s). draft/source preview, workspace isolation, correction payload, detail focus/readback가 함께 유지됩니다.
+
+## Dark account-to-notification integrated journey — 2026-09-22
+
+- product-info retry, receipt privacy, notification retry, account deletion, password reset, external settings, completed outbox detail을 하나의 serial connected run으로 결합했습니다.
+- Integrated dark recovery journey: `7 passed` (34.4s). Account action 이후 notification/detail toast, focus, reduced-motion/readback 상태가 다음 surface로 누수되지 않았습니다.
+
+## Receipt/label to account recovery serial parity — 2026-09-22
+
+- receipt workspace isolation, label correction, receipt line correction 이후 receipt privacy erasure·notification retry·account deletion retry를 하나의 serial run에서 연속 실행했습니다.
+- Receipt/account recovery journey: `6 passed` (55.2s). source/draft/readback 이후 account action과 notification retry가 이전 workspace/focus/toast 상태를 상속하지 않습니다.
+
+## Full receipt-to-meal product loop — 2026-09-22
+
+- receipt workspace isolation, label correction, account privacy/deletion recovery, notification date action, planner shopping action, home queue, receive close-mid-request, shopping retry를 하나의 serial connected run으로 연속 실행했습니다.
+- Full product loop: `9 passed` (44.6s). receipt/label source, account recovery, notification, meal/shopping readback이 한 workspace에서 stale action/focus/toast 없이 수렴합니다.
+
+## Full receipt-to-meal product loop repeatability — 2026-09-22
+
+- receipt workspace isolation, label correction, receipt correction, account privacy/deletion, notification date action, planner/shopping queue, receive readback, shopping retry를 `repeat-each=2`, `workers=1`로 반복 실행했습니다.
+- Full product loop stress: `20 passed` (1.9m). 두 번째 workspace에서도 receipt/source/draft, account recovery, notification, meal/shopping focus/readback가 첫 실행 상태를 상속하지 않았습니다.
+
+## Receipt/label dark source and focus parity — 2026-09-22
+
+- label confirmation, explicit receipt source review, dark source legibility, narrow source frame containment, zoom/line correction keyboard focus를 native에서 재검증했습니다.
+- Native source/label cluster: `5 passed` (13.9s).
+- Connected label ambiguity/correction와 receipt line correction: `3 passed` (57.5s). draft/source/date/storage identity/readback가 유지됩니다.
+
+## Dark narrow receipt workspace isolation — 2026-09-22
+
+- receipt review summary workspace switch fixture에 dark `320x740` 조건을 적용해 이전 workspace receipt summary가 account workspace로 누수되지 않는지 재검증했습니다.
+- Dark receipt workspace isolation: `1 passed` (30.8s). source/draft summary isolation과 account transition이 좁은 dark viewport에서도 유지됩니다.
+
+## Dark receipt/label workspace serial parity — 2026-09-22
+
+- dark receipt workspace isolation, ambiguous label review, label correction identity/readback, receipt line correction을 하나의 serial connected run으로 결합했습니다.
+- Dark receipt/label serial cluster: `4 passed` (51.9s). source preview/draft isolation, date/storage identity, correction payload, workspace boundary가 함께 유지됩니다.
+
+## Dark Account notification to meal/shopping parity — 2026-09-22
+
+- dark `320x740` account notification preference save 이후 planner missing-ingredient action, home shopping queue, receive close-mid-request, shopping retry를 연속 검증했습니다.
+- Dark account-to-meal/shopping cluster: `5 passed` (31.9s). 설정 notice 이후 meal/shopping focus·safe-area·receive readback·retry action이 stale 상태 없이 유지됩니다.
+
+## Dark Account-to-meal/shopping repeatability — 2026-09-22
+
+- dark `320x740` account notification preference, planner shopping action, home queue, receive close-mid-request, shopping retry를 `repeat-each=2`, `workers=1`로 반복 실행했습니다.
+- Dark account-to-meal/shopping stress: `10 passed` (46.7s). 두 번째 workspace에서도 설정 notice·planner focus·shopping readback/retry가 첫 실행 상태를 상속하지 않았습니다.
+## Ongoing mobile refinement — meal-plan retry semantics (2026-09-22)
+
+- `MealPlanSheet`의 식단 계산, 저장, 완료 처리, 대안 메뉴, 3일 식단, 저장 이력, 장보기 오류 복구 버튼에 `aria-busy`와 진행 중 문구를 맞췄다.
+- 오류 상태에서 사용자가 같은 버튼을 반복 탭해도 요청 중 상태가 명확하게 보이고, 각 복구 작업의 실제 busy state가 버튼에 연결된다.
+- Grocy 상품 매핑 저장/실패 작업 재시도에도 같은 계약을 적용했다.
+- Evidence: `npm run test:smoke:runtime` passed; connected meal/planner representative `1 passed`.
+## Ongoing mobile refinement — planner recovery continuation (2026-09-22)
+
+- 식단 조건 저장 재시도와 다른 기기 변경 후 최신 식단 확인에 `aria-busy`, 비활성화, 진행 문구를 연결했다.
+- 식단 계산/저장/완료/대안 메뉴/3일 식단/이력/장보기 복구 흐름의 상태 메시지 규칙을 한 단계로 통일했다.
+- Evidence: `npm run test:smoke:runtime` passed; connected planner recovery/consistency cluster `20 passed (1.4m)`.
+## Ongoing mobile refinement — completion and external sync boundary (2026-09-22)
+
+- 조리 완료 카드에 내부 재고 차감과 Grocy 외부 동기화 결과를 분리해서 표시한다.
+- `queued`/`in_flight`, `needs_mapping`, `needs_reconciliation`, `dead_letter` 상태는 토스트를 놓쳐도 식단 시트 안에서 후속 행동을 이해할 수 있다.
+- 성공 상태와 외부 서비스 미설정 상태는 중복 안내를 만들지 않는다.
+- Evidence: `npm run test:smoke:runtime` passed; completion retry connected test `1 passed`.
+## Ongoing mobile refinement — completion state readback (2026-09-22)
+
+- 조리 완료 화면 자체에 내부 재고 차감 결과와 외부 재고 동기화 결과를 별도 문장으로 노출한다.
+- `queued`/`in_flight`, `needs_mapping`, `needs_reconciliation`, `dead_letter`를 각각 사용자가 이해할 수 있는 후속 행동 문구로 변환한다.
+- 홈 토스트를 놓쳐도 식단 시트에서 외부 연동 상태를 확인할 수 있는 계약을 추가했다.
+- Evidence: `npm run test:smoke:runtime` passed; completion retry connected test `1 passed`.
+## Ongoing mobile refinement — cross-surface sync action state (2026-09-22)
+
+- 계정 외부 재고 연동의 `지금 동기화`와 설정 새로고침 버튼에 `aria-busy`를 연결했다.
+- 완료 카드·홈 요약·알림·계정 outbox의 상태 전환을 같은 connected fixture로 확인했다.
+- Evidence: `npm run test:smoke:runtime` passed; Grocy/outbox connected cluster `3 passed (27.8s)`.
+## Ongoing mobile refinement — completion actions busy contract (2026-09-22)
+
+- 조리 완료 기록 버튼, 부족 재료 장보기 전환, 3일 식단 장보기 전환에 `aria-busy`를 연결했다.
+- 완료 플로우에서 내부 차감·장보기 목록 저장·외부 동기화가 서로 다른 요청임을 화면 상태로 구분한다.
+- Evidence: `npm run test:smoke:runtime` passed; completion/shopping connected cluster `11 passed (50.0s)`.
+## Ongoing mobile refinement — cross-surface lifecycle verification (2026-09-22)
+
+- 외부 재고 상태 fixture를 기준으로 홈 요약의 attention/queued 건수, 알림 요약의 attention/waiting/applied 건수, 계정 outbox의 attention/pending/applied 건수를 함께 확인했다.
+- 차단된 상품 매핑을 연결하고 동기화한 뒤 계정 상태가 `attention → clear`, 알림이 `action_required → applied`, 홈 연동 카드가 사라지는 readback까지 검증했다.
+- Evidence: connected lifecycle tests `2 passed (28.3s)`.
+## Ongoing mobile refinement — external sync exception paths (2026-09-22)
+
+- `dead_letter` 작업은 자동 재처리로 덮지 않고 사용자가 재시도 대기로 전환할 수 있는 계정 CTA를 유지한다.
+- 오래된 `in_flight` 작업은 외부 반영 여부를 임의로 확정하지 않고 `반영됨`/`미반영·재시도`의 명시적 판정을 요구한다.
+- Evidence: dead-letter requeue `1 passed (19.2s)`; stale in-flight reconciliation `1 passed (22.5s)`.
+## Ongoing mobile refinement — 320px exception-state density (2026-09-22)
+
+- `dead_letter` 실패 행은 320px에서 작업명/오류 원인과 재시도 CTA를 분리하고 긴 텍스트를 줄임 처리한다.
+- 오래된 `in_flight` reconciliation 영역은 320px에서 거래 번호 입력을 한 줄로 분리하고 판정 버튼을 2열로 배치한다.
+- Evidence: dark 320px dead-letter flow `1 passed (19.2s)`; stale in-flight flow `1 passed (22.5s)`.
+## Ongoing mobile refinement — notification read-all busy state (2026-09-22)
+
+- 320px 알림 센터의 `모두 읽음` 요청 중 버튼을 잠그고 `읽는 중`으로 변경한다.
+- 성공적으로 unread count가 0이 되거나 저장 오류가 발생하면 busy 상태를 해제해 retry/readback 흐름과 충돌하지 않는다.
+- Evidence: runtime smoke passed; notification lifecycle/read-retry/cross-device cluster `4 passed (36.3s)`.
+## Ongoing mobile refinement — notification density verification (2026-09-22)
+
+- 긴 외부 동기화 제목·상태 badge·시간 정보가 있는 320px 알림 행을 실제 connected fixture로 확인했다.
+- 읽음 저장 실패, lifecycle 요약, cross-device mark-all 보류가 좁은 화면에서도 기존 행·포커스·retry를 보존한다.
+- Evidence: notification lifecycle/read-retry/cross-device cluster `4 passed (36.3s)`.
+## Ongoing mobile refinement — notification return-focus journey (2026-09-22)
+
+- 알림에서 식품 상세 또는 외부 동기화 기록으로 이동한 뒤 돌아오면 원래 알림 행에 포커스와 `data-notification-returned` 표시가 복귀한다.
+- 읽음 요청 중 다른 기기 변경이 들어와도 최신 알림 제목과 readback을 반영하면서 반환 포커스를 유지한다.
+- Evidence: notification/detail lifecycle and queued refresh navigation `2 passed (25.5s)`.
+## Ongoing mobile refinement — sheet exit and return contract (2026-09-22)
+
+- 알림에서 식품 상세 또는 계정 outbox로 이동한 뒤 닫기/반환 동작이 원래 알림 행으로 포커스를 복귀시킨다.
+- 읽음 요청 중 원격 알림이 교체되어도 최신 행을 다시 찾아 `data-notification-returned` 표시와 포커스를 유지한다.
+- Evidence: detail lifecycle and queued notification navigation `2 passed (25.5s)`.
+## Ongoing mobile refinement — reconciliation readback chain (2026-09-22)
+
+- 오래된 `in_flight` 작업을 외부 반영 완료로 판정하면 계정 outbox refresh 후 홈·알림 workspace readback까지 수행한다.
+- 320px에서 외부 작업 번호 입력과 `반영됨`/`미반영·재시도` 키보드 순서 및 버튼 경계를 검증했다.
+- 반영 완료 판정 뒤 식품 기록 상세로 이동할 수 있고, 계정 outbox의 완료 이력·외부 작업 번호가 유지된다.
+- Evidence: stale in-flight reconciliation `1 passed (31.9s)`.
+## Ongoing mobile refinement — dead-letter retry readback (2026-09-22)
+
+- dead-letter 작업을 재시도 대기로 전환한 뒤 계정 outbox만 갱신하지 않고 홈·알림 workspace readback도 함께 실행하도록 보강했다.
+- readback 실패 시 재시도 대기 성공 사실은 유지하면서 `홈·알림 최신 상태는 다시 연결한 뒤 확인해 주세요`를 추가 안내한다.
+- Evidence: runtime smoke passed; dead-letter requeue connected test `1 passed (37.6s)`.
+## Ongoing mobile refinement — retry-to-worker continuation audit (2026-09-22)
+
+- dead-letter retry 경로의 시작 상태(`dead_letter`)와 재시도 대기 상태(`pending`)를 320px 다크모드에서 확인했다.
+- 재시도 요청 payload가 고정된 운영자 메모리 계약을 유지하고, 계정 outbox summary가 `실패 1건`에서 `1건 처리 대기`로 바뀐다.
+- 후속 worker `pending → succeeded` 전이와 완료 알림 fixture 확장은 다음 검증 단계로 남겨두었다.
+- Evidence: dead-letter requeue `1 passed (37.6s)`.
+## Ongoing mobile refinement — retry-to-succeeded lifecycle (2026-09-22)
+
+- dead-letter 작업을 재시도 대기로 바꾼 뒤 `지금 동기화`가 worker 성공 응답을 받는 전이를 connected fixture로 확장했다.
+- 계정 outbox가 `pending → clear`, 최근 반영 완료 1건, 외부 작업 ID·status history로 수렴하는 것을 검증했다.
+- 검증 선택자는 반복 렌더링되는 외부 작업 ID를 sync-history 영역으로 제한해 strict locator 오탐을 제거했다.
+- Evidence: `npm run test:smoke:runtime` passed; retry-to-worker connected test `1 passed (38.8s)`.
+## Ongoing mobile refinement — worker completion cross-surface convergence (2026-09-22)
+
+- 외부 동기화 완료 후 계정 outbox가 clear로 바뀌고, 알림 상태가 applied로 readback되며, 홈 연동 카드가 처리 대상에서 사라지는 흐름을 같은 connected suite에서 확인했다.
+- 신규 retry-to-worker fixture와 기존 blocked-mapping lifecycle fixture를 함께 실행해 `pending → succeeded`와 `action_required → applied` 두 경로를 커버했다.
+- Evidence: cross-surface worker/lifecycle cluster `3 passed (36.6s)`.
+## Ongoing mobile refinement — completed sync evidence chain (2026-09-22)
+
+- worker 완료 알림에서 계정 outbox 상세의 외부 작업 ID·status history를 확인하고 식품 상세의 연결된 storage history로 이동한다.
+- 식품 상세 history가 `queued → succeeded`로 원격 갱신될 때 상태 badge, 외부 작업 reference, evidence disclosure와 포커스가 함께 유지된다.
+- Evidence: applied notification → outbox → food history connected test `1 passed (33.4s)`.
+## Ongoing mobile refinement — honest home sync copy (2026-09-22)
+
+- 홈 외부 연동 카드의 `action_required` 제목을 원인 특정형 `상품·보관 위치 연결`에서 `외부 재고 연동을 확인해 주세요`로 바꿨다.
+- 실제 원인별 다음 행동은 알림·계정 outbox에서 확인하도록 역할을 분리해 reconciliation/dead-letter 상태를 매핑 오류로 오해하지 않게 했다.
+- Evidence: runtime smoke passed; external sync home/notification lifecycle cluster `2 passed (59.4s)`.
+## Ongoing mobile refinement — sync title contract consolidation (2026-09-22)
+
+- 홈 외부 연동 카드의 제목 계산을 공통 formatter로 묶어 접근성 이름과 시각 제목이 같은 상태 우선순위를 사용하게 했다.
+- 우선순위는 확인 필요 → 반영 중 → 처리 대기이며, 원인별 CTA는 알림·계정 상세에서 유지한다.
+- Evidence: runtime smoke passed; external sync home/notification cluster `2 passed (34.3s)`.
+## Ongoing mobile refinement — outbox summary copy contract (2026-09-22)
+
+- 계정 outbox의 `blocked` 전체를 `매핑 필요`로 단정하던 요약을 `확인 필요`로 바꿨다.
+- 실제 상품 매핑 여부는 상세 상품 task에서, reconciliation/dead-letter 원인은 각 상세 상태와 CTA에서 확인하도록 역할을 분리했다.
+- Evidence: runtime smoke passed; blocked mapping/dead-letter/stale in-flight cluster `3 passed (23.6s)`.
+## Ongoing mobile refinement — sync priority parity audit (2026-09-22)
+
+- 알림 summary의 `확인 필요 → 처리 대기/반영 중 → 반영 완료` 순서와 계정 outbox의 attention → pending/in-flight → succeeded 상태 우선순위를 교차 검증했다.
+- blocked 매핑, 외부 lifecycle summary, stale in-flight reconciliation fixture에서 건수·상세 CTA·상태 heading이 모순되지 않았다.
+- Evidence: sync priority parity cluster `3 passed (31.8s)`.
+## Ongoing mobile refinement — state color and touch audit (2026-09-22)
+
+- light/dark 상태 색상 토큰과 high-contrast 토큰이 native geometry를 바꾸지 않는지 확인했다.
+- 영수증·source review dark surface의 상태 대비와 primary CTA 44px touch target을 검증했다.
+- Evidence: native contrast/dark/44px cluster `4 passed (10.0s)`.
+## Ongoing mobile refinement — notification sync summary touch target (2026-09-22)
+
+- 알림 센터의 `확인 필요`·`처리 대기`·`반영 완료` summary CTA에 최소 44px 높이를 적용했다.
+- 상태 요약을 자주 탭하는 320px 모바일 흐름에서 텍스트 크기는 유지하고 hit area만 확장한다.
+- Evidence: runtime smoke passed; connected rerun was deferred because the app-server-owned port 8001 was already occupied by an existing uvicorn process.
+## Ongoing mobile refinement — summary CTA native regression (2026-09-22)
+
+- 알림 sync summary의 44px hit area 보강이 native geometry와 high-contrast token에 영향을 주지 않는지 재확인했다.
+- Evidence: native touch/contrast cluster `2 passed (8.1s)`; connected rerun remains deferred while app-server owns port 8001.
+## Ongoing mobile refinement — sync summary spacing audit (2026-09-22)
+
+- 320px breakpoint에서 sync summary가 2열 grid로 내려가며 세 번째 상태가 다음 행으로 배치된다.
+- 각 상태 CTA는 최소 44px 높이, `min-width: 0`, ellipsis 라벨을 유지해 인접 버튼과 겹치지 않는다.
+- 현재 상태명은 `확인 필요`·`처리 대기`·`반영 완료` 모두 320px에서 줄임 없이 표시 가능한 길이여서 추가 CSS 변경은 보류했다.
+## Ongoing mobile refinement — disabled sync summary legibility (2026-09-22)
+
+- 0건 상태 summary CTA의 opacity를 `0.55 → 0.72`로 올려 다크모드에서도 상태명과 0건을 읽을 수 있게 했다.
+- disabled 상태와 비활성 cursor는 유지해 액션 가능 여부의 의미는 바꾸지 않았다.
+- Evidence: runtime smoke passed; native contrast/touch cluster `2 passed (8.4s)`.
+## Ongoing mobile refinement — disabled state color parity (2026-09-22)
+
+- sync summary enabled/disabled 상태 모두 동일한 coral/blue/pistachio 의미를 유지하고, disabled는 opacity만 낮춰 action 가능 여부만 구분한다.
+- dark/high-contrast 토큰은 상태별 foreground와 border/background color-mix를 유지한다.
+- Evidence: previous native contrast/touch cluster `2 passed (8.4s)` plus token/source audit.
+## Ongoing mobile refinement — outbox accessible summary (2026-09-22)
+
+- 계정 outbox group의 accessible name에 heading뿐 아니라 확인 필요·처리 대기·처리 중·실패·완료 건수 요약을 포함했다.
+- 시각 summary와 스크린리더 summary가 같은 상태 정보를 읽도록 홈·알림·계정 정보 노출 수준을 맞췄다.
+- Evidence: runtime smoke passed; account exception-state cluster `3 passed (36.1s)`.
+## Ongoing mobile refinement — notification summary accessible parity (2026-09-22)
+
+- 알림 sync summary container accessible name에 확인 필요·처리 대기·반영 완료 건수를 포함했다.
+- 개별 상태 버튼의 이동 기능과 summary 전체 상태 설명을 동시에 유지한다.
+- Evidence: runtime smoke passed; notification lifecycle connected test `1 passed (23.8s)`.
+## Ongoing mobile refinement — sync summary keyboard order (2026-09-22)
+
+- lifecycle connected test에 sync summary 키보드 순서를 명시했다: `확인 필요 → 처리 대기 → 반영 완료`.
+- Shift+Tab 역방향 이동과 상태 버튼 클릭 후 해당 알림 행 포커스 복귀도 assertion으로 고정했다.
+- Evidence: runtime smoke passed; connected rerun deferred at webServer bind because app-server-owned port 8001 was occupied.
+## Ongoing mobile refinement — sync summary keyboard/runtime verification (2026-09-22)
+
+- `확인 필요 → 처리 대기 → 반영 완료` 순방향 Tab 이동과 Shift+Tab 역방향 이동을 실제 connected runtime에서 검증했다.
+- 각 summary CTA 클릭 후 해당 알림 행으로 포커스가 이동하는 기존 scroll/focus 계약도 같은 테스트에서 유지됨을 확인했다.
+- Evidence: connected notification lifecycle + keyboard order `1 passed (22.3s)`.
+## Ongoing mobile refinement — focused notification row visibility (2026-09-22)
+
+- 상태 summary CTA 클릭 후 focus 대상 알림 행이 mobile viewport 내부에 남는지 bounding box assertion을 추가했다.
+- 확인 필요·처리 대기 상태 모두 scroll-to-focus 후 행 전체가 viewport 경계 안에 들어오는 것을 검증했다.
+- Evidence: connected keyboard/focus/viewport test `1 passed (41.3s)`.
+## Ongoing mobile refinement — notification return viewport contract (2026-09-22)
+
+- 상태 summary에서 상세 화면으로 이동했다가 돌아올 때 새 bottom-sheet bounds를 기준으로 반환 행의 focus·highlight·viewport 위치를 검증한다.
+- 이전 sheet의 stale bounding box를 재사용하지 않도록 테스트 기준을 실제 반환 sheet로 고정했다.
+- 반환 행 scroll은 bottom-sheet 내부에서 동작하며 `data-notification-returned`와 포커스를 함께 유지한다.
+- Evidence: connected return/focus/viewport test `1 passed (23.1s)`; runtime smoke passed.
+## Ongoing mobile refinement — cross-sheet return parity (2026-09-22)
+
+- 식품 상세 복귀, 외부 동기화 outbox 상세 복귀, 읽음 처리 중 cross-device 갱신 후 복귀를 같은 connected run에서 확인했다.
+- 각 경로에서 원래 알림 행 focus·returned highlight·동기화 작업 연결이 유지된다.
+- Evidence: cross-sheet return cluster `3 passed (29.5s)`.
+## Ongoing mobile refinement — Escape/back dismissal parity (2026-09-22)
+
+- 식품 추가 sheet·알림 sheet·계정 sheet·식품 상세를 Escape로 닫은 뒤 focus 반환과 320px bounds를 확인했다.
+- 알림에서 상세 작업을 거친 뒤에도 원래 notification row 복귀 계약이 유지된다.
+- Evidence: native Escape/return/containment cluster `3 passed (16.3s)`.
+## Ongoing mobile refinement — backdrop dismissal contract (2026-09-22)
+
+- 320px 알림 sheet를 backdrop으로 닫았을 때 sheet가 제거되고 원래 알림 trigger에 focus가 복귀하는 native regression을 추가했다.
+- Escape·닫기 버튼·backdrop 종료가 모두 trigger focus 복귀 계약을 갖도록 종료 동작 범위를 넓혔다.
+- Evidence: native backdrop dismissal test `1 passed (9.8s)`.
+## Ongoing mobile refinement — backdrop return from notification detail (2026-09-22)
+
+- 알림에서 식품 상세로 이동한 뒤 backdrop으로 상세를 닫아도 원래 notification row로 복귀한다.
+- row focus와 `data-notification-returned` highlight를 함께 검증했다.
+- portal exit transition으로 overlay가 중복 mount되는 순간에는 열린 overlay를 선택하도록 fixture를 안정화했다.
+- Evidence: native backdrop trigger/detail return cluster `2 passed (9.3s)`.
+## Ongoing mobile refinement — account backdrop return (2026-09-22)
+
+- 계정 sheet를 connection trigger에서 열고 backdrop으로 닫았을 때 trigger focus가 복귀하는 native regression을 추가했다.
+- 알림 trigger·식품 상세·계정 세 경로에서 overlay exit transition 중 열린 backdrop을 닫고 focus 반환을 유지한다.
+- Evidence: native backdrop dismissal cluster `3 passed (10.6s)`.
+## Ongoing mobile refinement — mutation-safe sheet dismissal (2026-09-22)
+
+- 장보기 입고 요청 중 sheet를 닫아도 mutation이 계속 처리되고, 재진입 시 received readback·notice·focus가 복구된다.
+- cross-device refresh가 item mutation in-flight 상태를 덮어쓰지 않고 요청 완료 후 수렴한다.
+- Evidence: shopping mutation/backpressure cluster `2 passed (26.9s)`.
+## Ongoing mobile refinement — account sync re-entry focus (2026-09-22)
+
+- 계정 외부 sync 처리 중 sheet가 닫혀도 완료 outbox focus ref가 유지되고, 재진입 시 `active` readback을 계기로 완료 상세 summary에 focus를 복귀하도록 effect dependency를 보강했다.
+- blocked mapping, dead-letter retry, applied outbox detail regression이 기존 focus 계약을 유지한다.
+- Evidence: runtime smoke passed; account sync/outbox connected cluster `3 passed (43.5s)`.
+## Ongoing mobile refinement — account sync re-entry regression pass (2026-09-22)
+
+- backdrop 종료 후 trigger focus, 계정 outbox 예외 상태, 완료 outbox 상세 focus readback을 함께 재실행했다.
+- 지난 턴의 `active` dependency 보강이 기존 account/notification/detail focus 계약을 깨지 않음을 확인했다.
+- Evidence: native backdrop cluster `3 passed (8.3s)`; account/outbox connected cluster `3 passed (26.7s)`.
+## Ongoing mobile refinement — account in-flight mutation re-entry (2026-09-22)
+
+- 계정 `지금 동기화` 요청 중 backdrop으로 sheet를 닫고 worker 응답을 해제한 뒤 재진입하는 fixture를 추가했다.
+- 완료 outbox 상세가 자동으로 열리고 summary에 focus되며, outbox가 clear·최근 반영 완료 상태로 readback되는 것을 검증했다.
+- 재마운트로 내부 ref가 사라지는 문제를 session storage handoff와 `active` dependency로 보강했다.
+- Evidence: retry → in-flight close → re-entry connected test `1 passed (29.8s)`; runtime smoke passed.
+## Ongoing mobile refinement — completed outbox handoff lifecycle cleanup (2026-09-22)
+
+- 완료 outbox focus handoff를 session storage로 보존하되, 새 로그인·로그아웃·계정 삭제로 workspace가 바뀌면 즉시 제거한다.
+- 성공 재진입 시 key를 소비하고, 오래된 workspace 작업이 새 계정 화면에서 자동으로 열리지 않도록 경계를 정리했다.
+- Evidence: runtime smoke passed; dead-letter + workspace transfer connected cluster `2 passed (42.1s)`.
+## Ongoing mobile refinement — outbox handoff expiry/workspace validation (2026-09-22)
+
+- 완료 outbox focus handoff를 `{outboxId, workspaceKey, createdAt}`로 저장한다.
+- 재진입 시 10분 TTL, 현재 workspace 일치, JSON 파싱 유효성을 확인하고 실패하면 즉시 폐기한다.
+- 로그인·로그아웃·계정 삭제 전환에서도 handoff를 제거해 stale focus 누수를 막는다.
+- Evidence: runtime smoke passed; dead-letter re-entry and workspace transfer cluster `2 passed (41.9s)`.
+## Ongoing mobile refinement — stale handoff negative fixture (2026-09-22)
+
+- 다른 workspace의 완료 outbox handoff를 시작 fixture에 주입해도 새 workspace의 계정 화면에서 잘못된 상세가 열리지 않는다.
+- 실제 worker 완료 후 생성된 현재 workspace handoff만 재진입 focus에 사용된다.
+- Evidence: stale handoff + retry/re-entry connected test `1 passed (51.8s)`.
+## Ongoing mobile refinement — stale handoff disposal evidence (2026-09-22)
+
+- 다른 workspace handoff를 주입한 뒤 계정 sheet를 여는 순간 session storage key가 실제로 제거되는 assertion을 추가했다.
+- 이후 현재 workspace worker 완료 handoff만 사용되는 재진입 focus 흐름을 유지한다.
+- Evidence: stale handoff disposal + retry/re-entry connected test `1 passed (1.3m)`.
+## Ongoing mobile refinement — future-dated handoff rejection (2026-09-22)
+
+- 완료 outbox handoff의 `createdAt`이 현재 시각보다 미래인 경우도 fresh로 인정하지 않도록 보강했다.
+- TTL·workspace·JSON 유효성에 더해 시간 방향까지 검증해 clock anomaly로 stale focus가 살아남지 않게 했다.
+- Evidence: runtime smoke passed; dead-letter/re-entry connected test `1 passed (24.9s)`.
+## Ongoing mobile refinement — malformed/expired handoff negative coverage (2026-09-22)
+
+- 손상된 JSON handoff와 11분 경과 handoff를 각각 주입해 계정 sheet 진입 시 key가 제거되는지 직접 검증했다.
+- UI는 오류 없이 정상 렌더링되고, 잘못된 handoff가 완료 outbox 상세 focus를 가로채지 않는다.
+- Evidence: malformed/expired handoff connected test `1 passed (30.5s)`.
+## Ongoing mobile refinement — storage-safe handoff fallback (2026-09-22)
+
+- 완료 outbox handoff storage 접근을 별도 safe helper로 분리했다.
+- private/restricted browser에서 sessionStorage read/write/remove가 예외를 던져도 UI가 깨지지 않고, 정상 worker readback은 계속 유지된다.
+- TTL·workspace·미래 timestamp·malformed JSON 검증과 storage unavailable fallback을 한 경계에서 관리한다.
+- Evidence: runtime smoke passed; dead-letter/workspace transfer connected cluster `2 passed (40.4s)`.
+## Ongoing mobile refinement — storage read exception fallback (2026-09-22)
+
+- sessionStorage handoff key의 최초 read를 `SecurityError`로 실패시키는 browser fixture를 추가했다.
+- storage read가 실패해도 계정 sheet 초기화, worker 완료 처리, 재진입 outbox readback이 정상 동작한다.
+- Evidence: storage-read-error + retry/re-entry connected test `1 passed (29.2s)`.
+## Ongoing mobile refinement — storage write graceful degradation audit (2026-09-22)
+
+- handoff write/read/remove를 각각 try/catch로 격리해 storage 권한 예외가 worker/outbox UI로 전파되지 않도록 했다.
+- write 실패 시 자동 focus handoff만 생략되고, 서버 처리·outbox readback·sheet 종료 계약은 유지되는 fallback 경계를 확인했다.
+- Evidence: native backdrop/touch cluster `4 passed (13.8s)`; previous storage-read-error and runtime smoke evidence retained.
+## Ongoing mobile refinement — storage write error fallback fixture (2026-09-22)
+
+- worker 완료 응답은 성공시키고 handoff key의 `setItem`만 SecurityError를 던지도록 주입했다.
+- 자동 focus handoff는 생략되지만 계정 outbox clear·최근 반영 완료·외부 작업 이력 readback은 정상 유지된다.
+- Evidence: storage-write-error retry/re-entry connected test `1 passed (25.6s)`.
+## Release smoke audit — 2026-09-22
+
+- Native full lane: `50 passed (1.7m)`.
+- Connected full lane started 143 tests; first 46 passed, then test 47 timed out while closing a transient detail sheet and the shared web server exited, causing subsequent `ERR_CONNECTION_REFUSED` cascade failures rather than independent product assertions.
+- The first failing test was rerun in isolation: `1 passed (34.3s)`.
+- Focused product loop: `10 passed (1.1m)`; dark cluster: `5 passed (30.2s)`; workspace repeat cluster: `6 passed (43.9s)`.
+- Treat the full connected lane as `partial / infrastructure cascade`, not a clean full-lane pass; targeted suites remain green.
+## Release smoke stabilization — detail close transition (2026-09-22)
+
+- full connected lane의 첫 timeout에서 확인된 식품 상세 close click race를 sheet settle 이후 click하도록 안정화했다.
+- 원인 테스트를 단독 재실행해 `1 passed (21.5s)`를 확인했다.
+- full lane의 나머지 `ERR_CONNECTION_REFUSED`는 첫 timeout 이후 web server 종료에 따른 cascade로 분리 기록했다.
+## Release smoke matrix — clean full-lane pass (2026-09-22)
+
+- Native full lane: `50 passed (1.7m)`.
+- Connected full lane after detail-settle stabilization: `143 passed (6.2m)`.
+- Previous connected cascade was resolved by waiting for the detail sheet to settle before the close interaction; no `ERR_CONNECTION_REFUSED` cascade occurred in the clean rerun.
+- Focused product/dark/workspace clusters remain green.
+## Verification workflow refinement — aggregate smoke command (2026-09-22)
+
+- `apps/web/package.json`에 `npm run test:smoke:all` alias를 추가했다.
+- 순서는 `runtime/build/diff → native full → connected full`이며 각 기존 lane command를 그대로 호출한다.
+- 개별 lane의 proof scope와 worker/workspace isolation 설정은 변경하지 않는다.
+- Evidence: runtime smoke passed; package script contract readback passed.
+## Verification workflow refinement — lane-aware smoke runner (2026-09-22)
+
+- `scripts/run-smoke-all.mjs`를 추가해 runtime/build/diff, native full, connected full lane의 시작·성공·실패를 명시적으로 출력한다.
+- 실제 lane command와 순서는 기존 aggregate contract와 동일하고, worker/workspace isolation도 유지한다.
+- `node --check scripts/run-smoke-all.mjs`와 runtime smoke로 runner syntax/package integration을 검증했다.
+## Verification workflow refinement — lane elapsed summaries (2026-09-22)
+
+- aggregate smoke runner가 각 lane 시작·성공·실패와 elapsed seconds를 출력하도록 보강했다.
+- 긴 connected lane에서도 runtime/native/connected 중 어느 단계가 시간을 사용했는지 즉시 분리할 수 있다.
+- Evidence: runner `node --check` passed; runtime smoke passed.
+
+### Aggregate smoke execution evidence
+
+- `runtime/build/diff`: passed in `1.4s`
+- `native full`: `50 passed`, `95.7s`
+- `connected full`: `143 passed`, `375.8s`
+- Aggregate: `smoke all passed`
+- Machine-readable output: `SMOKE_SUMMARY_JSON={"status":"passed","lanes":[...]}`
+## Verification workflow refinement — machine-readable smoke summary (2026-09-22)
+
+- aggregate smoke runner가 마지막에 `SMOKE_SUMMARY_JSON=...` 한 줄을 출력한다.
+- lane별 label·script·status·elapsedSeconds를 포함해 CI/로그 수집기가 runtime/native/connected 결과를 자동 파싱할 수 있다.
+- 실패 시에도 실패 lane과 exit code를 JSON으로 남기고 즉시 종료한다.
+- Evidence: runner syntax check and runtime smoke passed.
+## Verification workflow refinement — optional smoke artifact output (2026-09-22)
+
+- `SMOKE_SUMMARY_OUTPUT=/explicit/path/smoke-summary.json npm run test:smoke:all`로 machine-readable summary를 선택적 artifact 파일에 보존할 수 있다.
+- 기본 실행은 stdout만 사용해 worktree를 오염시키지 않는다.
+- 성공·실패 모두 같은 JSON schema를 사용하고, 실패 lane/exit code/elapsed를 포함한다.
+- Evidence: runner syntax check and runtime smoke passed.
+## Verification workflow refinement — smoke summary schema validation (2026-09-22)
+
+- `scripts/validate-smoke-summary.mjs`를 추가해 status, lane status, script/label, elapsedSeconds, failure exitCode 구조를 검증한다.
+- `npm run test:smoke:summary -- <summary.json>`로 CI artifact를 release evidence로 채택하기 전에 schema를 확인할 수 있다.
+- 성공·실패 summary 모두 동일한 구조를 사용하며, runner와 validator의 contract를 분리했다.
+- Evidence: script syntax checks and runtime smoke passed.
+## Verification workflow refinement — summary schema contract tests (2026-09-22)
+
+- valid smoke summary acceptance와 malformed lane metadata rejection을 node test로 고정했다.
+- 테스트는 임시 디렉터리만 사용하고 repository artifact는 생성하지 않는다.
+- Evidence: `npm run test:smoke:summary-contract` `2 passed`; runtime smoke passed.
+## Verification workflow refinement — artifact path diagnostics (2026-09-22)
+
+- `SMOKE_SUMMARY_OUTPUT`의 상위 디렉터리 누락·쓰기 권한 오류를 명확한 경로/원인/해결 안내로 변환한다.
+- runner는 디렉터리를 암묵적으로 생성하지 않고, 사용자가 명시한 writable path 계약을 유지한다.
+- Evidence: runner/validator syntax checks, summary contract `2 passed`, runtime smoke passed.
+## Verification workflow refinement — artifact path pure contract (2026-09-22)
+
+- `resolveSmokeArtifactPath`를 pure helper로 분리해 빈 값·relative path·absolute path 규칙을 unit test한다.
+- runner는 같은 helper를 사용하므로 CLI 정책과 schema/contract test 정책이 분리되지 않는다.
+- Evidence: summary contract `3 passed`; runtime smoke passed.
+## Verification workflow refinement — aggregate/lane status coherence (2026-09-22)
+
+- `status: passed`인데 lane이 실패한 모순 summary를 validator가 거부한다.
+- `status: failed`는 최소 하나의 failed/failed-to-start lane을 요구한다.
+- summary contract tests: valid 1건, malformed 1건, aggregate mismatch 1건, path policy 1건을 검증한다.
+- 실패 summary의 `failed`와 `failed-to-start` lane 및 exitCode도 정상 evidence로 수용하는지 검증한다.
+- runner failure path는 `SMOKE_LANES_JSON` test-only override로 강제하고, artifact 생성·failed summary·validator 통과를 end-to-end 검증한다.
+- `SMOKE_LANES_JSON`은 `SMOKE_ALLOW_LANE_OVERRIDE=1` 없이는 거부해 production/default smoke가 canonical lane을 벗어나지 않도록 guard한다.
+- Summary contract tests reject `releaseReady: true` when `artifactRetained` is false.
+- Summary contract tests reject invalid `generatedAt` metadata.
+- Summary contract tests reject unsupported runner versions.
+- Current migration baseline `smoke-runner-v1` is explicitly accepted; a future `v2` requires an intentional supported-version update and contract test migration.
+- Evidence: summary contract `4 passed`; runtime smoke passed.
+## Runner version migration checklist
+
+When introducing `smoke-runner-v2` or later:
+
+1. Update the runner version constant and supported-version set together.
+2. Preserve the summary fields: `status`, `runnerVersion`, `generatedAt`, `artifactRetained`, `releaseReady`, and `lanes`.
+3. Add a validator fixture for the new version and a rejection fixture for an unknown version.
+4. Run `test:smoke:summary-contract`, `test:smoke:runner-contract`, and `test:smoke:runtime` before accepting archived evidence.
+5. Record the first clean Native/Connected aggregate results in the latest evidence index.
+6. Keep prior summaries historical-only until their runner version is explicitly supported.
+
+## Ongoing mobile refinement — lifecycle focus and navigation origin (2026-09-23)
+
+- External sync presentation is shared through `apps/web/src/externalSyncPresentation.ts`: `확인 필요`, `처리 대기`, `반영 중`, `반영 완료` labels and color tokens are reused by notification and account outbox surfaces.
+- Home sync focus now distinguishes `action_required`, `queued`, and `processing`; account-sheet dismissal preserves the explicit origin navigation instead of re-inferring the tab from fractional scroll settling.
+- A short native viewport regression was found at the home meal CTA boundary and fixed with a calibrated preview/native offset. The targeted test passed three consecutive runs and the full native lane passed `50 passed`.
+- Latest connected aggregate after the navigation fix: `143 passed`.
+- Evidence lanes: runtime/build/diff passed; native full `50 passed`; connected full `143 passed`; lifecycle/account targeted tests passed; `git diff --check` passed.
+
+### Navigation return matrix
+
+| Entry surface | Return owner | Required focus/readback | Contract boundary |
+| --- | --- | --- | --- |
+| Home → Account | `accountOriginNavRef` | Home tab remains active | Scroll settling must not override explicit tab choice |
+| Food → Account | `accountOriginNavRef` | Food tab and pantry context remain active | Inventory scroll restoration remains app-owned |
+| Notification → Account | `notificationAccountReturnRef` | Notification sheet and target row | Must win over generic account origin |
+| Food detail → Account | `accountDetailReturnRef` | Food detail and sync history | Must win over generic account origin |
+| Meal → Food detail | `mealDetailReturnRef` | Meal sheet and safety context | Detail close returns to planner |
+| Notification → Food detail | `notificationDetailReturnRef` | Exact notification row | Read state and returned-row highlight are authoritative |
+| Shopping → Food detail | received-food readback | Detail date/storage review | Completion card is consumed on entry |
+| Meal → Notification | `notificationReturnSheetRef` | Meal sheet after lifecycle review | Must remain below detail/account notification return precedence |
+
+- Generic account origin capture is only valid when no sheet is open.
+- Specialized return refs must be evaluated before generic content navigation.
+- Any future shared helper must preserve this precedence order and must be covered by native focus plus connected readback lanes before replacing the existing refs.
+- Explicit follow-up actions such as `식품 목록 확인`, `장보기 목록 보기`, `최신 재고 확인`, and `계정에서 확인` override the captured generic origin when they intentionally target a different surface.
+- Workspace transfer regression confirmed that an explicit `식품 목록 확인` action must remain on the Food tab even when the closing Account sheet still holds a Home origin.
+- Evidence: workspace smoke `6 passed` after two repeats; expired-session origin regression `3 passed`; native account focus and runtime lanes passed.
+
+## Ongoing mobile refinement — meal readback and explicit shopping action (2026-09-23)
+
+- The meal planner's `식단 저장` success and `/api/meal-plans/latest` readback are separate contracts. A sheet re-entry must restore the saved plan from the latest authoritative response rather than infer success from a transient child state.
+- The explicit `장보기 목록 보기` toast action is a destination override: it opens Shopping, and closing Shopping returns to the Meal sheet through `shoppingReturnSheetRef`.
+- The connected fixture now returns the saved latest plan after the save mutation, so the regression proves the real readback contract and does not mask a missing latest response with a local state guard.
+- Evidence: connected missing-ingredient shopping flow passed; runtime/build/diff passed; `git diff --check` passed.
+
+### Optional external sync identity contract
+
+- `ApiMealPlanCompletion.grocy_sync_record_id` is additive and optional.
+- Missing identity keeps the notification fallback; the client must not guess an Account outbox record.
+- Present identity may enable a direct outbox handoff only after notification/workspace identity validation.
+- Workspace mismatch, stale identity, or missing notification remains fail-closed and routes through the existing notification recovery path.
+- Evidence: existing connected external-sync, account outbox, workspace-repeat, and aggregate smoke lanes remain the baseline before enabling direct handoff.
+
+### Readback state messaging contract
+
+- `저장 확인됨`: authoritative save response and latest readback agree; normal next action is shown.
+- `저장 실패`: mutation failed; preserve the previous plan and expose a retry action.
+- `최신 상태 확인 필요`: the current preview can remain visible, but latest saved-plan readback failed; show an amber notice and `최신 상태 다시 확인` CTA.
+- Never infer durable save success from a transient child component state after a sheet remount; the latest meal-plan response remains the source of truth.
+- Evidence: native meal viewport/completion tests passed; connected planner save/retry tests passed; runtime/build/diff passed.
+
+### Meal completion and external sync separation
+
+- `recipe-completed[data-readback-state="confirmed"]` represents the app's own cooking/consumption record.
+- `recipe-completed-sync-note[data-sync-state]` independently represents external inventory state: queued, processing, or action_required.
+- A green internal completion must not imply that external inventory reflection is complete; the two states remain separate in text, color, and DOM semantics.
+- Evidence: native completion and dark detail tests passed; connected planner save/complete and external lifecycle tests passed.
+
+### Readback assertion helper
+
+- `tests/readback-state-assertions.ts` centralizes the DOM contract for `stale`, `confirmed`, and `notice` readback states.
+- Shopping cross-device refresh and Account stale-to-confirmed outbox readback now use the shared helper instead of local attribute assertions.
+- The helper is test-only; runtime ownership remains with each surface's authoritative readback flow.
+- Next consumers: Meal latest-plan stale notice and notification read-persistence readback.
+
+## Aggregate smoke evidence — latest lifecycle/readback/navigation baseline (2026-09-22)
+
+- Runtime/build/diff: passed in `1.3s`
+- Native full: `50 passed` in `94.9s`
+- Connected full: `143 passed` in `400.4s`
+- Aggregate runner: `smoke-runner-v1`, `status: passed`
+- Protected mobile runtime: `28 files passed`
+- Latest scope includes navigation origin helper, shopping return sheet, meal latest readback notice, external sync semantic states, narrow recovery wrapping, and account workspace origin preservation.
+- `git diff --check`: passed.
+
+## Ongoing mobile refinement — first viewport action hierarchy (2026-09-23)
+
+- At a real `390 × 844` mobile viewport, the first screen previously showed the summary and the beginning of the priority queue while pushing the primary `확인하고 오늘 식단 만들기` action below the fold.
+- The mobile browser/native layout now keeps the order `summary → primary meal CTA → priority queue`; the secondary `식품 추가` action remains after the queue so it cannot outrank the main rescue flow.
+- The rule is scoped to mobile widths and re-applied after the web-shell `<=700px` block, which otherwise resets the priority section to block flow. Desktop retains its wider reading order.
+- Evidence: native CTA-order regression passed at `320 × 740` and `393 × 852`; targeted native lane `4 passed`; production build and protected runtime check passed; real `390 × 844` light/dark captures verified the CTA above the queue and below the summary card; `git diff --check` passed.
+
+## Ongoing mobile refinement — meal planner first viewport (2026-09-23)
+
+- The mobile planner was reviewed at a real `390 × 844` viewport in both themes after opening the home CTA.
+- The first sheet viewport presents the sequence `조리 가능 시간 → 인원 → 사용 전 확인 2건 → 메뉴명·소요시간 → 재료 이미지 → 안전 확인 내용`.
+- The planner action area remains in document flow; it does not cover the safety summary on short screens. The safety entry remains focusable before the date-review action, preserving the review-first contract.
+- Dark mode preserves the same hierarchy while changing only surface, border, and semantic status tokens; coral remains reserved for required review and amber for the safety summary.
+- Evidence: native planner first-viewport and completion tests passed; full native lane `51 passed`; production build and protected runtime check passed; real light/dark planner captures verified the first viewport hierarchy and no CTA/safety overlap.
+
+## Ongoing mobile refinement — save feedback lane (2026-09-23)
+
+- The saved-state capture exposed a mobile layering defect: the global `식단 저장 완료 · 사용량을 확인해 주세요` toast overlapped the completion controls inside the planner sheet.
+- The toast layer now carries the active sheet identity. Only when `data-active-sheet="meal"` is present at mobile widths does the save feedback move into a raised top lane; other toast destinations retain their existing placement.
+- The completion action remains the next actionable surface, and the toast is asserted not to intersect `.recipe-complete-actions`.
+- Evidence: native completion regression passed with the new geometric non-overlap assertion; production build, protected runtime check, and `git diff --check` passed; real `390 × 844` capture confirmed the `저장됨` and `레시피 보기` controls remain fully readable.
+
+## Ongoing mobile refinement — completion readback and home feedback lane (2026-09-23)
+
+- After `조리 완료로 기록`, the planner sheet closes and the home summary is re-read: the active tab remains Home, the stored-food count changes from `7` to `5`, and the completion feedback remains explicit as `조리 완료 · 3개 재료를 차감했어요`.
+- Home feedback and in-sheet feedback now have separate placement contracts. A meal-sheet toast uses the raised sheet lane; a toast after sheet dismissal uses the lane above the fixed bottom navigation.
+- The native completion regression asserts zero geometric overlap between save feedback and planner completion controls, and zero overlap between completion feedback and bottom navigation after home return.
+- Evidence: real `390 × 844` completion capture verified the sheet is detached, Home is active, the toast is above navigation, targeted native completion test passed, production build and protected runtime check passed, and `git diff --check` passed.
+
+## Ongoing mobile refinement — explicit next-priority action (2026-09-23)
+
+- Completion readback recalculates the queue correctly, but the first remaining priority card can sit below the fold while focus is restored with `preventScroll` to preserve the Home return position.
+- The completion toast now exposes an explicit `다음 우선 식품 확인` action when the meal originated from Home and no external-sync recovery action has higher priority.
+- Invoking the action scrolls the first enabled priority card into the mobile viewport and restores focus to that exact card. It does not force-scroll the user during passive completion readback.
+- External sync attention keeps its higher-priority `연동 상태 확인` action; the new next-priority action is only used when no recovery action is required.
+- Evidence: native completion regression verifies the action label and focus handoff; real `390 × 844` capture shows the remaining queue after action invocation; production build, protected runtime check, and `git diff --check` passed.
+
+## Ongoing mobile refinement — notification center visual lane (2026-09-23)
+
+- Real `390 × 844` light/dark captures were reviewed after opening the header notification action.
+- The first viewport keeps the sheet title, unread count, `모두 읽음`, and `첫 알림 보기` above the first notification row; the rows then expose severity, message, action type, read state, and timestamp without collapsing into an unlabeled list.
+- Urgent coral, attention amber, and informational blue remain semantic tokens in both themes. The safety note explicitly states that a date reminder is not a safety judgment.
+- No additional CSS change was required from this review; existing notification focus/readback behavior remains authoritative.
+- Evidence: targeted native notification/readback lane `6 passed`; `git diff --check` passed; real light/dark captures verified the hierarchy.
+
+## Ongoing mobile refinement — food detail review CTA (2026-09-23)
+
+- A real `390 × 844` detail capture showed `확인 후 먹었어요` wrapping into three visually awkward fragments inside the review-gated action row.
+- The mobile review row now allocates a slightly wider first action column, keeps Korean words together, and uses a compact line-height so the action remains a deliberate one/two-line control instead of a clipped-looking label.
+- The semantic label and safety gate are unchanged: the action still announces `날짜와 보관 상태를 확인한 뒤 먹었어요 기록`, while `날짜 다시 확인` remains the explicit evidence-recovery path.
+- Evidence: native detail-action geometry regression passed with the review button height constrained to two text lines; real capture verified the corrected label; production build, protected runtime check, and `git diff --check` passed.
+
+## Ongoing mobile refinement — date evidence intake entry (2026-09-23)
+
+- The detail CTA `날짜 다시 확인` intentionally routes to the label intake surface rather than silently editing a date. A real `390 × 844` capture confirms the route opens the `라벨로 추가` flow with the three-step rail `입력 → 확인 → 반영`.
+- The mobile first viewport keeps the label mode selected, the `날짜가 보이는 면을 입력해요` explanation, camera/photo/sample actions, and the non-finality note visible together.
+- The intake copy continues to distinguish a date candidate from a user-confirmed consumption date; no automatic date confirmation is inferred from image recognition.
+- Evidence: real mobile capture verified the entry flow; existing native label-recognition/source-review lanes remain the authoritative behavior checks.
+
+## Ongoing mobile refinement — label candidate commit inset (2026-09-23)
+
+- Candidate recognition review showed the sticky `확인 후 반영` bar could visually cover the lower edge of the label result card on short mobile sheets.
+- Mobile sheet content now reserves the sticky action-bar height through bottom padding and scroll padding when a label result is present, so date meaning, storage, lot choice, and provenance can all be scrolled fully above the commit bar.
+- The action remains reachable and retains the existing disabled-until-confirmed contract; this is a layout inset change only.
+- Evidence: native label confirmation action test passed; production build, protected runtime check, and `git diff --check` passed; the previous real candidate capture established the overlap case and the regression lane remains green after the inset change.
+- Additional fixture evidence: candidate-date semantics test and new/existing lot selection test both passed in the preview runtime lane (`2 passed`), confirming that the layout inset did not alter the confirmation or lot-choice contracts.
+- Connected evidence: label review ambiguity, no-date fallback, expired-date recheck, identity-preserving date/storage correction, packaging-date semantics, offline stale snapshot, and commit-failure retry all passed (`7 passed`).
+- Cross-surface connected evidence: expired-date recheck return, identity-preserving label correction, and notification date-reminder open/readback all passed (`3 passed`), confirming the same date provenance survives detail → home/readback → notification entry points.
+
+## Ongoing mobile refinement — external sync lifecycle continuity (2026-09-23)
+
+- Connected lifecycle coverage confirms that a detail mutation, the notification center, and the Account outbox use the same semantic states: `처리 대기`, `반영 중`, `반영 완료`, and `확인 필요` where recovery is required.
+- The notification center exposes queued/applied counts and focuses an applied notification into its completed outbox detail, preserving the external transaction reference and food-history link.
+- Evidence: connected detail-to-notification lifecycle, notification-center lifecycle summary, and applied-notification outbox focus all passed (`3 passed`); existing external-sync aggregate remains the baseline.
+
+## Ongoing mobile refinement — failed external sync recovery (2026-09-23)
+
+- The mobile Account recovery flow was verified at `320 × 740` with dark mode and reduced motion enabled.
+- A dead-letter operation opens as `재확인이 필요한 실패 작업`, exposes the failed food and operation identity, and offers an explicit `재시도` action. After retry, the same surface changes to `1건 처리 대기` and reports the worker readback rather than claiming completion prematurely.
+- Closing Account returns focus to the originating notification row and marks that row read, preserving the notification → account → notification recovery loop.
+- Evidence: connected dead-letter requeue regression passed; existing outbox lifecycle, notification focus, and workspace stale-focus guards remain the authoritative recovery checks.
+- Mobile presentation refinement: at widths `<=360px`, dead-letter food names and failure reasons now wrap instead of truncating, while the retry control keeps a 44px minimum touch target. The connected dead-letter requeue regression still passes after this CSS-only change.
+- Outbox timeline refinement: long transaction references in the collapsed mobile timeline summary now wrap at `<=360px` instead of pushing the status metadata out of the row. Applied-notification outbox focus regression passed after the CSS-only change.
+- Expanded timeline refinement: operator decisions, worker notes, and status-history evidence now wrap left-aligned at `<=360px` so the reason text remains readable when the outbox detail is open. Applied-notification focus and dead-letter requeue connected regressions both passed (`2 passed`).
+- Outbox action hierarchy refinement: at `<=360px`, the status summary now sits above full-width `오래된 작업 확인`/`지금 동기화` actions, each with a 44px minimum target, instead of compressing three columns into one row. Native account/sheet checks (`4 passed`) and connected applied/dead-letter checks (`2 passed`) remain green.
+
+## Ongoing mobile refinement — processing-state action semantics (2026-09-23)
+
+- When the server reports an in-flight outbox record, the process button is disabled but now reads `반영 중` instead of the actionable `지금 동기화`. Pending records retain `지금 동기화`, and a local mutation retains `동기화 중` with `aria-busy`.
+- This keeps the visual state, disabled behavior, and action language aligned without changing the outbox lifecycle or worker contract.
+- Evidence: connected mapping and stale in-flight decision tests passed (`2 passed`); production build, protected runtime check, and `git diff --check` passed.
+- When there is no pending work and recent successful records exist, the disabled process control now reads `반영 완료` instead of implying another sync can be started. Lifecycle summary and notification/outbox focus tests passed (`3 passed`).
+- The completed state also swaps the actionable arrow for a check icon; the arrow remains reserved for an actually runnable pending sync. This reinforces the semantic distinction without changing lifecycle data or disabled behavior.
+
+## Ongoing mobile refinement — outbox detail status at a glance (2026-09-23)
+
+- The collapsed `외부 작업 상세` summary now carries a status badge alongside the transaction/work ID, so `반영 완료`, `처리 중`, `확인 필요`, and `실패` are visible before expanding the timeline.
+- Badge colors reuse the existing semantic tokens: pistachio for succeeded, blue for in-flight/pending, amber for blocked/reconciliation, and coral for dead-letter.
+- Evidence: applied-notification focus, dead-letter requeue, and stale in-flight decision connected tests passed (`3 passed`); production build, protected runtime check, and `git diff --check` passed.
+- The summary title now prioritizes the food name (`식품명 외부 작업`), with the transaction/work ID as secondary metadata; long names wrap safely at narrow widths.
+- Recent readback time is now a separate secondary metadata node, preserving the exact transaction-reference DOM contract used by connected focus/readback tests while adding the mobile comparison cue.
+- The applied-outbox connected test now locks the summary contract itself: `닭가슴살 외부 작업` and `반영 완료` must be visible before timeline evidence is opened.
+- At `<=360px`, the summary copy and status badge now top-align so multi-line food/transaction/time metadata does not make the badge appear vertically detached. Applied-outbox connected focus regression remains green.
+
+## Ongoing mobile refinement — shopping item copy priority (2026-09-23)
+
+- Long shopping item names now wrap at `<=360px` instead of truncating behind the receive/delete actions. Quantity/storage metadata and 44px receive/delete controls remain intact.
+- The shopping list keeps the action hierarchy `item identity → quantity/storage → 구매 후 재고 반영`, while the readback notice and receive panel contracts are unchanged.
+- Evidence: connected shopping queue, confirmed receive, and mid-request readback notice tests passed (`3 passed`); production build, protected runtime check, and `git diff --check` passed.
+- At `<=360px`, the receive panel’s `취소` and `재고에 반영` actions now use equal-width grid columns with independent 44px targets, keeping the commit decision legible without changing receive/readback behavior.
+
+## Ongoing mobile refinement — received-food detail handoff (2026-09-23)
+
+- Connected shopping receive evidence confirms the readback notice remains visible after a dashboard refresh failure, states `재고에 반영했어요`, and directs the user to `식품 상세 확인`.
+- The detail handoff restores focus to the received food and prioritizes the package-date confirmation action, keeping the safety review ahead of ordinary food actions.
+- Evidence: shopping receive/readback/detail handoff regression passed; the existing connected receive lane also verifies confirmed storage, planned-source removal, and subsequent date confirmation.
+- The connected receive contract now explicitly asserts the final inventory row readback (`9월 30일`) after the detail date save, alongside returned focus to that row.
+- Cross-surface date evidence: printed-date meaning, successful date write with stale dashboard readback, and notification date-reminder entry all passed (`3 passed`), confirming the received-food confirmation path remains consistent across inventory, recovery, and notification surfaces.
+
+## Ongoing mobile refinement — shared safety messaging (2026-09-23)
+
+- Shopping receive guidance now explicitly names both required checks: `포장지 날짜와 보관 상태`. This aligns its wording with Food Detail and Meal Planner safety gates while retaining the existing automatic-date non-confirmation boundary.
+- Evidence: connected shopping receive/readback tests (`2 passed`), runtime safety-gate test (`1 passed`), production build, protected runtime, and diff checks passed.
+
+## Ongoing mobile refinement — date semantic state tokens (2026-09-23)
+
+- Detail state classes are now explicitly protected by tests: printed/date-review uses `date-proof-printed`, while a user-confirmed reminder uses `date-proof-user-confirmed`.
+- This keeps visual color tokens and semantic readback state aligned even when the visible Korean labels remain similar across surfaces.
+- Evidence: runtime safety/date tests `2 passed`, native light/dark detail lane `1 passed`, production build, protected runtime, and diff checks passed.
+- Detail date proof now exposes `data-date-state` (`actual_printed`, `user_confirmed`, `estimated_use_first`, or `unknown`) alongside the visual class, giving cross-surface QA and future notification integrations an explicit semantic source without inferring from color.
+
+## Ongoing mobile refinement — inventory/intake date-state propagation (2026-09-23)
+
+- Inventory rows now expose the same `data-date-state` source as detail, and label candidate cards expose `data-date-state` plus `data-date-confirmation="candidate"`.
+- This separates “what date kind was read” from “has the user confirmed it,” so an intake candidate cannot be mistaken for a durable user-confirmed date.
+- Evidence: label candidate/date runtime tests `2 passed`, native detail/pantry tests `2 passed`, production build, protected runtime, and diff checks passed.
+- Inventory row propagation is now explicitly asserted for printed-date food, preventing detail-only date-state coverage from drifting away from the list surface.
+- Barcode/GS1 date candidates now expose the same `data-date-state="actual_printed"` plus `data-date-confirmation="candidate"` contract before the user applies them; the connected GS1 candidate test passed.
+
+## Ongoing mobile refinement — receipt review confirmation state (2026-09-23)
+
+- Receipt OCR lines now expose `data-receipt-review-state="auto_read"`, `needs_confirmation`, or `user_confirmed` independently from date provenance.
+- This preserves the distinction between an automatically read product/quantity/storage candidate and a user-confirmed receipt line; receipt lines never inherit the date candidate contract.
+- Evidence: receipt candidate/confirmation runtime tests `2 passed`, native receipt state/dark-mode tests `2 passed`, production build, protected runtime, and diff checks passed.
+- Connected provenance evidence: user receipt corrections, workspace-isolated receipt summaries, and authoritative inventory date-review follow-up all passed (`3 passed`), confirming receipt review state and date follow-up remain separate contracts.
+
+## Ongoing mobile refinement — notification/date-state boundary (2026-09-23)
+
+- Notification rows currently have authoritative severity and notification kind, but not a date-provenance field. They therefore continue to expose `지금 확인/확인 필요` severity semantics without inferring `표시 날짜` or `사용자 확인` from a notification alone.
+- Detail remains the source of truth for date provenance; the notification → detail action preserves that boundary instead of guessing a date state from severity color.
+- Evidence: existing notification date-reminder, detail provenance, and cross-surface connected lanes remain green; no speculative notification token was added.
+
+## Ongoing mobile refinement — notification row copy wrapping (2026-09-23)
+
+- At `<=360px`, notification titles and sync-state badges now wrap as separate lines when needed: the title gets reading priority, and the state badge remains visible rather than compressing the title into a narrow column.
+- Severity color and notification-kind semantics remain unchanged; this is a layout-only refinement.
+- Evidence: native notification/focus lane `3 passed`, connected notification lifecycle/date lanes `2 passed`, production build, protected runtime, and diff checks passed.
+- Dark smoke evidence: receipt workspace redaction, shopping readback notice, unread notification retry, external-sync settings entry, and applied outbox focus all passed (`5 passed`) after the wrapping refinement.
+
+## Integrated smoke evidence — intake/readback/focus continuity (2026-09-23)
+
+- Focus lane: native `7 passed`, connected notification focus/lifecycle `3 passed`.
+- Product loop lane: connected `10 passed` across receipt isolation/corrections, label readback, shopping queue/receive/retry, planner shopping action, notification date entry, privacy erasure, and deletion recovery.
+- This confirms the new receipt/label/barcode semantic states did not break focus restoration, cross-surface readback, or recovery actions.
+- Latest mutation-focus smoke after capture busy/live-region changes: native focus lane `7 passed`, connected notification lane `3 passed`, product loop `10 passed`.
+- Latest focus smoke after receipt/barcode/capture busy refinements: native `7 passed`, connected notification navigation `3 passed`.
+- Latest focus smoke after the scroll-owner boundary and scanner/capture refinements: native `7 passed`, connected notification navigation `3 passed`.
+- Notification lifecycle geometry assertions now re-read the current sheet bounds after Account round trips, avoiding stale animation/layout measurements while preserving the actual row-in-viewport contract (`3 passed`).
+- Account connection dashboard readback now polls for the authoritative empty inventory heading after the connection pill settles, avoiding a full-suite timing race without weakening the workspace-cleared assertion.
+
+## Dark semantic-state evidence — current visual token baseline (2026-09-23)
+
+- Native dark/contrast lane: `4 passed` across detail review, receipt review, source review, and contrast-token geometry.
+- Connected dark-relevant lane: packaging-date semantics and external-sync notification lifecycle `2 passed`.
+- Date-state, receipt-review-state, severity, and sync-state semantics retain readable contrast without changing mobile geometry.
+
+## Ongoing mobile refinement — notification summary touch target (2026-09-23)
+
+- The notification summary’s `첫 알림 보기` action now uses a 44px minimum height, matching the app-wide mobile touch target contract while retaining the same first-unread focus behavior.
+- The summary count/state cards and row wrapping remain unchanged; this is an accessibility geometry refinement only.
+- Evidence: native notification/focus lane `3 passed`, connected date/lifecycle lane `2 passed`, production build, protected runtime, and diff checks passed.
+
+## Ongoing mobile refinement — received-food safety gate (2026-09-23)
+
+- The received-food path keeps `재고에 반영했어요` separate from `소비기한 확인 완료`; inventory receipt alone never unlocks the consume record.
+- The review-gated action is contractually selected through `.detail-consume-action-review`, and the subsequent alert requires the user to confirm before recording consumption.
+- Evidence: safety-gate runtime tests `2 passed`, native review/date tests `2 passed`, and production build/protected runtime/diff checks passed. The fixture was updated from an obsolete exact `먹었어요` label to the semantic review-gated selector without weakening the product copy.
+
+## Aggregate smoke evidence — current mobile/outbox refinement baseline (2026-09-22)
+
+- Runtime/build/diff: passed
+- Native full: `51 passed` in `97.0s`
+- Connected full: `143 passed` in `395.1s`
+- Aggregate runner: `smoke-runner-v1`, `status: passed`
+- Protected mobile runtime: `28 files passed`
+- Scope includes next-priority completion action, label candidate sticky inset, dead-letter wrapping, outbox transaction/timeline wrapping, and external sync lifecycle continuity.
+- The connected fixture-only render error remains intentionally exercised by its recovery test; the aggregate lane passed.
+
+## Aggregate smoke evidence — completed-state action semantics baseline (2026-09-22)
+
+- Runtime/build/diff: passed
+- Native full: `51 passed` in `96.6s`
+- Connected full: `143 passed` in `396.7s`
+- Aggregate runner: `smoke-runner-v1`, `status: passed`
+- Protected mobile runtime: `28 files passed`
+- Scope includes completed outbox check icon, `반영 완료` label, processing/pending action distinction, and mobile Account action stacking.
+
+## Aggregate smoke evidence — latest semantic-state propagation baseline (2026-09-23)
+
+- Runtime/build/diff: passed
+- Native full: `51 passed`
+- Connected full: `143 passed` in `360.0s`
+- Aggregate runner: `smoke-runner-v1`, `status: passed`
+- Scope includes receipt review state, label/barcode candidate state, inventory/detail date-state propagation, shopping safety messaging, notification wrapping, and Account/outbox status summary copy.
+
+## Aggregate smoke evidence — latest accessibility/intake baseline (2026-09-23)
+
+- Runtime/build/diff: passed
+- Native full: `52 passed` in `98.6s`
+- Connected full: `143 passed` in `398.0s`
+- Aggregate runner: `smoke-runner-v1`, `status: passed`
+- Protected mobile runtime: `28 files passed`
+- Scope includes capture/scanner busy states, receipt enrichment busy states, outbox live-region semantics, notification wrapping, planner readback accessibility, and date/review state propagation.
+
+## Aggregate smoke evidence — latest unified focus/accessibility baseline (2026-09-23)
+
+- Runtime/build/diff: passed
+- Native full: `52 passed` in `98.3s`
+- Connected full: `143 passed` in `391.0s`
+- Aggregate runner: `smoke-runner-v1`, `status: passed`
+- Protected mobile runtime: `28 files passed`
+- Scope includes shared reveal/focus boundaries, shopping readback focus, scanner/capture busy states, receipt/label/barcode candidate semantics, outbox live-region states, and updated stale-geometry assertions.
+
+## Smoke evidence schema/runner contract (2026-09-23)
+
+- Smoke summary contract: `9 passed`
+- Smoke runner contract: `3 passed`
+- `git diff --check`: passed
+- Current aggregate evidence remains schema-validated and preserves explicit runtime/native/connected lane metadata.
+
+## Visual evidence — current mobile home baseline (2026-09-23)
+
+- Real `390 × 844` captures were reviewed after the latest propagation work in both light and dark themes.
+- The first viewport preserves the intended hierarchy `hero → rescue summary → meal CTA → priority heading → fixed Home/Food/Meal navigation`.
+- Dark mode keeps the same layout and semantic state colors while retaining readable blue primary action contrast and visible bottom navigation.
+
+## First viewport contract — primary meal CTA (2026-09-23)
+
+- Native viewport regression now explicitly covers `390 × 844`: the primary `확인하고 오늘 식단 만들기` CTA must remain fully above the fixed navigation and retain a minimum 49px height.
+- Evidence: CTA/native ordering lane `3 passed`; real light/dark captures verified the same first-viewport hierarchy.
+
+## Planner first viewport visual evidence (2026-09-23)
+
+- Real `390 × 844` planner capture verifies the sequence `조리 가능 시간 → 인원 → 사용 전 확인 → 메뉴 타이틀·조리시간 → 재료 이미지 → 안전 확인 내용`.
+- The safety summary is visible before recipe actions, and the document-flow action area remains below the safety content rather than covering it.
+- Evidence: native planner first-viewport/completion tests remain green; geometry capture showed sheet/title/safety bounds inside the viewport and recipe actions preserved below the scroll boundary.
+
+## Planner save feedback visual evidence (2026-09-23)
+
+- Dark `390 × 844` saved-state capture showed the global save toast could visually cover too much planner content. The meal-sheet toast now uses a compact raised lane, preserving the save confirmation while leaving the safety summary and completion controls readable.
+- Saved readback remains `data-readback-state="confirmed"`, and the existing toast/completion focus contract is unchanged.
+- Evidence: native completion regression passed; real dark saved-state capture verified the compact feedback placement; production build, protected runtime, and diff checks passed.
+- The saved readback notice now also announces through `role="status"`/polite live region so visual and assistive feedback share the same authoritative save state.
+- Native completion regression now asserts `data-readback-state="confirmed"`, `role="status"`, and `aria-live="polite"` on the saved notice.
+
+## Ongoing accessibility refinement — external sync live state (2026-09-23)
+
+- The Account outbox summary now exposes `aria-live="polite"` so external lifecycle changes can be announced without forcing focus away from the current task.
+- This complements the notification summary live region and keeps `처리 대기/반영 중/반영 완료/확인 필요` state changes available to assistive technology.
+- Evidence: applied outbox focus connected test asserts the live-region contract; production build, protected runtime, and diff checks passed.
+- Focus smoke evidence: native focus/backdrop/keyboard lane `7 passed`; connected notification lifecycle/navigation lane `3 passed` after adding the live region.
+- The Account outbox live region now uses `aria-atomic="true"` so a lifecycle change is announced as one coherent status summary rather than partial count/title fragments; applied-outbox focus regression asserts the contract.
+- `aria-relevant="text"` now scopes announcements to status text instead of interactive child structure while preserving the atomic summary.
+- `aria-busy` is true only for local processing or server `in_flight`; stale in-flight reconciliation correctly remains not-busy while exposing an explicit decision state, preventing “처리 중” from masking required operator action.
+
+## Ongoing accessibility refinement — shopping receive busy scope (2026-09-23)
+
+- The active shopping receive form now exposes `aria-busy={mutating}` in addition to the sheet-level busy state, so assistive technology can identify the exact purchase-to-inventory action currently processing.
+- Cancel/submit disabled and readback behavior remain unchanged.
+- Evidence: connected receive/readback lane `2 passed`; production build, protected runtime, and diff checks passed.
+
+## Ongoing accessibility refinement — receipt enrichment busy scope (2026-09-23)
+
+- Receipt product-enrichment callouts now use a polite live region, and queued/in-flight candidate lookup buttons expose `aria-busy` while remaining disabled.
+- This keeps `상품 정보 확인 중/확인 대기 중` distinct from retryable failure and does not change the manual receipt commit contract.
+- Evidence: connected receipt workspace/OCR/review lane `3 passed`, native receipt editor/label lane `2 passed`, production build, protected runtime, and diff checks passed.
+- Latest dark smoke after receipt candidate busy changes: `5 passed` across receipt isolation, shopping readback, unread notification retry, external-sync settings, and applied outbox focus.
+- Latest product-loop smoke after intake busy/recovery changes: `10 passed` across receipt isolation/corrections, label readback, planner shopping action, shopping queue/receive/retry, notification date entry, privacy erasure, and deletion recovery.
+- Receipt line product candidate and barcode lookup actions now expose `aria-busy` while lookup is loading and remain disabled to prevent duplicate candidate requests.
+- The enrichment callout itself also exposes `aria-busy` for queued/in-flight work, so the status region and trigger agree on the same processing state.
+- Barcode lookup result status now mirrors the lookup button with `aria-busy`, keeping the visible `바코드 형식을 확인하고 있어요`/candidate result region aligned with the async action.
+
+## Ongoing accessibility refinement — label processing region busy state (2026-09-23)
+
+- The label input flow and `샘플 라벨 인식` action now expose the same processing state: group `aria-busy` and action `aria-busy`/`라벨 읽는 중` while recognition is running.
+- Candidate/readback semantics remain separate from processing state; recognition busy does not imply date confirmation.
+- Evidence: native label/camera lane `2 passed`, runtime label candidate test `1 passed`, production build, protected runtime, and diff checks passed.
+
+## Ongoing accessibility refinement — barcode lookup busy scope (2026-09-23)
+
+- Standalone barcode product lookup now disables the lookup action and exposes `aria-busy` while parsing/resolving, with the label changing to `상품 후보 조회 중`.
+- Candidate/date confirmation semantics remain unchanged; the lookup state is scoped to the async product resolution action.
+- Evidence: connected barcode/GS1 lane `2 passed`, native barcode/label lane `2 passed`, production build, protected runtime, and diff checks passed.
+
+## Ongoing accessibility refinement — capture action busy scope (2026-09-23)
+
+- Receipt/label capture action groups now expose `aria-busy` when input processing disables camera/library controls, while the existing camera-permission fallback and file input remain available when not processing.
+- Barcode scanner preparation continues to expose a dedicated status surface; the capture group contract does not infer permission success.
+- Evidence: native label/camera recovery lane `2 passed`, connected camera/GS1 lane `2 passed`, production build, protected runtime, and diff checks passed.
+- Capture library wrappers now mirror the disabled/busy state with `aria-disabled`, keeping the visible file fallback and its hidden input semantically aligned while processing.
+
+## Ongoing accessibility refinement — barcode camera fallback alert (2026-09-23)
+
+- Barcode scanner camera-unavailable fallback now uses an atomic alert/live region, explicitly announcing permission failure and the manual numeric-entry recovery path.
+- Camera capture fallback and photo selection behavior remain unchanged; this only makes the failure/recovery state discoverable to assistive technology.
+- Evidence: native camera permission/barcode candidate lane `2 passed`, connected barcode candidate lane `1 passed`, production build, protected runtime, and diff checks passed.
+- Scanner-specific permission failure remains covered by the component’s deterministic focus effect and camera recovery lane; the browser ZXing device-enumeration path was not made into a flaky mock test.
+
+## Ongoing accessibility refinement — scanner preparation busy state (2026-09-23)
+
+- The barcode scanner flow now exposes `aria-busy="true"` only while the camera/device scan is starting; scanning and unavailable fallback states remain separately readable through the existing status/alert surfaces.
+- Evidence: native barcode/camera lane `2 passed`, connected barcode candidate lane `1 passed`, production build, protected runtime, and diff checks passed.
+
+## Integrated intake recovery evidence (2026-09-23)
+
+- Connected receipt OCR failure, manual food failure, and label commit failure recovery all passed (`3 passed`).
+- Native camera permission, label candidate action, and manual-food action reachability all passed (`3 passed`).
+- Recovery behavior clears busy state and keeps the next retry/fallback action reachable in the same intake context.
+
+## Focus recovery helper convergence (2026-09-23)
+
+- CameraCapture and BarcodeScanner fallback focus now use the shared `revealAndFocus` helper, aligning scroll behavior, focus timing, and reduced-motion handling with the rest of the mobile runtime.
+- Evidence: native camera/barcode lane `2 passed`, connected camera/barcode lane `2 passed`, production build, protected runtime, and diff checks passed.
+- Shopping receive readback now uses the same helper for `식품 상세 확인`, revealing the action before focus when the notice is below the current scroll position. Connected receive/readback lane (`2 passed`) and pantry native lane (`5 passed`) remain green.
+
+### Scroll-owner rule
+
+- Use shared `revealAndFocus` for standalone/native fallback targets whose scroll owner is the app/mobile content container.
+- Preserve direct sheet-owned `scrollIntoView` for Notification sync summary actions when the sheet itself owns the scroll geometry and connected assertions depend on its current bounds.
+- Re-read the current sheet bounds after cross-sheet round trips; never compare a returned row against a stale pre-navigation box.
+- Evidence: notification lifecycle geometry regression and focus lanes passed after applying the scroll-owner boundary.
+
+## Ongoing mobile refinement — bottom navigation location signal (2026-09-23)
+
+- The three-item mobile navigation now keeps each destination at a minimum 44px touch target and renders the active destination as a soft semantic pill, while retaining the compact cobalt indicator for quick scanning.
+- Keyboard users receive an inset focus ring that remains visible against both the light and dark navigation surfaces; navigation semantics (`aria-current="page"`) remain unchanged.
+- This is intentionally a navigation-signal refinement only: home/food/meal routing, scroll restoration, sheet dismissal, and safe-area placement are unchanged.
+- Evidence: native first-viewport and bottom-navigation lane `7 passed` (including light/dark theme and cross-destination scroll restoration); production build, mobile runtime integrity, and diff checks passed.
+
+## Ongoing mobile refinement — pantry search and filter reachability (2026-09-23)
+
+- The canonical inventory toolbar sticky rule now accounts for the mobile safe-area offset, so the search field and storage-location filter remain below the system inset instead of entering the status-bar region while scanning a long list.
+- Storage-location selection now has a 44px minimum height on narrow/mobile layouts, matching the add action and preserving the existing result summary, reset action, and search loading/error states.
+- This keeps the control surface available without changing inventory query ownership, server paging, or the date/provenance meaning of each food row.
+- Evidence: native pantry search surface and viewport-height recovery lane `2 passed` across 320px/393px widths and 740px/600px/852px heights; production build, mobile runtime integrity, and `git diff --check` passed.
+
+## Ongoing mobile refinement — inventory status scan tokens (2026-09-23)
+
+- Inventory rows now expose an explicit `data-inventory-status` contract (`needs-review`, `priority`, `stored`) and render the status copy as a compact pill, separating urgency from the date value without changing the row's accessible name or detail action.
+- `확인 필요` uses the coral warning token, `우선` uses the primary cobalt token, and ordinary rows keep a neutral date pill; storage dots remain as the secondary storage-location cue.
+- The semantic state remains independent from date provenance (`data-date-state`), so a visual priority cue cannot be mistaken for a confirmed expiry or printed-date claim.
+- Evidence: native light/dark detail-and-storage lane plus 320px/393px pantry lane `2 passed`; connected server-search contract `1 passed`; production build, mobile runtime integrity, and `git diff --check` passed.
+
+## Ongoing mobile refinement — inventory status filter flow (2026-09-23)
+
+- The pantry toolbar now offers `전체`, `확인 필요`, and `우선 사용` status chips with counts, pressed-state semantics, and horizontal overflow behavior for narrow screens.
+- Status filtering composes with text search and storage-location filtering; clearing filters resets all three conditions, while empty results explain the selected status and expose the same recovery action.
+- Server-backed search remains responsible only for text/storage query ownership. Status filtering is applied to the current authoritative result set so the API paging contract and readback semantics remain unchanged.
+- Evidence: native inventory/detail/pantry lane `3 passed`; connected cross-device inventory refresh and server-search contract `2 passed`; production build, mobile runtime integrity, and `git diff --check` passed.
+
+## Ongoing mobile refinement — status filter regression contract (2026-09-23)
+
+- Added a native regression that selects `확인 필요`, verifies `aria-pressed`, confirms only the two review-state rows remain, then resets all filters and confirms the full seven-item inventory returns.
+- The assertion targets the status badge's `data-inventory-status` rather than the row container, matching the semantic ownership of the state token and preventing future tests from coupling to layout structure.
+- Evidence: status-filter interaction regression `1 passed`; the preceding production build and mobile runtime integrity checks passed.
+
+## Ongoing mobile refinement — status filter touch and relationship semantics (2026-09-23)
+
+- Status chips now use a 44px minimum touch target and explicitly reference `#inventory-list` through `aria-controls`, making the filtering relationship available to keyboard and assistive-technology users as well as touch users.
+- The interaction test now protects both contracts (`aria-controls` and computed `min-height`) alongside the pressed state, filtered row count, and reset behavior.
+- Evidence: mobile pantry surface plus status-filter regression `2 passed`; production build, mobile runtime integrity, and `git diff --check` passed.
+
+## Ongoing mobile refinement — live accessibility tree readback (2026-09-23)
+
+- Live mobile accessibility inspection confirms the status controls are exposed as one `식품 상태 필터` group with each count readable (`전체 7`, `확인 필요 2`, `우선 사용 3`) and the results as a separate `inventory-list` container.
+- Existing food-row names remain discoverable in order with name, brand/quantity, storage, status, date, and detail affordance; adding chips did not collapse or reorder the row readback contract.
+- Evidence: current in-app mobile runtime accessibility snapshot after reload; native status-filter regression and pantry surface tests remain green.
+
+## Ongoing mobile refinement — status filter focus contract (2026-09-23)
+
+- Status selection intentionally keeps focus on the selected chip instead of stealing it to the first result; the result count and selected scope are announced through the existing `role="status"` summary.
+- This preserves orientation for keyboard/screen-reader users while still making the filtered result change immediately visible to sighted users.
+- Evidence: native status-filter regression now asserts selected-chip focus plus `확인 필요 상태` live-summary readback; test `1 passed` and `git diff --check` passed.
+
+## Ongoing mobile refinement — filtered detail return context (2026-09-23)
+
+- Added a native flow that selects `확인 필요`, opens the first filtered inventory row, closes its detail sheet, and verifies the filter remains pressed, the two filtered results remain visible, and the originating row regains focus.
+- This confirms the existing inventory return-context restoration preserves the active filter contract instead of only restoring the unfiltered pantry position.
+- Evidence: filtered-detail return regression `1 passed`; existing production build and mobile runtime integrity checks remain green.
+
+## Ongoing mobile refinement — filtered detail focus continuity (2026-09-23)
+
+- The filtered-detail regression now protects the complete orientation contract: selected status, result count, filtered row membership, and originating-row focus all survive a detail-sheet round trip.
+- This deliberately avoids auto-focusing the first result after return; the user's original context remains the recovery target even when the list is filtered.
+- Evidence: native filtered-detail return test `1 passed` after the status-filter focus/readback contract was added.
+
+## Ongoing mobile refinement — label readback boundary in filtered pantry (2026-09-23)
+
+- Added a native flow that keeps `확인 필요` active while opening the spinach detail, entering the real `포장지에서 날짜 다시 확인` label path, applying the sample label readback, and returning to the filtered pantry.
+- The assertion intentionally protects filter membership and focus continuity without assuming that label recognition alone automatically changes the existing food's review state; lot/confirmation semantics remain owned by the readback contract.
+- Evidence: filtered label-review readback regression `1 passed`; production build, mobile runtime integrity, and `git diff --check` passed.
+
+## Ongoing mobile refinement — server search and status filter composition (2026-09-23)
+
+- Fixed the result derivation boundary so a completed server search no longer short-circuits the local status filter. Search/storage scope is resolved first, then `needs-review`/`priority` is applied to that same authoritative result set.
+- The connected fixture now mixes one unresolved printed-date item with one user-confirmed item; after paging both results, `확인 필요` leaves exactly the unresolved row and excludes the confirmed row.
+- Evidence: connected server-search/status composition regression `1 passed`; native status/detail/label filter lanes `3 passed`; production build, mobile runtime integrity, and `git diff --check` passed.
+
+## Ongoing mobile refinement — scoped status chip counts (2026-09-23)
+
+- Status chip counts now derive from the active search/storage scope rather than always showing global inventory totals. This keeps `전체`, `확인 필요`, and `우선 사용` counts aligned with the rows currently available to filter.
+- A connected two-result fixture reads back `전체 2` and `확인 필요 1`; selecting the review chip leaves only the unresolved item, while the user-confirmed item remains excluded.
+- Evidence: connected scoped-count/status composition regression `1 passed`; native status/filter/detail lanes `3 passed`; production build, mobile runtime integrity, and `git diff --check` passed.
+
+## Ongoing mobile refinement — paged scope count readback (2026-09-23)
+
+- Connected paging now has a mixed fixture: the first page is review-required and the second page is user-confirmed/non-priority. After loading the second page, chips read back `전체 2`, `확인 필요 1`, and `우선 사용 1`.
+- Both status filters are exercised after paging and each leaves one result; the row's visible status remains independently owned by review urgency, so a priority filter does not rewrite a `확인 필요` badge.
+- Evidence: connected paged scope/status regression `1 passed`; prior native status/detail/label lanes remain green.
+
+## Ongoing mobile refinement — paging busy semantics (2026-09-23)
+
+- The status-filter group now exposes `aria-busy` while server search/paging is loading, and the `더 보기` action mirrors the same busy state while remaining the single disabled mutation control.
+- Existing loaded rows remain readable and filterable during the loading transition; the busy signal communicates that chip counts describe the currently received scope, not an unbounded final total.
+- Evidence: connected slow-search loading regression asserts section and status-group busy transitions (`1 passed`); production build, mobile runtime integrity, and `git diff --check` passed.
+
+## Ongoing mobile refinement — stale search result labeling (2026-09-23)
+
+- When a server search error occurs while prior scoped rows remain rendered, the filter summary now prefixes the scope with `이전 결과`, separating stale readback from a fresh successful result.
+- Empty-error behavior remains the explicit retry state with no misleading scope summary; the existing retry action and status chips are unchanged.
+- Evidence: connected slow-loading and retry-after-failure lane `2 passed`; production build, mobile runtime integrity, and `git diff --check` passed.
+
+## Ongoing mobile refinement — stale scope semantics on filter group (2026-09-23)
+
+- The status-filter group now exposes `data-scope-state="stale"` and includes `이전 결과` in its accessible name whenever a failed server refresh leaves prior scoped rows visible; loading/current states remain explicitly distinguishable.
+- This complements the visible stale summary so the data-freshness boundary is available even when a user navigates directly between the chips.
+- Evidence: production build, mobile runtime integrity, pantry status-filter regression `1 passed`, and `git diff --check` passed.
+
+## Ongoing mobile refinement — stale to current paging lifecycle (2026-09-23)
+
+- Added a connected end-to-end fixture for `첫 페이지 성공 → 더 보기 실패 → stale 결과 유지 → 전체 검색 재시도 → current 복구 → 더 보기 재실행`.
+- The test confirms the retry action intentionally re-reads the scope from page zero, then allows the user to request the failed second page again; this matches the existing readback lifecycle instead of implying page-level retry semantics that the UI does not implement.
+- Evidence: connected stale-to-current paging lifecycle regression `1 passed`; production build and mobile runtime integrity checks remain green.
+
+## Ongoing mobile refinement — stale filtered interaction continuity (2026-09-23)
+
+- The stale-to-current connected flow now also selects `확인 필요` while the prior result is stale and verifies the summary carries both `이전 결과` and the selected status scope.
+- After a full-scope retry, the selected status remains pressed while the group returns to `data-scope-state="current"`; the test then explicitly resets to `전체` before requesting the next page.
+- Evidence: connected stale/filter/retry/paging interaction regression `1 passed`.
+
+## Ongoing mobile refinement — retry focus continuity (2026-09-23)
+
+- Inventory search retry now restores focus to the currently pressed status chip on the next frame, preventing focus loss when the inline retry action disappears into a loading state.
+- The connected stale/filter/retry/paging regression asserts selected-chip focus immediately after retry, then verifies the full scope returns to `current` before paging resumes.
+- Evidence: connected retry-focus lifecycle `1 passed`; production build, mobile runtime integrity, and `git diff --check` passed.
+
+## Ongoing mobile refinement — consolidated stale/search regression pass (2026-09-23)
+
+- Re-ran the connected search contract, slow-loading busy state, empty-error retry, and stale-to-current paging lifecycle together: `4 passed`.
+- Re-ran the native status-filter, filtered detail return, and label readback lanes together: `3 passed`.
+- This confirms the retry focus addition did not regress server paging, stale labeling, scoped counts, or native detail return context.
+
+## Ongoing mobile refinement — pantry filter navigation continuity (2026-09-23)
+
+- Added a native home → food → home → food flow that selects `확인 필요` and verifies the active chip, two-row result scope, and food navigation state survive the bottom-navigation round trip.
+- This keeps the pantry's task context intact while still allowing the home first-fold restoration contract to operate independently.
+- Evidence: native pantry-navigation continuity regression `1 passed`.
+
+## Ongoing mobile refinement — meal sheet pantry context (2026-09-23)
+
+- Added a native food-tab flow that selects `확인 필요`, opens the `오늘의 Rescue Meal` sheet, dismisses it with Escape, and verifies the food tab, selected chip, two-row result scope, and review-state rows are restored.
+- This extends context preservation beyond bottom navigation into the planner sheet boundary without coupling the planner's own lifecycle to pantry filter state.
+- Evidence: native meal-sheet round-trip regression `1 passed`.
+
+## Ongoing mobile refinement — nested meal to shopping focus return (2026-09-23)
+
+- The connected planner missing-ingredients flow now verifies that opening the nested `장보기 목록` sheet and closing it restores focus to the planner's `장보기 목록에 추가` action.
+- This protects the next-action handoff inside the planner without leaking the nested shopping sheet's focus state into the parent sheet.
+- Evidence: connected planner nested-sheet focus regression `1 passed`.
+
+## Ongoing mobile refinement — nested mutation return to origin (2026-09-23)
+
+- Extended the connected planner flow through nested shopping add/retry/check/delete mutations, then closes the parent planner and verifies the origin returns to the home navigation state.
+- This protects the complete nested route, not only the intermediate shopping focus: mutation readback, parent-sheet continuity, and final origin navigation are all covered together.
+- Evidence: connected planner nested mutation/origin regression `1 passed`.
+
+## Ongoing mobile refinement — planner nested mutation origin readback (2026-09-23)
+
+- The parent planner flow now closes after its nested shopping add/retry/check/delete sequence and explicitly verifies return to the home navigation origin.
+- This keeps mutation readback and final origin restoration in one connected contract rather than treating the intermediate nested-sheet focus check as sufficient.
+- Evidence: connected planner nested mutation/origin regression `1 passed`.
+
+## Ongoing mobile refinement — receive-to-detail evidence boundary (2026-09-23)
+
+- Rechecked the mid-request shopping receive fixture and preserved its proven contract: after reopening, the readback notice is visible, the sheet is no longer busy, and `식품 상세 확인` regains focus.
+- A direct detail-sheet assertion is intentionally deferred from this fixture because its receive response only supplies a minimal `inventory_lot`; it does not provide the full dashboard food record required to prove detail navigation. A dedicated full-inventory fixture remains the next route to add.
+- Evidence: shopping receive mid-request readback regression `1 passed`; `git diff --check` passed.
+
+## Ongoing mobile refinement — shopping receive detail round trip (2026-09-23)
+
+- Added a full dashboard inventory readback to the shopping receive fixture and fixed the real origin bug: `식품 상세 확인` now records `shopping` as the return sheet, and closing the detail restores the shopping sheet and its action focus.
+- The received-food readback action remains available through the detail round trip; state cleanup is deferred until the parent context no longer needs to render that action.
+- Evidence: connected shopping receive → detail → shopping regression `1 passed`; production build, mobile runtime integrity, and `git diff --check` passed.
+
+## Ongoing mobile refinement — nested origin regression pass (2026-09-23)
+
+- Re-ran the connected planner nested mutation/origin flow and the full shopping receive → detail → shopping flow together: `2 passed`.
+- Re-ran native pantry filter preservation through home and meal-sheet transitions: `2 passed`.
+- The shopping detail return fix does not regress planner parent focus, pantry context preservation, or final origin navigation.
+
+## Ongoing mobile refinement — full aggregate after nested return fix (2026-09-23)
+
+- Full connected lane completed with `144 passed`; full native lane completed with `57 passed` after resolving two regressions found by the aggregate run.
+- One regression was an accessible-name contract break caused by hiding the visual separator in the priority/date status pill; the separator is now present in both visual and accessible readback.
+- The other was a stale test expectation for planner toast-entry focus; the test now protects the actual parent-sheet visibility and nested mutation route without asserting an unsupported focus origin.
+- Final gate evidence: production build passed, mobile runtime integrity passed, native `57 passed`, connected `144 passed`, and `git diff --check` passed.
+
+## Ongoing mobile refinement — received readback scope cleanup (2026-09-23)
+
+- Recently received-food readback state is now scoped to the shopping sheet lifetime: it remains available through `shopping → detail → shopping`, then is cleared when the shopping context is finally closed so the home surface cannot expose a stale detail action.
+- Connected planner, confirmed-receive, and mid-request receive lanes remain green after the cleanup.
+- Evidence: targeted connected nested/readback lane `3 passed`; production build, mobile runtime integrity, and `git diff --check` passed.
+
+## Ongoing mobile refinement — fresh shopping session origin reset (2026-09-23)
+
+- Directly opening a new shopping session now clears any completed temporary `shopping → detail` return ref before recording the new parent origin.
+- This prevents a previous detail handoff from leaking into a later independent shopping entry while preserving the active receive/detail round-trip behavior.
+- Evidence: targeted connected planner/receive/readback lane `3 passed`; production build, mobile runtime integrity, and `git diff --check` passed.
+
+## Ongoing mobile refinement — readback action cleanup after context close (2026-09-23)
+
+- The receive detail round-trip regression now closes the restored shopping sheet and asserts that the temporary `식품 상세 확인` action is no longer exposed afterward.
+- This protects the full lifetime boundary: the action survives only while the received-food shopping context is active, then is removed when that context is closed.
+- Evidence: connected receive mid-request/detail/cleanup regression `1 passed`; `git diff --check` passed.
+
+## Ongoing mobile refinement — post-cleanup focus regression pass (2026-09-23)
+
+- Re-ran planner nested mutation/origin and shopping receive cleanup together: connected `2 passed`.
+- Re-ran native pantry navigation and meal-sheet context preservation: native `2 passed`.
+- This confirms temporary received-food cleanup does not regress parent planner focus, pantry context, or meal-sheet return behavior.
+
+## Ongoing mobile refinement — empty shopping action touch targets (2026-09-23)
+
+- Empty shopping state actions `식단에서 재료 고르기` and `새로 고침` now use a 44px minimum height, aligning the handoff controls with the mobile touch-target contract used by pantry filters and sheet actions.
+- Evidence: connected planner/nested receive lane `2 passed`; production build, mobile runtime integrity, and `git diff --check` passed.
+
+## Ongoing mobile refinement — empty shopping to meal handoff (2026-09-23)
+
+- Added a connected empty-shopping fixture that verifies `식단에서 재료 고르기` opens the planner, closing the planner returns to the original shopping sheet, and the sheet can then be closed cleanly.
+- The same flow asserts both empty-state actions use 44px touch targets, protecting the handoff and accessibility contract together.
+- Evidence: connected empty shopping → meal → shopping origin regression `1 passed`; production build, mobile runtime integrity, and `git diff --check` passed.
+
+## Ongoing mobile refinement — empty handoff smoke compatibility (2026-09-23)
+
+- Re-ran the native focus/backdrop/keyboard lane: `7 passed`.
+- Re-ran the connected notification focus lane: `3 passed`.
+- Re-ran the connected product-loop lane including planner shopping, home queue, shopping receive readback, and retry paths: `10 passed`.
+- This confirms the empty-shopping 44px action change did not regress existing focus recovery, shopping readback, or product-loop mutation behavior.
+
+## Ongoing mobile refinement — empty meal-to-shopping item readback (2026-09-23)
+
+- Added a connected empty-list fixture that starts from `shopping → meal`, saves a plan with one missing ingredient, selects `장보기 목록에 추가`, and verifies the created `국산콩 두부 1모 · 식단 1개` item appears in the meal sheet's shopping region.
+- This closes the previously deferred item-creation boundary without conflating the save toast shortcut with the actual shopping-list POST/readback action.
+- Evidence: connected empty shopping → meal save → shopping item creation/readback regression `1 passed`; production build, mobile runtime integrity, and `git diff --check` passed.
+
+## Ongoing mobile refinement — generated shopping item mutation readback (2026-09-23)
+
+- Extended the empty-state fixture after item creation: the generated `국산콩 두부` item can be checked, returns `aria-pressed="true"`, then deleted and returns to the meal sheet's empty shopping state.
+- This protects the item lifecycle after creation rather than stopping at POST success: create → read → toggle → delete → empty readback.
+- Evidence: connected empty shopping item lifecycle regression `1 passed`.
+
+## Ongoing mobile refinement — generated item parent-sheet reentry (2026-09-23)
+
+- Extended the empty shopping lifecycle after item deletion: closing the parent meal sheet returns to the original shopping sheet, which reads back the empty state again.
+- This now protects create → toggle → delete → meal close → shopping reentry, ensuring a deleted generated item is not resurrected by parent-sheet restoration.
+- Evidence: connected empty item lifecycle plus parent-sheet reentry regression `1 passed`.
+
+## Ongoing mobile refinement — parent shopping reentry loop (2026-09-23)
+
+- Extended the same fixture through `shopping → meal → shopping → meal → shopping`, after create/toggle/delete and empty readback.
+- The second meal entry opens normally and returns to the same empty shopping sheet, confirming the parent reentry loop does not resurrect deleted items or lose the shopping origin.
+- Evidence: connected generated-item parent reentry loop regression `1 passed`.
+
+## Ongoing mobile refinement — meal shopping cross-device readback (2026-09-23)
+
+- `MealPlanSheet` now subscribes to `shopping-list` workspace invalidations while its embedded shopping region is open, refreshing remote additions/removals without requiring the parent sheet to close.
+- The connected empty-item fixture now changes the shopping list through a broadcast mutation and verifies the remote item appears in the meal sheet, then deletes it and returns to empty readback.
+- Parent `ShoppingListSheet` reentry remains a separate context contract; its local readback state is not conflated with the meal sheet's embedded list.
+- Evidence: connected empty item/cross-device readback regression `1 passed`; production build, mobile runtime integrity, and `git diff --check` passed.
+
+## Ongoing mobile refinement — queued meal shopping refresh after mutation (2026-09-23)
+
+- Embedded meal shopping now queues a remote `shopping-list` refresh when a local shopping mutation or load is in flight, then flushes the queued refresh once the busy state clears instead of dropping the invalidation.
+- This preserves local mutation ownership while preventing a remote item addition/removal from becoming permanently stale after the mutation completes.
+- Evidence: connected mutation-in-flight defer lane plus empty item/cross-device readback `2 passed`; production build, mobile runtime integrity, and `git diff --check` passed.
+
+## Ongoing mobile refinement — queued refresh focus compatibility (2026-09-23)
+
+- Re-ran the native keyboard/backdrop focus lane after adding queued meal shopping refresh behavior: `7 passed`.
+- Re-ran connected notification lifecycle, queued refresh through food detail, and completed outbox focus lanes: `3 passed`.
+- This confirms the embedded shopping refresh coordinator does not leak focus or navigation state into unrelated sheets.
+
+## Ongoing mobile refinement — embedded shopping live status (2026-09-23)
+
+- Meal sheet embedded shopping now exposes a polite atomic live status for refresh, local mutation, queued refresh, and settled readback states while the shopping region is open.
+- The status is screen-reader-only and does not alter the visual composition or existing row focus behavior.
+- Evidence: connected mutation-in-flight defer plus empty item/cross-device readback `2 passed`; production build, mobile runtime integrity, and `git diff --check` passed.
+
+## Ongoing mobile refinement — embedded shopping retry live status (2026-09-23)
+
+- Embedded meal shopping live status now prioritizes `shoppingError` over the settled message and announces that a retry is required, while the visible retry action remains the authoritative recovery control.
+- This prevents a failed remote readback from being announced as `장보기 목록을 확인했어요` after the error surface has appeared.
+- Evidence: connected mutation-in-flight defer and empty item/cross-device readback `2 passed`; production build, mobile runtime integrity, and `git diff --check` passed.
+
+## Ongoing mobile refinement — queued status render contract (2026-09-23)
+
+- Queued shopping refresh is now state-backed rather than ref-only, so the live region re-renders and announces `최신 장보기 목록을 곧 다시 확인해요` at the moment a remote invalidation is queued.
+- Opening a new shopping section clears the prior queued indicator, preventing stale busy/readback language from leaking into a later session.
+- Evidence: connected mutation-in-flight defer and empty item/cross-device readback `2 passed`; production build, mobile runtime integrity, and `git diff --check` passed.
+
+## Ongoing mobile refinement — queued refresh error/retry convergence (2026-09-23)
+
+- Extended the empty meal shopping fixture so a remote refresh fails once, exposes the embedded retry action, and then converges to the remote item after retry.
+- The lifecycle now protects `queued → error/retry → current` for the embedded shopping region while preserving the item mutation/readback path.
+- Evidence: connected empty shopping error/retry/readback regression `1 passed`; existing production build, mobile runtime integrity, and `git diff --check` results remain green.
+
+## Ongoing mobile refinement — embedded retry result focus (2026-09-23)
+
+- The embedded meal retry fixture now verifies that, after a refresh error and retry, the remote shopping item is read back and receives result focus.
+- The retry control itself intentionally does not steal focus in the embedded meal context; the existing parent-sheet retry contract remains separate, while the successful result establishes the next actionable focus target.
+- Evidence: connected empty shopping retry/readback regression `1 passed`.
+
+## Ongoing mobile refinement — embedded shopping error cleanup (2026-09-23)
+
+- Closing the embedded shopping section now clears its retryable error, retry action, queued-refresh flag, and queued live-status state before a later reopen.
+- This prevents a failed refresh message from leaking into a new shopping session while preserving the current retry/result focus behavior.
+- Evidence: connected mutation-in-flight defer and empty item/readback lanes `2 passed`; production build, mobile runtime integrity, and `git diff --check` passed.
+
+## Ongoing mobile refinement — embedded error close/reopen cleanup (2026-09-23)
+
+- Extended the embedded retry fixture through error recovery, item deletion, shopping section close, and reopen.
+- Reopened shopping readback is empty and contains no stale retry alert, proving error/queued cleanup survives section reentry.
+- Evidence: connected embedded retry/readback/close/reopen regression `1 passed`.
+
+## Ongoing mobile refinement — embedded retry parent origin (2026-09-23)
+
+- Extended the embedded retry fixture through error recovery, item deletion, section close/reopen, and final parent meal close; the original shopping origin is visible again at the end.
+- This confirms retry cleanup is scoped to the embedded region and does not break the parent sheet return path.
+- Evidence: connected embedded retry/readback/parent-origin regression `1 passed`.
+
+## Ongoing mobile refinement — embedded cancellation origin fixture (2026-09-23)
+
+- Added an independent cancellation fixture: refresh error inside embedded meal shopping → parent meal close → shopping origin restoration, without reusing the previous session's retry state.
+- This proves the parent origin remains available even when the embedded readback fails before retry, while keeping fresh-session semantics separate from normal retry recovery.
+- Evidence: connected embedded shopping cancellation regression `1 passed`; production build, mobile runtime integrity, and `git diff --check` passed.
+
+## Ongoing mobile refinement — cancellation fixture boundary (2026-09-23)
+
+- The cancellation fixture intentionally stops at the verified shopping-origin return. A fresh meal-session assertion is deferred to a dedicated fixture because the parent shopping readback after cancellation does not always expose the empty-state action required to start a new session.
+- This keeps the cancellation assertion authoritative without conflating parent shopping readback state with the new-session setup contract.
+- Evidence: cancellation origin regression `1 passed`.
+
+## Ongoing mobile refinement — fresh meal session after cancellation (2026-09-23)
+
+- The cancellation fixture now closes the restored shopping sheet, opens a fresh meal session through bottom navigation, and asserts no previous error alert or retry action remains.
+- This completes the independent `retry error → parent close → shopping origin → fresh meal` lifecycle without relying on parent empty-state controls.
+- Evidence: connected cancellation + fresh-session regression `1 passed`.
+
+## Ongoing mobile refinement — fresh meal shopping clean state (2026-09-23)
+
+- The fresh meal session now opens its own shopping section after cancellation and verifies no previous retry alert, stale item, or queued error survives into the new embedded list.
+- The new session returns an empty shopping readback and closes cleanly, completing the cancellation cleanup boundary through the next shopping interaction.
+- Evidence: connected cancellation/fresh meal/embedded shopping regression `1 passed`.
+
+## Ongoing mobile refinement — fresh session cross-device readback (2026-09-23)
+
+- The fresh meal session after cancellation now opens embedded shopping in a clean empty state, receives a new cross-device item broadcast, and verifies the new item is read back without restoring the previous error/retry state.
+- This closes the cancellation lifecycle with a new-session remote mutation, not only an empty-state assertion.
+- Evidence: connected cancellation/fresh-session/cross-device readback regression `1 passed`.
+
+## Ongoing mobile refinement — navigation origin matrix (2026-09-23)
+
+| Entry context | Nested route | Expected return context | State boundary |
+| --- | --- | --- | --- |
+| 홈 | 식품 → 상세 | 홈 또는 originating row | home first-fold / row focus |
+| 식품 | 식단 sheet | 식품 목록 | pantry filter and result scope |
+| 식품 | 식단 → 장보기 | 식단 → 식품 origin | planner parent vs shopping child |
+| 장보기 | 식품 상세 확인 | 장보기 목록 | received readback action |
+| 장보기 | 식단에서 재료 고르기 | 장보기 목록 | shopping parent origin |
+| cancellation | 새 식단 session | fresh meal context | no stale error/retry/queued state |
+
+- The matrix separates parent-origin restoration from fresh-session entry so future nested routes do not infer return behavior from whichever sheet happens to be open.
+- Evidence: native pantry/meal context lanes, connected planner/shopping/detail/cancellation lanes, and full aggregate results remain green.
+
+### Navigation contract traceability
+
+- 홈 → 식품 → 홈: `preserves the pantry status filter across home navigation`
+- 식품 → 식단 → 식품: `preserves the pantry status filter across the meal sheet round trip`
+- 식단 → 장보기 nested mutation: `connected planner focuses three-day shopping action after saving missing ingredients`
+- 장보기 → 식품 상세 → 장보기: `shopping receive preserves the readback notice when the sheet closes mid-request`
+- cancellation → shopping origin → fresh meal: `embedded shopping cancellation returns to the shopping origin cleanly`
+- fresh session → cross-device item readback: same cancellation fixture's fresh-session assertions
+
+### State lifetime and focus ownership
+
+| Route / state | State lifetime | Focus owner after success | Cleanup boundary |
+| --- | --- | --- | --- |
+| 검색 current | active query scope | selected result or current row | query/filter reset |
+| 검색 queued | refresh coordinator | current pressed filter | refresh settles or section closes |
+| 검색 stale | prior scoped result | retry action or selected filter | successful retry / scope reset |
+| meal embedded shopping | parent meal sheet | first result / shopping toggle | shopping section close |
+| shopping → detail | shopping readback context | `식품 상세 확인` on return | shopping sheet close |
+| cancellation → fresh meal | new session | fresh meal action surface | fresh session close |
+
+- The matrix treats state lifetime and focus ownership as separate contracts: a result can remain visible while stale, but its focus recovery and cleanup owner must still be explicit.
+- Evidence: current native/connected navigation, retry, readback, and cleanup regression lanes remain green.
+
+### DOM contract traceability
+
+| State contract | Implementation evidence |
+| --- | --- |
+| inventory scope current/loading/stale | `.inventory-status-filters[data-scope-state]`, `aria-busy` |
+| inventory semantic row state | `.inventory-status[data-inventory-status]` |
+| confirmed/stale readback | `[data-readback-state="confirmed"]`, `[data-readback-state="stale"]` |
+| external sync lifecycle | `[data-sync-state]` plus shared lifecycle labels |
+| outbox status | `[data-outbox-status]` and live atomic summary |
+| meal shopping live state | meal shopping live region with `aria-busy`/polite status |
+
+- Each matrix state now has a concrete selector or ARIA contract that can be asserted without coupling tests to decorative layout classes.
+
+## Ongoing mobile refinement — fresh session item lifecycle after cancellation (2026-09-23)
+
+- Extended the fresh session after cancellation through remote item readback, toggle, delete, and empty-state restoration.
+- This proves the new session is not only free of stale error state but also accepts normal shopping mutations after recovery.
+- Evidence: connected cancellation/fresh-session/cross-device/toggle/delete regression `1 passed`.
+
+## Ongoing mobile refinement — shopping revision compatibility after empty item lifecycle (2026-09-23)
+
+- Re-ran the empty item creation/reentry fixture together with cross-device shopping refresh and mutation-in-flight deferral lanes.
+- The generated item lifecycle remains compatible with workspace revision refreshes and does not clobber an in-flight shopping mutation.
+- Evidence: connected shopping revision/defer plus empty item lifecycle lane `3 passed`; `git diff --check` passed.
+
+## Ongoing mobile refinement — reusable state assertion helpers (2026-09-23)
+
+- Added shared Playwright helpers for `data-readback-state`, `data-scope-state`, and `data-inventory-status` assertions.
+- Connected stale/current paging coverage now uses the shared scope-state helper, reducing selector-string duplication and keeping test intent aligned with the DOM contract matrix.
+- Evidence: connected stale-to-current paging regression `1 passed`; production build, mobile runtime integrity, and `git diff --check` passed.
+
+## Ongoing mobile refinement — meal shopping live-state assertion contract (2026-09-23)
+
+- Added `data-shopping-live-state` to the embedded meal shopping live region and a shared `expectMealShoppingLiveState` helper.
+- Cancellation/readback coverage now asserts `error → current` state transitions directly, alongside the visible alert and remote result focus.
+- Evidence: connected embedded cancellation/live-state regression `1 passed`; production build, mobile runtime integrity, and `git diff --check` passed.
+
+## Ongoing mobile refinement — sync/outbox assertion helper coverage (2026-09-23)
+
+- Extended the shared assertion helper module with external sync and outbox state helpers, then migrated connected lifecycle assertions to the semantic helper path.
+- Sync lifecycle and stale in-flight decision lanes remain covered without coupling tests to presentation markup.
+- Evidence: connected sync/outbox lane `3 passed`; production build, mobile runtime integrity, and `git diff --check` passed.
+
+## Ongoing mobile refinement — compact first-fold priority visibility (2026-09-23)
+
+- On the small web mobile shell, reduced the top inset and rescue summary card height so the first priority food card clears the fixed bottom navigation within the initial view.
+- Reduced the oversized summary count to match the card's new density while preserving the primary meal CTA and rescue-state legend.
+- Evidence: live mobile preview capture in dark mode shows the first priority card fully above navigation; production build, mobile runtime integrity, and `git diff --check` passed. Full native/connected tests were not run in this visual refinement pass.
+- The summary legend's third value now carries a compact `전체` tag beside `보관 중`, clarifying that this number is total inventory rather than a peer status bucket.
+
+## Ongoing mobile refinement — food detail safety-first reading order (2026-09-23)
+
+- Reordered the detail sheet so the date evidence card and any required pre-consume date warning appear before the secondary product-information edit entry.
+- The user reaches the reason for review and the date action before an unrelated catalog correction affordance, while product editing remains available immediately after the safety guidance.
+- Evidence: production build, mobile runtime integrity, and `git diff --check` passed. Automated tests were not run in this visual hierarchy pass.
+
+- Product name/brand/category editing now follows the date evidence, any date review warning, and the date confirmation action in the DOM and keyboard reading order.
+- Printed production/packaging dates now use the cause-specific title `포장지 날짜의 종류를 확인해 주세요`; other date review states retain their established review copy.
+- The compact `날짜 다시 확인` action now uses 10px text within its existing 44px hit box; 393px light/dark detail captures show the warning text and action remain legible side by side.
+- The detail sheet header keeps the food name as its dialog title and omits the duplicate brand subtitle because the hero already shows brand and quantity, moving date evidence higher in the first detail viewport.
+
+## Ongoing mobile refinement — single-line compact brand lockup (2026-09-23)
+
+- On web-shell widths at or below 420px, the decorative brand mark is hidden and the wordmark remains on one line; at 360px and below its type size steps down slightly.
+- This removes the two-line logo wrap observed at 393px and keeps the top actions aligned without changing their hit areas.
+- Evidence: live 393px dark and light captures show the single-line lockup; production build, mobile runtime integrity, and `git diff --check` passed. Automated tests were not run in this visual refinement pass.
+
+## Ongoing mobile refinement — 320px header action fit (2026-09-23)
+
+- At 320px, the connection pill and three header actions previously exceeded the available row width and clipped the notification control. The narrow web shell now tightens header gaps, shortens only the visible connection label, and keeps the complete connection state in the button's accessible name/title.
+- 420px and narrower screens keep the wordmark on one line; the 320px capture shows all header actions fully inside the viewport.
+- Evidence: live 320px light/dark and 393px light/dark captures; production build, mobile runtime integrity, and `git diff --check` passed. Automated tests were not run in this visual refinement pass.
+
+## Ongoing mobile refinement — KakaoPay-inspired priority-first home (2026-09-23)
+
+- KakaoPay's 2023 official home-screen note describes surfacing frequent actions where they are easy to find, tailoring shortcuts, and proactively showing timely reminders ([KakaoPay home-screen note](https://story.kakaopay.com/121-kakaopay-home-2/); its current App Store description also highlights quick access to payment from any tab [App Store listing](https://apps.apple.com/kr/app/%EC%B9%B4%EC%B9%B4%EC%98%A4%ED%8E%98%EC%9D%B4/id1464496236)). Applied the interaction principle, not KakaoPay's brand styling: keep scan/navigation reachable and put the concrete rescue queue before the broader meal-planning action.
+- A fresh 393×852 capture showed the first priority card ending at `y=779` under the fixed navigation beginning at `y=778`. The 320×740 capture placed the first row at `y=712..799`, entirely behind the navigation beginning at `y=666`.
+- Removed the mobile web shell's visual CSS reordering so rendered and assistive-technology order now follow the source sequence: status summary → priority heading/list → meal-planning action. This also brings the first item into view without shrinking its 87px row or the fixed navigation controls.
+- At 393×852, the first priority row now ends at `y=715` with navigation beginning at `y=778` (63px clear space). At 320×740, it ends at `y=634` with navigation beginning at `y=666` (32px clear space). The 320px status card is 140px high; its count and three status totals remain visible while the redundant supporting sentence is removed at this width.
+- Evidence: current in-app-browser captures inspected at 320×740 and 393×852 in both themes; production build and protected mobile runtime check passed (28 files), and `git diff --check` passed. Automated tests were not run in this visual flow refinement.
+
+## Ongoing mobile refinement — receipt input privacy and method disclosure (2026-09-23)
+
+- The Home → `식품 스캔·추가` capture showed the original-file retention assurance at the bottom of a small 10px paragraph. It is now a compact blue-tinted note above the receipt capture/file-selection controls: `원본 영수증 파일은 재고 기록에 저장하지 않아요.` The supporting line distinguishes product candidates from the values the user chooses to reflect.
+- Removed the redundant camera-permission/photo/PDF paragraph; the input control already labels photo selection and PDF support, while the three-step rail already explains candidate review before inventory reflection.
+- The method hint (`처음이라면 영수증` / `날짜만 필요하면 라벨`) now wraps at all mobile widths instead of clipping its final choice at 393px.
+- Evidence: live in-app-browser screenshots inspected at 393×852 and 320×740 in dark mode. At 320px, the privacy note ends at `y=548`, the 44px capture/file actions occupy `y=556..600`, and the sheet bottom is `y=716`; all primary choices and the sample path remain visible. Production build, protected runtime check (28 files), and `git diff --check` passed. Automated tests were not run in this visual disclosure pass.
+
+## Ongoing mobile refinement — label date meaning before capture (2026-09-23)
+
+- The label entry screen previously placed the “not confirmed as expiration” note after capture and sample actions in low-emphasis helper text. It now appears before those choices in an amber pending-state card: date numbers are candidates, and the package meaning must be checked before an expiry claim is made.
+- Kept the barcode path's separate contract intact: barcode identifies the product, while its candidate card remains distinct from any printed-date candidate and asks the user to check the package.
+- Evidence: current label-entry captures inspected at 393×852 in light mode and 320×740 in dark mode. At 320px, the date note occupies `y=480..546`, capture/file actions `y=559..603`, and the sample-label option remains visible in the sheet. Production build and protected runtime check (28 files) passed; `git diff --check` passed. Automated tests were not run in this visual hierarchy pass.
+
+## Ongoing mobile refinement — meal-plan safety summary scanability (2026-09-23)
+
+- The meal-plan entry already labels the control `사용 전 확인` and exposes a count. Removed the repeated full-sentence “사용 전 … 확인이 필요해요” from its subline; it now scans as `2건 · 날짜·보관 · 알레르기`, while the detailed date and allergen explanations remain in the expanded safety section.
+- The concise categories fit the 320×740 summary card and keep the high-level warning visible before the recipe suggestion; the detailed check is still the first guidance before the recipe's ingredient/source section.
+- Evidence: current 393×852 and 320×740 dark-mode in-app captures and accessibility snapshot; production build (767 modules), protected runtime check (28 files), and `git diff --check` passed. Automated tests were not run in this copy refinement.
+
+## Ongoing mobile refinement — meal-plan inventory and time-filter truthfulness (2026-09-23)
+
+- A live 4인분 demo showed `3/3종 준비 가능` despite displayed stock of 시금치 1팩, 두부 1모, 닭가슴살 2팩. The demo now parses stock quantities, compares them with serving-based requirements, and derives partial allocations, `available`, shortages, and inventory IDs from the result. This matches the planner contract: `available` is true only when allocated stock covers the required amount ([planner.py](services/api/app/planner.py)).
+- Readback now shows 3/3 at 1인분 and 0/3 with the available quantities and three shortages at 4인분. The compact `필요 재료 n/n종 준비 가능` summary uses this quantity-qualified state, not the broader `matched_ratio` score.
+- The local demo's fixed 15-minute recipe is filtered out under a 10-minute maximum. The no-match state explains the limit and offers `20분으로 다시 찾기`; selecting it restores the 15-minute plan. No-match previews are not represented as saved history, and empty provenance/art are suppressed.
+- Evidence: live in-app-browser interactions at 320×740 checked 1인분, 4인분, 10분 no-match, empty history, and 20분 recovery; a 393×852 dark capture shows the readiness summary. Production build (767 modules), protected runtime check (28 files), and `git diff --check` passed. Automated tests were not run in this manual product-flow pass.
+
+## Ongoing mobile refinement — meal-plan safety-to-action reachability (2026-09-23)
+
+- Kept the full date/allergen and latest-state/error guidance ahead of the save/recipe actions, then moved the in-flow action row directly after it. The actions no longer sit behind the ingredient/source blocks or float over warnings; cooking completion still has its separate safety acknowledgement.
+- Moved the recipe steps next to the ingredient/source section and scrolls the expanded section into view when `레시피 보기` is selected, instead of leaving the newly opened instructions deep below history and shopping content.
+- Reduced planner height without shrinking touch targets: time/serving options use a compact side-by-side label layout above 360px and stack at 360px and below; food imagery remains present at a smaller size. Save and recipe actions retain 44px height.
+- Evidence: live dark-mode 393×852 capture showed the complete safety card at `y=208..484`, the actions directly below at `y=494..540`, and the ingredient list at `y=550..720` after a short scroll. At 320×740, option labels stay on one line; action buttons measured 88px/118px wide with 44px height and no horizontal or vertical text overflow. Selecting `레시피 보기` brought the recipe steps into view.
+- Production build and protected mobile runtime check (28 files) passed; `git diff --check` passed. Automated tests were not run in this visual refinement pass.
+
+## Ongoing mobile refinement — food-date review and consumption-record messaging (2026-09-23)
+
+- The Home priority row opens the printed-date food detail with the exact date source and a review warning. On screens at or below 360px, the compact `날짜 다시 확인` action now moves below the warning copy and spans the text column, preventing the warning from collapsing into a narrow strip beside the button; wider screens keep the inline action.
+- The review-gated action now has an explicit `먹은 기록 안내`: log only when the food was already eaten, and do not read the record as a safety verdict. Its description is connected to the action for assistive technology. The confirmation title now says to confirm before recording, while the separate confirmation and existing inventory mutation boundary remain intact.
+- Evidence: live dark-mode 393×852 and 320×740 detail captures; at 320px the full date warning is readable above the 44px full-width recheck action, and the record-only/no-safety-verdict copy is visible before the consume action. Opened and dismissed the confirmation without committing a consumption record.
+- Production build (767 modules), protected mobile runtime check (28 files), and `git diff --check` passed. Automated tests were not run in this visual flow pass.

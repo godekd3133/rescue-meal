@@ -481,6 +481,8 @@ export type ApiMealPlanCompletion = {
     reason: string;
   }>;
   grocy_sync_status?: ApiGrocySyncStatus;
+  /** Optional identity for a future direct outbox handoff; absent responses keep the notification fallback. */
+  grocy_sync_record_id?: string;
 };
 
 export type ApiMealPlanAuditEvent = {

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { BrowserMultiFormatReader } from "@zxing/browser";
 import { InfoCircledIcon } from "@radix-ui/react-icons";
+import { revealAndFocus } from "./mobile/scroll";
 
 type BarcodeScannerProps = {
   onDetected: (value: string) => void;
@@ -58,14 +59,14 @@ export default function BarcodeScanner({ onDetected, onCancel }: BarcodeScannerP
 
   useEffect(() => {
     if (status !== "unavailable") return;
-    const timer = window.setTimeout(() => fallbackButtonRef.current?.focus({ preventScroll: true }), 120);
+    const timer = window.setTimeout(() => revealAndFocus(fallbackButtonRef.current), 120);
     return () => window.clearTimeout(timer);
   }, [status]);
 
   return (
-    <div className="scanner-flow" aria-live="polite">
+    <div className="scanner-flow" aria-live="polite" aria-busy={status === "starting"}>
       {status === "unavailable" ? (
-        <div className="scanner-unavailable"><div className="capture-visual warning"><InfoCircledIcon width={24} height={24} /></div><strong>카메라를 사용할 수 없어요</strong><p>브라우저 권한을 허용하거나 아래 입력창에 바코드 숫자를 직접 입력해 주세요.</p></div>
+        <div className="scanner-unavailable" role="alert" aria-live="assertive" aria-atomic="true"><div className="capture-visual warning"><InfoCircledIcon width={24} height={24} /></div><strong>카메라를 사용할 수 없어요</strong><p>브라우저 권한을 허용하거나 아래 입력창에 바코드 숫자를 직접 입력해 주세요.</p></div>
       ) : (
         <div className="scanner-preview"><video ref={videoRef} aria-label="바코드 카메라 미리보기" autoPlay muted playsInline /><span className="scanner-frame" aria-hidden="true" /></div>
       )}

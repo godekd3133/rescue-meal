@@ -22,5 +22,5 @@ export default function ConnectionStatus({ state, hasCachedData = false, cachedA
       ? `연결 상태: ${label} · 읽기 전용 · ${actionLabel}`
       : `연결 상태: ${label} · 최신 기록을 사용할 수 없음 · ${actionLabel}`
     : `연결 상태: ${label} · ${actionLabel}`;
-  return <button className={`connection-pill connection-${state}${freshnessClass}`} type="button" onClick={onOpenAccount} aria-label={accessibleLabel} title={accessibleLabel}><span className="connection-dot" />{label}<ChevronRightIcon aria-hidden="true" width={11} height={11} style={{ flex: "0 0 auto", opacity: 0.72 }} /></button>;
+  return <button className={`connection-pill connection-${state}${freshnessClass}`} type="button" onClick={onOpenAccount} aria-label={accessibleLabel} title={accessibleLabel}><span className="connection-dot" /><span className="connection-label">{label}</span><ChevronRightIcon aria-hidden="true" width={11} height={11} style={{ flex: "0 0 auto", opacity: 0.72 }} /></button>;
 }
