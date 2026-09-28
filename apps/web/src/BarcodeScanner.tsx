@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { BrowserMultiFormatReader } from "@zxing/browser";
 import { InfoCircledIcon } from "@radix-ui/react-icons";
-import { revealAndFocus } from "./mobile/scroll";
+import { revealAndFocusWithinNearestContainer as revealAndFocus } from "./appScroll";
 
 type BarcodeScannerProps = {
   onDetected: (value: string) => void;
@@ -70,7 +70,7 @@ export default function BarcodeScanner({ onDetected, onCancel }: BarcodeScannerP
       ) : (
         <div className="scanner-preview"><video ref={videoRef} aria-label="바코드 카메라 미리보기" autoPlay muted playsInline /><span className="scanner-frame" aria-hidden="true" /></div>
       )}
-      <p className="scanner-status">{status === "starting" ? "카메라를 준비하고 있어요" : status === "scanning" ? "바코드를 화면 안에 맞춰 주세요" : "수동 입력으로도 상품 후보를 찾을 수 있어요"}</p>
+      <p className="scanner-status">{status === "starting" ? "카메라를 준비하고 있어요" : status === "scanning" ? "바코드를 화면 안에 맞춰 주세요" : "바코드 숫자를 직접 입력해 상품을 찾을 수 있어요"}</p>
       <button ref={fallbackButtonRef} className="secondary-sheet-button" type="button" onClick={onCancel}>{status === "unavailable" ? "수동 입력으로 계속" : "카메라 닫기"}</button>
     </div>
   );

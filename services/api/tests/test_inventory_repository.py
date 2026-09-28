@@ -32,7 +32,7 @@ def _food_record(food_id: str, quantity: float = 2):
             "테스트",
             1,
             "육류",
-            "/assets/food/chicken.png",
+            "/assets/food/chicken-photo.jpg",
             "테스트",
         )
     )

@@ -449,7 +449,7 @@ def _response_from_ollama_suggestion(
         requires_confirmation=True,
         abstained=False,
         abstain_reason=None,
-        safety_disclaimer="AI가 소비기한이나 안전 여부를 판정한 결과가 아닙니다. 먼저 확인할 순서만 제안합니다.",
+        safety_disclaimer="소비기한이나 안전 여부를 판정한 결과가 아니에요. 먼저 확인할 순서를 참고해 주세요.",
     )
 
 

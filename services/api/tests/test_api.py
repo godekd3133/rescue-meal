@@ -3078,7 +3078,7 @@ def test_receipt_commit_rolls_back_after_failure_and_can_retry() -> None:
         json={
             "source_filename": "commit-retry.jpg",
             "lines": [
-                {"raw_name": "첫 번째 새 상품", "quantity": 1, "unit": "개", "line_type": "product", "canonical_name": "첫 번째 새 상품", "match_confidence": 0.95},
+                {"raw_name": "첫 번째 새 상품", "quantity": 1, "unit": "개", "line_type": "product", "canonical_name": "첫 번째 새 상품", "match_confidence": 0.95, "source_observation_ids": ["obs-source-line-1"]},
                 {"raw_name": "두 번째 새 상품", "quantity": 1, "unit": "개", "line_type": "product", "canonical_name": "두 번째 새 상품", "match_confidence": 0.95},
             ],
         },
@@ -3106,6 +3106,10 @@ def test_receipt_commit_rolls_back_after_failure_and_can_retry() -> None:
 
     assert failed.status_code == 503
     assert len(client.get("/api/dashboard").json()["inventory"]) == 7
+    failed_draft = client.get(f"/api/receipts/{receipt_id}").json()
+    assert failed_draft["status"] == "review_required"
+    assert failed_draft["stock_created"] is False
+    assert failed_draft["lines"][0]["source_observation_ids"] == ["obs-source-line-1"]
     assert any(transaction.status == "needs_reconciliation" for transaction in store.commit_transactions.values())
     reconciliation_rows = client.get("/api/commit-transactions").json()
     assert any(row["status"] == "needs_reconciliation" for row in reconciliation_rows)
@@ -4256,6 +4260,8 @@ def test_receiving_shopping_item_creates_lot_reconciles_plan_and_replays_idempot
     assert lot["date_assertion"]["kind"] == "unknown"
     assert lot["date_assertion"]["value"] is None
     assert "포장지에서 확인" in lot["note"]
+    assert "구매일을 기록했어요" in lot["note"]
+    assert "먹어도 되는지를 판단하지 않아요" in lot["note"]
     assert lot["estimated_use_first_window"] is not None
 
     lot_count = len(store.foods)
@@ -4878,6 +4884,27 @@ def test_manual_food_correct_action_requires_a_target_lot() -> None:
     assert response.status_code == 422
 
 
+def test_manual_food_correction_returns_typed_error_for_missing_target_lot() -> None:
+    response = client.post(
+        "/api/foods",
+        json={
+            "lot_action": "correct",
+            "target_food_id": "deleted-label-target",
+            "canonical_name": "삭제된 라벨 대상",
+            "quantity": 1,
+            "unit": "팩",
+            "storage_type": "refrigerated",
+            "date_kind": "use_by",
+            "date_value": "2026-09-30",
+            "date_source": "label_ocr",
+            "user_confirmed": True,
+        },
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"]["code"] == "food_lot_target_not_found"
+
+
 def test_manual_food_target_updates_one_lot_and_keeps_quantity_and_date_history() -> None:
     created = client.post(
         "/api/foods",
@@ -5344,7 +5371,7 @@ def test_confirmed_label_date_updates_existing_food_without_duplicate() -> None:
             "storage_type": "refrigerated",
             "category": "채소",
             "brand": "국내산 시금치",
-            "image_path": "/assets/food/spinach.png",
+            "image_path": "/assets/food/spinach-photo.jpg",
             "date_kind": "use_by",
             "date_value": "2026-09-02",
             "date_source": "label_ocr",
@@ -5373,7 +5400,7 @@ def test_explicit_label_lot_correction_replaces_confirmed_date_and_keeps_history
             "storage_type": "ambient",
             "category": "기타",
             "brand": "라벨 확인 필요",
-            "image_path": "/assets/food/tomato.png",
+            "image_path": "/assets/food/tomato-photo.jpg",
             "date_kind": "sell_by",
             "date_value": "2026-09-13",
             "date_source": "label_ocr",
@@ -5395,7 +5422,7 @@ def test_explicit_label_lot_correction_replaces_confirmed_date_and_keeps_history
     assert payload["storage_type"] == "ambient"
     assert payload["brand"] == "국내산 시금치"
     assert payload["category"] == "채소"
-    assert payload["image_path"] == "/assets/food/spinach.png"
+    assert payload["image_path"] == "/assets/food/spinach-photo.jpg"
     assert payload["date_assertion_history"][0]["value"] == "2026-09-02"
     assert len(client.get("/api/dashboard").json()["inventory"]) == 7
 
@@ -5416,7 +5443,7 @@ def test_label_lot_correction_persistence_failure_restores_target_identity_and_d
                 "storage_type": "ambient",
                 "category": "기타",
                 "brand": "라벨 확인 필요",
-                "image_path": "/assets/food/tomato.png",
+                "image_path": "/assets/food/tomato-photo.jpg",
                 "date_kind": "sell_by",
                 "date_value": "2026-09-13",
                 "date_source": "label_ocr",

@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { ArchiveIcon, ArrowRightIcon, CheckCircledIcon, Cross2Icon, InfoCircledIcon, ReaderIcon } from "@radix-ui/react-icons";
 import { KeyboardInput, useKeyboard } from "./mobile/Keyboard";
-import { getMobileScrollBehavior, revealAndFocus } from "./mobile/scroll";
+import { getMobileScrollBehavior } from "./mobile/scroll";
+import { revealAndFocusWithinNearestContainer as revealAndFocus, scrollTargetWithinNearestContainer } from "./appScroll";
 import type { ApiShoppingListItem, ApiStorageLocation, ApiStorageType } from "./mealApi";
 
 const shouldAutoFocusReceiveQuantity = ((import.meta.env.VITE_APP_SHELL as string | undefined)?.trim().toLowerCase() ?? "web") === "native";
@@ -21,6 +22,7 @@ type ShoppingListSheetProps = {
   onOpenReceivedFood?: () => void;
   onOpenMeal: () => void;
   initialFocus?: boolean;
+  demoMode?: boolean;
   storageLocations: ApiStorageLocation[];
   retryAction?: { label: string; onRetry: () => void } | null;
 };
@@ -58,7 +60,7 @@ function sourceLabel(item: ApiShoppingListItem) {
 }
 
 function itemLabel(item: ApiShoppingListItem) {
-  return `${item.canonical_name} ${formatQuantity(item.quantity)}${item.unit} · ${sourceLabel(item)}${item.checked ? " · 구매 완료 · 재고 반영 전" : ""}`;
+  return `${item.canonical_name} ${formatQuantity(item.quantity)}${item.unit} · ${sourceLabel(item)}${item.checked ? " · 구매 완료 · 식품 목록에 추가 전" : ""}`;
 }
 
 export default function ShoppingListSheet({
@@ -76,12 +78,14 @@ export default function ShoppingListSheet({
   onOpenReceivedFood,
   onOpenMeal,
   initialFocus = false,
+  demoMode = false,
   storageLocations,
   retryAction,
 }: ShoppingListSheetProps) {
   const keyboard = useKeyboard();
   const receivePanelRef = useRef<HTMLFormElement | null>(null);
   const receiveQuantityRef = useRef<HTMLInputElement | null>(null);
+  const manualNameRef = useRef<HTMLInputElement | null>(null);
   const receivedFoodActionRef = useRef<HTMLButtonElement | null>(null);
   const shoppingItemRefs = useRef(new Map<string, HTMLButtonElement>());
   const receiveButtonRefs = useRef(new Map<string, HTMLButtonElement>());
@@ -103,14 +107,9 @@ export default function ShoppingListSheet({
   const remainingCount = items.filter((item) => !item.checked).length;
   const completedCount = items.length - remainingCount;
   const customStorageLocations = storageLocations.filter((location) => !["ambient", "refrigerated", "frozen"].includes(location.id));
-  const hasManualItems = items.some((item) => item.sources.some((source) => source.source_type === "manual"));
-  const hasPlannedItems = items.some((item) => item.sources.some((source) => source.source_type !== "manual"));
   const progressPercent = items.length ? Math.round((completedCount / items.length) * 100) : 0;
-  const heroDescription = hasManualItems && hasPlannedItems
-    ? "식단 부족 재료와 직접 추가한 물건을 함께 관리해요."
-    : hasManualItems
-      ? "식단과 상관없이 필요한 물건을 기록했어요."
-      : "저장한 식단에서 부족한 재료를 모았어요.";
+
+  const focusManualEntry = () => revealAndFocus(manualNameRef.current, { block: "center" });
 
   useEffect(() => {
     if (!initialFocus) {
@@ -159,7 +158,7 @@ export default function ShoppingListSheet({
           tryFocus();
           return;
         }
-        currentTarget.scrollIntoView({ behavior: "auto", block: "nearest" });
+        scrollTargetWithinNearestContainer(currentTarget, "nearest", "auto");
         currentTarget.focus({ preventScroll: true });
         initialFocusHandledRef.current = true;
         cleanup();
@@ -270,7 +269,7 @@ export default function ShoppingListSheet({
   useEffect(() => {
     if (!receivingItemId) return;
     const frame = window.requestAnimationFrame(() => {
-      receivePanelRef.current?.scrollIntoView({ behavior: getMobileScrollBehavior(), block: "nearest" });
+      scrollTargetWithinNearestContainer(receivePanelRef.current, "nearest", getMobileScrollBehavior());
       if (shouldAutoFocusReceiveQuantity) receiveQuantityRef.current?.focus({ preventScroll: true });
     });
     return () => window.cancelAnimationFrame(frame);
@@ -329,6 +328,10 @@ export default function ShoppingListSheet({
       setReceiveError("구매 수량은 0보다 큰 숫자로 입력해 주세요.");
       return;
     }
+    if (!item.checked) {
+      setReceiveError("구매를 마치면 수량과 보관 위치를 입력해 주세요.");
+      return;
+    }
     setReceiveError("");
     pendingItemFocusRef.current = { itemId: item.id, index: items.findIndex((candidate) => candidate.id === item.id), mode: "remove", items };
     const received = await onReceive(item, { quantity, storageType: receiveStorageType, storageLocationId: receiveStorageLocationId });
@@ -337,22 +340,17 @@ export default function ShoppingListSheet({
 
   return (
     <div className="shopping-sheet-content" aria-label="장보기 목록" aria-busy={loading || mutating} data-received-food-name={recentlyReceivedFoodName || undefined}>
-      <section className="shopping-sheet-hero" aria-labelledby="shopping-sheet-title">
-        <span className="shopping-sheet-hero-icon"><ReaderIcon width={19} height={19} /></span>
-        <div>
-          <p className="shopping-sheet-kicker">장보기 목록</p>
-          <h3 id="shopping-sheet-title">{loading ? "장보기 목록을 확인하고 있어요" : error && !items.length ? "장보기 목록을 불러오지 못했어요" : remainingCount ? `${remainingCount}개를 준비해요` : items.length ? "모두 구매했어요" : "장볼 재료가 없어요"}</h3>
-          <p>{loading ? "저장한 식단과 직접 추가한 항목을 불러옵니다." : error && !items.length ? "기존 목록을 확인할 수 없어요. 연결을 확인한 뒤 다시 시도해 주세요." : remainingCount ? heroDescription : items.length ? "구매 완료한 항목은 재고에 반영할 수 있어요." : "식단을 저장하거나 필요한 물건을 직접 추가해 보세요."}</p>
-        </div>
-      </section>
+      {items.length || loading || error ? (
+        <section className={`shopping-sheet-progress${remainingCount ? " shopping-sheet-progress-active" : " shopping-sheet-progress-complete"}`} aria-label="구매 현황">
+          <div className="shopping-sheet-progress-heading">
+            <span><strong>{loading && !items.length ? "장보기 목록을 불러오고 있어요" : error && !items.length ? "목록을 불러오지 못했어요" : remainingCount ? "구매 현황" : "구매 완료 · 식품 목록에 추가 전"}</strong><small>{loading && !items.length ? "저장한 식단과 직접 추가한 재료를 불러오고 있어요." : error && !items.length ? "인터넷에 연결한 뒤 목록을 다시 불러와 주세요." : remainingCount ? `${remainingCount}개를 구매하면 식품 목록에 추가할 수 있어요.` : "구매한 식품을 목록에 추가한 뒤 포장지 날짜와 보관 방법을 살펴봐 주세요."}</small></span>
+            <em>{loading && !items.length ? "불러오는 중" : `${completedCount}/${items.length}`}</em>
+          </div>
+          {items.length ? <div className="shopping-sheet-progress-track" role="progressbar" aria-label="장보기 완료율" aria-valuemin={0} aria-valuemax={items.length} aria-valuenow={completedCount}><span style={{ width: `${progressPercent}%` }} /></div> : null}
+        </section>
+      ) : null}
 
-      <section className={`shopping-sheet-progress${remainingCount ? " shopping-sheet-progress-active" : " shopping-sheet-progress-complete"}`} aria-label="장보기 진행 상황">
-        <div className="shopping-sheet-progress-heading">
-          <span><strong>{loading && !items.length ? "장보기 목록을 확인하고 있어요" : error && !items.length ? "다시 확인이 필요해요" : remainingCount ? "장보기 진행 상황" : items.length ? "구매 완료 · 재고 반영 전" : "장보기 시작하기"}</strong><small>{loading && !items.length ? "저장한 식단과 직접 추가한 항목을 불러옵니다." : error && !items.length ? "연결을 확인하고 목록을 다시 불러와 주세요." : remainingCount ? `${remainingCount}개를 구매하면 재고에 반영할 수 있어요.` : items.length ? "구매한 식품을 재고에 넣으면 날짜와 보관 상태를 이어서 확인할 수 있어요." : "필요한 재료를 추가하면 여기에서 관리할 수 있어요."}</small></span>
-          <em>{loading && !items.length ? "확인 중" : items.length ? `${completedCount}/${items.length}` : "—"}</em>
-        </div>
-        {items.length ? <div className="shopping-sheet-progress-track" role="progressbar" aria-label="장보기 완료율" aria-valuemin={0} aria-valuemax={items.length} aria-valuenow={completedCount}><span style={{ width: `${progressPercent}%` }} /></div> : null}
-      </section>
+      {demoMode ? <div className="shopping-sheet-preview-note" role="note"><InfoCircledIcon width={15} height={15} /><span>미리보기 내용은 저장되지 않아요.</span></div> : null}
 
       {notice ? <div className="shopping-sheet-refresh-notice" data-readback-state="notice" role="status"><CheckCircledIcon width={15} height={15} /><span>{notice}</span></div> : null}
       {error ? (
@@ -366,15 +364,15 @@ export default function ShoppingListSheet({
       {recentlyReceivedFoodName && onOpenReceivedFood ? (
         <div className="receipt-review-contract shopping-sheet-received" data-readback-state="confirmed" role="status" aria-live="polite">
           <CheckCircledIcon width={15} height={15} />
-          <span><strong>재고에 반영했어요</strong><small>{recentlyReceivedFoodName} · 다음: 포장지 날짜와 보관 상태를 확인해 주세요.</small></span>
-          <button ref={receivedFoodActionRef} className="primary-sheet-button" type="button" onPointerDown={(event) => event.preventDefault()} onClick={onOpenReceivedFood}>식품 상세 확인</button>
+          <span><strong>식품 목록에 추가했어요</strong><small>{recentlyReceivedFoodName}의 포장지 날짜와 보관 방법을 살펴봐 주세요.</small></span>
+          <button ref={receivedFoodActionRef} className="primary-sheet-button" type="button" onPointerDown={(event) => event.preventDefault()} onClick={onOpenReceivedFood}>식품 보기</button>
         </div>
       ) : null}
 
       {loading && !items.length ? (
         <div className="shopping-sheet-state shopping-sheet-loading" role="status">
           <span className="shopping-sheet-state-icon"><ReaderIcon width={17} height={17} /></span>
-          <span><strong>장보기 목록을 불러오고 있어요</strong><small>저장한 식단과 현재 재고를 확인합니다.</small></span>
+          <span><strong>장보기 목록을 불러오고 있어요</strong><small>저장한 식단과 식품 목록을 살펴보고 있어요.</small></span>
         </div>
       ) : items.length ? (
         <section className="shopping-sheet-list-section" aria-label="장보기 항목">
@@ -406,7 +404,7 @@ export default function ShoppingListSheet({
                     <span className="shopping-sheet-copy">
                       <strong>{item.canonical_name}</strong>
                       <small>{formatQuantity(item.quantity)}{item.unit} · {sourceLabel(item)}</small>
-                      {item.checked ? <small>구매 완료 · 재고 반영 전</small> : null}
+                      {item.checked ? <small>구매 완료 · 식품 목록에 추가 전</small> : null}
                     </span>
                   </button>
                   <div className="shopping-sheet-actions" role="group" aria-label={`${item.canonical_name} 장보기 항목 행동`}>
@@ -417,13 +415,13 @@ export default function ShoppingListSheet({
                       }}
                       className={`shopping-sheet-receive${receivingItemId === item.id ? " shopping-sheet-receive-active" : ""}`}
                       type="button"
-                      aria-label={`${item.canonical_name} 재고에 반영`}
+                      aria-label={`${item.canonical_name} 식품 목록에 추가`}
                       aria-expanded={receivingItemId === item.id}
                       disabled={mutating}
                       aria-busy={mutating}
                       onClick={() => receivingItemId === item.id ? cancelReceive() : beginReceive(item)}
                     >
-                      <ArchiveIcon width={13} height={13} /> 재고에 반영
+                      <ArchiveIcon width={13} height={13} /> 식품 목록에 추가
                     </button>
                     <button
                       className="shopping-sheet-delete"
@@ -444,18 +442,18 @@ export default function ShoppingListSheet({
                   <form
                     className="shopping-sheet-receive-panel"
                     ref={receivePanelRef}
-                    aria-label={`${item.canonical_name} 재고 반영`}
+                    aria-label={`${item.canonical_name} 식품 목록에 추가`}
                     aria-busy={mutating}
                     onSubmit={(event) => { event.preventDefault(); void submitReceive(item); }}
                   >
-                    <ol className="shopping-sheet-receive-steps" aria-label="구매 후 재고 반영 단계">
-                      <li className="shopping-sheet-receive-step-complete"><span>1</span><small>구매 완료</small></li>
-                      <li className="shopping-sheet-receive-step-active"><span>2</span><small>재고 반영</small></li>
-                      <li><span>3</span><small>날짜 확인</small></li>
+                    <ol className="shopping-sheet-receive-steps" aria-label="구매한 식품을 목록에 추가하는 순서">
+                      <li className={item.checked ? "shopping-sheet-receive-step-complete" : "shopping-sheet-receive-step-active"}><span>1</span><small>{item.checked ? "구매 완료" : "구매 확인"}</small></li>
+                      <li className={item.checked ? "shopping-sheet-receive-step-active" : ""}><span>2</span><small>목록에 추가</small></li>
+                      <li><span>3</span><small>포장지 날짜</small></li>
                     </ol>
                     <div className="shopping-sheet-receive-heading">
-                      <strong>{item.canonical_name} 구매 내용 확인</strong>
-                      <small>실제로 구매한 수량과 보관 위치를 확인해 주세요.</small>
+                      <strong>{item.canonical_name} 구매 정보</strong>
+                      <small>구매한 수량과 보관 위치를 입력해 주세요.</small>
                     </div>
                     <div className="shopping-sheet-receive-fields">
                       <label className="shopping-sheet-receive-field shopping-sheet-receive-quantity">
@@ -492,48 +490,58 @@ export default function ShoppingListSheet({
                         </div>
                       </div>
                     </div>
-                    <p className="shopping-sheet-receive-note"><InfoCircledIcon width={13} height={13} /> 소비기한은 자동 확정하지 않아요. 재고에 넣은 뒤 포장지 날짜와 보관 상태를 확인해 주세요.</p>
+                    {item.checked ? (
+                      <div className="shopping-sheet-purchase-confirmed" role="status"><CheckCircledIcon width={15} height={15} /><span>구매한 수량과 보관 위치를 입력한 뒤 식품 목록에 추가해 주세요.</span></div>
+                    ) : (
+                      <div className="shopping-sheet-purchase-check" role="group" aria-label={`${item.canonical_name} 구매 완료 확인`}>
+                        <span><strong>구매가 끝났나요?</strong><small id={`shopping-sheet-purchase-hint-${item.id}`}>구매 완료로 표시한 뒤 식품 목록에 추가할 수 있어요.</small></span>
+                        <button type="button" disabled={mutating} aria-busy={mutating} onClick={() => onToggle(item)}>구매 완료로 표시</button>
+                      </div>
+                    )}
+                    <p className="shopping-sheet-receive-note"><InfoCircledIcon width={13} height={13} /> 소비기한은 자동으로 정하지 않아요. 식품 목록에 추가한 뒤 포장지 날짜와 보관 방법을 살펴봐 주세요.</p>
                     {receiveError ? <p className="shopping-sheet-receive-error" role="alert">{receiveError}</p> : null}
                     <div className="shopping-sheet-receive-actions">
                       <button className="shopping-sheet-receive-cancel" type="button" disabled={mutating} aria-busy={mutating} onClick={cancelReceive}>취소</button>
                       <button
                         className="shopping-sheet-receive-submit"
                         type="submit"
-                        disabled={mutating}
+                        disabled={mutating || !item.checked}
+                        aria-describedby={!item.checked ? `shopping-sheet-purchase-hint-${item.id}` : undefined}
                         aria-busy={mutating}
                         onPointerDown={(event) => {
                           event.preventDefault();
                           void submitReceive(item);
                           keyboard.hide();
                         }}
-                      >{mutating ? "반영 중" : "재고에 반영"}</button>
+                      >{mutating ? "추가 중" : "식품 목록에 추가"}</button>
                     </div>
                   </form>
                 ) : null}
               </div>
             ))}
           </div>
-          <p className="shopping-sheet-note"><ArrowRightIcon width={13} height={13} /> 재고에 추가한 뒤 다시 동기화하면 보유한 재료는 자동으로 빠져요.</p>
+          <p className="shopping-sheet-note"><ArrowRightIcon width={13} height={13} />{demoMode ? "미리보기에서는 식품 목록에 넣은 수량만큼 장보기 목록에서 빠져요." : "식품 목록에 추가하면 이미 가진 재료는 장보기에서 빠져요."}</p>
         </section>
-      ) : recentlyReceivedFoodName ? null : (
+      ) : error || recentlyReceivedFoodName ? null : (
         <div className="shopping-sheet-state shopping-sheet-empty" role="status" style={{ flexWrap: "wrap" }}>
-          <span className="shopping-sheet-state-icon"><CheckCircledIcon width={17} height={17} /></span>
-          <span><strong>필요한 재료를 이어서 준비해요</strong><small>식단에서 부족한 재료를 고르거나, 아래에서 필요한 물건을 직접 기록할 수 있어요.</small></span>
+          <span><strong>목록에 무엇을 담을까요?</strong></span>
           <div className="shopping-sheet-receive-actions" style={{ width: "100%", flexBasis: "100%" }}>
-            <button className="primary-sheet-button" style={{ width: "auto", minHeight: 44, flex: "1 1 auto", padding: "0 10px", fontSize: 10 }} type="button" onClick={onOpenMeal}><ReaderIcon width={15} height={15} /> 식단에서 재료 고르기 <ArrowRightIcon width={14} height={14} /></button>
-            <button className="secondary-sheet-button" style={{ width: "auto", minHeight: 44, flex: "0 0 auto", padding: "0 10px" }} type="button" onClick={onRefresh} disabled={loading}>새로 고침</button>
+            <button className="primary-sheet-button" style={{ width: "auto", minHeight: 44, flex: "1 1 auto", padding: "0 10px", fontSize: 12 }} type="button" onClick={onOpenMeal}><ReaderIcon width={15} height={15} /> 식단에서 재료 고르기 <ArrowRightIcon width={14} height={14} /></button>
+            {demoMode
+              ? <button className="secondary-sheet-button" style={{ width: "auto", minHeight: 44, flex: "0 0 auto", padding: "0 10px" }} type="button" onClick={focusManualEntry}>직접 추가</button>
+              : <button className="secondary-sheet-button" style={{ width: "auto", minHeight: 44, flex: "0 0 auto", padding: "0 10px" }} type="button" onClick={onRefresh} disabled={loading}>새로 고침</button>}
           </div>
         </div>
       )}
 
       <section className="shopping-sheet-manual" aria-label="직접 장보기 추가">
         <div className="shopping-sheet-manual-heading">
-          <span><strong>직접 추가</strong><small>식단과 상관없이 필요한 물건도 기록해요.</small></span>
+          <span><strong>직접 추가</strong><small>필요한 물건을 목록에 적어 둘 수 있어요.</small></span>
         </div>
         <form className="shopping-sheet-manual-form" onSubmit={(event) => { event.preventDefault(); void submitManualItem(); }}>
           <label className="shopping-sheet-manual-field shopping-sheet-manual-name">
             <span>상품명</span>
-            <KeyboardInput className="app-input" value={manualName} maxLength={160} autoComplete="off" placeholder="예: 우유" aria-label="직접 추가 상품명" onChange={(event) => { setManualName(event.target.value); setManualError(""); }} onBlur={() => keyboard.hide()} />
+            <KeyboardInput ref={manualNameRef} className="app-input" value={manualName} maxLength={160} autoComplete="off" placeholder="예: 우유" aria-label="직접 추가 상품명" onChange={(event) => { setManualName(event.target.value); setManualError(""); }} onBlur={() => keyboard.hide()} />
           </label>
           <label className="shopping-sheet-manual-field shopping-sheet-manual-quantity">
             <span>수량</span>
@@ -556,7 +564,7 @@ export default function ShoppingListSheet({
           >추가</button>
         </form>
         {manualError ? <p className="shopping-sheet-manual-error" role="alert">{manualError}</p> : null}
-        <p className="shopping-sheet-manual-note">같은 상품명·단위가 이미 있으면 직접 추가 수량으로 갱신해요.</p>
+        <p className="shopping-sheet-manual-note">이미 있는 상품은 수량을 더해요.</p>
       </section>
     </div>
   );

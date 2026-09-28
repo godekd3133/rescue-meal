@@ -57,11 +57,11 @@ test("connected empty workspace gives the user a clear first action", async ({ p
   await expect(page.getByRole("heading", { name: "내 식품 목록 0" })).toBeVisible();
   await expect(page.locator(".priority-empty-state")).toContainText("아직 식품을 등록하지 않았어요");
   await expect(page.locator(".inventory-empty-state")).toContainText("아직 등록된 식품이 없어요");
-  await expect(page.locator(".rescue-status-legend")).toContainText("첫 식품을 추가하면 우선순위를 만들어요");
+  await expect(page.locator(".rescue-status-legend")).toContainText("첫 식품을 추가하면 먼저 먹을 순서를 보여드려요");
   await expect(page.getByRole("button", { name: "첫 식품을 추가하고 시작하기" })).toBeVisible();
   const emptyStatusCard = page.getByRole("button", { name: "아직 식품이 없어요, 식품 추가" });
   await expect(emptyStatusCard).toContainText("식품을 추가해 주세요");
-  await expect(emptyStatusCard).toContainText("첫 식품을 추가하면 오늘 먼저 확인할 순서를 만들어요.");
+  await expect(emptyStatusCard).toContainText("첫 식품을 추가하면 먼저 먹을 재료를 보여드려요.");
   await emptyStatusCard.click();
   await expect(page.getByRole("dialog", { name: "영수증으로 추가" })).toBeVisible();
   await page.keyboard.press("Escape");
@@ -71,7 +71,7 @@ test("connected empty workspace gives the user a clear first action", async ({ p
 
   await page.keyboard.press("Escape");
   await page.getByRole("button", { name: "식단", exact: true }).click();
-  const emptyMealDialog = page.getByRole("dialog", { name: "오늘의 Rescue Meal" });
+  const emptyMealDialog = page.getByRole("dialog", { name: "오늘의 식단" });
   await expect(emptyMealDialog.getByRole("group", { name: "조리 가능 시간" })).toHaveCount(0);
   await expect(emptyMealDialog.getByRole("group", { name: "식사 인원" })).toHaveCount(0);
   await expect(emptyMealDialog.getByRole("button", { name: "식품 추가하기" })).toBeVisible();
@@ -79,6 +79,67 @@ test("connected empty workspace gives the user a clear first action", async ({ p
   await expect(page.getByRole("dialog", { name: "영수증으로 추가" })).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(page.locator(".app-bottom-nav-item-active")).toHaveText("홈");
+});
+
+test("receipt-backed canonical identity is not displayed as its own brand", async ({ page }) => {
+  const food = {
+    id: "receipt-canonical-brand-e2e",
+    canonical_name: "시금치",
+    display_name: "시금치",
+    brand: "시금치",
+    source_receipt_id: "receipt-canonical-brand-e2e",
+    source_receipt_line_id: "receipt-canonical-brand-e2e:line-spinach",
+    purchased_at: "2026-09-02T09:00:00Z",
+    quantity: 1,
+    unit: "팩",
+    storage_type: "refrigerated",
+    storage_location_id: null,
+    opened: false,
+    opened_at: null,
+    date_assertion: {
+      kind: "unknown",
+      value: null,
+      display_label: "확인 필요",
+      source: "unknown",
+      source_detail: "영수증 + 상품 유형",
+      confidence: 1,
+      user_confirmed: false,
+      applicable_storage_type: null,
+      storage_condition_text: null,
+    },
+    estimated_use_first_window: null,
+    priority: 1,
+    category: "채소",
+    image_path: "/assets/food/spinach-photo.jpg",
+    note: "",
+  };
+  const dashboard = { generated_at: "2026-09-24T00:00:00Z", food_count: 1, rescue_count: 1, rescue_queue: [food], inventory: [food], storage_locations: [] };
+  await page.route("**/api/dashboard", async (route) => {
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(dashboard) });
+  });
+  await page.route("**/api/notifications*", async (route) => {
+    await route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
+  });
+  await page.route("**/api/shopping-list", async (route) => {
+    await route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
+  });
+  await page.route("**/api/receipts", async (route) => {
+    await route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
+  });
+
+  await page.goto("/");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
+  const inventory = page.getByRole("region", { name: /내 식품 목록/ });
+  const spinachRow = inventory.locator(".inventory-row").filter({ hasText: "시금치" });
+  await expect(spinachRow.locator(".food-subline")).toHaveText("영수증 · 1팩");
+  await expect(spinachRow).not.toContainText("시금치 · 1팩");
+
+  await spinachRow.click();
+  const detail = page.getByRole("dialog", { name: "시금치" });
+  await expect(detail.locator(".detail-hero-copy p")).toHaveText("남은 1팩");
+  const receiptSource = detail.getByRole("group", { name: "구매 출처" });
+  await expect(receiptSource).toContainText("영수증에서 추가");
+  await expect(receiptSource).toContainText("영수증 상품 항목 연결됨");
 });
 
 test("connected empty workspace promotes the first saved food into the Home queue", async ({ page }) => {
@@ -116,6 +177,10 @@ test("connected empty workspace promotes the first saved food into the Home queu
   await expect(page.locator(".toast-action")).toHaveText("날짜·보관 상태 확인");
   await expect(page.getByRole("heading", { name: "내 식품 목록 1" })).toBeVisible();
   await expect(page.getByRole("button", { name: "확인하고 오늘 식단 만들기" })).toBeVisible();
+  const firstFoodRow = page.locator(".inventory-row").filter({ hasText: "대파" });
+  const firstFoodImage = firstFoodRow.locator("img");
+  await expect(firstFoodImage).toHaveAttribute("src", "/assets/food/groceries-photo.jpg");
+  await expect.poll(() => firstFoodImage.evaluate((image) => image.complete && image.naturalWidth > 0)).toBe(true);
   await expect(page.locator(".priority-card").filter({ hasText: "대파" })).toBeFocused();
   await expect.poll(() => notificationCalls).toBeGreaterThan(0);
   await expect.poll(() => shoppingCalls).toBeGreaterThan(0);
@@ -138,15 +203,15 @@ test("connected planner exposes a retry action after preview calculation failure
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.getByRole("button", { name: /확인하고 오늘 식단 만들기/ }).click();
-  const dialog = page.getByRole("dialog", { name: "오늘의 Rescue Meal" });
+  const dialog = page.getByRole("dialog", { name: "오늘의 식단" });
   const error = dialog.getByRole("alert");
-  await expect(error).toContainText("현재 재료로 식단을 계산하지 못했어요");
-  await expect(error.getByRole("button", { name: "다시 계산" })).toBeVisible();
+  await expect(error).toContainText("현재 재료로 메뉴를 찾지 못했어요. 잠시 후 다시 찾아봐 주세요.");
+  await expect(error.getByRole("button", { name: "메뉴 다시 찾기" })).toBeVisible();
   await expect.poll(() => previewAttempts).toBe(1);
 
-  await error.getByRole("button", { name: "다시 계산" }).click();
+  await error.getByRole("button", { name: "메뉴 다시 찾기" }).click();
   await expect.poll(() => previewAttempts).toBe(2);
   await expect(dialog.getByRole("heading", { name: "시금치 두부 닭가슴살 덮밥" })).toBeVisible();
 });
@@ -167,10 +232,10 @@ test("connected planner explains the recovery path when no recipe matches", asyn
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.getByRole("button", { name: /확인하고 오늘 식단 만들기/ }).click();
-  const dialog = page.getByRole("dialog", { name: "오늘의 Rescue Meal" });
-  await expect(dialog.getByText("재료를 더 추가하거나 조리 조건을 바꿔 다시 계산해 보세요.")).toBeVisible();
+  const dialog = page.getByRole("dialog", { name: "오늘의 식단" });
+  await expect(dialog.getByText("재료를 더 추가하거나 조리 조건을 바꿔 다시 찾아보세요.")).toBeVisible();
   await expect(dialog.getByRole("button", { name: "식품 더 추가하기" })).toBeVisible();
   await dialog.getByRole("button", { name: "식품 더 추가하기" }).click();
   await expect(page.getByRole("dialog", { name: "영수증으로 추가" })).toBeVisible();
@@ -192,9 +257,9 @@ test("connected planner retries an alternative-menu lookup without closing the s
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.getByRole("button", { name: /확인하고 오늘 식단 만들기/ }).click();
-  const dialog = page.getByRole("dialog", { name: "오늘의 Rescue Meal" });
+  const dialog = page.getByRole("dialog", { name: "오늘의 식단" });
   await dialog.getByRole("button", { name: "다른 메뉴 찾아보기" }).click();
   const alternatives = dialog.getByRole("region", { name: "다른 메뉴" });
   await expect(alternatives.getByRole("alert")).toContainText("다른 메뉴를 불러오지 못했어요");
@@ -220,14 +285,14 @@ test("connected planner retries a multi-day preview without closing the section"
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.getByRole("button", { name: /확인하고 오늘 식단 만들기/ }).click();
-  const dialog = page.getByRole("dialog", { name: "오늘의 Rescue Meal" });
+  const dialog = page.getByRole("dialog", { name: "오늘의 식단" });
   await dialog.getByRole("button", { name: "3일 식단 미리보기" }).click();
   const multiDay = dialog.getByRole("region", { name: "3일 식단" });
-  await expect(multiDay.getByRole("alert")).toContainText("3일 식단을 계산하지 못했어요");
-  await expect(multiDay.getByRole("button", { name: "다시 계산" })).toBeVisible();
-  await multiDay.getByRole("button", { name: "다시 계산" }).click();
+  await expect(multiDay.getByRole("alert")).toContainText("3일 식단을 만들지 못했어요. 잠시 후 다시 찾아봐 주세요.");
+  await expect(multiDay.getByRole("button", { name: "다시 찾아보기" })).toBeVisible();
+  await multiDay.getByRole("button", { name: "다시 찾아보기" }).click();
   await expect.poll(() => previewAttempts).toBe(2);
   await expect(multiDay.getByRole("listitem")).toHaveCount(3);
 });
@@ -248,9 +313,9 @@ test("connected planner retries multi-day history without closing the section", 
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.getByRole("button", { name: /확인하고 오늘 식단 만들기/ }).click();
-  const dialog = page.getByRole("dialog", { name: "오늘의 Rescue Meal" });
+  const dialog = page.getByRole("dialog", { name: "오늘의 식단" });
   await dialog.getByRole("button", { name: "저장한 3일 식단 보기", exact: true }).click();
   const history = dialog.getByRole("region", { name: "저장한 3일 식단" });
   await expect(history.getByRole("alert")).toContainText("저장한 3일 식단을 불러오지 못했어요");
@@ -295,7 +360,7 @@ test("connected home refreshes after a cross-device dashboard revision", async (
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await expect(page.getByText("현재 기기 식품", { exact: true }).first()).toBeVisible();
   const baselineDashboardCalls = dashboardCalls;
   const baselineRevisionCalls = revisionCalls;
@@ -340,7 +405,7 @@ test("connected inventory search refreshes after a cross-device dashboard revisi
     estimated_use_first_window: null,
     priority: 1,
     category: "검색 테스트",
-    image_path: "/assets/food/tomato.png",
+    image_path: "/assets/food/tomato-photo.jpg",
     note: "검색 revision fixture",
   };
   const remoteFood = { ...initialFood, canonical_name: "검색 최신 식품", display_name: "검색 최신 식품" };
@@ -380,7 +445,7 @@ test("connected inventory search refreshes after a cross-device dashboard revisi
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   const search = page.getByRole("searchbox", { name: "식품·브랜드·카테고리 검색" });
   await search.fill("검색");
   await expect(page.getByText("검색 현재 식품", { exact: true }).first()).toBeVisible();
@@ -402,6 +467,7 @@ test("connected inventory search refreshes after a cross-device dashboard revisi
 });
 
 test("connected home lets the user resume a stored receipt review draft", async ({ page }) => {
+  let receiptDraftReadCount = 0;
   await page.route("**/api/receipts", async (route) => {
     await route.fulfill({
       status: 200,
@@ -418,6 +484,7 @@ test("connected home lets the user resume a stored receipt review draft", async 
     });
   });
   await page.route("**/api/receipts/receipt-resume-e2e", async (route) => {
+    receiptDraftReadCount += 1;
     await route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -455,14 +522,15 @@ test("connected home lets the user resume a stored receipt review draft", async 
   await page.goto("/");
   const entry = page.getByTestId("pending-receipt-review");
   await expect(entry).toContainText("동네마트");
-  await expect(entry).toContainText("검수할 영수증 1건");
+  await expect(entry).toContainText("확인할 영수증 1건");
   await entry.click();
 
   const dialog = page.getByRole("dialog", { name: "영수증으로 추가" });
-  await expect(dialog.getByText("저장해 둔 검수 초안이에요")).toBeVisible();
-  await expect(dialog.locator(".receipt-resume-callout")).toContainText("검수 상태도 이 화면에서 다시 확인한 뒤 반영해요");
+  const intakeSheet = page.getByRole("dialog");
+  await expect(dialog.getByText("이어서 확인하는 영수증이에요")).toBeVisible();
+  await expect(dialog.locator(".receipt-resume-callout")).toContainText("확인을 마치고 저장하면 식품 목록에 추가돼요");
   await expect(dialog.getByText("receipt-2026-09-05.jpg")).toBeVisible();
-  await expect(dialog.getByText("원본 사진은 저장하지 않아서 미리보기 없이 상품 정보만 다시 확인해요.")).toBeVisible();
+  await expect(dialog.getByText("사진 파일은 저장하지 않아 상품 정보만 다시 보여요. 확인을 마치고 저장하면 식품 목록에 추가돼요.")).toBeVisible();
   await expect(dialog.locator(".receipt-source-preview")).toHaveCount(0);
   await expect(dialog.locator(".receipt-line-toggle").first()).toBeFocused();
   const firstToggleDescriptionId = await dialog.locator(".receipt-line-toggle").first().getAttribute("aria-describedby");
@@ -475,7 +543,18 @@ test("connected home lets the user resume a stored receipt review draft", async 
     const viewport = content.getBoundingClientRect();
     return target.top >= viewport.top - 1 && target.bottom <= viewport.bottom + 1;
   })).toBe(true);
-  await expect(dialog.getByRole("button", { name: "1개 항목 반영하기" })).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "1개 식품 저장하기" })).toBeVisible();
+
+  const receiptName = dialog.getByRole("textbox", { name: "재고에 저장할 상품명" });
+  await receiptName.fill("사용자가 확인한 두부");
+  const barcodeTab = intakeSheet.getByRole("tab", { name: "바코드" });
+  await barcodeTab.click();
+  await expect(intakeSheet.getByRole("textbox", { name: "바코드 숫자" })).toBeVisible();
+  await intakeSheet.getByRole("tab", { name: "영수증" }).click();
+  await expect(receiptName).toHaveValue("사용자가 확인한 두부");
+  await expect(dialog.locator(".receipt-line-card-confirmed")).toContainText("사용자가 확인한 두부");
+  await expect(dialog.getByRole("button", { name: "1개 식품 저장하기" })).toBeEnabled();
+  expect(receiptDraftReadCount).toBe(1);
 });
 
 test("connected receipt review queue refreshes after a cross-device revision", async ({ page }) => {
@@ -509,13 +588,13 @@ test("connected receipt review queue refreshes after a cross-device revision", a
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   const entry = page.getByTestId("pending-receipt-review");
-  await expect(entry).toContainText("검수할 영수증 2건");
+  await expect(entry).toContainText("확인할 영수증 2건");
   await entry.click();
-  const dialog = page.getByRole("dialog", { name: "검수할 영수증" });
-  await expect(dialog.getByRole("list", { name: "검수 대기 영수증 목록" })).toContainText("현재 기기 마트");
-  await expect(dialog.getByRole("list", { name: "검수 대기 영수증 목록" })).toContainText("지난 기기 마트");
+  const dialog = page.getByRole("dialog", { name: "확인할 영수증" });
+  await expect(dialog.getByRole("list", { name: "확인 대기 영수증 목록" })).toContainText("현재 기기 마트");
+  await expect(dialog.getByRole("list", { name: "확인 대기 영수증 목록" })).toContainText("지난 기기 마트");
   await expect(dialog.locator(".receipt-review-queue-row").first()).toBeFocused();
   const baselineSummaryCalls = summaryCalls;
   const baselineRevisionCalls = revisionCalls;
@@ -529,16 +608,16 @@ test("connected receipt review queue refreshes after a cross-device revision", a
 
   await expect.poll(() => revisionCalls).toBeGreaterThan(baselineRevisionCalls);
   await expect.poll(() => summaryCalls).toBeGreaterThan(baselineSummaryCalls);
-  await expect(dialog.locator(".receipt-review-queue-refresh-notice")).toContainText("다른 기기에서 검수 대기 영수증이 바뀌어 최신 목록을 불러왔어요");
-  await expect(dialog.getByRole("list", { name: "검수 대기 영수증 목록" })).toContainText("다른 기기 마트");
-  await expect(dialog.getByRole("list", { name: "검수 대기 영수증 목록" })).not.toContainText("현재 기기 마트");
+  await expect(dialog.locator(".receipt-review-queue-refresh-notice")).toContainText("다른 기기에서 확인할 영수증이 바뀌어 최신 목록을 불러왔어요");
+  await expect(dialog.getByRole("list", { name: "확인 대기 영수증 목록" })).toContainText("다른 기기 마트");
+  await expect(dialog.getByRole("list", { name: "확인 대기 영수증 목록" })).not.toContainText("현재 기기 마트");
   remoteSummaries = [];
   revision = 3;
   await page.evaluate(() => {
     Object.defineProperty(document, "visibilityState", { configurable: true, value: "visible" });
     document.dispatchEvent(new Event("visibilitychange"));
   });
-  await expect(dialog.locator(".receipt-review-queue-empty")).toContainText("검수할 영수증이 없어요");
+  await expect(dialog.locator(".receipt-review-queue-empty")).toContainText("확인할 영수증이 없어요");
   await expect(dialog.getByRole("button", { name: "새 영수증으로 추가" })).toBeVisible();
 });
 
@@ -573,19 +652,19 @@ test("connected home lets the user choose which pending receipt to resume", asyn
   });
 
   await page.goto("/");
-  await expect(page.getByTestId("pending-receipt-review")).toContainText("검수할 영수증 2건");
+  await expect(page.getByTestId("pending-receipt-review")).toContainText("확인할 영수증 2건");
   await expect(page.getByTestId("pending-receipt-review")).toContainText("오늘마트");
   await page.getByTestId("pending-receipt-review").click();
 
-  const queue = page.getByRole("dialog", { name: "검수할 영수증" });
-  await expect(queue.getByRole("list", { name: "검수 대기 영수증 목록" })).toContainText("오늘마트");
-  await expect(queue.getByRole("list", { name: "검수 대기 영수증 목록" })).toContainText("지난마트");
+  const queue = page.getByRole("dialog", { name: "확인할 영수증" });
+  await expect(queue.getByRole("list", { name: "확인 대기 영수증 목록" })).toContainText("오늘마트");
+  await expect(queue.getByRole("list", { name: "확인 대기 영수증 목록" })).toContainText("지난마트");
   await queue.getByRole("button", { name: /지난마트.*이어서 확인/ }).click();
 
   const dialog = page.getByRole("dialog", { name: "영수증으로 추가" });
-  await expect(dialog.getByText("저장해 둔 검수 초안이에요")).toBeVisible();
+  await expect(dialog.getByText("이어서 확인하는 영수증이에요")).toBeVisible();
   await expect(dialog).toContainText("지난마트");
-  await expect(dialog.getByRole("button", { name: "1개 항목 반영하기" })).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "1개 식품 저장하기" })).toBeVisible();
 });
 
 test("receipt review summaries cannot leak across an account workspace switch", async ({ page }) => {
@@ -644,7 +723,7 @@ test("receipt review summaries cannot leak across an account workspace switch", 
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.locator(".connection-pill").click();
   const accountDialog = page.getByRole("dialog", { name: "내 계정" });
   await accountDialog.getByRole("tab", { name: "회원가입" }).click();
@@ -705,8 +784,8 @@ test("connected label review keeps an ambiguous date and storage unconfirmed", a
   const dialog = page.getByRole("dialog", { name: "라벨로 추가" });
   await dialog.locator('input[type="file"][data-input-source="library"]').setInputFiles({ name: "produce-label.png", mimeType: "image/png", buffer: Buffer.from("fixture-label") });
 
-  await expect(dialog.getByText("날짜 숫자는 보이지만 소비기한 의미가 확인되지 않았습니다.")).toBeVisible();
-  await expect(dialog.getByRole("status").filter({ hasText: "날짜 의미와 보관 위치를 확인하세요" })).toHaveAttribute("aria-live", "polite");
+  await expect(dialog.getByText("날짜는 읽었지만 어떤 날짜인지는 확인하지 못했어요. 포장지에서 날짜 종류를 확인해 주세요.")).toBeVisible();
+  await expect(dialog.getByRole("status").filter({ hasText: "날짜가 뜻하는 내용과 보관 위치를 확인해 주세요" })).toHaveAttribute("aria-live", "polite");
   await expect(dialog.getByText("날짜 의미를 확인해 주세요")).toBeVisible();
   await expect(dialog.getByRole("group", { name: "라벨 날짜 의미 확인" })).toHaveAttribute("aria-describedby", "label-date-meaning-hint");
   await expect(dialog.getByRole("group", { name: "라벨 식품 보관 위치" })).toHaveAttribute("aria-describedby", "label-storage-hint");
@@ -725,7 +804,7 @@ test("connected label review keeps an ambiguous date and storage unconfirmed", a
 
   await dialog.getByRole("radio", { name: "소비기한", exact: true }).click();
   await dialog.getByRole("button", { name: "냉장", exact: true }).click();
-  await expect(dialog.getByRole("button", { name: "확인 후 반영", exact: true })).toBeEnabled();
+  await expect(dialog.getByRole("button", { name: "확인 후 저장", exact: true })).toBeEnabled();
 });
 
 test("connected label review carries a no-date product into editable manual entry", async ({ page }) => {
@@ -840,7 +919,7 @@ test("connected receipt review shows safe merchant and template provenance", asy
 
   await expect(dialog.getByText("동네마트", { exact: true })).toBeVisible();
   await expect(dialog).toContainText("마트 영수증 형식");
-  await expect(dialog).toContainText("상품 후보 1개");
+  await expect(dialog).toContainText("식품 후보 1개 · 선택 1개");
 });
 
 test("connected receipt OCR failure returns to a retryable capture state", async ({ page }) => {
@@ -854,7 +933,7 @@ test("connected receipt OCR failure returns to a retryable capture state", async
   await page.goto("/");
   await page.getByRole("button", { name: /식품 추가하기/ }).click();
   const dialog = page.getByRole("dialog", { name: "영수증으로 추가" });
-  await dialog.locator('input[type="file"][data-input-source="library"]').setInputFiles("public/assets/food/tomato.png");
+  await dialog.locator('input[type="file"][data-input-source="library"]').setInputFiles("public/assets/food/tomato-photo.jpg");
 
   await expect(dialog.getByRole("heading", { name: "사진을 다시 확인해 주세요" })).toBeVisible();
   await expect(dialog.getByRole("button", { name: "다시 촬영하거나 사진 선택" })).toBeVisible();
@@ -873,10 +952,10 @@ test("connected receipt draft persistence failure explains the retryable capture
   await page.goto("/");
   await page.getByRole("button", { name: /식품 추가하기/ }).click();
   const dialog = page.getByRole("dialog", { name: "영수증으로 추가" });
-  await dialog.locator('input[type="file"][data-input-source="library"]').setInputFiles("public/assets/food/tomato.png");
+  await dialog.locator('input[type="file"][data-input-source="library"]').setInputFiles("public/assets/food/tomato-photo.jpg");
 
   await expect(dialog.getByRole("heading", { name: "사진을 다시 확인해 주세요" })).toBeVisible();
-  await expect(dialog).toContainText("영수증 검수 초안을 저장하지 못했어요");
+  await expect(dialog).toContainText("영수증 확인 내용을 저장하지 못했어요");
   await expect(dialog.getByRole("button", { name: "다시 촬영하거나 사진 선택" })).toBeVisible();
 });
 
@@ -982,7 +1061,7 @@ test("connected inventory search uses the server result and page contract", asyn
     estimated_use_first_window: null,
     priority: 1,
     category: "검색 테스트",
-    image_path: "/assets/food/tomato.png",
+    image_path: "/assets/food/tomato-photo.jpg",
     note: "검색 결과 fixture",
   };
   const secondFood = {
@@ -1023,7 +1102,7 @@ test("connected inventory search uses the server result and page contract", asyn
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.getByRole("searchbox", { name: "식품·브랜드·카테고리 검색" }).fill("서버 검색 식품");
   await expect(page.getByRole("heading", { name: "내 식품 목록 2" })).toBeVisible();
   await expect(page.locator(".inventory-filter-summary")).toContainText("“서버 검색 식품” 검색 결과 · 2개");
@@ -1046,10 +1125,11 @@ test("connected inventory search uses the server result and page contract", asyn
   await searchResult.click();
   const searchDetail = page.getByRole("dialog", { name: "서버 검색 식품" });
   const dateProof = searchDetail.locator(".date-proof-card");
-  await expect(dateProof.locator("small")).toHaveText("출처 확인 필요");
+  await expect(dateProof.locator("small")).toHaveText("표시 날짜 미확인");
   await expect(dateProof).not.toContainText("fixture");
   await searchDetail.getByTestId("date-confirmation-action").click();
   const dateEditor = searchDetail.getByRole("group", { name: "확인한 날짜 입력" });
+  await dateEditor.getByRole("radio", { name: "소비기한", exact: true }).click();
   await dateEditor.getByRole("textbox", { name: "날짜" }).fill("2026-09-10");
   await dateEditor.getByRole("button", { name: "확인 후 저장" }).click();
   await expect.poll(() => datePatchPayload).toMatchObject({ kind: "use_by", date_value: "2026-09-10" });
@@ -1089,7 +1169,7 @@ test("connected inventory search keeps a contextual loading state during a slow 
     estimated_use_first_window: null,
     priority: 1,
     category: "검색 테스트",
-    image_path: "/assets/food/tomato.png",
+    image_path: "/assets/food/tomato-photo.jpg",
     note: "느린 검색 fixture",
   };
   await page.route("**/api/inventory/search*", async (route) => {
@@ -1100,7 +1180,7 @@ test("connected inventory search keeps a contextual loading state during a slow 
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.getByRole("searchbox", { name: "식품·브랜드·카테고리 검색" }).fill("느린 검색 식품");
   await expect.poll(() => requestStarted).toBeTruthy();
   await expect(page.locator(".inventory-search-loading")).toContainText("“느린 검색 식품” 검색 결과를 불러오고 있어요");
@@ -1138,7 +1218,7 @@ test("connected inventory search offers retry after a server failure", async ({ 
     estimated_use_first_window: null,
     priority: 1,
     category: "검색 테스트",
-    image_path: "/assets/food/tomato.png",
+    image_path: "/assets/food/tomato-photo.jpg",
     note: "검색 복구 fixture",
   };
   await page.route("**/api/inventory/search*", async (route) => {
@@ -1152,7 +1232,7 @@ test("connected inventory search offers retry after a server failure", async ({ 
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.getByRole("searchbox", { name: "식품·브랜드·카테고리 검색" }).fill("재시도 검색 식품");
   const error = page.locator(".inventory-search-error");
   await expect(error).toContainText("“재시도 검색 식품” 검색 결과를 불러오지 못했어요");
@@ -1177,7 +1257,7 @@ test("connected inventory paging transitions stale results back to current after
     estimated_use_first_window: null,
     priority: 1,
     category: "검색 테스트",
-    image_path: "/assets/food/tomato.png",
+    image_path: "/assets/food/tomato-photo.jpg",
     note: "stale fixture",
   };
   const secondFood = { ...firstFood, id: "stale-scope-second", canonical_name: "두 번째 페이지 식품", display_name: "두 번째 페이지 식품", brand: "두 번째 브랜드", priority: 4, date_assertion: { ...firstFood.date_assertion, kind: "user_reminder", value: "2026-10-10", display_label: "10월 10일", source: "user_input", user_confirmed: true } };
@@ -1196,7 +1276,7 @@ test("connected inventory paging transitions stale results back to current after
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.getByRole("searchbox", { name: "식품·브랜드·카테고리 검색" }).fill("페이지 식품");
   await expect(page.getByRole("button", { name: /첫 페이지 식품 첫 브랜드/ })).toBeVisible();
   await page.getByRole("button", { name: "더 보기 · 1개 남음" }).click();
@@ -1233,11 +1313,11 @@ test("connected app loads the API-backed planner and saves the selected recipe",
   });
   await page.goto("/");
 
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await expect(page.getByRole("heading", { name: "내 식품 목록 7" })).toBeVisible();
 
   await page.getByRole("button", { name: /확인하고 오늘 식단 만들기/ }).click();
-  const dialog = page.getByRole("dialog", { name: "오늘의 Rescue Meal" });
+  const dialog = page.getByRole("dialog", { name: "오늘의 식단" });
   await expect(dialog.getByRole("heading", { name: "시금치 두부 닭가슴살 덮밥" })).toBeVisible();
   await expect(dialog.locator(".recipe-kicker")).toHaveText("RESCUE MEAL");
   await expect(dialog).not.toContainText("RESCUE PLANNER · V2");
@@ -1245,13 +1325,15 @@ test("connected app loads the API-backed planner and saves the selected recipe",
   await expect(dialog.getByText("필요한 재료", { exact: true })).toBeVisible();
   await expect(dialog.getByText("부족한 재료")).toHaveCount(0);
 
-  await dialog.getByRole("button", { name: "레시피 보기" }).click();
+  await dialog.getByRole("button", { name: "조리 방법 보기" }).click();
   await expect(dialog.getByText("조리 순서")).toBeVisible();
   await expect(dialog.getByText("안전 메모")).toBeVisible();
 
   await dialog.getByRole("button", { name: "식단 저장" }).click();
   await expect(dialog.getByRole("button", { name: "저장됨" })).toBeVisible();
+  await expect(dialog.locator(".recipe-preview-save-note")).toHaveCount(0);
   await expectReadbackState(dialog.locator(".saved-recipe"), "confirmed");
+  await expect(dialog.locator(".saved-recipe strong")).toHaveText("오늘의 식단에 저장했어요 · 1인분");
   await expect(page.locator(".toast")).toHaveText("식단 저장 완료 · 사용량을 확인해 주세요");
   const savedActionOrder = await dialog.locator(".meal-sheet-content").evaluate((element) => Array.from(element.children).map((child) => child.className));
   const recipeActionsIndex = savedActionOrder.findIndex((className) => className.split(/\s+/).includes("recipe-actions"));
@@ -1275,7 +1357,7 @@ test("connected app loads the API-backed planner and saves the selected recipe",
   await page.keyboard.press("Escape");
   await expect(dialog).toHaveCount(0);
   await page.getByRole("button", { name: /확인하고 오늘 식단 만들기/ }).click();
-  const reopenedDialog = page.getByRole("dialog", { name: "오늘의 Rescue Meal" });
+  const reopenedDialog = page.getByRole("dialog", { name: "오늘의 식단" });
   await expect(reopenedDialog.getByRole("button", { name: "저장됨" })).toBeVisible();
   await reopenedDialog.getByRole("button", { name: "조리 전 확인했어요" }).click();
   const chickenUsage = reopenedDialog.getByRole("spinbutton", { name: "닭가슴살 사용량" });
@@ -1299,12 +1381,16 @@ test("connected app loads the API-backed planner and saves the selected recipe",
   await expect(remainingDetail).toHaveCount(0);
 
   await page.getByRole("button", { name: /확인하고 오늘 식단 만들기/ }).click();
-  const currentMealDialog = page.getByRole("dialog", { name: "오늘의 Rescue Meal" });
-  await currentMealDialog.getByRole("button", { name: "최근 식단 보기" }).click();
-  await expect(currentMealDialog.locator(".recipe-history")).toContainText("시금치 두부 닭가슴살 덮밥");
+  const currentMealDialog = page.getByRole("dialog", { name: "오늘의 식단" });
+  const historyToggle = currentMealDialog.locator(".recipe-history-toggle");
+  await expect(historyToggle).toHaveAttribute("aria-expanded", "false");
+  await historyToggle.click();
+  await expect(historyToggle).toHaveAttribute("aria-expanded", "true");
+  await expect(currentMealDialog.getByRole("region", { name: "최근 식단" })).toContainText("시금치 두부 닭가슴살 덮밥");
   await expect(currentMealDialog.locator(".recipe-history")).toContainText("조리 완료");
   await currentMealDialog.getByRole("button", { name: "시금치 두부 닭가슴살 덮밥 조리 완료 식단 열기" }).click();
-  await expect(currentMealDialog.locator(".recipe-history")).toHaveCount(0);
+  await expect(currentMealDialog.getByRole("region", { name: "최근 식단" })).toBeHidden();
+  await expect(historyToggle).toHaveAttribute("aria-expanded", "false");
   await expect(currentMealDialog.getByRole("button", { name: "저장됨", exact: true })).toHaveCount(0);
 });
 
@@ -1333,9 +1419,9 @@ test("connected planner offers a typed completion retry without changing the con
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.getByRole("button", { name: /확인하고 오늘 식단 만들기/ }).click();
-  const dialog = page.getByRole("dialog", { name: "오늘의 Rescue Meal" });
+  const dialog = page.getByRole("dialog", { name: "오늘의 식단" });
   await expect(dialog.getByRole("heading", { name: "시금치 두부 닭가슴살 덮밥" })).toBeVisible();
   await dialog.getByRole("button", { name: "식단 저장" }).click();
   await expect(dialog.getByRole("button", { name: "저장됨" })).toBeVisible();
@@ -1387,9 +1473,9 @@ test("connected planner offers a typed save retry with the same plan payload", a
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.getByRole("button", { name: /확인하고 오늘 식단 만들기/ }).click();
-  const dialog = page.getByRole("dialog", { name: "오늘의 Rescue Meal" });
+  const dialog = page.getByRole("dialog", { name: "오늘의 식단" });
   await expect(dialog.getByRole("heading", { name: "시금치 두부 닭가슴살 덮밥" })).toBeVisible();
   await dialog.getByRole("button", { name: "식단 저장" }).click();
 
@@ -1402,7 +1488,7 @@ test("connected planner offers a typed save retry with the same plan payload", a
   await expect.poll(() => saveAttempts).toBe(2);
   expect(savePayloads[1]).toEqual(savePayloads[0]);
   await expect(dialog.getByRole("button", { name: "저장됨" })).toBeVisible();
-  await expect(dialog.getByRole("button", { name: "레시피 보기" })).toBeFocused();
+  await expect(dialog.getByRole("button", { name: "조리 방법 보기" })).toBeFocused();
 });
 
 test("connected planner offers a typed multi-day save retry with the same bundle payload", async ({ page }) => {
@@ -1434,9 +1520,9 @@ test("connected planner offers a typed multi-day save retry with the same bundle
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.getByRole("button", { name: /확인하고 오늘 식단 만들기/ }).click();
-  const dialog = page.getByRole("dialog", { name: "오늘의 Rescue Meal" });
+  const dialog = page.getByRole("dialog", { name: "오늘의 식단" });
   await expect(dialog.getByRole("heading", { name: "시금치 두부 닭가슴살 덮밥" })).toBeVisible();
   await dialog.getByRole("button", { name: "3일 식단 미리보기" }).click();
   const multiDay = dialog.getByRole("region", { name: "3일 식단" });
@@ -1462,7 +1548,7 @@ test("connected planner preview does not invalidate the dashboard", async ({ pag
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await expect.poll(() => dashboardRequests).toBeGreaterThan(0);
   // The disposable connected API can finish an initial dashboard readback
   // after the connection pill becomes visible. Give that startup settle a
@@ -1471,7 +1557,7 @@ test("connected planner preview does not invalidate the dashboard", async ({ pag
   const baselineDashboardRequests = dashboardRequests;
 
   await page.getByRole("button", { name: /확인하고 오늘 식단 만들기/ }).click();
-  const dialog = page.getByRole("dialog", { name: "오늘의 Rescue Meal" });
+  const dialog = page.getByRole("dialog", { name: "오늘의 식단" });
   await expect(dialog.getByRole("heading", { name: "시금치 두부 닭가슴살 덮밥" })).toBeVisible();
   await page.waitForTimeout(200);
 
@@ -1556,9 +1642,9 @@ test("connected planner refreshes an open plan after another tab changes the mea
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.getByRole("button", { name: /확인하고 오늘 식단 만들기/ }).click();
-  const dialog = page.getByRole("dialog", { name: "오늘의 Rescue Meal" });
+  const dialog = page.getByRole("dialog", { name: "오늘의 식단" });
   await expect(dialog.getByRole("heading", { name: "처음 계산한 식단" })).toBeVisible();
 
   const workspaceKey = await page.evaluate(() => {
@@ -1570,7 +1656,7 @@ test("connected planner refreshes an open plan after another tab changes the mea
   const secondPage = await context.newPage();
   try {
     await secondPage.goto(new URL("/", page.url()).toString());
-    await expect(secondPage.locator(".connection-pill")).toHaveText("서버 연결됨");
+    await expect(secondPage.locator(".connection-pill")).toHaveText("온라인 연결됨");
     await secondPage.evaluate(({ key }) => {
       const channel = new BroadcastChannel("rescue-meal.workspace-sync.v1");
       channel.postMessage({
@@ -1632,9 +1718,9 @@ test("connected planner keeps local choices until explicit reload after a cross-
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.getByRole("button", { name: /확인하고 오늘 식단 만들기/ }).click();
-  const dialog = page.getByRole("dialog", { name: "오늘의 Rescue Meal" });
+  const dialog = page.getByRole("dialog", { name: "오늘의 식단" });
   await expect(dialog.getByRole("heading", { name: "처음 계산한 식단" })).toBeVisible();
   await page.waitForTimeout(100);
   const baselineRevisionCalls = revisionCalls;
@@ -1711,9 +1797,9 @@ test("connected planner explains when a recipe quantity was converted safely", a
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.getByRole("button", { name: /확인하고 오늘 식단 만들기/ }).click();
-  const dialog = page.getByRole("dialog", { name: "오늘의 Rescue Meal" });
+  const dialog = page.getByRole("dialog", { name: "오늘의 식단" });
   await expect(dialog.getByRole("heading", { name: "리터 재료 환산 요리" })).toBeVisible();
   await expect(dialog.locator(".recipe-ingredients")).toContainText("시금치 · 단위 환산");
 });
@@ -1770,18 +1856,18 @@ test("connected planner asks for confirmation when matching units are incompatib
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.getByRole("button", { name: /확인하고 오늘 식단 만들기/ }).click();
-  const dialog = page.getByRole("dialog", { name: "오늘의 Rescue Meal" });
+  const dialog = page.getByRole("dialog", { name: "오늘의 식단" });
   await expect(dialog.getByRole("heading", { name: "단위 확인이 필요한 요리" })).toBeVisible();
   await expect(dialog.locator(".recipe-ingredients")).toContainText("시금치 · 단위 확인 필요");
 });
 
 test("connected planner changes the recipe when the cooking time changes", async ({ page }) => {
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.getByRole("button", { name: /확인하고 오늘 식단 만들기/ }).click();
-  const dialog = page.getByRole("dialog", { name: "오늘의 Rescue Meal" });
+  const dialog = page.getByRole("dialog", { name: "오늘의 식단" });
 
   await dialog.getByRole("group", { name: "조리 가능 시간" }).getByRole("button", { name: "10분" }).click();
   await expect(dialog.getByRole("heading", { name: "맛타리버섯 달걀 볶음" })).toBeVisible();
@@ -1806,15 +1892,15 @@ test("connected planner changes the recipe when the cooking time changes", async
   await expect(multiDay.getByRole("listitem")).toHaveCount(3);
   await expect(multiDay).toContainText("1일차");
   await expect(multiDay).toContainText("3일차");
-  await expect(multiDay).toContainText("재고·중복 사용을 함께 최적화했어요.");
+  await expect(multiDay).toContainText("남은 재료를 나눠 쓸 수 있도록 3일 식단을 구성했어요.");
   await multiDay.getByRole("button", { name: "3일 식단 저장", exact: true }).click();
   await expect(multiDay.getByRole("button", { name: "3일 식단 저장됨", exact: true })).toBeVisible();
-  await expect(page.locator(".toast-message")).toHaveText("3일 식단 저장 완료 · 부족 재료를 장보기에 추가해 주세요");
+  await expect(page.locator(".toast-message")).toHaveText("3일 식단 저장 완료 · 부족한 재료를 장보기 목록에 담아 주세요");
   await expect(multiDay.getByRole("button", { name: "3일 부족 재료 장보기", exact: true })).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(dialog).toHaveCount(0);
   await page.getByRole("button", { name: /확인하고 오늘 식단 만들기/ }).click();
-  const reopenedDialog = page.getByRole("dialog", { name: "오늘의 Rescue Meal" });
+  const reopenedDialog = page.getByRole("dialog", { name: "오늘의 식단" });
   await reopenedDialog.getByRole("group", { name: "조리 가능 시간" }).getByRole("button", { name: "20분" }).click();
   await reopenedDialog.getByRole("button", { name: "3일 식단 미리보기" }).click();
   const reopenedMultiDay = reopenedDialog.getByRole("region", { name: "3일 식단" });
@@ -1866,15 +1952,15 @@ test("connected planner focuses three-day shopping action after saving missing i
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.getByRole("button", { name: /확인하고 오늘 식단 만들기/ }).click();
-  const dialog = page.getByRole("dialog", { name: "오늘의 Rescue Meal" });
+  const dialog = page.getByRole("dialog", { name: "오늘의 식단" });
   await dialog.getByRole("button", { name: "3일 식단 미리보기" }).click();
   const multiDay = dialog.getByRole("region", { name: "3일 식단" });
   await expect(multiDay.getByRole("listitem")).toHaveCount(3);
   await multiDay.getByRole("button", { name: "3일 식단 저장", exact: true }).click();
   await expect(multiDay.getByRole("button", { name: "3일 식단 저장됨", exact: true })).toBeVisible();
-  await expect(page.locator(".toast-message")).toHaveText("3일 식단 저장 완료 · 부족 재료를 장보기에 추가해 주세요");
+  await expect(page.locator(".toast-message")).toHaveText("3일 식단 저장 완료 · 부족한 재료를 장보기 목록에 담아 주세요");
   await expect(multiDay).toContainText("부족 재료를 장보기로 이어갈 수 있어요.");
   await expect(multiDay.getByRole("button", { name: "3일 부족 재료 장보기", exact: true })).toBeFocused();
 });
@@ -1890,14 +1976,14 @@ test("connected planner sends the selected serving count to the API", async ({ p
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.getByRole("button", { name: /확인하고 오늘 식단 만들기/ }).click();
-  const dialog = page.getByRole("dialog", { name: "오늘의 Rescue Meal" });
+  const dialog = page.getByRole("dialog", { name: "오늘의 식단" });
   await expect(dialog.getByRole("group", { name: "식사 인원" })).toBeVisible();
 
   await dialog.getByRole("group", { name: "식사 인원" }).getByRole("button", { name: "2인분" }).click();
 
-  await expect(dialog.getByText("2인분 기준으로 필요한 재료량을 계산해요.", { exact: true })).toBeVisible();
+  await expect(dialog.getByText("재료 양은 2인분 기준이에요.", { exact: true })).toBeVisible();
   await expect.poll(() => previewServings.at(-1) ?? 0).toBe(2);
 });
 
@@ -1991,31 +2077,30 @@ test("connected planner turns confirmed missing ingredients into a checked shopp
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.getByRole("button", { name: /확인하고 오늘 식단 만들기/ }).click();
-  const dialog = page.getByRole("dialog", { name: "오늘의 Rescue Meal" });
+  const dialog = page.getByRole("dialog", { name: "오늘의 식단" });
   await expect(dialog.getByRole("heading", { name: "시금치 두부 닭가슴살 덮밥" })).toBeVisible();
   await expect(dialog.getByRole("button", { name: "사용 전 확인 2건 보기" })).toContainText("부족 재료");
   const missingMessageOrder = await dialog.locator(".meal-sheet-content").evaluate((element) => Array.from(element.children).map((child) => child.className));
   const missingSafetySummary = dialog.locator("#recipe-safety-summary");
   await expect(missingSafetySummary).toHaveAttribute("aria-label", "사용 전 확인 안내 2건");
-  await expect(missingSafetySummary.locator(".recipe-missing-callout")).toBeVisible();
+  const missingCallout = missingSafetySummary.locator(".recipe-missing-callout");
+  await expect(missingCallout).toBeVisible();
+  await expect(missingCallout).toContainText("식단을 저장한 뒤 장보기 목록에 추가할 수 있어요.");
+  await expect(missingCallout.getByRole("button", { name: "장보기 목록에 담기" })).toHaveCount(0);
   expect(missingMessageOrder.indexOf("recipe-safety-summary")).toBeGreaterThanOrEqual(0);
   expect(missingMessageOrder.indexOf("recipe-safety-summary")).toBeLessThan(missingMessageOrder.indexOf("recipe-ingredients"));
   await dialog.getByRole("button", { name: "식단 저장", exact: true }).click();
   await expect(dialog.getByRole("button", { name: "저장됨", exact: true })).toBeVisible();
-  await expect(page.locator(".toast-message")).toHaveText("식단 저장 완료 · 부족 재료를 장보기에 추가해 주세요");
-  await expect(page.locator(".toast-action")).toHaveText("장보기 목록 보기");
-  await page.locator(".toast-action").click();
-  const toastShoppingDialog = page.getByRole("dialog", { name: "장보기 목록" });
-  await expect(toastShoppingDialog).toBeVisible();
-  await toastShoppingDialog.getByRole("button", { name: "닫기", exact: true }).click();
-  await expect(toastShoppingDialog).toHaveCount(0);
-  await expect(dialog).toBeVisible();
-  const mealShoppingAction = dialog.getByRole("button", { name: "장보기 목록에 추가", exact: true });
+  await expect(missingCallout).not.toContainText("식단을 저장한 뒤");
+  await expect(missingCallout).toContainText("장보기 목록에 추가할 수 있어요.");
+  await expect(page.locator(".toast-message")).toHaveText("식단 저장 완료 · 부족한 재료를 장보기 목록에 담아 주세요");
+  await expect(page.locator(".toast-action")).toHaveText("부족 재료 담기");
+  const mealShoppingAction = dialog.getByRole("button", { name: "장보기 목록에 담기", exact: true });
   await expect(mealShoppingAction).toBeVisible();
   await expect(mealShoppingAction).toHaveCSS("min-height", "44px");
-  await mealShoppingAction.click();
+  await page.locator(".toast-action").click();
   const shopping = dialog.getByRole("region", { name: "장보기 목록" });
   await expect(shopping.getByRole("alert")).toContainText("기존 목록을 유지했어요");
   await shopping.getByRole("alert").getByRole("button", { name: "다시 시도" }).click();
@@ -2026,7 +2111,7 @@ test("connected planner turns confirmed missing ingredients into a checked shopp
   await expect(item).toHaveAttribute("aria-pressed", "false");
   await item.click();
   await expect(item).toHaveAttribute("aria-pressed", "true");
-  await dialog.getByRole("button", { name: "장보기 목록에 추가", exact: true }).click();
+  await dialog.getByRole("button", { name: "장보기 목록에 담기", exact: true }).click();
   await expect(item).toBeFocused();
   await shopping.getByRole("button", { name: "국산콩 두부 장보기 항목 삭제" }).click();
   await expect(shopping.getByTestId("meal-shopping-empty")).toBeVisible();
@@ -2104,7 +2189,7 @@ test("connected home exposes the shopping queue and keeps item mutations in sync
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   const card = page.getByRole("button", { name: /장보기 1개가 남아 있어요/ });
   await expect(card).toBeVisible();
   await card.click();
@@ -2152,7 +2237,7 @@ test("connected home exposes the shopping queue and keeps item mutations in sync
   await manualList.getByRole("button", { name: "생수 장보기 항목 삭제" }).click();
   await expect(dialog).toContainText("필요한 재료를 이어서 준비해요");
   await dialog.getByRole("button", { name: "식단에서 재료 고르기" }).click();
-  const mealDialog = page.getByRole("dialog", { name: "오늘의 Rescue Meal" });
+  const mealDialog = page.getByRole("dialog", { name: "오늘의 식단" });
   await expect(mealDialog).toBeVisible();
   await mealDialog.getByRole("button", { name: "닫기", exact: true }).click();
   const returnedShoppingDialog = page.getByRole("dialog", { name: "장보기 목록" });
@@ -2207,7 +2292,7 @@ test("connected shopping list refreshes after a cross-device revision", async ({
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await expect(page.getByRole("button", { name: /장보기 1개가 남아 있어요/ })).toBeVisible();
   await page.getByRole("button", { name: /장보기 1개가 남아 있어요/ }).click();
   const dialog = page.getByRole("dialog", { name: "장보기 목록" });
@@ -2296,7 +2381,7 @@ test("connected shopping list defers a cross-device refresh while an item mutati
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await expect(page.getByRole("button", { name: /장보기 1개가 남아 있어요/ })).toBeVisible();
   await page.getByRole("button", { name: /장보기 1개가 남아 있어요/ }).click();
   const dialog = page.getByRole("dialog", { name: "장보기 목록" });
@@ -2359,6 +2444,11 @@ test("connected shopping receive adds a lot with confirmed storage and clears th
     }
     await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(shoppingItem ? [shoppingItem] : []) });
   });
+  await page.route("**/api/shopping-list/*", async (route) => {
+    if (route.request().method() !== "PATCH") { await route.continue(); return; }
+    shoppingItem = shoppingItem ? { ...shoppingItem, checked: true, updated_at: now } : null;
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(shoppingItem) });
+  });
   await page.route("**/api/shopping-list/*/receive", async (route) => {
     if (route.request().method() !== "POST") {
       await route.continue();
@@ -2401,7 +2491,7 @@ test("connected shopping receive adds a lot with confirmed storage and clears th
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.getByRole("button", { name: /장보기 1개가 남아 있어요/ }).click();
 
   const dialog = page.getByRole("dialog", { name: "장보기 목록" });
@@ -2424,6 +2514,7 @@ test("connected shopping receive adds a lot with confirmed storage and clears th
   await expect(reopenedReceivePanel).toBeVisible();
   await reopenedReceivePanel.getByRole("spinbutton", { name: "국산콩 두부 구매 수량" }).fill("2");
   await reopenedReceivePanel.getByRole("group", { name: "국산콩 두부 보관 위치" }).getByRole("button", { name: "냉동", exact: true }).click();
+  await reopenedReceivePanel.getByRole("button", { name: "구매 완료로 표시", exact: true }).click();
   await reopenedReceivePanel.getByRole("button", { name: "재고에 반영", exact: true }).click();
 
   await expect.poll(() => receiveRequestCount).toBe(1);
@@ -2447,7 +2538,7 @@ test("connected shopping receive adds a lot with confirmed storage and clears th
   const receivedNotice = dialog.locator(".shopping-sheet-received");
   await expect(receivedNotice).toContainText("재고에 반영했어요");
   await expect(receivedNotice).toContainText("국산콩 두부");
-  await expect(receivedNotice).toContainText("다음: 포장지 날짜와 보관 상태를 확인해 주세요");
+  await expect(receivedNotice).toContainText("국산콩 두부의 포장지 날짜와 보관 상태를 확인해 주세요.");
   await expect(dialog.getByRole("button", { name: "추가", exact: true })).toBeVisible();
   const receivedDetailButton = page.getByRole("dialog", { name: "장보기 목록" }).getByRole("button", { name: "식품 상세 확인" });
   await expect(receivedDetailButton).toBeFocused();
@@ -2459,7 +2550,7 @@ test("connected shopping receive adds a lot with confirmed storage and clears th
  await expect(receivedDetail.getByRole("button", { name: "포장지에서 확인한 날짜 입력" })).toBeFocused();
   await receivedDetail.getByRole("button", { name: "포장지에서 확인한 날짜 입력" }).click();
   const receivedDateEditor = receivedDetail.getByRole("group", { name: "확인한 날짜 입력" });
-  await receivedDateEditor.getByRole("button", { name: "소비기한", exact: true }).click();
+  await receivedDateEditor.getByRole("radio", { name: "소비기한", exact: true }).click();
   await receivedDateEditor.getByRole("textbox", { name: "날짜" }).fill("2026-09-30");
   await receivedDateEditor.getByRole("button", { name: "확인 후 저장" }).click();
   await expect(page.locator(".toast")).toContainText("국산콩 두부 소비기한을 사용자 확인으로 저장했어요");
@@ -2476,7 +2567,7 @@ test("shopping receive preserves the readback notice when the sheet closes mid-r
   let releaseReceive!: () => void;
   const receiveStartedPromise = new Promise<void>((resolve) => { receiveStarted = resolve; });
   const receiveGate = new Promise<void>((resolve) => { releaseReceive = resolve; });
-  const item = {
+  let item = {
     id: "shopping-close-mid-request",
     canonical_name: "재진입 두부",
     quantity: 1,
@@ -2501,7 +2592,7 @@ test("shopping receive preserves the readback notice when the sheet closes mid-r
     estimated_use_first_window: null,
     priority: 1,
     category: "두부",
-    image_path: "/assets/food/tofu.png",
+    image_path: "/assets/food/tofu-photo.jpg",
     note: "receive readback fixture",
   };
   await page.route("**/api/dashboard", async (route) => {
@@ -2512,6 +2603,11 @@ test("shopping receive preserves the readback notice when the sheet closes mid-r
     if (route.request().method() !== "GET") { await route.continue(); return; }
     await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(itemAvailable ? [item] : []) });
   });
+  await page.route("**/api/shopping-list/*", async (route) => {
+    if (route.request().method() !== "PATCH") { await route.continue(); return; }
+    item = { ...item, checked: true, updated_at: "2026-09-03T09:00:00Z" };
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(item) });
+  });
   await page.route("**/api/shopping-list/*/receive", async (route) => {
     if (route.request().method() !== "POST") { await route.continue(); return; }
     receiveStarted();
@@ -2521,11 +2617,12 @@ test("shopping receive preserves the readback notice when the sheet closes mid-r
     await route.fulfill({ status: 201, contentType: "application/json", body: JSON.stringify({ status: "received", shopping_item_id: item.id, received_quantity: 1, inventory_lot: { id: "close-mid-request-lot", canonical_name: "재진입 두부", display_name: "재진입 두부" }, items: [], removed_planned_source_count: 0, idempotency_replayed: false }) });
   });
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.locator(".shopping-summary-card").first().click();
   const dialog = page.getByRole("dialog", { name: "장보기 목록" });
   await dialog.getByRole("button", { name: "재진입 두부 재고에 반영" }).click();
   const panel = dialog.getByRole("form", { name: "재진입 두부 재고 반영" });
+  await panel.getByRole("button", { name: "구매 완료로 표시", exact: true }).click();
   await panel.getByRole("button", { name: "재고에 반영", exact: true }).click();
   await receiveStartedPromise;
   await expect(dialog.locator(".shopping-sheet-content")).toHaveAttribute("aria-busy", "true");
@@ -2576,7 +2673,7 @@ test("shopping queue failure stays local to the sheet and keeps the dashboard co
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   const card = page.getByRole("button", { name: /장보기 목록을 다시 확인해요/ });
   await expect(card).toBeVisible();
   await card.click();
@@ -2585,10 +2682,11 @@ test("shopping queue failure stays local to the sheet and keeps the dashboard co
   await expect(dialog.getByRole("heading", { name: "장보기 목록을 불러오지 못했어요" })).toBeVisible();
   await expect(dialog.getByText("다시 확인이 필요해요", { exact: true })).toBeVisible();
   await expect(dialog.getByRole("alert")).toContainText("장보기 목록을 불러오지 못했어요");
+  await expect(dialog.locator(".shopping-sheet-empty")).toHaveCount(0);
   const retry = dialog.getByRole("button", { name: "다시 시도" });
   await expect(retry).toBeVisible();
   await expect(retry).toBeFocused();
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await retry.click();
   const retryRow = dialog.getByRole("button", { name: "재시도 장보기 식품 1개 · 직접 추가", exact: true });
   await expect(retryRow).toBeVisible();
@@ -2606,7 +2704,7 @@ test("empty shopping hands off to meal planning and returns to its origin", asyn
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   const card = page.locator(".shopping-summary-card").first();
   await expect(card).toBeVisible();
   await card.click();
@@ -2618,7 +2716,7 @@ test("empty shopping hands off to meal planning and returns to its origin", asyn
   await expect(refresh).toHaveCSS("min-height", "44px");
   await chooseFromMeal.click();
 
-  const meal = page.getByRole("dialog", { name: "오늘의 Rescue Meal" });
+  const meal = page.getByRole("dialog", { name: "오늘의 식단" });
   await expect(meal).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(meal).toHaveCount(0);
@@ -2717,14 +2815,14 @@ test("empty shopping creates a missing ingredient from meal readback", async ({ 
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.locator(".shopping-summary-card").first().click();
   const shopping = page.getByRole("dialog", { name: "장보기 목록" });
   await shopping.getByRole("button", { name: /식단에서 재료 고르기/ }).click();
-  const meal = page.getByRole("dialog", { name: "오늘의 Rescue Meal" });
+  const meal = page.getByRole("dialog", { name: "오늘의 식단" });
   await expect(meal.getByRole("heading", { name: plan.title })).toBeVisible();
   await meal.getByRole("button", { name: "식단 저장", exact: true }).click();
-  const addMissing = meal.getByRole("button", { name: "장보기 목록에 추가", exact: true });
+  const addMissing = meal.getByRole("button", { name: "장보기 목록에 담기", exact: true });
   await expect(addMissing).toBeVisible();
   await addMissing.click();
   const mealShopping = meal.getByRole("region", { name: "장보기 목록" });
@@ -2836,14 +2934,14 @@ test("embedded shopping cancellation returns to the shopping origin cleanly", as
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.locator(".shopping-summary-card").first().click();
   const shopping = page.getByRole("dialog", { name: "장보기 목록" });
   await shopping.getByRole("button", { name: /식단에서 재료 고르기/ }).click();
-  const meal = page.getByRole("dialog", { name: "오늘의 Rescue Meal" });
+  const meal = page.getByRole("dialog", { name: "오늘의 식단" });
   await expect(meal.getByRole("heading", { name: plan.title })).toBeVisible();
   await meal.getByRole("button", { name: "식단 저장", exact: true }).click();
-  await meal.getByRole("button", { name: "장보기 목록에 추가", exact: true }).click();
+  await meal.getByRole("button", { name: "장보기 목록에 담기", exact: true }).click();
   const mealShopping = meal.getByRole("region", { name: "장보기 목록" });
   await expect(mealShopping).toBeVisible();
   failNextShoppingRead = true;
@@ -2859,11 +2957,11 @@ test("embedded shopping cancellation returns to the shopping origin cleanly", as
   await meal.getByRole("button", { name: "닫기", exact: true }).click();
   await expect(meal).toHaveCount(0);
   await expect(shopping).toBeVisible();
-  await expect(page.getByRole("dialog", { name: "오늘의 Rescue Meal" })).toHaveCount(0);
+  await expect(page.getByRole("dialog", { name: "오늘의 식단" })).toHaveCount(0);
   await shopping.getByRole("button", { name: "닫기", exact: true }).click();
   await expect(shopping).toHaveCount(0);
   await page.getByRole("button", { name: "식단", exact: true }).click();
-  const freshMeal = page.getByRole("dialog", { name: "오늘의 Rescue Meal" });
+  const freshMeal = page.getByRole("dialog", { name: "오늘의 식단" });
   await expect(freshMeal).toBeVisible();
   await expect(freshMeal.getByRole("alert")).toHaveCount(0);
   await expect(freshMeal.getByRole("button", { name: "다시 시도" })).toHaveCount(0);
@@ -2931,7 +3029,7 @@ test("connected shopping item failure exposes a retry action", async ({ page }) 
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.getByRole("button", { name: /장보기 1개가 남아 있어요/ }).click();
   const dialog = page.getByRole("dialog", { name: "장보기 목록" });
   const shopping = dialog.getByRole("region", { name: "장보기 항목" });
@@ -2966,23 +3064,51 @@ test("connected planner saves allergen preferences before recalculating the reci
     await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(preferencesState) });
   });
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.getByRole("button", { name: /확인하고 오늘 식단 만들기/ }).click();
-  const dialog = page.getByRole("dialog", { name: "오늘의 Rescue Meal" });
+  const dialog = page.getByRole("dialog", { name: "오늘의 식단" });
   await dialog.getByRole("button", { name: "식단 조건 설정", exact: true }).click();
   const preferences = dialog.getByRole("region", { name: "식단 조건" });
   const soy = preferences.getByRole("button", { name: "대두·콩", exact: true });
   await soy.click();
   await expect(soy).toHaveAttribute("aria-pressed", "true");
+  await dialog.getByRole("group", { name: "식사 인원" }).getByRole("button", { name: "2인분", exact: true }).click();
+  await expect(dialog.getByText("재료 양은 2인분 기준이에요.", { exact: true })).toBeVisible();
+  await expect(preferences).toBeVisible();
+  await expect(preferences.getByText("저장 전 변경한 조건이에요. 저장해야 다음 메뉴에 적용돼요.", { exact: true })).toBeVisible();
+  await expect(soy).toHaveAttribute("aria-pressed", "true");
+  expect(updateAttempts).toBe(0);
   await preferences.getByRole("button", { name: "식단 조건 저장", exact: true }).click();
   await expect(preferences.getByRole("alert")).toContainText("기존 조건을 유지했어요");
   await preferences.getByRole("alert").getByRole("button", { name: "다시 시도" }).click();
-  await expect(dialog.getByText("식단 조건을 저장했어요. 추천을 다시 계산합니다.", { exact: true })).toBeVisible();
+  await expect(dialog.getByText("식단 조건을 저장했어요. 이 조건으로 메뉴를 다시 찾아볼게요.", { exact: true })).toBeVisible();
   expect(updateAttempts).toBe(2);
   await expect(dialog.getByRole("button", { name: "피할 알레르기 1개", exact: true })).toBeVisible();
 });
 
 test("connected planner calls out date review for allocated lots", async ({ page }) => {
+  let mealPreferenceWrites = 0;
+  let mealPreferenceReads = 0;
+  let allowPreferenceRead = false;
+  page.on("request", (request) => {
+    if (request.method() === "PUT" && new URL(request.url()).pathname.endsWith("/api/meal-preferences")) mealPreferenceWrites += 1;
+  });
+  await page.route("**/api/meal-preferences", async (route) => {
+    if (route.request().method() === "GET") {
+      mealPreferenceReads += 1;
+      if (!allowPreferenceRead) {
+        await route.fulfill({
+          status: 503,
+          contentType: "application/json",
+          body: JSON.stringify({ code: "meal_preferences_read_unavailable", detail: "식단 조건을 불러오지 못했습니다." }),
+        });
+        return;
+      }
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ avoid_allergens: [] }) });
+      return;
+    }
+    await route.continue();
+  });
   const dateReviewPlan = {
     id: "meal-date-review-ui-1",
     snapshot_hash: "b".repeat(64),
@@ -3027,13 +3153,13 @@ test("connected planner calls out date review for allocated lots", async ({ page
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.getByRole("button", { name: /확인하고 오늘 식단 만들기/ }).click();
-  const dialog = page.getByRole("dialog", { name: "오늘의 Rescue Meal" });
+  const dialog = page.getByRole("dialog", { name: "오늘의 식단" });
   await expect(dialog.getByRole("heading", { name: "날짜 확인 레시피" })).toBeVisible();
   await expect(dialog.getByRole("button", { name: "사용 전 확인 3건 보기" })).toContainText("부족 재료");
   await dialog.getByRole("group", { name: "식사 인원" }).getByRole("button", { name: "2인분" }).click();
-  await expect(dialog.getByText("2인분 기준으로 필요한 재료량을 계산해요.", { exact: true })).toBeVisible();
+  await expect(dialog.getByText("재료 양은 2인분 기준이에요.", { exact: true })).toBeVisible();
   const callout = dialog.locator(".recipe-date-review-callout");
   await expect(callout).toContainText("조리 전 날짜 확인이 필요해요");
   await expect(callout).toContainText("김치냉장고");
@@ -3047,7 +3173,7 @@ test("connected planner calls out date review for allocated lots", async ({ page
   await foodDetail.getByRole("button", { name: "닫기", exact: true }).click();
   await expect(foodDetail).toHaveCount(0);
   await expect(dialog).toBeVisible();
-  await expect(dialog.getByText("2인분 기준으로 필요한 재료량을 계산해요.", { exact: true })).toBeVisible();
+  await expect(dialog.getByText("재료 양은 2인분 기준이에요.", { exact: true })).toBeVisible();
   const safetySummary = dialog.locator("#recipe-safety-summary");
   await expect(safetySummary).toHaveAttribute("aria-label", "사용 전 확인 안내 3건");
   await expect(safetySummary).toContainText("확인할 내용");
@@ -3058,10 +3184,29 @@ test("connected planner calls out date review for allocated lots", async ({ page
   await expect(safetyItems.nth(0)).toHaveClass(/recipe-date-review-callout/);
   await expect(safetyItems.nth(1)).toHaveClass(/recipe-missing-callout/);
   await expect(safetyItems.nth(2)).toHaveClass(/recipe-allergen-callout/);
+  await expect(safetyItems.nth(2)).toContainText("재료 일부의 알레르기 정보가 확인되지 않았어요. 먹기 전 포장지 표시와 개인 알레르기를 확인해 주세요.");
   const dateMessageOrder = await dialog.locator(".meal-sheet-content").evaluate((element) => Array.from(element.children).map((child) => child.className));
   expect(dateMessageOrder.indexOf("recipe-safety-summary")).toBeGreaterThanOrEqual(0);
   expect(dateMessageOrder.indexOf("recipe-safety-summary")).toBeLessThan(dateMessageOrder.indexOf("recipe-ingredients"));
   expect(dateMessageOrder.indexOf("recipe-safety-summary")).toBeLessThan(dateMessageOrder.indexOf("recipe-provenance"));
+
+  const allergenCallout = safetyItems.nth(2);
+  const preferenceAction = allergenCallout.getByRole("button", { name: "피할 알레르기 설정 열기", exact: true });
+  await expect(preferenceAction).toBeEnabled();
+  await preferenceAction.click();
+  const preferences = dialog.getByRole("region", { name: "식단 조건" });
+  await expect(preferences).toBeVisible();
+  await expect(preferences).toBeFocused();
+  const preferenceLoadError = preferences.getByRole("alert");
+  await expect(preferenceLoadError).toBeVisible();
+  await expect(preferences.getByRole("group", { name: "피할 알레르기 선택" }).getByRole("button", { name: "대두·콩", exact: true })).toBeDisabled();
+  await expect(preferences.getByRole("button", { name: "조건 확인 후 저장", exact: true })).toBeDisabled();
+  allowPreferenceRead = true;
+  await preferenceLoadError.getByRole("button", { name: "다시 불러오기", exact: true }).click();
+  await expect(preferences.getByRole("group", { name: "피할 알레르기 선택" }).getByRole("button", { name: "대두·콩", exact: true })).toBeEnabled();
+  await expect(preferences.getByRole("button", { name: "식단 조건 저장", exact: true })).toBeEnabled();
+  expect(mealPreferenceReads).toBeGreaterThan(1);
+  expect(mealPreferenceWrites).toBe(0);
 });
 
 test("connected inventory preserves the printed date meaning", async ({ page }) => {
@@ -3103,7 +3248,7 @@ test("connected inventory preserves the printed date meaning", async ({ page }) 
     estimated_use_first_window: null,
     priority: 1,
     category: "유제품",
-    image_path: "/assets/food/milk.png",
+    image_path: "/assets/food/milk-photo.jpg",
     note: "포장지 표시 날짜를 확인했어요.",
   };
   let provenanceCleared = false;
@@ -3183,19 +3328,19 @@ test("connected inventory preserves the printed date meaning", async ({ page }) 
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await expect(page.getByText("표시 유통기한")).toBeVisible();
   await page.locator(".inventory-row").filter({ hasText: "테스트 우유" }).click();
   const dialog = page.getByRole("dialog", { name: "테스트 우유" });
   await expect(dialog.getByText("표시 유통기한")).toBeVisible();
   await dialog.locator("details.detail-history-disclosure").locator("summary").click();
-  await expect(dialog.getByRole("group", { name: "상품 정보 출처" })).toContainText("공개 상품 DB");
-  await expect(dialog.getByRole("group", { name: "상품 정보 출처" })).toContainText("신뢰도 62%");
+  await expect(dialog.getByRole("group", { name: "상품 정보 출처" })).toContainText("공개 상품 정보");
+  await expect(dialog.getByRole("group", { name: "상품 정보 출처" })).not.toContainText("신뢰도");
   await expect(dialog.getByRole("group", { name: "상품 정보 출처" })).toContainText("상품 기준 보관 정보 냉장");
-  await expect(dialog.getByRole("group", { name: "상품 정보 출처" })).toContainText("개별 포장의 소비기한을 확정하지 않아요");
-  await expect(dialog.getByRole("group", { name: "상품 정보 변경 기록" })).toContainText("상품 출처 적용");
+  await expect(dialog.getByRole("group", { name: "상품 정보 출처" })).toContainText("상품 정보만으로 개별 포장의 소비기한을 알 수는 없어요. 포장지 날짜를 확인해 주세요.");
+  await expect(dialog.getByRole("group", { name: "상품 정보 변경 기록" })).toContainText("상품 정보 출처 저장");
   await expect(dialog.getByRole("group", { name: "상품 정보 변경 기록" })).toContainText("공개 상품 DB");
-  await expect(dialog.getByRole("group", { name: "상품 정보 변경 기록" })).toContainText("게스트 기록");
+  await expect(dialog.getByRole("group", { name: "상품 정보 변경 기록" })).toContainText("기기에서 기록");
   await expect(dialog.getByRole("group", { name: "상품 정보 변경 기록" })).not.toContainText("Open Food Facts");
   await expect(dialog.getByRole("group", { name: "상품 정보 변경 기록" })).not.toContainText("workspace");
   await dialog.getByRole("button", { name: "상품 출처 다시 확인" }).click();
@@ -3203,8 +3348,8 @@ test("connected inventory preserves the printed date meaning", async ({ page }) 
   await dialog.getByRole("alert").getByRole("button", { name: "출처 지우기" }).click();
   await expect.poll(() => provenanceCleared).toBe(true);
   await expect(dialog.getByRole("group", { name: "상품 정보 출처" })).toHaveCount(0);
-  await expect(dialog.getByRole("group", { name: "상품 정보 변경 기록" })).toContainText("상품 출처 제거");
-  await expect(dialog.getByRole("group", { name: "상품 정보 변경 기록" })).toContainText("게스트 기록");
+  await expect(dialog.getByRole("group", { name: "상품 정보 변경 기록" })).toContainText("상품 정보 출처 삭제");
+  await expect(dialog.getByRole("group", { name: "상품 정보 변경 기록" })).toContainText("기기에서 기록");
   await dialog.getByRole("button", { name: "상품 정보 수정" }).click();
   const productInfoEditor = dialog.getByRole("group", { name: "상품 정보 수정" });
   await expect(productInfoEditor).toBeVisible();
@@ -3224,7 +3369,7 @@ test("connected inventory preserves the printed date meaning", async ({ page }) 
   await expect(updatedDialog.getByRole("group", { name: "상품 정보 수정 기록" })).toContainText("상품 정보 수정");
   await expect(updatedDialog.getByRole("group", { name: "상품 정보 수정 기록" })).toContainText("상품명 테스트 우유 → 사용자 확인 우유");
   await expect(updatedDialog.getByRole("group", { name: "상품 정보 수정 기록" })).toContainText("브랜드 예시 브랜드 → 확인한 브랜드");
-  await expect(updatedDialog.getByRole("group", { name: "상품 정보 수정 기록" })).toContainText("게스트 기록");
+  await expect(updatedDialog.getByRole("group", { name: "상품 정보 수정 기록" })).toContainText("기기에서 기록");
   await expect(updatedDialog.getByRole("group", { name: "상품 정보 수정 기록" })).not.toContainText("workspace");
   await expect(updatedDialog.getByRole("group", { name: "상품 정보 수정 기록" })).not.toContainText("recipe_admin");
   await expect(updatedDialog.getByText("AI 소비 우선순위")).toHaveCount(0);
@@ -3262,7 +3407,7 @@ test("connected packaging date explains the separate expiry review path", async 
     estimated_use_first_window: null,
     priority: 1,
     category: "가공식품",
-    image_path: "/assets/food/milk.png",
+    image_path: "/assets/food/milk-photo.jpg",
     note: "포장일만 확인된 식품이에요.",
   };
   await page.route("**/api/dashboard", async (route) => {
@@ -3278,7 +3423,7 @@ test("connected packaging date explains the separate expiry review path", async 
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.locator(".inventory-row").filter({ hasText: "포장일만 확인된 식품" }).click();
   const dialog = page.getByRole("dialog", { name: "포장일만 확인된 식품" });
   await expect(dialog.getByText("표시 포장일")).toBeVisible();
@@ -3321,7 +3466,7 @@ test("connected expired printed date offers a direct label recheck and returns t
     estimated_use_first_window: null,
     priority: 1,
     category: "채소",
-    image_path: "/assets/food/spinach.png",
+    image_path: "/assets/food/spinach-photo.jpg",
     note: "표시 소비기한을 기록했어요.",
   };
   await page.route("**/api/dashboard", async (route) => {
@@ -3337,7 +3482,7 @@ test("connected expired printed date offers a direct label recheck and returns t
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.locator(".inventory-row").filter({ hasText: "기한 지난 표시 식품" }).click();
   const detail = page.getByRole("dialog", { name: "기한 지난 표시 식품" });
   await expect(detail.locator(".date-review-callout")).toContainText("표시 날짜가 오늘이거나 지났어요");
@@ -3378,7 +3523,7 @@ test("connected product info persistence failure restores the detail and exposes
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.locator(".inventory-row").filter({ hasText: "시금치" }).click();
   const dialog = page.getByRole("dialog", { name: "시금치" });
   await dialog.getByRole("button", { name: "상품 정보 수정" }).click();
@@ -3451,7 +3596,7 @@ test("connected product provenance removal keeps a successful write visible when
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   const inventory = page.getByRole("region", { name: /내 식품 목록/ });
   await inventory.getByRole("button", { name: /시금치 국내산 시금치/ }).click();
   const dialog = page.getByRole("dialog", { name: "시금치" });
@@ -3511,7 +3656,7 @@ test("connected food detail keeps local edits until an explicit cross-device ref
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   const inventory = page.getByRole("region", { name: /내 식품 목록/ });
   await inventory.getByRole("button", { name: /시금치 국내산 시금치/ }).click();
   const dialog = page.getByRole("dialog", { name: "시금치" });
@@ -3566,7 +3711,7 @@ test("connected inventory warns when printed date storage condition differs", as
     estimated_use_first_window: null,
     priority: 1,
     category: "잼·소스",
-    image_path: "/assets/food/tomato.png",
+    image_path: "/assets/food/tomato-photo.jpg",
     note: "표시 날짜와 포장지 보관조건을 함께 확인했어요.",
   };
   await page.route("**/api/dashboard", async (route) => {
@@ -3608,7 +3753,7 @@ test("connected inventory warns when printed date storage condition differs", as
           { status: "blocked", occurred_at: "2026-09-03T08:00:00Z", source: "created", note: null },
           { status: "pending", occurred_at: "2026-09-03T08:10:00Z", source: "mapping", note: null },
           { status: "in_flight", occurred_at: "2026-09-03T08:20:00Z", source: "worker", note: null },
-          { status: "succeeded", occurred_at: "2026-09-03T08:30:00Z", source: "worker", note: "외부 작업 #grocy-storage-condition-tx" },
+          { status: "succeeded", occurred_at: "2026-09-03T08:30:00Z", source: "worker", note: "재고 앱 기록 #grocy-storage-condition-tx" },
         ],
       }]),
     });
@@ -3648,8 +3793,11 @@ test("connected inventory warns when printed date storage condition differs", as
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
-  await expect(page.locator(".priority-card").filter({ hasText: "실온 보관 잼" }).locator(".date-source")).toHaveText("보관 조건 확인");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
+  const storageConditionPriorityCard = page.locator(".priority-card").filter({ hasText: "실온 보관 잼" });
+  await expect(storageConditionPriorityCard.locator(".date-source")).toHaveText("표시 소비기한");
+  await expect(storageConditionPriorityCard.locator(".priority-date small")).toHaveText("보관 확인");
+  await expect(storageConditionPriorityCard.locator(".priority-date small")).toHaveAttribute("title", "보관 조건 확인");
   await expect(page.getByRole("region", { name: /내 식품 목록/ }).locator(".inventory-row").filter({ hasText: "실온 보관 잼" }).locator(".inventory-status")).toHaveText("확인 필요");
   await page.locator(".inventory-row").filter({ hasText: "실온 보관 잼" }).click();
   const dialog = page.getByRole("dialog", { name: "실온 보관 잼" });
@@ -3663,14 +3811,14 @@ test("connected inventory warns when printed date storage condition differs", as
   await expect(dialog.locator(".detail-history")).toContainText("김치냉장고 → 실온");
   await expect(dialog.locator(".detail-history").locator('[data-history-sync-status="succeeded"]')).toHaveText("외부 반영 완료");
   await expect(dialog.locator(".detail-history").locator('[data-history-sync-timeline="storage-condition-event"]')).toContainText("외부 연결 확인 → 외부 반영 대기 → 외부 반영 대기 → 외부 반영 완료");
-  await expect(dialog.locator(".detail-history").locator('[data-history-sync-reference="outbox-storage-condition-event"]')).toHaveText("외부 작업 #grocy-storage-condition-tx");
+  await expect(dialog.locator(".detail-history").locator('[data-history-sync-reference="outbox-storage-condition-event"]')).toHaveText("재고 앱 기록 #grocy-storage-condition-tx");
   const historyEvidence = dialog.locator('[data-history-sync-evidence="storage-condition-event"]');
   await historyEvidence.locator("summary").click();
   await expect(historyEvidence.locator('[data-history-sync-evidence-status="succeeded"]')).toContainText("자동 동기화");
-  await expect(historyEvidence.locator('[data-history-sync-evidence-status="succeeded"]')).toContainText("외부 작업 #grocy-storage-condition-tx");
-  await expect(historyEvidence.getByRole("button", { name: "작업 상세 보기" })).toBeVisible();
+  await expect(historyEvidence.locator('[data-history-sync-evidence-status="succeeded"]')).toContainText("재고 앱 기록 #grocy-storage-condition-tx");
+  await expect(historyEvidence.getByRole("button", { name: "자세히 보기" })).toBeVisible();
   await expect(historyEvidence.getByRole("button", { name: "알림에서 보기" })).toBeVisible();
-  await historyEvidence.getByRole("button", { name: "작업 상세 보기" }).click();
+  await historyEvidence.getByRole("button", { name: "자세히 보기" }).click();
   const accountFromDetail = page.getByRole("dialog", { name: "내 계정" });
   await expect(accountFromDetail).toBeVisible();
   await accountFromDetail.getByRole("button", { name: "닫기", exact: true }).click();
@@ -3685,7 +3833,7 @@ test("connected inventory warns when printed date storage condition differs", as
   if (!(await currentHistoryEvidence.getAttribute("open"))) await currentHistoryEvidence.locator("summary").click();
   await currentHistoryEvidence.getByRole("button", { name: "알림에서 보기" }).click();
   const notifications = page.getByRole("dialog", { name: "알림" });
-  const returnedNotification = notifications.getByRole("button", { name: "외부 재고에 반영했어요: 실온 보관 잼" });
+  const returnedNotification = notifications.getByRole("button", { name: "재고 앱에 반영했어요: 실온 보관 잼" });
   await expect(returnedNotification).toBeFocused();
   await expect(returnedNotification).toHaveAttribute("data-notification-returned", "true");
 });
@@ -3710,13 +3858,13 @@ test("connected date confirmation exposes a retry action after persistence failu
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   const inventory = page.getByRole("region", { name: /내 식품 목록/ });
   await inventory.getByRole("button", { name: /국산콩 두부 풀무원 · 1모/ }).click();
   const dialog = page.getByRole("dialog", { name: "국산콩 두부" });
   await dialog.getByRole("button", { name: "포장지에서 확인한 날짜 입력" }).click();
   const editor = dialog.getByRole("group", { name: "확인한 날짜 입력" });
-  await editor.getByRole("button", { name: "소비기한", exact: true }).click();
+  await editor.getByRole("radio", { name: "소비기한", exact: true }).click();
   await editor.getByRole("textbox", { name: "날짜" }).fill("2026-09-30");
   await editor.getByRole("button", { name: "확인 후 저장" }).click();
 
@@ -3759,13 +3907,13 @@ test("connected date confirmation keeps a successful write visible when dashboar
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   const inventory = page.getByRole("region", { name: /내 식품 목록/ });
   await inventory.getByRole("button", { name: /국산콩 두부 풀무원 · 1모/ }).click();
   const dialog = page.getByRole("dialog", { name: "국산콩 두부" });
   await dialog.getByRole("button", { name: "포장지에서 확인한 날짜 입력" }).click();
   const editor = dialog.getByRole("group", { name: "확인한 날짜 입력" });
-  await editor.getByRole("button", { name: "소비기한", exact: true }).click();
+  await editor.getByRole("radio", { name: "소비기한", exact: true }).click();
   await editor.getByRole("textbox", { name: "날짜" }).fill("2026-09-30");
   await editor.getByRole("button", { name: "확인 후 저장" }).click();
 
@@ -3806,7 +3954,7 @@ test("connected inventory shows the persisted first-opened timestamp", async ({ 
     estimated_use_first_window: null,
     priority: 1,
     category: "유제품",
-    image_path: "/assets/food/milk.png",
+    image_path: "/assets/food/milk-photo.jpg",
     note: "개봉일을 기준으로 먼저 먹을 순서를 계산했어요.",
   };
   await page.route("**/api/dashboard", async (route) => {
@@ -3822,7 +3970,7 @@ test("connected inventory shows the persisted first-opened timestamp", async ({ 
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.locator(".inventory-row").filter({ hasText: "테스트 우유" }).click();
   const dialog = page.getByRole("dialog", { name: "테스트 우유" });
   await expect(dialog.locator(".opened-row")).toContainText("2026년 9월 3일");
@@ -3844,7 +3992,7 @@ test("connected inventory explains the inference basis without exposing technica
       value: null,
       display_label: "확인 필요",
       source: "unknown",
-      source_detail: "상품 유형 + 보관 방식",
+      source_detail: "영수증 + 상품 유형 · refrigerated 보관 기준",
       confidence: 1,
       user_confirmed: false,
     },
@@ -3865,7 +4013,7 @@ test("connected inventory explains the inference basis without exposing technica
     },
     priority: 1,
     category: "두부·콩",
-    image_path: "/assets/food/tofu.png",
+    image_path: "/assets/food/tofu-photo.jpg",
     note: "실제 소비기한이 아니라 먼저 먹기 위한 추정 순서예요.",
   };
   await page.route("**/api/dashboard", async (route) => {
@@ -3881,13 +4029,13 @@ test("connected inventory explains the inference basis without exposing technica
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.locator(".inventory-row").filter({ hasText: "국산콩 두부" }).click();
   const dialog = page.getByRole("dialog", { name: "국산콩 두부" });
-  const trace = dialog.getByRole("group", { name: "AI 소비 우선순위 근거" });
-  await expect(trace).toContainText("상품 유형 + 보관 방식 기준으로 계산했어요.");
-  await expect(trace).toContainText("냉장 보관 · 미개봉 상태를 반영했어요.");
-  await expect(trace).toContainText("소비기한이나 안전 판정이 아니라");
+  const trace = dialog.getByRole("group", { name: "이 식품이 먼저 나온 이유" });
+  await expect(trace).toContainText("참고한 정보 · 구매 기록과 식품 종류 · 냉장 보관 기준");
+  await expect(trace).toContainText("냉장 보관 · 미개봉 상태를 살펴봤어요.");
+  await expect(trace).toContainText("소비기한이나 먹어도 되는지를 판단하는 안내가 아니에요.");
   await expect(trace).not.toContainText("input_sha256");
   await expect(trace).not.toContainText("safe_to_eat");
 });
@@ -3924,7 +4072,7 @@ test("connected home routes a provenance-backed food to the source review action
     },
     priority: 1,
     category: "채소",
-    image_path: "/assets/food/tomato.png",
+    image_path: "/assets/food/tomato-photo.jpg",
     note: "상품 후보와 포장지 날짜를 함께 확인해 주세요.",
   };
   await page.route("**/api/dashboard", async (route) => {
@@ -3936,14 +4084,15 @@ test("connected home routes a provenance-backed food to the source review action
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.locator(".priority-card").filter({ hasText: "상품 출처 식품" }).click();
   const dialog = page.getByRole("dialog", { name: "상품 출처 식품" });
   const productSource = dialog.getByRole("group", { name: "상품 정보 출처" });
   await expect(productSource).toBeVisible();
-  await expect(productSource).toContainText("공개 상품 DB · 신뢰도 88%");
-  await expect(productSource).toContainText("현재 확인 가능한 상품 기준");
-  await expect(productSource).toContainText("상품 후보 정보는 개별 포장의 소비기한을 확정하지 않아요.");
+  await expect(productSource).toContainText("공개 상품 정보");
+  await expect(productSource).toContainText("현재 확인 가능한 상품 정보");
+  await expect(productSource).not.toContainText("신뢰도");
+  await expect(productSource).toContainText("상품 정보만으로 개별 포장의 소비기한을 알 수는 없어요. 포장지 날짜를 확인해 주세요.");
   await expect(dialog.getByRole("button", { name: "상품 출처 다시 확인" })).toBeFocused();
 });
 
@@ -3969,7 +4118,7 @@ test("connected inventory keeps an abstained inference in the explicit review st
     estimated_use_first_window: null,
     priority: 1,
     category: "기타",
-    image_path: "/assets/food/tomato.png",
+    image_path: "/assets/food/tomato-photo.jpg",
     note: "정보가 부족해 우선순위를 계산하지 않았어요. 포장지 표시를 확인해 주세요.",
   };
   await page.route("**/api/dashboard", async (route) => {
@@ -3985,7 +4134,7 @@ test("connected inventory keeps an abstained inference in the explicit review st
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await expect(page.locator(".inventory-row").filter({ hasText: "정체불명 식품" }).locator(".inventory-status")).toHaveText(/확인 필요/);
   await page.locator(".inventory-row").filter({ hasText: "정체불명 식품" }).click();
   const dialog = page.getByRole("dialog", { name: "정체불명 식품" });
@@ -4000,7 +4149,7 @@ test("connected inventory keeps an abstained inference in the explicit review st
     return Boolean(review && action && (review.compareDocumentPosition(action) & Node.DOCUMENT_POSITION_FOLLOWING));
   });
   expect(dateReviewOrder).toBe(true);
-  await expect(dialog.getByRole("group", { name: "AI 소비 우선순위 근거" })).toHaveCount(0);
+  await expect(dialog.getByRole("group", { name: "이 식품이 먼저 나온 이유" })).toHaveCount(0);
 });
 
 test("connected label correction readback preserves identity while updating date and storage", async ({ page }) => {
@@ -4086,22 +4235,22 @@ test("connected label correction readback preserves identity while updating date
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.getByRole("button", { name: /식품 추가하기/ }).click();
   await page.getByRole("dialog", { name: "영수증으로 추가" }).getByRole("tab", { name: "라벨" }).click();
   const dialog = page.getByRole("dialog", { name: "라벨로 추가" });
-  await dialog.locator('input[type="file"][data-input-source="library"]').setInputFiles("public/assets/food/tomato.png");
+  await dialog.locator('input[type="file"][data-input-source="library"]').setInputFiles("public/assets/food/tomato-photo.jpg");
   await expect(dialog.getByText("유통기한 2026.09.12")).toBeVisible();
   await expect(dialog.getByText("포장지 보관 조건: 직사광선을 피해 실온보관")).toBeVisible();
-  await dialog.getByLabel("라벨 표시 날짜").fill("2026-09-13");
+  await dialog.getByLabel("포장지 날짜").fill("2026-09-13");
   await expect(dialog.getByText("유통기한 2026.09.13")).toBeVisible();
   const sourcePreview = dialog.getByRole("region", { name: "라벨 원본 미리보기" });
   await expect(sourcePreview).toBeVisible();
   await expect(sourcePreview.locator(".label-source-preview-frame")).toHaveAttribute("data-preview-ready", "true");
   await expect(sourcePreview.locator(".label-source-box-active")).toHaveCount(1);
-  await expect(sourcePreview.getByText(/날짜 후보가 읽힌 위치를 강조했어요/)).toBeVisible();
-  await dialog.getByRole("radio", { name: /기존 lot · 1팩/ }).click();
-  await dialog.getByRole("button", { name: "확인 후 반영" }).click();
+  await expect(sourcePreview.getByText("읽은 날짜가 있는 곳을 표시했어요. 포장지의 날짜 문구와 날짜를 확인한 뒤 저장해 주세요.")).toBeVisible();
+  await dialog.getByRole("radio", { name: /기존 식품 · 1팩/ }).click();
+  await dialog.getByRole("button", { name: "확인 후 기존 식품 수정" }).click();
 
   await expect.poll(() => createPayload).not.toBeNull();
   await expect.poll(() => createResponse).not.toBeNull();
@@ -4138,6 +4287,77 @@ test("connected label correction readback preserves identity while updating date
   await correctedDialog.getByRole("button", { name: "닫기", exact: true }).click();
   await page.getByRole("button", { name: /알림 확인/ }).click();
   await expect(page.getByRole("dialog", { name: "알림" }).getByText("지금 확인할 알림이 없어요")).toBeVisible();
+});
+
+test("connected missing label target returns the user to the refreshed inventory", async ({ page }) => {
+  let missingTargetRequest: Record<string, unknown> | null = null;
+  let targetMissing = false;
+  let refreshedSearchIds: string[] | null = null;
+  await page.route("**/api/dashboard", async (route) => {
+    if (route.request().method() !== "GET") {
+      await route.continue();
+      return;
+    }
+    const response = await route.fetch();
+    const payload = await response.json() as Record<string, unknown>;
+    if (targetMissing) {
+      const inventory = (payload.inventory as Array<Record<string, unknown>> | undefined) ?? [];
+      payload.inventory = inventory.filter((food) => food.id !== "spinach-1");
+      payload.food_count = inventory.length - Number(inventory.some((food) => food.id === "spinach-1"));
+    }
+    await route.fulfill({ response, body: JSON.stringify(payload) });
+  });
+  await page.route("**/api/inventory/search**", async (route) => {
+    if (route.request().method() !== "GET") {
+      await route.continue();
+      return;
+    }
+    const response = await route.fetch();
+    const payload = await response.json() as { items?: Array<Record<string, unknown>>; total?: number; has_more?: boolean };
+    if (targetMissing) {
+      const refreshedItems = (payload.items ?? []).filter((food) => food.id !== "spinach-1");
+      payload.items = refreshedItems;
+      payload.total = refreshedItems.length;
+      payload.has_more = false;
+      refreshedSearchIds = refreshedItems.map((food) => String(food.id));
+    }
+    await route.fulfill({ response, body: JSON.stringify(payload) });
+  });
+  await page.route("**/api/foods", async (route) => {
+    const request = route.request();
+    if (request.method() !== "POST" || new URL(request.url()).pathname !== "/api/foods") {
+      await route.continue();
+      return;
+    }
+    missingTargetRequest = JSON.parse(request.postData() ?? "{}") as Record<string, unknown>;
+    targetMissing = true;
+    await route.fulfill({
+      status: 404,
+      contentType: "application/json",
+      body: JSON.stringify({ detail: { code: "food_lot_target_not_found", detail: "대상 식품 lot을 찾을 수 없습니다." } }),
+    });
+  });
+
+  await page.goto("/");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
+  await page.getByRole("button", { name: /시금치 국내산 시금치 · 1팩/ }).first().click();
+  const detail = page.getByRole("dialog", { name: "시금치" });
+  await detail.getByRole("button", { name: "포장지에서 날짜 다시 확인" }).click();
+  const dialog = page.getByRole("dialog", { name: "날짜 다시 확인" });
+  await dialog.getByRole("button", { name: "샘플 라벨 인식" }).click();
+  await expect(dialog.getByRole("radio", { name: /기존 식품 · 1팩/ })).toHaveAttribute("aria-checked", "true");
+  await dialog.getByRole("button", { name: "확인 후 기존 식품 수정" }).click();
+
+  await expect.poll(() => missingTargetRequest).not.toBeNull();
+  expect(missingTargetRequest).toMatchObject({ lot_action: "correct", target_food_id: "spinach-1" });
+  const staleToast = page.getByRole("status").filter({ hasText: "선택한 식품 기록을 찾지 못해 날짜를 저장하지 않았어요" });
+  await expect(staleToast).toBeVisible();
+  await staleToast.getByRole("button", { name: "식품 목록 보기" }).click();
+  const inventory = page.getByRole("region", { name: /내 식품 목록/ });
+  await expect(inventory).toBeVisible();
+  await expect(inventory.getByRole("searchbox", { name: "식품·브랜드·카테고리 검색" })).toHaveValue("시금치");
+  await expect.poll(() => refreshedSearchIds).not.toBeNull();
+  expect(refreshedSearchIds).not.toContain("spinach-1");
 });
 
 test("connected label review exposes a packaging date without treating it as an expiry", async ({ page }) => {
@@ -4178,19 +4398,23 @@ test("connected label review exposes a packaging date without treating it as an 
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.getByRole("button", { name: /식품 추가하기/ }).click();
   await page.getByRole("dialog", { name: "영수증으로 추가" }).getByRole("tab", { name: "라벨" }).click();
   const dialog = page.getByRole("dialog", { name: "라벨로 추가" });
   await dialog.locator('input[type="file"][data-input-source="library"]').setInputFiles({ name: "produce-label-e2e.jpg", mimeType: "image/jpeg", buffer: Buffer.from("fixture") });
   await expect(dialog.getByText("포장일 2017.06.28")).toBeVisible();
-  await expect(dialog.getByText("소비기한이 아닌 날짜 후보예요.")).toBeVisible();
-  await dialog.getByRole("button", { name: "확인 후 반영" }).click();
+  await expect(dialog.getByText("소비기한이 아닐 수 있어요. 포장지에서 날짜 종류와 보관 방법을 확인해 주세요.")).toBeVisible();
+  await dialog.getByRole("textbox", { name: "새 식품 수량" }).fill("2팩");
+  await expect(dialog.locator("#label-new-food-quantity-hint")).toHaveText("입력한 수량 2팩을 새 기록에 저장해요.");
+  await dialog.getByRole("button", { name: "확인 후 저장" }).click();
 
   await expect.poll(() => createPayload).not.toBeNull();
   expect(createPayload).toMatchObject({
     canonical_name: "채소류",
     lot_action: "create",
+    quantity: 2,
+    unit: "팩",
     date_kind: "packaging_date",
     date_value: "2017-06-28",
     date_source: "label_ocr",
@@ -4217,7 +4441,7 @@ test("connected storage mutation retries once with the same idempotency key", as
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.getByRole("button", { name: /닭가슴살 무항생제 닭가슴살 · 2팩/ }).first().click();
   const dialog = page.getByRole("dialog", { name: "닭가슴살" });
   await dialog.getByRole("button", { name: "냉장", exact: true }).click();
@@ -4294,7 +4518,7 @@ test("connected storage mutation readback updates dashboard and notifications to
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.locator(".priority-card").filter({ hasText: "닭가슴살" }).click();
   const dialog = page.getByRole("dialog", { name: "닭가슴살" });
   await dialog.getByRole("button", { name: "냉장", exact: true }).click();
@@ -4305,7 +4529,7 @@ test("connected storage mutation readback updates dashboard and notifications to
   await expect.poll(() => notificationCalls).toBeGreaterThan(1);
   await expect(page.locator(".priority-card").filter({ hasText: "닭가슴살" }).locator(".storage-pill")).toHaveText("냉장");
   await expect(page.locator(".toast")).toContainText("변경 범위: 보관 위치");
-  await expect(page.locator(".toast")).toContainText("외부 재고 반영을 대기 중이에요");
+  await expect(page.locator(".toast")).toContainText("재고 앱 반영을 기다리고 있어요");
   await expect(page.locator(".toast")).not.toContainText("Grocy");
   await expect.poll(() => page.locator(".toast").evaluate((element) => {
     const screen = document.querySelector<HTMLElement>("[data-testid=device-screen]")?.getBoundingClientRect();
@@ -4396,12 +4620,12 @@ test("connected detail mutation carries the external sync lifecycle into notific
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.locator(".priority-card").filter({ hasText: "닭가슴살" }).click();
   const detail = page.getByRole("dialog", { name: "닭가슴살" });
   await detail.getByRole("button", { name: "냉장", exact: true }).click();
   await detail.locator(".detail-actions .primary-sheet-button").click();
-  await expect(page.locator(".toast")).toContainText("외부 재고 반영을 대기 중이에요");
+  await expect(page.locator(".toast")).toContainText("재고 앱 반영을 기다리고 있어요");
   await page.getByRole("button", { name: /알림 확인/ }).click();
   const notifications = page.getByRole("dialog", { name: "알림" });
   await expect(notifications.locator('[data-notification-sync-state="queued"]')).toHaveText("처리 대기");
@@ -4447,7 +4671,7 @@ test("connected storage sync attention offers a direct external-inventory settin
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.locator(".priority-card").filter({ hasText: "닭가슴살" }).click();
   const dialog = page.getByRole("dialog", { name: "닭가슴살" });
   await dialog.getByRole("button", { name: "냉장", exact: true }).click();
@@ -4485,7 +4709,7 @@ test("connected storage persistence failure exposes a retry with the same idempo
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.getByRole("button", { name: /닭가슴살 무항생제 닭가슴살 · 2팩/ }).first().click();
   const dialog = page.getByRole("dialog", { name: "닭가슴살" });
   await dialog.getByRole("button", { name: "냉장", exact: true }).click();
@@ -4534,7 +4758,7 @@ test("connected move and open use one atomic storage event sequence", async ({ p
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.getByRole("button", { name: /닭가슴살 무항생제 닭가슴살 · 2팩/ }).first().click();
   const dialog = page.getByRole("dialog", { name: "닭가슴살" });
   await dialog.getByRole("button", { name: "수량 줄이기" }).click();
@@ -4556,7 +4780,7 @@ test("connected move and open use one atomic storage event sequence", async ({ p
     ],
   });
   await expect(page.getByRole("status")).toContainText("변경 범위: 보관 위치·개봉 상태·수량");
-  await expect(page.getByRole("status")).toContainText("외부 재고 반영을 대기 중이에요");
+  await expect(page.getByRole("status")).toContainText("재고 앱 반영을 기다리고 있어요");
 });
 
 test("connected consume mutation recovers through the storage recovery module", async ({ page }) => {
@@ -4585,7 +4809,7 @@ test("connected consume mutation recovers through the storage recovery module", 
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.getByRole("button", { name: /닭가슴살 무항생제 닭가슴살 · 2팩/ }).first().click();
   const dialog = page.getByRole("dialog", { name: "닭가슴살" });
   await dialog.getByRole("button", { name: "먹었어요" }).click();
@@ -4597,7 +4821,7 @@ test("connected consume mutation recovers through the storage recovery module", 
   expect(idempotencyKeys[1]).toBe(idempotencyKeys[0]);
   await expect(page.locator(".toast")).toContainText("닭가슴살을 먹은 기록으로 남겼어요");
   await expect(page.locator(".toast")).toContainText("기록 범위: 전체 2팩");
-  await expect(page.locator(".toast")).toContainText("외부 재고 반영을 대기 중이에요");
+  await expect(page.locator(".toast")).toContainText("재고 앱 반영을 기다리고 있어요");
 });
 
 test("connected discard mutation recovers through the storage recovery module", async ({ page }) => {
@@ -4626,7 +4850,7 @@ test("connected discard mutation recovers through the storage recovery module", 
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.getByRole("button", { name: /닭가슴살 무항생제 닭가슴살 · 2팩/ }).first().click();
   const dialog = page.getByRole("dialog", { name: "닭가슴살" });
   await dialog.getByRole("button", { name: "상태가 이상해 폐기하기" }).click();
@@ -4639,7 +4863,7 @@ test("connected discard mutation recovers through the storage recovery module", 
   expect(idempotencyKeys[1]).toBe(idempotencyKeys[0]);
   await expect(page.locator(".toast")).toContainText("닭가슴살 폐기 기록을 남겼어요");
   await expect(page.locator(".toast")).toContainText("기록 범위: 전체 2팩");
-  await expect(page.locator(".toast")).toContainText("외부 재고 반영을 대기 중이에요");
+  await expect(page.locator(".toast")).toContainText("재고 앱 반영을 기다리고 있어요");
 });
 
 test("connected receipt review sends user corrections to the commit API", async ({ page }) => {
@@ -4807,7 +5031,7 @@ test("connected receipt review sends user corrections to the commit API", async 
     commitAttempts += 1;
     commitIdempotencyKeys.push(route.request().headers()["idempotency-key"] ?? "");
     commitPayload = JSON.parse(route.request().postData() ?? "{}") as Record<string, unknown>;
-    if (commitAttempts === 1) {
+    if (commitAttempts <= 2) {
       await route.fulfill({
         status: 503,
         contentType: "application/json",
@@ -4823,28 +5047,29 @@ test("connected receipt review sends user corrections to the commit API", async 
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.getByRole("button", { name: /식품 추가하기/ }).click();
   const dialog = page.getByRole("dialog", { name: "영수증으로 추가" });
-  await dialog.locator('input[type="file"][data-input-source="library"]').setInputFiles("public/assets/food/tomato.png");
+  await dialog.locator('input[type="file"][data-input-source="library"]').setInputFiles("public/assets/food/tomato-photo.jpg");
   await expect(dialog.getByRole("button", { name: "맛타리버섯 2팩 · 3,980원 확인 필요" })).toBeVisible();
   const sourcePreview = dialog.getByRole("region", { name: "영수증 원본 미리보기" });
   await expect(sourcePreview).toBeVisible();
-  await expect(sourcePreview.getByText("상품 항목을 누르면 원본 위치를, 원본 영역을 누르면 해당 상품 수정을 열어요. 필요한 항목만 체크해 주세요.")).toBeVisible();
+  await expect(sourcePreview.getByText("상품을 선택하면 영수증에서 확인할 곳을 표시해요. 영수증 영역을 누르면 해당 상품을 수정할 수 있어요.")).toBeVisible();
   await expect(sourcePreview.locator(".receipt-source-box")).toHaveCount(2);
   await expect(sourcePreview.locator(".receipt-source-box-active")).toHaveCount(2);
   await expect(sourcePreview).toContainText("현재 항목 · 맛타리버섯");
-  await expect(sourcePreview).toContainText("원본 위치 2곳 확인 중");
+  await expect(sourcePreview.locator(".receipt-source-preview-heading small")).toContainText("영수증에서 확인 중");
+  await expect(sourcePreview).toHaveAttribute("data-active-source-count", "2");
   await expect(sourcePreview).toHaveAttribute("data-active-source-count", "2");
   await expect(sourcePreview).toHaveAttribute("data-active-source-line", "맛타리버섯");
   const mushroomCard = dialog.locator('.receipt-line-card[data-line-id="api-line-e2e-1"]');
-  const sourceButton = dialog.getByRole("button", { name: "맛타리버섯 원본 위치 보기" });
+  const sourceButton = dialog.getByRole("button", { name: "맛타리버섯 영수증에서 확인하기" });
   await expect(sourceButton).toBeVisible();
   await sourceButton.click();
   await expect(mushroomCard).toHaveClass(/receipt-line-card-source-active/);
   await expect(mushroomCard).toHaveCSS("border-top-color", /rgb/);
   await expect(mushroomCard).toHaveCSS("background-color", /rgb/);
-  await expect(mushroomCard.locator("[id^='receipt-line-status-']")).toContainText("원본 위치 확인 중");
+  await expect(mushroomCard.locator("[id^='receipt-line-status-']")).toContainText("영수증에서 확인 중");
   await expect.poll(() => sourcePreview.evaluate((element) => {
     const content = element.closest<HTMLElement>(".sheet-content");
     if (!content) return false;
@@ -4870,7 +5095,7 @@ test("connected receipt review sends user corrections to the commit API", async 
   expect(sourceHitTargets.every((target) => target.width >= 44 && target.height >= 44)).toBe(true);
   await mushroomCard.getByRole("button", { name: "맛타리버섯 항목 수정 닫기" }).click();
   await expect(mushroomCard.getByRole("button", { name: "맛타리버섯 항목 수정" })).toBeVisible();
-  const sourceObservationButtons = sourcePreview.getByRole("button", { name: "맛타리버섯 원본 위치 선택" });
+  const sourceObservationButtons = sourcePreview.getByRole("button", { name: "맛타리버섯 영수증에서 확인하기" });
   await expect(sourceObservationButtons).toHaveCount(2);
   await expect(sourceObservationButtons.first()).toHaveAttribute("aria-pressed", "true");
   await expect(sourceObservationButtons.nth(1)).toHaveAttribute("aria-pressed", "true");
@@ -4883,7 +5108,7 @@ test("connected receipt review sends user corrections to the commit API", async 
     const bar = document.querySelector<HTMLElement>(".receipt-review-submit-bar")?.getBoundingClientRect();
     const content = document.querySelector<HTMLElement>(".sheet-content");
     const criticalControls = [
-      '.receipt-line-card-editing input[aria-label="상품명"]',
+      '.receipt-line-card-editing input[aria-label="재고에 저장할 상품명"]',
       '.receipt-line-card-editing input[aria-label="수량"]',
       '.receipt-line-card-editing input[aria-label="단위"]',
       ".receipt-line-card-editing .receipt-line-storage-field",
@@ -4896,22 +5121,22 @@ test("connected receipt review sends user corrections to the commit API", async 
   }), { timeout: 2_500 }).toBe(0);
   await expect(dialog.getByText("검토된 상품명 규칙")).toBeVisible();
   await dialog.getByRole("button", { name: "상품 정보 확인" }).click();
-  await expect(dialog.getByRole("alert")).toContainText("상품 정보 확인 작업을 저장하지 못했어요. 검수 상태를 유지했어요.");
+  await expect(dialog.getByRole("alert")).toContainText("상품 정보 확인 내용을 저장하지 못했어요. 기존 내용을 유지했어요.");
   await dialog.getByRole("alert").getByRole("button", { name: "다시 시도" }).click();
   await expect.poll(() => enrichmentPostAttempts).toBe(2);
-  await expect(dialog.getByText("상품 정보 확인을 기다리는 중이에요. 영수증 반영은 지금도 진행할 수 있어요.")).toBeVisible();
-  const receiptName = dialog.getByRole("textbox", { name: "상품명" });
+  await expect(dialog.getByText("상품 정보를 확인 중이에요. 영수증은 지금 저장할 수 있어요.")).toBeVisible();
+  const receiptName = dialog.getByRole("textbox", { name: "재고에 저장할 상품명" });
   await receiptName.fill("사용자 확인 맛타리버섯");
-  await expect(dialog.getByText("상품 정보 후보 1개를 확인했어요.")).toBeVisible({ timeout: 8_000 });
+  await expect(dialog.getByText("상품 정보 1개를 찾았어요.")).toBeVisible({ timeout: 8_000 });
   await expect(receiptName).toHaveValue("사용자 확인 맛타리버섯");
   await receiptName.fill("맛타리버섯");
   await expect(dialog.getByRole("button", { name: "상품 정보 적용" })).toBeVisible();
   await page.setViewportSize({ width: 320, height: 740 });
-  await dialog.getByRole("button", { name: "상품 정보 후보 찾기" }).click();
-  await expect(dialog.locator(".receipt-product-lookup").getByText("공개 상품 DB 후보").first()).toBeVisible();
-  await expect(dialog.locator(".receipt-product-lookup").filter({ hasText: "공개 상품 DB 후보" }).first()).toHaveAttribute("aria-live", "polite");
-  await expect(dialog.getByText("실제 상품명·포장지 날짜 확인 필요")).toBeVisible();
-  const productCandidateAction = dialog.locator(".receipt-product-lookup").filter({ hasText: "공개 상품 DB 후보" }).getByRole("button", { name: "상품 정보 적용" }).first();
+  await dialog.getByRole("button", { name: "상품 정보 찾기" }).click();
+  await expect(dialog.locator(".receipt-product-lookup").getByText("공개 상품 정보").first()).toBeVisible();
+  await expect(dialog.locator(".receipt-product-lookup").filter({ hasText: "공개 상품 정보" }).first()).toHaveAttribute("aria-live", "polite");
+  await expect(dialog.getByText("공개 상품 정보예요. 실제 상품명과 포장지 날짜를 확인해 주세요.")).toBeVisible();
+  const productCandidateAction = dialog.locator(".receipt-product-lookup").filter({ hasText: "공개 상품 정보" }).getByRole("button", { name: "상품 정보 적용" }).first();
   await expect.poll(() => page.evaluate(() => {
     const cards = Array.from(document.querySelectorAll<HTMLElement>(".receipt-product-lookup .receipt-product-candidate"));
     const actions = Array.from(document.querySelectorAll<HTMLElement>(".receipt-product-lookup .candidate-apply-button"));
@@ -4942,7 +5167,7 @@ test("connected receipt review sends user corrections to the commit API", async 
   })).toBe(true);
   await productCandidateAction.click();
   await expect(dialog.getByRole("status").filter({ hasText: "상품 정보를 적용했어요" })).toContainText("포장지 날짜는 별도로 확인해 주세요");
-  await expect(dialog.getByRole("textbox", { name: "상품명" })).toHaveValue("매일맛있는맛타리버섯");
+  await expect(dialog.getByRole("textbox", { name: "재고에 저장할 상품명" })).toHaveValue("매일맛있는맛타리버섯");
   await expect.poll(() => page.evaluate(() => {
     const status = document.querySelector<HTMLElement>(".receipt-candidate-applied");
     const bar = document.querySelector<HTMLElement>(".receipt-review-submit-bar");
@@ -4957,22 +5182,34 @@ test("connected receipt review sends user corrections to the commit API", async 
   await page.setViewportSize({ width: 1100, height: 1100 });
 
   await mushroomCard.getByRole("button", { name: "실온", exact: true }).click();
-  await mushroomCard.getByRole("textbox", { name: "상품명" }).fill("새송이버섯");
-  await expect(dialog.getByRole("status").filter({ hasText: "후보 적용 후 사용자 값으로 수정했어요" })).toContainText("상품 후보 출처는 남아 있고");
+  await mushroomCard.getByRole("textbox", { name: "재고에 저장할 상품명" }).fill("새송이버섯");
+  await expect(mushroomCard.locator(".receipt-line-toggle")).toHaveAttribute("aria-label", /새송이버섯.*확인 완료$/);
+  await expect(mushroomCard.locator(".ocr-confidence")).toHaveText("읽음");
+  await expect(mushroomCard.locator(".ocr-confidence")).not.toHaveClass(/ocr-review/);
+  await expect(dialog.locator("#receipt-review-ready-hint")).toHaveText("선택한 항목을 확인했어요. 저장할 수 있어요.");
+  await expect(dialog.getByRole("button", { name: "3개 식품 저장하기" })).toBeEnabled();
+  await expect(dialog.getByRole("status").filter({ hasText: "상품 정보를 직접 수정했어요" })).toContainText("상품 정보가 어디서 왔는지는 기록에 남아 있어요");
   await expect(dialog.getByRole("status").filter({ hasText: "상품 정보를 적용했어요" })).toHaveCount(0);
   await expect(dialog.locator(".receipt-line-confirmed-badge")).toHaveCount(1);
   await expect(dialog.locator(".receipt-line-confirmed-badge")).toHaveAttribute("aria-label", "사용자 확인 완료");
   await expect(dialog.locator(".receipt-candidate-user-edited")).toHaveCSS("border-top-color", /rgb/);
   await mushroomCard.getByRole("spinbutton", { name: "수량" }).fill("1");
   await mushroomCard.getByRole("textbox", { name: "단위" }).fill("봉");
-  await dialog.getByRole("button", { name: "1개 항목 반영하기" }).click();
+  await dialog.getByRole("button", { name: "1개 식품 저장하기" }).click();
 
   await expect(dialog).toHaveCount(0);
   await expect(page.getByRole("status")).toContainText("영수증 반영을 저장하지 못했어요. 기존 목록을 유지했어요");
   await page.locator(".toast").getByRole("button", { name: "다시 시도" }).click();
   await expect.poll(() => page.evaluate(() => document.activeElement?.matches(".priority-card, .connection-pill") ?? false)).toBe(true);
   await expect.poll(() => commitAttempts).toBe(2);
-  expect(commitIdempotencyKeys[1]).toBe(commitIdempotencyKeys[0]);
+  const retryAgainButton = page.locator(".toast-action");
+  await expect(retryAgainButton).toHaveText("다시 시도");
+  await expect(retryAgainButton).toBeEnabled();
+  await expect(retryAgainButton).toHaveAttribute("aria-busy", "false");
+  await retryAgainButton.click();
+  await expect.poll(() => commitAttempts).toBe(3);
+  expect(commitIdempotencyKeys).toHaveLength(3);
+  expect(commitIdempotencyKeys.every((key) => key === commitIdempotencyKeys[0])).toBe(true);
   expect(commitPayload).toMatchObject({
     confirmed_line_ids: ["line-e2e-1"],
     overrides: { "line-e2e-1": { canonical_name: "새송이버섯", quantity: 1, unit: "봉", storage_type: "ambient", match_source: "open_food_facts" } },
@@ -5005,7 +5242,7 @@ test("connected receipt commit creates a date-review follow-up from authoritativ
     estimated_use_first_window: null,
     priority: 1,
     category: "채소",
-    image_path: "/assets/food/mushroom.png",
+    image_path: "/assets/food/mushroom-photo.jpg",
     note: "포장지 날짜 확인 필요",
   };
   await page.route("**/api/dashboard", async (route) => {
@@ -5068,12 +5305,12 @@ test("connected receipt commit creates a date-review follow-up from authoritativ
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.getByRole("button", { name: /식품 추가하기/ }).click();
   const dialog = page.getByRole("dialog", { name: "영수증으로 추가" });
-  await dialog.locator('input[type="file"][data-input-source="library"]').setInputFiles("public/assets/food/tomato.png");
-  await expect(dialog.getByRole("button", { name: "1개 항목 반영하기" })).toBeVisible();
-  await dialog.getByRole("button", { name: "1개 항목 반영하기" }).click();
+  await dialog.locator('input[type="file"][data-input-source="library"]').setInputFiles("public/assets/food/tomato-photo.jpg");
+  await expect(dialog.getByRole("button", { name: "1개 식품 저장하기" })).toBeVisible();
+  await dialog.getByRole("button", { name: "1개 식품 저장하기" }).click();
 
   await expect(page.locator(".toast")).toContainText("1개 항목을 검토 후 반영했어요");
   await expect(page.locator(".toast-action")).toHaveText("날짜·보관 상태 확인");
@@ -5083,7 +5320,7 @@ test("connected receipt commit creates a date-review follow-up from authoritativ
   await expect(detail.getByTestId("date-confirmation-action")).toBeFocused();
   await detail.getByTestId("date-confirmation-action").click();
   const dateEditor = detail.getByRole("group", { name: "확인한 날짜 입력" });
-  await dateEditor.getByRole("button", { name: "소비기한", exact: true }).click();
+  await dateEditor.getByRole("radio", { name: "소비기한", exact: true }).click();
   await dateEditor.getByRole("textbox", { name: "날짜" }).fill("2026-09-30");
   await dateEditor.getByRole("button", { name: "확인 후 저장" }).click();
   await expect(page.locator(".toast")).toContainText("맛타리버섯 소비기한을 사용자 확인으로 저장했어요");
@@ -5175,20 +5412,20 @@ test("connected receipt review can look up a line GTIN before committing the lot
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.getByRole("button", { name: /식품 추가하기/ }).click();
   const dialog = page.getByRole("dialog", { name: "영수증으로 추가" });
   await dialog.locator('input[type="file"][data-input-source="library"]').setInputFiles({ name: "receipt-barcode-e2e.jpg", mimeType: "image/jpeg", buffer: Buffer.from("fixture") });
   await expect(dialog.getByRole("button", { name: "두부 1모 · 2,980원 확인 필요" })).toBeVisible();
   await expect(dialog.getByText("영수증 바코드", { exact: true })).toBeVisible();
   await expect(dialog.getByText("08801114167523", { exact: true })).toBeVisible();
-  await dialog.getByRole("button", { name: "바코드로 상품 후보 조회" }).click();
+  await dialog.getByRole("button", { name: "바코드로 상품 찾기" }).click();
   await expect(dialog.getByText("풀무원 국산콩 두부")).toBeVisible();
-  await expect(dialog.getByText("식품안전나라 상품 기준")).toBeVisible();
-  await expect(dialog.getByText("과거 기준 데이터 후보")).toBeVisible();
+  await expect(dialog.getByText("식품안전나라 상품 정보")).toBeVisible();
+  await expect(dialog.getByText("오래된 상품 정보")).toBeVisible();
   await dialog.getByRole("button", { name: "상품 정보 적용" }).click();
-  await expect(dialog.getByRole("textbox", { name: "상품명" })).toHaveValue("풀무원 국산콩 두부");
-  await dialog.getByRole("button", { name: "1개 항목 반영하기" }).click();
+  await expect(dialog.getByRole("textbox", { name: "재고에 저장할 상품명" })).toHaveValue("풀무원 국산콩 두부");
+  await dialog.getByRole("button", { name: "1개 식품 저장하기" }).click();
 
   await expect(dialog).toHaveCount(0);
   expect(commitPayload).toMatchObject({
@@ -5223,11 +5460,11 @@ test("duplicate receipt commit explains the idempotent conflict", async ({ page 
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.getByRole("button", { name: /식품 추가하기/ }).click();
   const dialog = page.getByRole("dialog", { name: "영수증으로 추가" });
   await dialog.getByRole("button", { name: "샘플 영수증으로 시작" }).click();
-  await dialog.getByRole("button", { name: "3개 항목 반영하기" }).click();
+  await dialog.getByRole("button", { name: "3개 식품 저장하기" }).click();
 
   await expect(page.getByRole("status")).toHaveText("이미 반영된 영수증이에요. 기존 목록을 유지했어요");
   await expect(dialog).toHaveCount(0);
@@ -5269,11 +5506,11 @@ test("receipt commit replay explains that the existing inventory was recovered",
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.getByRole("button", { name: /식품 추가하기/ }).click();
   const dialog = page.getByRole("dialog", { name: "영수증으로 추가" });
   await dialog.getByRole("button", { name: "샘플 영수증으로 시작" }).click();
-  await dialog.getByRole("button", { name: "3개 항목 반영하기" }).click();
+  await dialog.getByRole("button", { name: "3개 식품 저장하기" }).click();
 
   await expect(page.getByRole("status")).toHaveText("3개 항목은 이미 반영되어 최신 목록을 확인했어요");
   await expect(dialog).toHaveCount(0);
@@ -5339,7 +5576,7 @@ test("offline dashboard exposes a manual reconnect action", async ({ page }) => 
 
   failDashboard = false;
   await retry.click();
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await expect(page.getByRole("status")).toHaveText("서버에 다시 연결했어요");
 });
 
@@ -5354,7 +5591,7 @@ test("offline reload uses the last successful dashboard snapshot and labels it s
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await expect(page.getByRole("heading", { name: "내 식품 목록 7" })).toBeVisible();
 
   failDashboard = true;
@@ -5367,12 +5604,12 @@ test("offline reload uses the last successful dashboard snapshot and labels it s
   await expect(page.getByRole("button", { name: /최근 동기화한 오늘 먼저 확인할 식품 3개, 마지막 동기화 (방금 전|[0-9]+분 전|[0-9]+시간 전|어제|[0-9]+일 전)/ })).toBeVisible();
   await expect(page.locator(".rescue-status-legend")).toHaveAttribute("aria-label", "최근 동기화한 재고 상태와 전체 보관 수");
   await expect(page.locator(".rescue-status-card")).toContainText("최근 동기화 재고");
-  await expect(page.locator(".rescue-status-description")).toHaveText("최근 동기화 상태를 먼저 보고, 다시 연결한 뒤 오늘 식단을 계산해요.");
+  await expect(page.locator(".rescue-status-description")).toHaveText("최근 동기화 상태를 먼저 보고, 다시 연결한 뒤 오늘 식단을 준비해요.");
   await expect(page.locator(".rescue-status-kicker")).toContainText(/최근 동기화 재고 · (방금 전|[0-9]+분 전|[0-9]+시간 전|어제|[0-9]+일 전)/);
   await expect(page.getByRole("alert")).toContainText("마지막으로 동기화한 재고");
   await expect(page.getByRole("alert")).toContainText(/마지막으로 동기화한 재고\((방금 전|[0-9]+분 전|[0-9]+시간 전|어제|[0-9]+일 전) · /);
   await expect(page.getByRole("button", { name: "다시 연결", exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: /다시 연결하고 오늘 식단 만들기/ })).toContainText("최신 상태를 확인한 뒤 오늘 식단을 계산해요.");
+  await expect(page.getByRole("button", { name: /다시 연결하고 오늘 식단 만들기/ })).toContainText("최신 상태를 확인한 뒤 오늘 식단을 준비해요.");
 
   await page.locator(".inventory-row").first().click();
   const detail = page.getByRole("dialog", { name: "시금치" });
@@ -5387,7 +5624,7 @@ test("offline reload uses the last successful dashboard snapshot and labels it s
   await expect(detail).toHaveCount(0);
 
   await page.getByRole("button", { name: "식단", exact: true }).click();
-  await expect(page.getByRole("dialog", { name: "오늘의 Rescue Meal" })).toHaveCount(0);
+  await expect(page.getByRole("dialog", { name: "오늘의 식단" })).toHaveCount(0);
   await expect(page.locator(".toast")).toContainText("최신 재고에 연결한 뒤 식단을 확인할 수 있어요");
   await expect(page.locator(".toast-action")).toHaveText("다시 연결");
   const offlineNotificationTrigger = page.getByRole("button", { name: /다시 연결 후 최신 알림 확인/ });
@@ -5400,7 +5637,7 @@ test("offline reload uses the last successful dashboard snapshot and labels it s
 
   failDashboard = false;
   await page.locator(".connection-retry-callout").getByRole("button", { name: "다시 연결", exact: true }).click();
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.locator(".inventory-row").first().click();
   const liveDetail = page.getByRole("dialog", { name: "시금치" });
   await expect(liveDetail.locator(".detail-read-only-callout")).toHaveCount(0);
@@ -5472,7 +5709,7 @@ test("account settings keeps local drafts until an explicit cross-device refresh
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.locator(".connection-pill").click();
   const dialog = page.getByRole("dialog", { name: "내 계정" });
   await dialog.locator(".account-notification-disclosure > summary").click();
@@ -5570,7 +5807,7 @@ test("guest account settings also exposes the cross-device stale boundary", asyn
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.locator(".connection-pill").click();
   const dialog = page.getByRole("dialog", { name: "내 계정" });
   await expect(dialog.getByRole("heading", { name: "내 식품을 안전하게 이어가기" })).toBeVisible();
@@ -5660,7 +5897,7 @@ test("account settings exposes the receipt privacy erasure boundary", async ({ p
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.locator(".connection-pill").click();
   const dialog = page.getByRole("dialog", { name: "내 계정" });
   await dialog.locator(".account-archive-disclosure > summary").click();
@@ -5735,7 +5972,7 @@ test("account settings saves notification preferences and keeps push delivery ex
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.locator(".connection-pill").click();
   const dialog = page.getByRole("dialog", { name: "내 계정" });
   await dialog.locator(".account-notification-disclosure > summary").click();
@@ -5810,7 +6047,7 @@ test("connected notification center keeps an unread item and offers retry after 
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.getByRole("button", { name: /알림 확인/ }).click();
   const dialog = page.getByRole("dialog", { name: "알림" });
   const summary = dialog.getByRole("region", { name: "알림 요약" });
@@ -5860,7 +6097,7 @@ test("account settings downloads a redacted workspace export", async ({ page }) 
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.locator(".connection-pill").click();
   const dialog = page.getByRole("dialog", { name: "내 계정" });
   await dialog.locator(".account-archive-disclosure > summary").click();
@@ -5891,7 +6128,7 @@ test("account settings explains an export rate limit without creating a download
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.locator(".connection-pill").click();
   const dialog = page.getByRole("dialog", { name: "내 계정" });
   await dialog.locator(".account-archive-disclosure > summary").click();
@@ -5920,7 +6157,7 @@ test("account settings explains export audit persistence failure without creatin
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.locator(".connection-pill").click();
   const dialog = page.getByRole("dialog", { name: "내 계정" });
   await dialog.locator(".account-archive-disclosure > summary").click();
@@ -5947,7 +6184,7 @@ test("account settings changes the password and explains session rotation", asyn
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.locator(".connection-pill").click();
   const dialog = page.getByRole("dialog", { name: "내 계정" });
   await dialog.getByRole("button", { name: /비밀번호 변경/ }).first().click();
@@ -5971,7 +6208,7 @@ test("account password change explains an auth rate limit response", async ({ pa
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.locator(".connection-pill").click();
   const dialog = page.getByRole("dialog", { name: "내 계정" });
   await dialog.getByRole("button", { name: /비밀번호 변경/ }).first().click();
@@ -5995,7 +6232,7 @@ test("account settings requires an explicit confirmation before account deletion
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.locator(".connection-pill").click();
   const dialog = page.getByRole("dialog", { name: "내 계정" });
   await dialog.getByRole("button", { name: /계정 삭제/ }).click();
@@ -6044,7 +6281,7 @@ test("account deletion persistence failure exposes a typed retry with the same e
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.locator(".connection-pill").click();
   const dialog = page.getByRole("dialog", { name: "내 계정" });
   await dialog.getByRole("button", { name: /계정 삭제/ }).click();
@@ -6069,7 +6306,7 @@ test("interrupted account deletion stays discoverable for a retry after reload",
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.locator(".connection-pill").click();
   const dialog = page.getByRole("dialog", { name: "내 계정" });
   await expect(dialog.getByRole("alert")).toContainText("삭제 작업이 아직 끝나지 않았어요");
@@ -6086,7 +6323,7 @@ test("account deletion explains an auth rate limit response", async ({ page }) =
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.locator(".connection-pill").click();
   const dialog = page.getByRole("dialog", { name: "내 계정" });
   await dialog.getByRole("button", { name: /계정 삭제/ }).click();
@@ -6110,7 +6347,7 @@ test("login screen accepts a generic password reset request without exposing acc
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.locator(".connection-pill").click();
   const dialog = page.getByRole("dialog", { name: "내 계정" });
   const recovery = dialog.getByRole("region", { name: "비밀번호 재설정" });
@@ -6134,7 +6371,7 @@ test("password reset request failure preserves the email and returns focus at a 
   await page.setViewportSize({ width: 320, height: 740 });
   await page.addInitScript(() => window.localStorage.setItem("rescue-meal.theme", "dark"));
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.locator(".connection-pill").click();
   const dialog = page.getByRole("dialog", { name: "내 계정" });
   const recovery = dialog.getByRole("region", { name: "비밀번호 재설정" });
@@ -6166,7 +6403,7 @@ test("expired password reset link returns focus to the new password field at a s
   await page.setViewportSize({ width: 320, height: 740 });
   await page.addInitScript(() => window.localStorage.setItem("rescue-meal.theme", "dark"));
   await page.goto("/?reset_token=expired-reset-token");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.locator(".connection-pill").click();
   const dialog = page.getByRole("dialog", { name: "내 계정" });
   const recovery = dialog.getByRole("region", { name: "비밀번호 재설정" });
@@ -6196,7 +6433,7 @@ test("connected login failure preserves credentials and returns focus to the pas
 
   await page.setViewportSize({ width: 320, height: 740 });
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.locator(".connection-pill").click();
   const dialog = page.getByRole("dialog", { name: "내 계정" });
   const email = dialog.getByRole("textbox", { name: "이메일" });
@@ -6217,7 +6454,7 @@ test("connected login failure preserves credentials and returns focus to the pas
   expect(screenBox, "mobile viewport has no bounding box").toBeTruthy();
   expect(loginBox, "login action has no bounding box").toBeTruthy();
   expect(loginBox!.y + loginBox!.height).toBeLessThanOrEqual(screenBox!.y + screenBox!.height - 12);
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
 });
 
 test("registration conflict preserves credentials and returns focus to the email field at a short viewport", async ({ page }) => {
@@ -6230,7 +6467,7 @@ test("registration conflict preserves credentials and returns focus to the email
 
   await page.setViewportSize({ width: 320, height: 740 });
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.locator(".connection-pill").click();
   const dialog = page.getByRole("dialog", { name: "내 계정" });
   await dialog.getByRole("tab", { name: "회원가입" }).click();
@@ -6265,7 +6502,7 @@ test("account login screen does not mount workspace settings before a session is
   }
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.locator(".connection-pill").click();
   const dialog = page.getByRole("dialog", { name: "내 계정" });
   await expect(dialog.getByRole("tab", { name: "로그인" })).toBeVisible();
@@ -6293,7 +6530,7 @@ test("password reset link lets a user set a new password and receive a fresh acc
 
   await page.goto("/?reset_token=rt1.reset-token-value-abcdefghijklmnopqrstuvwxyz-0123456789");
   await expect.poll(() => page.url()).not.toContain("reset_token=");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.locator(".connection-pill").click();
   const dialog = page.getByRole("dialog", { name: "내 계정" });
   const recovery = dialog.getByRole("region", { name: "비밀번호 재설정" });
@@ -6340,7 +6577,7 @@ test("connected notification center marks a date reminder and opens its food", a
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.getByRole("button", { name: /알림 확인/ }).click();
   const dialog = page.getByRole("dialog", { name: "알림" });
   await expect(dialog.getByText("오늘 확인할 날짜예요")).toBeVisible();
@@ -6389,7 +6626,7 @@ test("connected external source notification opens provenance history and return
     estimated_use_first_window: null,
     priority: 1,
     category: "채소",
-    image_path: "/assets/food/tomato.png",
+    image_path: "/assets/food/tomato-photo.jpg",
     note: "상품 출처와 포장지 날짜를 함께 확인해 주세요.",
   };
   const notification = {
@@ -6444,7 +6681,7 @@ test("connected external source notification opens provenance history and return
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.getByRole("button", { name: /알림 확인/ }).click();
   const notifications = page.getByRole("dialog", { name: "알림" });
   const notificationRow = notifications.getByRole("button", { name: "상품 연결을 확인해 주세요: 출처 확인 식품" });
@@ -6453,10 +6690,10 @@ test("connected external source notification opens provenance history and return
   await notificationRow.click();
 
   const detail = page.getByRole("dialog", { name: "출처 확인 식품" });
-  await expect(detail.getByRole("group", { name: "상품 정보 출처" })).toContainText("공개 상품 DB");
+  await expect(detail.getByRole("group", { name: "상품 정보 출처" })).toContainText("공개 상품 정보");
   await detail.locator("details.detail-history-disclosure").locator("summary").click();
-  await expect(detail.getByRole("group", { name: "상품 정보 변경 기록" })).toContainText("상품 출처 적용");
-  await expect(detail.getByRole("group", { name: "상품 정보 변경 기록" })).toContainText("게스트 기록");
+  await expect(detail.getByRole("group", { name: "상품 정보 변경 기록" })).toContainText("상품 정보 출처 저장");
+  await expect(detail.getByRole("group", { name: "상품 정보 변경 기록" })).toContainText("기기에서 기록");
   await detail.getByRole("button", { name: "닫기", exact: true }).click();
   await expect(notifications).toBeVisible();
   await expect(notificationRow).toBeFocused();
@@ -6532,7 +6769,7 @@ test("connected notification center exposes the external sync lifecycle at a gla
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   const homeSyncSummary = page.getByRole("button", { name: /외부 재고 연동을 확인해 주세요/ });
   await expect(homeSyncSummary).toBeVisible();
   await expect(homeSyncSummary).toHaveAttribute("data-sync-focus", "action_required");
@@ -6689,7 +6926,7 @@ test("connected external-sync notification opens the external inventory settings
     await route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
   });
   await page.route("**/api/integrations/grocy/status", async (route) => {
-    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ configured: true, status: "ok", version: "4.0.0", detail: "외부 재고 서비스 연결 상태를 확인했어요." }) });
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ configured: true, status: "ok", version: "4.0.0", detail: "재고 앱과 연결되어 있어요." }) });
   });
   await page.route("**/api/integrations/grocy/location-mappings", async (route) => {
     await route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
@@ -6710,23 +6947,23 @@ test("connected external-sync notification opens the external inventory settings
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.getByRole("button", { name: /알림 확인/ }).click();
   const notifications = page.getByRole("dialog", { name: "알림" });
   await notifications.getByRole("button", { name: "외부 상품 연결이 필요해요: 출처 확인 식품" }).click();
   const account = page.getByRole("dialog", { name: "내 계정" });
   await expect.poll(() => notificationRead).toBe(true);
-  await expect(account.getByRole("heading", { name: "외부 재고 연동" })).toBeVisible();
-  await expect(account.getByText("외부 재고 서비스 연결 상태를 확인했어요.", { exact: true })).toBeVisible();
+  await expect(account.getByRole("heading", { name: "재고 앱 연결" })).toBeVisible();
+  await expect(account.getByText("재고 앱과 연결되어 있어요.", { exact: true })).toBeVisible();
   await expect(account.getByText("상세 연결 설정", { exact: true })).toBeVisible();
   await expect(account.locator('[data-grocy-outbox-details="outbox-notification-dead-letter"]')).toHaveAttribute("open", "");
   await expect(account.locator('[data-outbox-detail-id="outbox-notification-dead-letter"]')).toContainText("Rescue Meal 작업 ID");
-  await expect(account.getByText("재확인이 필요한 실패 작업", { exact: true })).toBeVisible();
+  await expect(account.getByText("실패한 기록", { exact: true })).toBeVisible();
   await expect(account.locator(".grocy-dead-letter-row")).toContainText("출처 확인 식품");
   await account.getByRole("button", { name: "재시도" }).click();
   await expect(account.getByRole("status")).toContainText("출처 확인 식품 소비 작업을 재시도 대기로 돌렸어요");
-  await expect(account.getByText("재확인이 필요한 실패 작업", { exact: true })).toHaveCount(0);
-  await expect(account.getByText("막힌 작업 없음 · 1건 처리 대기", { exact: true })).toBeVisible();
+  await expect(account.getByText("실패한 기록", { exact: true })).toHaveCount(0);
+  await expect(account.getByText("확인이 필요한 기록 없음 · 1건 반영 대기", { exact: true })).toBeVisible();
   await expect(account.getByText(/마지막 확인 .*2건 처리/)).toBeVisible();
   await account.getByRole("button", { name: "닫기", exact: true }).click();
   await expect(notifications).toBeVisible();
@@ -6755,7 +6992,7 @@ test("connected applied notification focuses its completed outbox detail", async
     estimated_use_first_window: null,
     priority: 1,
     category: "육류·수산",
-    image_path: "/assets/food/chicken.png",
+    image_path: "/assets/food/chicken-photo.jpg",
     note: "외부 재고 반영 작업과 연결된 식품 기록",
   };
   const notification = {
@@ -6792,7 +7029,7 @@ test("connected applied notification focuses its completed outbox detail", async
       { status: "blocked", occurred_at: "2026-09-19T11:00:00Z", source: "created", note: "상품 연결 확인이 필요했어요." },
       { status: "pending", occurred_at: "2026-09-19T11:00:30Z", source: "mapping", note: null },
       { status: "in_flight", occurred_at: "2026-09-19T11:01:00Z", source: "worker", note: null },
-      { status: "succeeded", occurred_at: "2026-09-19T11:02:00Z", source: "worker", note: "외부 작업 #grocy-applied-notification-tx" },
+      { status: "succeeded", occurred_at: "2026-09-19T11:02:00Z", source: "worker", note: "재고 앱 기록 #grocy-applied-notification-tx" },
     ],
     attempts: 1,
     last_error: null,
@@ -6833,7 +7070,7 @@ test("connected applied notification focuses its completed outbox detail", async
       grocy_outbox_id: "outbox-applied-notification",
       grocy_transaction_id: historyRemote ? "grocy-applied-notification-tx" : null,
       grocy_status_history: historyRemote
-        ? [{ status: "pending", occurred_at: "2026-09-19T11:01:00Z", source: "created", note: null }, { status: "succeeded", occurred_at: "2026-09-19T11:02:00Z", source: "worker", note: "외부 작업 #grocy-applied-notification-tx" }]
+        ? [{ status: "pending", occurred_at: "2026-09-19T11:01:00Z", source: "created", note: null }, { status: "succeeded", occurred_at: "2026-09-19T11:02:00Z", source: "worker", note: "재고 앱 기록 #grocy-applied-notification-tx" }]
         : [{ status: "pending", occurred_at: "2026-09-19T11:01:00Z", source: "created", note: null }],
     }]) });
   });
@@ -6857,17 +7094,17 @@ test("connected applied notification focuses its completed outbox detail", async
   });
   await page.route("**/api/shopping-list", async (route) => { await route.fulfill({ status: 200, contentType: "application/json", body: "[]" }); });
   await page.route("**/api/receipts", async (route) => { await route.fulfill({ status: 200, contentType: "application/json", body: "[]" }); });
-  await page.route("**/api/integrations/grocy/status", async (route) => { await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ configured: true, status: "ok", version: "4.0.0", detail: "외부 재고 서비스 연결 상태를 확인했어요." }) }); });
+  await page.route("**/api/integrations/grocy/status", async (route) => { await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ configured: true, status: "ok", version: "4.0.0", detail: "재고 앱과 연결되어 있어요." }) }); });
   await page.route("**/api/integrations/grocy/location-mappings", async (route) => { await route.fulfill({ status: 200, contentType: "application/json", body: "[]" }); });
   await page.route("**/api/integrations/grocy/mappings", async (route) => { await route.fulfill({ status: 200, contentType: "application/json", body: "[]" }); });
   await page.route("**/api/integrations/grocy/outbox", async (route) => { await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify([succeeded]) }); });
   await page.route("**/api/integrations/grocy/worker/status", async (route) => { await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify([]) }); });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.getByRole("button", { name: /알림 확인/ }).click();
   const notifications = page.getByRole("dialog", { name: "알림" });
-  await notifications.getByRole("button", { name: "외부 재고에 반영했어요: 닭가슴살" }).click();
+  await notifications.getByRole("button", { name: "재고 앱에 반영했어요: 닭가슴살" }).click();
   const account = page.getByRole("dialog", { name: "내 계정" });
   await expect.poll(() => notificationRead).toBe(true);
   const detail = account.locator('[data-grocy-outbox-details="outbox-applied-notification"]');
@@ -6875,17 +7112,17 @@ test("connected applied notification focuses its completed outbox detail", async
   await expect(account.locator('[data-outbox-overall-state]')).toHaveAttribute("aria-live", "polite");
   await expect(account.locator('[data-outbox-overall-state]')).toHaveAttribute("aria-atomic", "true");
   await expect(account.locator('[data-outbox-overall-state]')).toHaveAttribute("aria-relevant", "text");
-  await expect(detail.locator(".grocy-product-history-heading-copy strong")).toHaveText("닭가슴살 외부 작업");
+  await expect(detail.locator(".grocy-product-history-heading-copy strong")).toHaveText("닭가슴살 재고 앱 반영");
   await expect(detail.locator(".grocy-product-history-heading .grocy-task-state-badge")).toHaveText("반영 완료");
-  await expect(detail.locator('[data-outbox-detail-id="outbox-applied-notification"]')).toContainText("외부 작업 #grocy-applied-notification-tx");
+  await expect(detail.locator('[data-outbox-detail-id="outbox-applied-notification"]')).toContainText("재고 앱 기록 #grocy-applied-notification-tx");
   await expect(detail.locator('[data-outbox-timeline-step="food-record"]')).toContainText("식품 상세 최근 기록과 연결돼요");
   await expect(detail.locator('[data-outbox-timeline-step="external-inventory"]')).toContainText("반영 완료");
   await detail.locator('[data-outbox-timeline-step="external-inventory"]').locator("summary").click();
-  await expect(detail.locator('[data-outbox-evidence-step="external-inventory"]')).toContainText("변경 주체 · 자동 동기화");
-  await expect(detail.locator('[data-outbox-evidence-step="external-inventory"]')).toContainText("외부 작업 #grocy-applied-notification-tx");
-  await expect(detail.locator('[data-outbox-status-history="outbox-applied-notification"]')).toContainText("작업 타임라인");
+  await expect(detail.locator('[data-outbox-evidence-step="external-inventory"]')).toContainText("확인 방식 · 자동 반영");
+  await expect(detail.locator('[data-outbox-evidence-step="external-inventory"]')).toContainText("재고 앱 기록 #grocy-applied-notification-tx");
+  await expect(detail.locator('[data-outbox-status-history="outbox-applied-notification"]')).toContainText("반영 내역");
   await expect(detail.locator('[data-outbox-status-history-entry="blocked"]')).toContainText("상품 연결 확인이 필요했어요.");
-  await detail.getByRole("button", { name: "닭가슴살 작업 타임라인의 식품 기록 보기" }).click();
+  await detail.getByRole("button", { name: "닭가슴살 재고 앱 반영 내역의 식품 기록 보기" }).click();
   const foodDetail = page.getByRole("dialog", { name: "닭가슴살" });
   await expect(foodDetail).toBeVisible();
   const linkedHistoryRow = foodDetail.locator('[data-history-sync-highlighted="true"]');
@@ -6908,7 +7145,7 @@ test("connected applied notification focuses its completed outbox detail", async
     window.setTimeout(() => channel.close(), 0);
   }, workspaceKey);
   await expect(linkedHistoryRow.locator('[data-history-sync-status="succeeded"]')).toHaveText("외부 반영 완료");
-  await expect(linkedHistoryRow.locator('[data-history-sync-reference="outbox-applied-notification"]')).toHaveText("외부 작업 #grocy-applied-notification-tx");
+  await expect(linkedHistoryRow.locator('[data-history-sync-reference="outbox-applied-notification"]')).toHaveText("재고 앱 기록 #grocy-applied-notification-tx");
   await expect(linkedEvidence).not.toHaveAttribute("open", "");
   await expect(linkedEvidence.locator("summary")).toBeFocused();
   await linkedEvidence.locator("summary").click();
@@ -6937,7 +7174,7 @@ test("connected applied notification focuses its completed outbox detail", async
   await foodDetail.getByRole("button", { name: "닫기", exact: true }).click();
   await expect(account).toBeVisible();
   await account.getByRole("button", { name: "닫기", exact: true }).click();
-  await expect(notifications.getByRole("button", { name: "외부 재고에 반영했어요: 닭가슴살" })).toBeFocused();
+  await expect(notifications.getByRole("button", { name: "재고 앱에 반영했어요: 닭가슴살" })).toBeFocused();
 });
 
 test("connected notification center offers a latest-inventory recovery when its food is stale", async ({ page }) => {
@@ -6975,7 +7212,7 @@ test("connected notification center offers a latest-inventory recovery when its 
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.getByRole("button", { name: /알림 확인/ }).click();
   const dialog = page.getByRole("dialog", { name: "알림" });
   await dialog.getByRole("button", { name: "이미 사라진 식품 확인이 필요해요: 이미 사라진 식품" }).click();
@@ -7038,7 +7275,7 @@ test("queued notification refresh survives navigation into a food detail", async
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.getByRole("button", { name: /알림 확인/ }).click();
   const notificationDialog = page.getByRole("dialog", { name: "알림" });
   await notificationDialog.getByRole("button", { name: `${initialNotification.title}: ${initialNotification.canonical_name}` }).click();
@@ -7141,7 +7378,7 @@ test("storage mutation and notification readback converge while a food detail is
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.getByRole("button", { name: /알림 확인/ }).click();
   const notifications = page.getByRole("dialog", { name: "알림" });
   await notifications.getByRole("button", { name: `${mismatchNotification.title}: ${mismatchNotification.canonical_name}` }).click();
@@ -7187,7 +7424,7 @@ test("connected open food detail refreshes the linked sync history after a remot
         grocy_outbox_id: "outbox-remote-worker-storage-event",
         grocy_transaction_id: workerFinished ? "grocy-remote-worker-tx" : null,
         grocy_status_history: workerFinished
-          ? [{ status: "pending", occurred_at: "2026-09-19T12:00:00Z", source: "created", note: null }, { status: "succeeded", occurred_at: "2026-09-19T12:02:00Z", source: "worker", note: "외부 작업 #grocy-remote-worker-tx" }]
+          ? [{ status: "pending", occurred_at: "2026-09-19T12:00:00Z", source: "created", note: null }, { status: "succeeded", occurred_at: "2026-09-19T12:02:00Z", source: "worker", note: "재고 앱 기록 #grocy-remote-worker-tx" }]
           : [{ status: "pending", occurred_at: "2026-09-19T12:00:00Z", source: "created", note: null }],
       }]),
     });
@@ -7197,7 +7434,7 @@ test("connected open food detail refreshes the linked sync history after a remot
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.locator(".priority-card").filter({ hasText: "닭가슴살" }).click();
   const detail = page.getByRole("dialog", { name: "닭가슴살" });
   await detail.locator("details.detail-history-disclosure").locator("summary").click();
@@ -7221,7 +7458,7 @@ test("connected open food detail refreshes the linked sync history after a remot
     window.setTimeout(() => channel.close(), 0);
   }, workspaceKey);
   await expect.poll(async () => detail.locator('[data-history-sync-status="succeeded"]').count()).toBe(1);
-  await expect(detail.locator('[data-history-sync-reference="outbox-remote-worker-storage-event"]')).toHaveText("외부 작업 #grocy-remote-worker-tx");
+  await expect(detail.locator('[data-history-sync-reference="outbox-remote-worker-storage-event"]')).toHaveText("재고 앱 기록 #grocy-remote-worker-tx");
   await expect(detail.getByRole("status")).toContainText("외부 반영 완료 상태로 업데이트됐어요.");
   await expect.poll(() => detailSheetContent.evaluate((element) => element.scrollTop)).toBe(preservedHistoryScrollTop);
 });
@@ -7261,7 +7498,7 @@ test("connected workspace mutation refreshes an open notification center in anot
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.getByRole("button", { name: /알림 확인/ }).click();
   const firstDialog = page.getByRole("dialog", { name: "알림" });
   await expect(firstDialog.getByRole("button", { name: "모두 읽음" })).toBeVisible();
@@ -7269,7 +7506,7 @@ test("connected workspace mutation refreshes an open notification center in anot
   const secondPage = await context.newPage();
   try {
     await secondPage.goto("/");
-    await expect(secondPage.locator(".connection-pill")).toHaveText("서버 연결됨");
+    await expect(secondPage.locator(".connection-pill")).toHaveText("온라인 연결됨");
     await secondPage.getByRole("button", { name: /알림 확인/ }).click();
     const secondDialog = secondPage.getByRole("dialog", { name: "알림" });
     await expect(secondDialog.getByRole("button", { name: `${notification.title}: ${notification.canonical_name}` })).toBeVisible();
@@ -7343,7 +7580,7 @@ test("connected notification center refreshes after a cross-device revision", as
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.getByRole("button", { name: /알림 확인/ }).click();
   const dialog = page.getByRole("dialog", { name: "알림" });
   await expect(dialog.getByRole("button", { name: `${initialNotification.title}: ${initialNotification.canonical_name}` })).toBeVisible();
@@ -7434,7 +7671,7 @@ test("connected notification center defers a cross-device refresh while mark-all
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.getByRole("button", { name: /알림 확인/ }).click();
   const dialog = page.getByRole("dialog", { name: "알림" });
   await expect(dialog.getByRole("button", { name: `${initialNotification.title}: ${initialNotification.canonical_name}` })).toBeVisible();
@@ -7465,7 +7702,7 @@ test("connected client carries the latest workspace revision on mutations", asyn
     id: "workspace-revision-notification",
     kind: "date_due",
     severity: "urgent",
-    title: "revision을 확인할 날짜예요",
+    title: "다시 확인할 날짜예요",
     message: "서버 revision을 변경 요청에 함께 보내는지 확인해요.",
     canonical_name: "revision 식품",
     food_id: null,
@@ -7511,7 +7748,7 @@ test("connected client carries the latest workspace revision on mutations", asyn
   await page.goto("/");
   const dashboardResponse = await dashboardResponsePromise;
   expect(dashboardResponse.headers()["x-rescue-meal-workspace-revision"]).toBe("17");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.getByRole("button", { name: /알림 확인/ }).click();
   const dialog = page.getByRole("dialog", { name: "알림" });
   const mutationRequestPromise = page.waitForRequest((request) => request.method() === "POST" && request.url().includes("/api/notifications/"));
@@ -7548,7 +7785,7 @@ test("connected notification center exposes the custom storage location in a mis
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.getByRole("button", { name: /알림 확인/ }).click();
   const dialog = page.getByRole("dialog", { name: "알림" });
   await expect(dialog.getByText("포장지 보관조건을 확인해 주세요")).toBeVisible();
@@ -7632,7 +7869,7 @@ test("connected mapping notification focuses its blocked product task", async ({
   });
   await page.route("**/api/shopping-list", async (route) => { await route.fulfill({ status: 200, contentType: "application/json", body: "[]" }); });
   await page.route("**/api/receipts", async (route) => { await route.fulfill({ status: 200, contentType: "application/json", body: "[]" }); });
-  await page.route("**/api/integrations/grocy/status", async (route) => { await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ configured: true, status: "ok", version: "4.0.0", detail: "외부 재고 서비스 연결 상태를 확인했어요." }) }); });
+  await page.route("**/api/integrations/grocy/status", async (route) => { await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ configured: true, status: "ok", version: "4.0.0", detail: "재고 앱과 연결되어 있어요." }) }); });
   await page.route("**/api/integrations/grocy/location-mappings", async (route) => { await route.fulfill({ status: 200, contentType: "application/json", body: "[]" }); });
   await page.route("**/api/integrations/grocy/mappings", async (route) => { await route.fulfill({ status: 200, contentType: "application/json", body: "[]" }); });
   await page.route("**/api/integrations/grocy/mappings/*", async (route) => {
@@ -7651,14 +7888,14 @@ test("connected mapping notification focuses its blocked product task", async ({
     processCalls += 1;
     failDashboardReadback = true;
     notificationSyncState = "applied";
-    outbox = [{ ...blocked, status: "succeeded", last_error: null, grocy_transaction_id: "grocy-mapping-focus-tx", updated_at: "2026-09-19T12:03:00Z", status_history: [{ status: "blocked", occurred_at: "2026-09-19T12:00:00Z", source: "created", note: "외부 상품 연결 확인이 필요합니다." }, { status: "pending", occurred_at: "2026-09-19T12:02:00Z", source: "mapping", note: null }, { status: "succeeded", occurred_at: "2026-09-19T12:03:00Z", source: "worker", note: "외부 작업 #grocy-mapping-focus-tx" }] }];
+    outbox = [{ ...blocked, status: "succeeded", last_error: null, grocy_transaction_id: "grocy-mapping-focus-tx", updated_at: "2026-09-19T12:03:00Z", status_history: [{ status: "blocked", occurred_at: "2026-09-19T12:00:00Z", source: "created", note: "외부 상품 연결 확인이 필요합니다." }, { status: "pending", occurred_at: "2026-09-19T12:02:00Z", source: "mapping", note: null }, { status: "succeeded", occurred_at: "2026-09-19T12:03:00Z", source: "worker", note: "재고 앱 기록 #grocy-mapping-focus-tx" }] }];
     await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ processed: 1, succeeded: 1, retried: 0, dead_lettered: 0, blocked: 0, records: outbox }) });
   });
   await page.route("**/api/integrations/grocy/outbox", async (route) => { await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(outbox) }); });
   await page.route("**/api/integrations/grocy/worker/status", async (route) => { await route.fulfill({ status: 200, contentType: "application/json", body: "[]" }); });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.getByRole("button", { name: /알림 확인/ }).click();
   const notifications = page.getByRole("dialog", { name: "알림" });
   await notifications.getByRole("button", { name: "외부 상품 연결이 필요해요: 두부" }).click();
@@ -7679,20 +7916,20 @@ test("connected mapping notification focuses its blocked product task", async ({
   await expect(account.getByRole("button", { name: "지금 동기화" })).toBeFocused();
   await account.getByRole("button", { name: "지금 동기화" }).click();
   await expect.poll(() => processCalls).toBe(1);
-  await expect(account.getByRole("status")).toContainText("외부 재고 동기화 1건을 완료하고 0건을 재시도 대기했어요.");
+  await expect(account.getByRole("status")).toContainText("재고 앱에 1건을 반영했어요. 0건은 다시 시도할 예정이에요.");
   await expect(account.getByRole("status")).toContainText("홈·알림 최신 상태는 다시 연결한 뒤 확인해 주세요.");
   await expectReadbackState(account.getByRole("status"), "stale");
   await account.getByRole("status").getByRole("button", { name: "최신 상태 확인" }).click();
   await expect(account.getByRole("status")).not.toContainText("홈·알림 최신 상태는 다시 연결한 뒤 확인해 주세요.");
   await expectReadbackState(account.getByRole("status"), "confirmed");
   await expect(account.getByTestId("grocy-sync-history")).toContainText("최근 반영 완료");
-  await expect(account.getByText("최근 1건 반영 완료 · 추가 처리 대기 없음", { exact: true })).toBeVisible();
+  await expect(account.getByText("최근 1건 반영 완료 · 대기 중인 기록 없음", { exact: true })).toBeVisible();
   await expect(accountOutboxSummary).toHaveAttribute("data-outbox-overall-state", "clear");
   await expectExternalSyncState(accountOutboxSummary, "applied");
   await expect(accountOutboxSummary).toHaveAttribute("data-outbox-attention-count", "0");
   await expect(accountOutboxSummary).toHaveAttribute("data-outbox-pending-count", "0");
   await expect(accountOutboxSummary).toHaveAttribute("data-outbox-applied-count", "1");
-  await expect(account.getByTestId("grocy-sync-history")).toContainText("외부 작업 #grocy-mapping-focus-tx");
+  await expect(account.getByTestId("grocy-sync-history")).toContainText("재고 앱 기록 #grocy-mapping-focus-tx");
   const completedOutboxDetails = account.locator('[data-grocy-outbox-details="outbox-mapping-focus"]');
   await expect(completedOutboxDetails).toHaveAttribute("open", "");
   await account.getByRole("button", { name: "닫기", exact: true }).click();
@@ -7796,32 +8033,32 @@ test("account settings connects Grocy locations and a blocked product mapping", 
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.locator(".connection-pill").click();
   const dialog = page.getByRole("dialog", { name: "내 계정" });
   const grocyPanel = dialog.locator(".grocy-integration");
-  await expect(grocyPanel.getByRole("heading", { name: "외부 재고 연동" })).toBeVisible();
+  await expect(grocyPanel.getByRole("heading", { name: "재고 앱 연결" })).toBeVisible();
   await expect(dialog.getByText("연결됨 · v4.0.0")).toBeVisible();
-  await expect(dialog.getByText("외부 재고 서비스 연결 상태를 확인했어요.", { exact: true })).toBeVisible();
+  await expect(dialog.getByText("재고 앱과 연결되어 있어요.", { exact: true })).toBeVisible();
   await expect(dialog).not.toContainText("system info readback");
   await expect(dialog.getByText(/마지막 확인 .*2건 처리/)).toBeVisible();
   const grocySettings = grocyPanel.locator("details.grocy-settings-block").first();
   await expect(grocySettings).toHaveAttribute("open", "");
-  await expect(dialog.getByText("확인 필요 1건 · 0건 처리 대기")).toBeVisible();
-  await expect(dialog.getByText("확인할 동기화 작업", { exact: true })).toBeVisible();
+  await expect(dialog.getByText("확인 필요 1건 · 0건 반영 대기")).toBeVisible();
+  await expect(dialog.getByText("확인이 필요한 재고 앱 기록", { exact: true })).toBeVisible();
   const blockedProductTask = dialog.locator('[data-grocy-outbox-task="outbox-blocked-chicken"]');
   await expect(blockedProductTask).toHaveRole("group");
-  await expect(blockedProductTask).toHaveAccessibleName("닭가슴살 외부 상품 연결 작업");
+  await expect(blockedProductTask).toHaveAccessibleName("닭가슴살 재고 앱 상품 연결");
 
-  const refrigerated = dialog.getByLabel("냉장 외부 재고 위치 번호");
+  const refrigerated = dialog.getByLabel("냉장 재고 앱 위치 번호");
   await refrigerated.fill("20");
   await grocyPanel.getByRole("button", { name: "저장", exact: true }).nth(1).click();
   await expect(dialog.getByRole("status")).toContainText("냉장 보관 위치를 저장했어요");
   expect(locationPut).toMatchObject({ grocy_location_id: 20, source: "user_confirmed" });
 
-  await dialog.getByLabel("닭가슴살 외부 상품 번호").fill("88");
+  await dialog.getByLabel("닭가슴살 재고 앱 상품 번호").fill("88");
   await grocyPanel.getByRole("button", { name: "연결", exact: true }).click();
-  await expect(grocyPanel.getByRole("alert")).toContainText("기존 매핑과 동기화 대기 상태를 유지했어요");
+  await expect(grocyPanel.getByRole("alert")).toContainText("기존 연결과 재고 앱 반영 대기 상태를 유지했어요");
   await grocyPanel.getByRole("alert").getByRole("button", { name: "다시 시도" }).click();
   await expect(dialog.getByRole("status")).toContainText("닭가슴살 상품 매핑을 저장했어요");
   expect(productPutAttempts).toBe(2);
@@ -7843,7 +8080,7 @@ test("account settings connects Grocy locations and a blocked product mapping", 
   const mappingHistory = dialog.getByRole("region", { name: "닭가슴살 매핑 변경 이력" });
   await expect(mappingHistory).toContainText("매핑 수정");
   await expect(mappingHistory).toContainText("외부 상품 #88 · 팩 → 외부 상품 #89 · 팩");
-  await expect(dialog.getByText("막힌 작업 없음 · 0건 처리 대기")).toBeVisible();
+  await expect(dialog.getByText("확인이 필요한 기록 없음 · 반영 대기 0건")).toBeVisible();
 });
 
 test("account settings requeues a dead-letter Grocy operation", async ({ page }) => {
@@ -7926,7 +8163,7 @@ test("account settings requeues a dead-letter Grocy operation", async ({ page })
     if (url.pathname.endsWith("/outbox/process") && request.method() === "POST") {
       processStarted();
       await processGate;
-      outbox = [{ ...outbox[0], status: "succeeded", attempts: 1, last_error: null, grocy_transaction_id: "grocy-dead-chicken-tx", updated_at: "2026-09-02T00:12:00Z", status_history: [{ status: "dead_letter", occurred_at: "2026-09-02T00:00:00Z", source: "created", note: "외부 반영 실패" }, { status: "pending", occurred_at: "2026-09-02T00:10:00Z", source: "retry", note: "사용자가 설정 화면에서 재시도" }, { status: "succeeded", occurred_at: "2026-09-02T00:12:00Z", source: "worker", note: "외부 작업 #grocy-dead-chicken-tx" }] }];
+      outbox = [{ ...outbox[0], status: "succeeded", attempts: 1, last_error: null, grocy_transaction_id: "grocy-dead-chicken-tx", updated_at: "2026-09-02T00:12:00Z", status_history: [{ status: "dead_letter", occurred_at: "2026-09-02T00:00:00Z", source: "created", note: "외부 반영 실패" }, { status: "pending", occurred_at: "2026-09-02T00:10:00Z", source: "retry", note: "사용자가 설정 화면에서 재시도" }, { status: "succeeded", occurred_at: "2026-09-02T00:12:00Z", source: "worker", note: "재고 앱 기록 #grocy-dead-chicken-tx" }] }];
       await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ processed: 1, succeeded: 1, retried: 0, dead_lettered: 0, blocked: 0, records: outbox }) });
       return;
     }
@@ -7935,16 +8172,16 @@ test("account settings requeues a dead-letter Grocy operation", async ({ page })
 
   await page.setViewportSize({ width: 320, height: 740 });
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.locator(".connection-pill").click();
   const dialog = page.getByRole("dialog", { name: "내 계정" });
   await expect(dialog).toBeVisible();
   await expect.poll(() => page.evaluate(() => window.sessionStorage.getItem("rescue-meal.completed-grocy-outbox-focus"))).toBeNull();
   await expect(dialog.locator("details.grocy-settings-block").filter({ hasText: "상세 연결 설정" })).toHaveAttribute("open", "");
-  const deadLetterHeading = dialog.getByText("재확인이 필요한 실패 작업", { exact: true });
+  const deadLetterHeading = dialog.getByText("실패한 기록", { exact: true });
   await expect(deadLetterHeading).toHaveCount(1);
   await expect(dialog.locator(".grocy-dead-letter-row")).toContainText("외부 재고 서비스 재고 동기화 실패; 외부 반영 여부 확인이 필요합니다.");
-  await expect(dialog.getByText("막힌 작업 없음 · 0건 처리 대기 · 실패 1건")).toHaveCount(1);
+  await expect(dialog.getByText("확인 필요 0건 · 0건 반영 대기 · 반영 실패 1건")).toHaveCount(1);
   const retryButton = dialog.getByRole("button", { name: "재시도" });
   await waitForSheetSettled(page);
   const screenBox = await page.getByTestId("mobile-app-viewport").boundingBox();
@@ -7953,10 +8190,10 @@ test("account settings requeues a dead-letter Grocy operation", async ({ page })
   expect(retryBox, "Grocy retry action has no bounding box").toBeTruthy();
   expect(retryBox!.y + retryBox!.height).toBeLessThanOrEqual(screenBox!.y + screenBox!.height - 12);
   await retryButton.click();
-  const grocyPanel = dialog.getByRole("region", { name: "외부 재고 연동" });
+  const grocyPanel = dialog.getByRole("region", { name: "재고 앱 연결" });
   await expect(grocyPanel.getByRole("status")).toContainText("닭가슴살 소비 작업을 재시도 대기로 돌렸어요");
   expect(retryPayload).toEqual({ operator_note: "사용자가 설정 화면에서 재시도" });
-  await expect(dialog.getByText("막힌 작업 없음 · 1건 처리 대기")).toHaveCount(1);
+  await expect(dialog.getByText("확인이 필요한 기록 없음 · 1건 반영 대기")).toHaveCount(1);
   const processButton = dialog.getByRole("button", { name: "지금 동기화" });
   await page.evaluate(() => {
     const originalSetItem = Storage.prototype.setItem;
@@ -7975,8 +8212,8 @@ test("account settings requeues a dead-letter Grocy operation", async ({ page })
   const completedOutbox = reopenedAccount.locator('[data-grocy-outbox-details="outbox-dead-chicken"]');
   await expect(completedOutbox).not.toHaveAttribute("open", "");
   await expect(reopenedAccount.locator('[data-outbox-overall-state]')).toHaveAttribute("data-outbox-overall-state", "clear");
-  await expect(reopenedAccount.locator('[data-outbox-overall-state]')).toContainText("최근 1건 반영 완료 · 추가 처리 대기 없음");
-  await expect(reopenedAccount.getByTestId("grocy-sync-history").getByText("외부 작업 #grocy-dead-chicken-tx", { exact: true }).first()).toBeVisible();
+  await expect(reopenedAccount.locator('[data-outbox-overall-state]')).toContainText("최근 1건 반영 완료 · 대기 중인 기록 없음");
+  await expect(reopenedAccount.getByTestId("grocy-sync-history").getByText("재고 앱 기록 #grocy-dead-chicken-tx", { exact: true }).first()).toBeVisible();
 });
 
 test("account settings requires an explicit decision for a stale in-flight operation", async ({ page }) => {
@@ -8053,16 +8290,16 @@ test("account settings requires an explicit decision for a stale in-flight opera
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.locator(".connection-pill").click();
   const dialog = page.getByRole("dialog", { name: "내 계정" });
   await expect(dialog.getByText("처리 중 1건")).toHaveCount(1);
   await dialog.locator(".grocy-integration").getByText("상세 연결 설정", { exact: true }).click();
   await dialog.getByRole("button", { name: "오래된 작업 확인" }).click();
   await expect(dialog.getByText("외부 반영 여부 확인", { exact: true })).toHaveCount(1);
-  await dialog.getByText("닭가슴살 외부 작업", { exact: true }).click();
+  await dialog.getByText("닭가슴살 재고 앱 반영", { exact: true }).click();
   await expect(dialog.locator('[data-outbox-detail-id="outbox-inflight-e2e"]')).toContainText("소비 · 1팩 · 반영 여부 확인 필요");
-  await expect(dialog.locator('[data-outbox-detail-id="outbox-inflight-e2e"]')).toContainText("Rescue Meal 작업 ID · outbox-inflight-e2e");
+  await expect(dialog.locator('[data-outbox-detail-id="outbox-inflight-e2e"]')).toContainText("앱 기록 번호 · outbox-inflight-e2e");
   const transactionInput = dialog.getByLabel("닭가슴살 외부 작업 번호");
   await transactionInput.fill("grocy-inflight-e2e-tx");
   const reconciliationActions = dialog.locator(".grocy-reconciliation-actions");
@@ -8094,8 +8331,8 @@ test("account settings requires an explicit decision for a stale in-flight opera
   const syncHistory = dialog.getByTestId("grocy-sync-history");
   await expect(syncHistory).toContainText("최근 반영 완료");
   await expect(syncHistory).toContainText("닭가슴살");
-  await expect(syncHistory).toContainText("외부 작업 #grocy-inflight-e2e-tx");
-  await syncHistory.getByRole("button", { name: "닭가슴살 반영 작업의 식품 기록 보기" }).click();
+  await expect(syncHistory).toContainText("재고 앱 기록 #grocy-inflight-e2e-tx");
+  await syncHistory.getByRole("button", { name: "닭가슴살 재고 앱 반영 기록의 식품 기록 보기" }).click();
   await expect(page.getByRole("dialog", { name: "닭가슴살" })).toBeVisible();
   await page.getByRole("dialog", { name: "닭가슴살" }).getByRole("button", { name: "닫기", exact: true }).click();
   await expect(dialog).toBeVisible();
@@ -8109,10 +8346,10 @@ test("recipe review surface is opt-in and explains a disabled operator endpoint"
   await entry.click();
 
   const dialog = page.getByRole("dialog", { name: "공개 레시피 검토" });
-  await expect(dialog.getByRole("heading", { name: "공개 레시피 검토", level: 3 })).toBeVisible();
-  await dialog.getByLabel("운영자 검토 토큰 (이전 방식)").fill("not-configured");
-  await dialog.getByRole("button", { name: "검토 대기 불러오기" }).click();
-  await expect(dialog.getByRole("alert")).toContainText("레시피 검토 서버가 비활성화되어 있어요.");
+  await expect(dialog.getByRole("heading", { name: "공개 레시피 확인", level: 3 })).toBeVisible();
+  await dialog.getByLabel("레시피 관리 확인 코드").fill("not-configured");
+  await dialog.getByRole("button", { name: "확인할 레시피 불러오기" }).click();
+  await expect(dialog.getByRole("alert")).toContainText("레시피 확인 서비스를 사용할 수 없어요.");
 });
 
 test("recipe review surface can fetch source drafts with bounded filters", async ({ page }) => {
@@ -8191,13 +8428,13 @@ test("recipe review surface can fetch source drafts with bounded filters", async
   await page.goto("/?review=1");
   await page.getByRole("button", { name: "운영자 레시피 검토 열기" }).click();
   const dialog = page.getByRole("dialog", { name: "공개 레시피 검토" });
-  await dialog.getByLabel("운영자 검토 토큰 (이전 방식)").fill("runtime-only-token");
-  await dialog.getByRole("button", { name: "검토 대기 불러오기" }).click();
-  await expect(dialog.getByText("원본 연결됨")).toBeVisible();
-  await expect(dialog.getByText("API key는 서버 환경변수에만 있고 이 화면에는 표시하지 않아요.")).toBeVisible();
+  await dialog.getByLabel("레시피 관리 확인 코드").fill("runtime-only-token");
+  await dialog.getByRole("button", { name: "확인할 레시피 불러오기" }).click();
+  await expect(dialog.getByText("레시피 정보에 연결됨")).toBeVisible();
+  await expect(dialog.getByText("연결 정보는 서버에서 안전하게 관리하며 이 화면에는 표시하지 않아요.")).toBeVisible();
   await dialog.getByLabel("메뉴명으로 좁히기").fill("두부");
-  await dialog.getByRole("button", { name: "원본에서 검토 초안 가져오기" }).click();
-  await expect(dialog.locator(".recipe-review-notice")).toContainText("새 검토 초안 1개를 추가했어요");
+  await dialog.getByRole("button", { name: "레시피 가져오기" }).click();
+  await expect(dialog.locator(".recipe-review-notice")).toContainText("원본에서 1개를 확인했고, 새 레시피 1개를 목록에 추가했어요.");
   await expect(dialog.getByRole("button", { name: /소스에서 가져온 두부 요리/ })).toBeVisible();
   expect(importPayload).toMatchObject({ start_idx: 1, end_idx: 20, menu_name: "두부" });
   await expect(page.locator("body")).not.toContainText("source-key");
@@ -8289,19 +8526,19 @@ test("recipe review surface can approve a source-grounded draft without exposing
   await page.goto("/?review=1");
   await page.getByRole("button", { name: "운영자 레시피 검토 열기" }).click();
   const dialog = page.getByRole("dialog", { name: "공개 레시피 검토" });
-  await dialog.getByLabel("운영자 검토 토큰 (이전 방식)").fill("runtime-only-token");
-  await dialog.getByRole("button", { name: "검토 대기 불러오기" }).click();
+  await dialog.getByLabel("레시피 관리 확인 코드").fill("runtime-only-token");
+  await dialog.getByRole("button", { name: "확인할 레시피 불러오기" }).click();
   await expect(dialog.getByRole("button", { name: /검토된 두부 볶음/ })).toBeVisible();
-  await expect(dialog.getByText("식품안전나라 조리식품 레시피 DB · COOKRCP01 · public-api-terms-review-required")).toBeVisible();
-  await expect(dialog.locator(".recipe-review-audit")).toContainText("검토 수정");
+  await expect(dialog.getByText("식품안전나라 조리식품 레시피 DB · public-api-terms-review-required")).toBeVisible();
+  await expect(dialog.locator(".recipe-review-audit")).toContainText("내용 수정");
   await expect(dialog.locator(".recipe-review-audit")).toContainText("admin@example.com");
-  await dialog.getByRole("button", { name: "검토 담당 맡기" }).click();
-  await expect(dialog.locator(".recipe-review-claim-bar")).toContainText("내가 검토 중");
+  await dialog.getByRole("button", { name: "담당 맡기" }).click();
+  await expect(dialog.locator(".recipe-review-claim-bar")).toContainText("내가 맡아 확인 중");
   await dialog.getByRole("checkbox", { name: "원본 이용조건·이미지 재사용 권한을 확인했습니다." }).check();
-  await dialog.getByRole("button", { name: "planner에 승인" }).click();
-  await expect(dialog.getByRole("alert")).toContainText("기존 초안을 유지했어요");
+  await dialog.getByRole("button", { name: "식단에 공개" }).click();
+  await expect(dialog.getByRole("alert")).toContainText("기존 내용을 그대로예요");
   await dialog.getByRole("alert").getByRole("button", { name: "다시 시도" }).click();
-  await expect(dialog.getByRole("status")).toContainText("planner 후보에 포함됩니다");
+  await expect(dialog.getByRole("status")).toContainText("식단 추천에 공개했어요. 이제 추천 목록에서 볼 수 있어요.");
   expect(reviewPatchAttempts).toBe(2);
   expect(catalogRevisionHeaders).toEqual(["5", "6", "7"]);
   await expect(page.locator("body")).not.toContainText("runtime-only-token");
@@ -8349,12 +8586,12 @@ test("recipe review surface blocks a draft claimed by another operator", async (
   await page.goto("/?review=1");
   await page.getByRole("button", { name: "운영자 레시피 검토 열기" }).click();
   const dialog = page.getByRole("dialog", { name: "공개 레시피 검토" });
-  await dialog.getByLabel("운영자 검토 토큰 (이전 방식)").fill("runtime-only-token");
-  await dialog.getByRole("button", { name: "검토 대기 불러오기" }).click();
-  await expect(dialog.locator(".recipe-review-claim-bar")).toContainText("다른 운영자가 검토 중");
+  await dialog.getByLabel("레시피 관리 확인 코드").fill("runtime-only-token");
+  await dialog.getByRole("button", { name: "확인할 레시피 불러오기" }).click();
+  await expect(dialog.locator(".recipe-review-claim-bar")).toContainText("다른 운영자가 확인 중");
   await expect(dialog.locator(".recipe-review-claim-bar")).toContainText("other-admin@example.com");
-  await expect(dialog.getByRole("button", { name: "검토 담당 맡기" })).toHaveCount(0);
-  await expect(dialog.getByRole("button", { name: "planner에 승인" })).toBeDisabled();
+  await expect(dialog.getByRole("button", { name: "담당 맡기" })).toHaveCount(0);
+  await expect(dialog.getByRole("button", { name: "식단에 공개" })).toBeDisabled();
 });
 
 test("recipe review surface keeps reviewer edits but hides publisher actions", async ({ page }) => {
@@ -8411,13 +8648,13 @@ test("recipe review surface keeps reviewer edits but hides publisher actions", a
   await page.goto("/?review=1");
   await page.getByRole("button", { name: "운영자 레시피 검토 열기" }).click();
   const dialog = page.getByRole("dialog", { name: "공개 레시피 검토" });
-  await dialog.getByLabel("운영자 검토 토큰 (이전 방식)").fill("runtime-only-token");
-  await dialog.getByRole("button", { name: "검토 대기 불러오기" }).click();
-  await dialog.getByRole("button", { name: "검토 담당 맡기" }).click();
-  await expect(dialog.locator(".recipe-review-claim-bar")).toContainText("승인·반려 권한은 없어요");
-  await expect(dialog.getByRole("button", { name: "검토 저장" })).toBeEnabled();
-  await expect(dialog.getByRole("button", { name: "planner에 승인" })).toBeDisabled();
-  await expect(dialog.getByRole("button", { name: "반려" })).toBeDisabled();
+  await dialog.getByLabel("레시피 관리 확인 코드").fill("runtime-only-token");
+  await dialog.getByRole("button", { name: "확인할 레시피 불러오기" }).click();
+  await dialog.getByRole("button", { name: "담당 맡기" }).click();
+  await expect(dialog.locator(".recipe-review-claim-bar")).toContainText("저장할 수 있지만 공개하거나 반려할 권한은 없어요.");
+  await expect(dialog.getByRole("button", { name: "저장" })).toBeEnabled();
+  await expect(dialog.getByRole("button", { name: "식단에 공개" })).toBeDisabled();
+  await expect(dialog.getByRole("button", { name: "공개 안 함" })).toBeDisabled();
 });
 
 test("recipe review queue filters all, mine, and unassigned drafts", async ({ page }) => {
@@ -8472,8 +8709,8 @@ test("recipe review queue filters all, mine, and unassigned drafts", async ({ pa
   await page.goto("/?review=1");
   await page.getByRole("button", { name: "운영자 레시피 검토 열기" }).click();
   const dialog = page.getByRole("dialog", { name: "공개 레시피 검토" });
-  await dialog.getByLabel("운영자 검토 토큰 (이전 방식)").fill("runtime-only-token");
-  await dialog.getByRole("button", { name: "검토 대기 불러오기" }).click();
+  await dialog.getByLabel("레시피 관리 확인 코드").fill("runtime-only-token");
+  await dialog.getByRole("button", { name: "확인할 레시피 불러오기" }).click();
   await expect(dialog.getByRole("button", { name: /내가 맡은 레시피/ })).toBeVisible();
   await expect(dialog.getByRole("button", { name: /미배정 레시피/ })).toBeVisible();
   await dialog.getByRole("button", { name: "내 작업" }).click();
@@ -8533,8 +8770,8 @@ test("recipe review queue refreshes after a remote catalog mutation without clob
   await page.goto("/?review=1");
   await page.getByRole("button", { name: "운영자 레시피 검토 열기" }).click();
   const dialog = page.getByRole("dialog", { name: "공개 레시피 검토" });
-  await dialog.getByLabel("운영자 검토 토큰 (이전 방식)").fill("runtime-only-token");
-  await dialog.getByRole("button", { name: "검토 대기 불러오기" }).click();
+  await dialog.getByLabel("레시피 관리 확인 코드").fill("runtime-only-token");
+  await dialog.getByRole("button", { name: "확인할 레시피 불러오기" }).click();
   await dialog.getByLabel("제목").fill("내 로컬 편집");
   drafts = [draft, remoteDraft];
   await page.evaluate(() => {
@@ -8595,8 +8832,8 @@ test("recipe review queue requires explicit editor refresh after the selected dr
   await page.goto("/?review=1");
   await page.getByRole("button", { name: "운영자 레시피 검토 열기" }).click();
   const dialog = page.getByRole("dialog", { name: "공개 레시피 검토" });
-  await dialog.getByLabel("운영자 검토 토큰 (이전 방식)").fill("runtime-only-token");
-  await dialog.getByRole("button", { name: "검토 대기 불러오기" }).click();
+  await dialog.getByLabel("레시피 관리 확인 코드").fill("runtime-only-token");
+  await dialog.getByRole("button", { name: "확인할 레시피 불러오기" }).click();
   await dialog.getByLabel("제목").fill("내 편집을 버리지 마세요");
   drafts = [remotelyChanged];
   await page.evaluate(() => {
@@ -8604,13 +8841,13 @@ test("recipe review queue requires explicit editor refresh after the selected dr
     channel.postMessage({ type: "mutation", id: "remote-selected-recipe-change", sourceId: "remote-operator", workspaceKey: "recipe-catalog", channels: ["recipe-review"] });
     channel.close();
   });
-  await expect(dialog.locator(".recipe-review-editor-stale")).toContainText("최신 검토 초안 확인 필요");
+  await expect(dialog.locator(".recipe-review-editor-stale")).toContainText("최신 레시피를 불러와 주세요");
   await expect(dialog.getByLabel("제목")).toHaveValue("내 편집을 버리지 마세요");
-  await expect(dialog.getByRole("button", { name: "검토 저장" })).toBeDisabled();
-  await dialog.getByRole("button", { name: "최신 초안 불러오기" }).click();
+  await expect(dialog.getByRole("button", { name: "저장" })).toBeDisabled();
+  await dialog.getByRole("button", { name: "최신 내용 불러오기" }).click();
   await expect(dialog.getByLabel("제목")).toHaveValue("원격에서 바뀐 레시피");
-  await expect(dialog.locator(".recipe-review-claim-bar")).toContainText("내가 검토 중");
-  await expect(dialog.getByRole("button", { name: "검토 저장" })).toBeEnabled();
+  await expect(dialog.locator(".recipe-review-claim-bar")).toContainText("내가 맡아 확인 중");
+  await expect(dialog.getByRole("button", { name: "저장" })).toBeEnabled();
 });
 
 test("recipe review queue probes catalog revision when the operator returns to the tab", async ({ page }) => {
@@ -8665,8 +8902,8 @@ test("recipe review queue probes catalog revision when the operator returns to t
   await page.goto("/?review=1");
   await page.getByRole("button", { name: "운영자 레시피 검토 열기" }).click();
   const dialog = page.getByRole("dialog", { name: "공개 레시피 검토" });
-  await dialog.getByLabel("운영자 검토 토큰 (이전 방식)").fill("runtime-only-token");
-  await dialog.getByRole("button", { name: "검토 대기 불러오기" }).click();
+  await dialog.getByLabel("레시피 관리 확인 코드").fill("runtime-only-token");
+  await dialog.getByRole("button", { name: "확인할 레시피 불러오기" }).click();
   await expect(dialog.getByRole("button", { name: /탭 복귀 전 레시피/ })).toBeVisible();
   revision = 6;
   drafts = [draft, remoteDraft];
@@ -8720,9 +8957,23 @@ test("recipe_admin account can load review drafts without the legacy token", asy
   await page.goto("/?review=1");
   await page.getByRole("button", { name: "운영자 레시피 검토 열기" }).click();
   const dialog = page.getByRole("dialog", { name: "공개 레시피 검토" });
-  await dialog.getByRole("button", { name: "검토 대기 불러오기" }).click();
+  await dialog.getByRole("button", { name: "확인할 레시피 불러오기" }).click();
   await expect(dialog.getByRole("button", { name: /관리자 계정으로 보는 레시피/ })).toBeVisible();
   await expect(dialog.getByText("레시피 운영자 계정으로 로그인했다면 토큰 없이도 사용할 수 있어요.")).toBeVisible();
+});
+
+test("connected demo barcode example fills the code without claiming a lookup", async ({ page }) => {
+  await page.getByRole("button", { name: /식품 추가하기/ }).click();
+  const dialog = page.getByRole("dialog", { name: "영수증으로 추가" });
+  await dialog.getByRole("tab", { name: "바코드" }).click();
+
+  const barcodeInput = dialog.getByRole("textbox", { name: "바코드 숫자" });
+  await dialog.getByRole("button", { name: "예시 바코드 입력" }).click();
+
+  await expect(barcodeInput).toHaveValue("8801114167523");
+  await expect(dialog.getByText("상품 정보 1개를 찾았어요.", { exact: true })).toHaveCount(0);
+  await expect(dialog.locator(".barcode-candidate-list")).toHaveCount(0);
+  await expect(dialog.getByRole("button", { name: "상품 정보 찾기" })).toHaveClass(/primary-sheet-button/);
 });
 
 test("barcode product candidates expose product shelf life and fill the manual form", async ({ page }) => {
@@ -8779,19 +9030,20 @@ test("barcode product candidates expose product shelf life and fill the manual f
     await route.fulfill({ status: 201, contentType: "application/json", body: "{}" });
   });
 
+  await page.addInitScript(() => window.localStorage.setItem("rescue-meal.theme", "dark"));
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.getByRole("button", { name: /식품 추가하기/ }).click();
   const dialog = page.getByRole("dialog");
   await dialog.getByRole("tab", { name: "바코드" }).click();
   await dialog.getByRole("textbox", { name: "바코드 숫자" }).fill("8801791000055");
-  await dialog.getByRole("button", { name: "상품 후보 조회" }).click();
+  await dialog.getByRole("button", { name: "상품 정보 찾기" }).click();
 
   await expect(dialog.getByText("상품 정보 기준 기간 참고: 실온보관 2년")).toBeVisible();
-  await expect(dialog.getByText(/2018년 이후 최신화 중단|개별 라벨 확인 필요/)).toBeVisible();
+  await expect(dialog.getByText(/2018년 이후 갱신되지 않았을 수 있어요|개별 포장지를 확인해 주세요/)).toBeVisible();
   await expect(dialog.getByText("일부 상품 정보 확인 필요")).toBeVisible();
   await expect(dialog.locator(".barcode-candidate-list")).toHaveAttribute("aria-live", "polite");
-  await expect(dialog).toContainText("공개 상품 DB를 확인하지 못했어요");
+  await expect(dialog.getByText("공개 상품 정보를 확인하지 못했어요. 포장지 상품명과 날짜를 직접 확인해 주세요.")).toBeVisible();
   const barcodeCandidateAction = dialog.getByRole("button", { name: "상품 정보 적용" });
   await expect(barcodeCandidateAction).toBeFocused();
   await expect.poll(() => barcodeCandidateAction.evaluate((element) => {
@@ -8806,9 +9058,9 @@ test("barcode product candidates expose product shelf life and fill the manual f
   const manualDialog = page.getByRole("dialog", { name: "직접 추가" });
   await expect(manualDialog).toBeVisible();
   await expect(manualDialog.getByRole("textbox", { name: "식품 이름" })).toHaveValue("매일맛있는진간장골드");
-  await expect(manualDialog.getByRole("group", { name: "식품 추가 2단계" })).toContainText("상품 후보와 입력값을 확인해요");
+  await expect(manualDialog.getByRole("group", { name: "식품 추가 2단계" })).toContainText("상품명과 보관 정보를 확인해요");
   await expect(manualDialog.getByRole("button", { name: "실온", exact: true })).toHaveAttribute("aria-pressed", "true");
-  await expect(manualDialog.locator(".manual-source-confirmation")).toContainText("바코드 상품 후보를 적용했어요");
+  await expect(manualDialog.locator(".manual-source-confirmation")).toContainText("바코드에서 찾은 상품 정보예요");
   await manualDialog.getByRole("button", { name: "식품 추가하기" }).click();
   await expect.poll(() => createPayload).not.toBeNull();
   expect(createPayload).toMatchObject({
@@ -8823,6 +9075,92 @@ test("barcode product candidates expose product shelf life and fill the manual f
     },
   });
   expect(idempotencyKey).toMatch(/^manual-food:food-/);
+});
+
+test("connected barcode lookup ignores a delayed result after the input changes", async ({ page }) => {
+  const firstBarcode = "8800000000001";
+  const secondBarcode = "8800000000002";
+  const firstGtin = "08800000000001";
+  const secondGtin = "08800000000002";
+  let releaseFirstParse!: () => void;
+  let signalFirstParseStarted!: () => void;
+  let signalFirstParseFinished!: () => void;
+  let productResolveCalls = 0;
+  const firstParseGate = new Promise<void>((resolve) => { releaseFirstParse = resolve; });
+  const firstParseStarted = new Promise<void>((resolve) => { signalFirstParseStarted = resolve; });
+  const firstParseFinished = new Promise<void>((resolve) => { signalFirstParseFinished = resolve; });
+
+  const parsedBarcode = (rawScan: string, gtin: string) => ({
+    raw_scan: rawScan,
+    barcode_type: "gtin",
+    gtin,
+    lot: null,
+    date_assertions: [],
+    warnings: [],
+    requires_review: true,
+  });
+
+  await page.route("**/api/barcodes/parse", async (route) => {
+    const body = route.request().postDataJSON() as { raw_scan?: string };
+    if (body.raw_scan === firstBarcode) {
+      signalFirstParseStarted();
+      await firstParseGate;
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(parsedBarcode(firstBarcode, firstGtin)) });
+      signalFirstParseFinished();
+      return;
+    }
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(parsedBarcode(secondBarcode, secondGtin)) });
+  });
+  await page.route("**/api/products/resolve/**", async (route) => {
+    productResolveCalls += 1;
+    const isSecond = route.request().url().includes(secondGtin);
+    const gtin = isSecond ? secondGtin : firstGtin;
+    const name = isSecond ? "현재 코드 상품" : "이전 코드 상품";
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        barcode: gtin,
+        status: "matched",
+        candidates: [{
+          source: "mfds_c005",
+          source_url: null,
+          canonical_name: name,
+          brand: "테스트 상품",
+          category: "식품",
+          quantity_text: null,
+          confidence: 0.9,
+          provenance_note: "검증용 상품 후보",
+          shelf_life_text: null,
+          storage_hint: "refrigerated",
+          source_freshness: "current",
+        }],
+        warnings: [],
+        requires_review: true,
+        provider_statuses: {},
+      }),
+    });
+  });
+
+  await page.goto("/");
+  await page.getByRole("button", { name: /식품 추가하기/ }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByRole("tab", { name: "바코드" }).click();
+  const barcodeInput = dialog.getByRole("textbox", { name: "바코드 숫자" });
+  await barcodeInput.fill(firstBarcode);
+  await dialog.getByRole("button", { name: "상품 정보 찾기" }).click();
+  await firstParseStarted;
+
+  await barcodeInput.fill(secondBarcode);
+  await expect(dialog.locator(".result-callout")).toHaveCount(0);
+  await dialog.getByRole("button", { name: "상품 정보 찾기" }).click();
+  await expect(dialog.locator(".barcode-candidate-list")).toContainText("현재 코드 상품");
+
+  releaseFirstParse();
+  await firstParseFinished;
+  await expect(dialog.locator(".barcode-candidate-list")).toContainText("현재 코드 상품");
+  await expect(dialog.locator(".barcode-candidate-list")).not.toContainText("이전 코드 상품");
+  expect(productResolveCalls).toBe(1);
 });
 
 test("connected manual food create retries with the same idempotency key", async ({ page }) => {
@@ -8923,7 +9261,7 @@ test("connected label commit failure exposes the same manual-food retry contract
   const labelDialog = page.getByRole("dialog", { name: "라벨로 추가" });
   await labelDialog.getByRole("button", { name: "샘플 라벨 인식" }).click();
   await labelDialog.getByRole("textbox", { name: "라벨 상품명" }).fill("라벨 재고 테스트");
-  await labelDialog.getByRole("button", { name: "확인 후 반영" }).click();
+  await labelDialog.getByRole("button", { name: "확인 후 저장" }).click();
 
   const toast = page.getByRole("status").filter({ hasText: "식품을 저장하지 못했어요" });
   await expect(toast).toBeVisible();
@@ -8955,7 +9293,7 @@ test("manual food can request a review-only priority window from the backend", a
         requires_confirmation: true,
         abstained: false,
         abstain_reason: null,
-        safety_disclaimer: "AI가 소비기한이나 안전 여부를 판정한 결과가 아닙니다.",
+        safety_disclaimer: "AI가 소비기한이나 안전 여부를 판정한 결과가 아닙니다. 먼저 확인할 순서만 제안합니다.",
       }),
     });
   });
@@ -8968,13 +9306,13 @@ test("manual food can request a review-only priority window from the backend", a
   const dialog = page.getByRole("dialog", { name: "직접 추가" });
   await expect(dialog).toBeVisible();
   await dialog.getByRole("textbox", { name: "식품 이름" }).fill("정체불명 수제 소스");
-  await expect(dialog.getByRole("group", { name: "식품 추가 1단계" })).toContainText("이름과 보관 위치를 확인해요");
-  await dialog.getByRole("button", { name: "먼저 먹을 순서 확인" }).click();
+  await expect(dialog.getByRole("group", { name: "식품 추가 1단계" })).toContainText("이름과 보관 위치를 입력해요");
+  await dialog.getByRole("button", { name: "먼저 확인할 식품 보기" }).click();
 
   await expect(dialog.getByText("먼저 확인할 기간")).toBeVisible();
-  await expect(dialog.getByRole("group", { name: "식품 추가 2단계" })).toContainText("먼저 먹을 순서를 확인해요");
-  await expect(dialog).toContainText("로컬 모델이 가공 소스 후보로 분류했습니다.");
-  await expect(dialog).toContainText("AI가 소비기한이나 안전 여부를 판정한 결과가 아닙니다.");
+  await expect(dialog.getByRole("group", { name: "식품 추가 2단계" })).toContainText("먼저 확인할 순서를 살펴봐요");
+  await expect(dialog).toContainText("가공 소스 식품일 수 있어요.");
+  await expect(dialog).toContainText("안전 여부나 소비기한을 판단하지 않고, 먼저 확인할 순서만 제안해요.");
   await expect.poll(() => dialog.locator(".result-callout").last().evaluate((element) => {
     const content = element.closest<HTMLElement>(".sheet-content");
     if (!content) return false;
@@ -9038,27 +9376,35 @@ test("GS1 barcode keeps a date candidate separate until the user confirms it", a
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.getByRole("button", { name: /식품 추가하기/ }).click();
   const addDialog = page.getByRole("dialog");
   await addDialog.getByRole("tab", { name: "바코드" }).click();
   await addDialog.getByRole("textbox", { name: "바코드 숫자" }).fill("(01)08801114167523(17)260902(10)LOT-7");
-  await addDialog.getByRole("button", { name: "상품 후보 조회" }).click();
+  await addDialog.getByRole("button", { name: "상품 정보 찾기" }).click();
 
-  const dateCandidate = addDialog.getByRole("group", { name: "바코드 날짜 후보" });
+  const dateCandidate = addDialog.getByRole("group", { name: "바코드 날짜 확인" });
+  await expect(addDialog.getByRole("group", { name: "식품 추가 2단계" })).toContainText("날짜 후보와 대상 식품이 맞는지 포장지에서 확인해 주세요.");
+  await expect(addDialog.getByText("바코드에서 날짜 후보를 찾았어요. 포장지에서 날짜 종류와 숫자를 확인해 주세요.")).toBeVisible();
   await expect(dateCandidate).toHaveAttribute("data-date-state", "actual_printed");
   await expect(dateCandidate).toHaveAttribute("data-date-confirmation", "candidate");
-  await expect(dateCandidate).toContainText("소비기한 2026.09.02");
-  await expect(dateCandidate).toContainText("바코드에서 읽은 날짜 후보");
+  await expect(dateCandidate).toContainText("소비기한 후보 · 2026.09.02");
+  await expect(dateCandidate).toContainText("바코드에서 읽은 날짜 후보예요.");
   await expect(dateCandidate).not.toContainText("gs1_ai_17");
-  await expect(addDialog.getByText("풀무원 국산콩 두부 · 상품 후보 1개")).toBeVisible();
-  await dateCandidate.getByRole("button", { name: "상품·날짜를 입력에 반영" }).click();
+  await expect.poll(() => dateCandidate.evaluate((element) => getComputedStyle(element).backgroundColor)).not.toBe("rgb(255, 249, 244)");
+  await expect.poll(() => dateCandidate.locator("small").first().evaluate((element) => Number.parseFloat(getComputedStyle(element).fontSize))).toBeGreaterThanOrEqual(12);
+  await expect.poll(() => dateCandidate.locator(".candidate-apply-button").evaluate((element) => getComputedStyle(element).fontSize)).toBe("12px");
+  await expect.poll(() => dateCandidate.locator(".candidate-apply-button").evaluate((element) => getComputedStyle(element).backgroundColor)).not.toBe("rgb(237, 243, 233)");
+  await expect(addDialog.locator(".barcode-candidate-list")).toContainText("풀무원 국산콩 두부");
+  await dateCandidate.getByRole("button", { name: "상품·날짜를 입력에 넣기" }).click();
 
   const manualDialog = page.getByRole("dialog", { name: "직접 추가" });
   await expect(manualDialog.getByRole("textbox", { name: "식품 이름" })).toHaveValue("국산콩 두부");
-  const manualDateCandidate = manualDialog.getByRole("status").filter({ hasText: "바코드 소비기한 후보" });
-  await expect(manualDateCandidate).toContainText("바코드 소비기한 후보");
+  const manualDateCandidate = manualDialog.getByRole("status").filter({ hasText: "바코드에서 읽은 소비기한 후보예요." });
+  await expect(manualDateCandidate).toContainText("바코드에서 읽은 소비기한 후보예요.");
   await expect(manualDateCandidate).toContainText("2026.09.02");
+  await expect.poll(() => manualDateCandidate.locator("small").evaluate((element) => Number.parseFloat(getComputedStyle(element).fontSize))).toBeGreaterThanOrEqual(12);
+  await expect(manualDialog.locator("#manual-submit-summary")).toHaveText("추가할 내용 · 국산콩 두부 · 브랜드 후보: 풀무원 · 1개 · 소비기한 후보 2026.09.02 · 냉장 보관");
   await manualDialog.getByRole("button", { name: "식품 추가하기" }).click();
 
   await expect.poll(() => createPayload).not.toBeNull();
@@ -9135,7 +9481,7 @@ test("account registration offers an explicit guest workspace transfer", async (
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.locator(".connection-pill").click();
   const dialog = page.getByRole("dialog", { name: "내 계정" });
   await dialog.getByRole("tab", { name: "회원가입" }).click();
@@ -9161,7 +9507,7 @@ test("account registration offers an explicit guest workspace transfer", async (
   await expect(dialog).toHaveCount(0);
 
   await page.reload();
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.locator(".connection-pill").click();
   const restoredDialog = page.getByRole("dialog", { name: "내 계정" });
   await expect(restoredDialog.getByRole("region", { name: "게스트 기록을 가져올까요?" })).toBeVisible();
@@ -9231,7 +9577,7 @@ test("account connection clears the previous workspace while dashboard sync is p
   await expect(page.getByRole("button", { name: "시금치 국내산 시금치 · 1팩 확인 필요" })).toHaveCount(0);
 
   releaseDashboard();
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await expect.poll(() => page.getByRole("heading", { name: "내 식품 목록 0" }).count(), { timeout: 20_000 }).toBeGreaterThan(0);
 });
 
@@ -9267,10 +9613,13 @@ test("account connection failure keeps the old workspace hidden and exposes reco
   await expect(dialog).toHaveCount(0);
   await expect(page.locator(".connection-pill")).toHaveText("오프라인 · 임시 화면");
   await expect(page.getByRole("button", { name: "다시 연결하고 재고 확인하기" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "재고를 확인할 수 없어요, 다시 연결" })).toBeVisible();
+  const inventoryStatus = page.getByRole("button", { name: "재고를 확인할 수 없어요, 식품 목록 열기" });
+  await expect(inventoryStatus).toBeVisible();
   await expect(page.getByRole("heading", { name: "내 식품 목록 확인 필요" })).toBeVisible();
   await expect(page.getByRole("button", { name: "시금치 국내산 시금치 · 1팩 확인 필요" })).toHaveCount(0);
   await expect(page.getByRole("status")).toContainText("계정은 연결했지만 식품 목록을 읽지 못했어요");
+  await inventoryStatus.click();
+  await expect(page.getByRole("button", { name: "식품", exact: true })).toHaveAttribute("aria-current", "page");
 });
 
 test("account dashboard reconnect recovers the cleared workspace presentation", async ({ page }) => {
@@ -9316,7 +9665,7 @@ test("account dashboard reconnect recovers the cleared workspace presentation", 
   await expect(reconnect).toBeVisible();
   await reconnect.click();
   await expect.poll(() => dashboardAttempts).toBe(2);
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await expect(page.getByRole("heading", { name: "내 식품 목록 0" })).toBeVisible();
   await expect(page.getByRole("status")).toHaveText("서버에 다시 연결했어요");
 });
@@ -9393,7 +9742,7 @@ test("guest transfer conflict sends the user back to a fresh preview", async ({ 
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.locator(".connection-pill").click();
   const dialog = page.getByRole("dialog", { name: "내 계정" });
   await expect(dialog.getByRole("region", { name: "게스트 기록을 가져올까요?" })).toBeVisible();
@@ -9461,7 +9810,7 @@ test("connected custom storage locations can be managed from the account sheet",
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.locator(".connection-pill").click();
   const dialog = page.getByRole("dialog", { name: "내 계정" });
   await dialog.locator(".account-storage-disclosure > summary").click();
@@ -9519,7 +9868,7 @@ test("connected storage location manager refreshes after a cross-device revision
   });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("서버 연결됨");
+  await expect(page.locator(".connection-pill")).toHaveText("온라인 연결됨");
   await page.locator(".connection-pill").click();
   const dialog = page.getByRole("dialog", { name: "내 계정" });
   await dialog.locator(".account-storage-disclosure > summary").click();
@@ -9561,7 +9910,7 @@ test("connected manual food intake posts the selected custom storage location", 
   });
   await page.route("**/api/foods", async (route) => {
     manualPayload = JSON.parse(route.request().postData() ?? "{}") as Record<string, unknown>;
-    const food = { id: "manual-custom-location-food", canonical_name: "김치", display_name: "김치", brand: "사용자 입력", quantity: 1, unit: "통", storage_type: "refrigerated", storage_location_id: customLocation.id, opened: false, opened_at: null, date_assertion: { kind: "unknown", value: null, display_label: "확인 필요", source: "unknown", source_detail: "사용자 입력", confidence: 1, user_confirmed: false, applicable_storage_type: null, storage_condition_text: null }, estimated_use_first_window: null, priority: 1, category: "기타", image_path: "/assets/food/tomato.png", note: "확인 필요" };
+    const food = { id: "manual-custom-location-food", canonical_name: "김치", display_name: "김치", brand: "사용자 입력", quantity: 1, unit: "통", storage_type: "refrigerated", storage_location_id: customLocation.id, opened: false, opened_at: null, date_assertion: { kind: "unknown", value: null, display_label: "확인 필요", source: "unknown", source_detail: "사용자 입력", confidence: 1, user_confirmed: false, applicable_storage_type: null, storage_condition_text: null }, estimated_use_first_window: null, priority: 1, category: "기타", image_path: "/assets/food/tomato-photo.jpg", note: "확인 필요" };
     inventory = [food];
     await route.fulfill({ status: 201, contentType: "application/json", body: JSON.stringify(food) });
   });
@@ -9654,7 +10003,7 @@ test("connected receipt review posts a custom storage location override", async 
   await page.getByRole("button", { name: "샘플 영수증으로 시작" }).click();
   const mushroomCard = page.locator('.receipt-line-card[data-line-id="receipt-mushroom"]');
   await mushroomCard.getByRole("group", { name: "맛타리버섯 보관 위치" }).getByRole("button", { name: "김치냉장고", exact: true }).click();
-  await page.getByRole("button", { name: "3개 항목 반영하기" }).click();
+  await page.getByRole("button", { name: "3개 식품 저장하기" }).click();
 
   await expect.poll(() => commitPayload).not.toBeNull();
   expect((commitPayload?.overrides as Record<string, Record<string, unknown>>)["line-mushroom-custom"]).toMatchObject({ storage_type: "refrigerated", storage_location_id: customLocation.id });
@@ -9677,6 +10026,12 @@ test("connected shopping receive posts the selected custom storage location", as
   await page.route("**/api/shopping-list", async (route) => {
     await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(currentItems) });
   });
+  await page.route("**/api/shopping-list/*", async (route) => {
+    if (route.request().method() !== "PATCH") { await route.continue(); return; }
+    const checkedItem = { ...item, checked: true, updated_at: now };
+    currentItems = [checkedItem];
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(checkedItem) });
+  });
   await page.route("**/api/shopping-list/*/receive", async (route) => {
     receivePayload = JSON.parse(route.request().postData() ?? "{}") as Record<string, unknown>;
     currentItems = [];
@@ -9697,6 +10052,7 @@ test("connected shopping receive posts the selected custom storage location", as
   await shopping.getByRole("button", { name: "김치 재고에 반영" }).click();
   const receivePanel = shopping.getByRole("form", { name: "김치 재고 반영" });
   await receivePanel.getByRole("group", { name: "김치 보관 위치" }).getByRole("button", { name: "김치냉장고", exact: true }).click();
+  await receivePanel.getByRole("button", { name: "구매 완료로 표시", exact: true }).click();
   await receivePanel.getByRole("button", { name: "재고에 반영", exact: true }).click();
 
   await expect.poll(() => receivePayload).toMatchObject({ storage_type: "refrigerated", storage_location_id: customLocation.id });

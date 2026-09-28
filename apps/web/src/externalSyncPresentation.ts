@@ -1,10 +1,10 @@
 export type ExternalSyncLifecycle = "action_required" | "queued" | "processing" | "applied";
 
 export function externalSyncLifecycleLabel(state: ExternalSyncLifecycle) {
-  if (state === "queued") return "처리 대기";
-  if (state === "processing") return "반영 중";
-  if (state === "applied") return "반영 완료";
-  return "확인 필요";
+  if (state === "queued") return "추가 대기";
+  if (state === "processing") return "추가 중";
+  if (state === "applied") return "추가됨";
+  return "살펴봐 주세요";
 }
 
 export function externalSyncLifecycleColor(state: ExternalSyncLifecycle) {

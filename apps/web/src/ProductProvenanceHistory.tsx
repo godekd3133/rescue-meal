@@ -4,39 +4,38 @@ import { mealApi, type ApiProductProvenance, type ApiProductProvenanceAuditEvent
 import { formatHistoryTime, groupHistoryByDay, sortHistoryNewest } from "./historyDates";
 
 function sourceLabel(source: ApiProductProvenance["source"]) {
-  if (source === "open_food_facts") return "공개 상품 DB";
-  if (source === "mfds_c005" || source === "mfds_i1250") return "식품안전나라 상품 기준";
-  if (source === "user_confirmed_alias") return "사용자 확인 영수증 별칭";
-  if (source === "local_rule") return "검토된 영수증 상품명 규칙";
-  if (source === "parser") return "영수증 분석 후보";
-  return "서비스 상품 기준";
+  if (source === "open_food_facts") return "공개 상품 정보";
+  if (source === "mfds_c005" || source === "mfds_i1250") return "식품안전나라";
+  if (source === "user_confirmed_alias") return "직접 살펴본 영수증 상품명";
+  if (source === "local_rule") return "영수증 상품명 기준";
+  if (source === "parser") return "영수증에서 읽은 상품명";
+  return "서비스 제공 상품 정보";
 }
 
 function actionLabel(action: ApiProductProvenanceAuditEvent["action"]) {
-  if (action === "applied") return "상품 출처 적용";
-  if (action === "replaced") return "상품 출처 교체";
-  return "상품 출처 제거";
+  if (action === "applied") return "상품 정보 저장";
+  if (action === "replaced") return "상품 정보 변경";
+  return "상품 정보 삭제";
 }
 
 function actorLabel(role: ApiProductProvenanceAuditEvent["actor_role"]) {
-  return role === "guest" ? "게스트 기록" : "내 계정 기록";
+  return role === "guest" ? "기기에서 기록" : "내 계정 기록";
 }
 
 function reasonLabel(reason: string) {
   return reason
-    .replace(/Open Food Facts/gi, "공개 상품 DB")
-    .replace(/식품안전나라 C005/gi, "식품안전나라 상품 기준")
-    .replace(/식품안전나라 I1250/gi, "식품안전나라 상품 기준")
-    .replace(/Grocy/gi, "외부 재고 서비스")
-    .replace(/workspace/gi, "기록 공간")
-    .replace(/recipe_admin/gi, "레시피 운영자");
+    .replace(/Open Food Facts/gi, "공개 상품 정보")
+    .replace(/식품안전나라 C005/gi, "식품안전나라")
+    .replace(/식품안전나라 I1250/gi, "식품안전나라")
+    .replace(/Grocy/gi, "재고 앱")
+    .replace(/workspace/gi, "내 기록")
+    .replace(/recipe_admin/gi, "관리자");
 }
 
 function eventDetail(event: ApiProductProvenanceAuditEvent) {
-  if (!event.after) return "상품 후보 없이 직접 입력 상태로 남겼어요";
-  const source = `${sourceLabel(event.after.source)} · 신뢰도 ${Math.round(event.after.confidence * 100)}%`;
-  if (event.action !== "replaced" || !event.before) return source;
-  return `${sourceLabel(event.before.source)} → ${source}`;
+  if (!event.after) return "상품 정보를 지웠어요. 상품명은 그대로예요.";
+  if (event.action !== "replaced" || !event.before) return `참고한 상품 정보: ${sourceLabel(event.after.source)}`;
+  return `${sourceLabel(event.before.source)}에서 ${sourceLabel(event.after.source)}로 바꿨어요.`;
 }
 
 function eventIcon(action: ApiProductProvenanceAuditEvent["action"]) {

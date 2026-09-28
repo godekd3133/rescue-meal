@@ -109,7 +109,7 @@ export default function ServiceWorkerUpdatePrompt() {
         </span>
         <span className="update-prompt-copy">
           <strong>새 버전이 준비됐어요</strong>
-          <small>최신 식품 기록과 기능을 적용하려면 새로고침해 주세요.</small>
+          <small>최신 버전을 사용하려면 새로고침해 주세요.</small>
         </span>
         <button className="update-prompt-action" type="button" onClick={applyUpdate} disabled={applying}>
           {applying ? "적용 중…" : "새로고침"}

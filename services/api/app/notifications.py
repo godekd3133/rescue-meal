@@ -321,7 +321,7 @@ def _food_notification(
         start_date = food.estimated_start_date or food.estimated_end_date
         severity = "urgent" if food.estimated_end_date < current_date else "attention"
         title = "먼저 확인할 식품이에요"
-        message = f"{food.canonical_name}의 AI 소비 우선순위 범위가 {format_date(start_date)}~{format_date(food.estimated_end_date)}예요. 실제 소비기한이 아니므로 포장지 날짜와 식품 상태를 확인하세요."
+        message = f"{food.canonical_name}: {format_date(start_date)}~{format_date(food.estimated_end_date)} 사이에 먼저 확인해 보세요. 이 기간은 참고용이며 소비기한이나 식품 안전을 판정한 안내가 아니니 포장지 날짜와 식품 상태를 확인해 주세요."
         return NotificationResponse(
             id=f"food-estimate:{food.id}:{food.estimated_end_date.isoformat()}",
             kind="date_due",

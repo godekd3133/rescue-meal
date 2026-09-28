@@ -15,7 +15,7 @@ export function sortHistoryNewest<T extends TimestampedHistory>(events: T[]) {
 
 export function historyDayLabel(value: string, now = new Date()) {
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "날짜 확인 필요";
+  if (Number.isNaN(date.getTime())) return "날짜 미정";
   const day = localDayStart(date);
   const today = localDayStart(now);
   const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1).getTime();
@@ -43,6 +43,6 @@ export function groupHistoryByDay<T extends TimestampedHistory>(events: T[]) {
 
 export function formatHistoryTime(value: string) {
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "시간 확인 필요";
+  if (Number.isNaN(date.getTime())) return "시간을 알 수 없어요";
   return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
 }

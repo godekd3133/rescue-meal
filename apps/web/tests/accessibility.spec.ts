@@ -44,10 +44,67 @@ test("home surface passes axe audit", async ({ page }) => {
   await expectNoViolations(page, "home");
 });
 
+test("primary home action text meets contrast in light and dark themes", async ({ page }) => {
+  await page.evaluate(() => window.localStorage.removeItem("rescue-meal.theme"));
+  await page.reload();
+
+  for (const theme of ["light", "dark"] as const) {
+    if (await page.locator("html").getAttribute("data-rescue-theme") !== theme) {
+      await page.getByTestId("theme-toggle").click();
+    }
+    await expect(page.locator("html")).toHaveAttribute("data-rescue-theme", theme);
+
+    const ratios = await page.locator(".meal-plan-button").evaluate((button) => {
+      const luminance = (color: string) => {
+        const channels = color.match(/[\d.]+/g)?.slice(0, 3).map(Number);
+        if (!channels || channels.length !== 3) throw new Error(`Unparseable CSS color: ${color}`);
+        const [red, green, blue] = channels.map((channel) => {
+          const normalized = channel / 255;
+          return normalized <= 0.04045 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
+        });
+        return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+      };
+      const background = getComputedStyle(button).backgroundColor;
+      const contrast = (foreground: string) => {
+        const foregroundLuminance = luminance(foreground);
+        const backgroundLuminance = luminance(background);
+        return (Math.max(foregroundLuminance, backgroundLuminance) + 0.05)
+          / (Math.min(foregroundLuminance, backgroundLuminance) + 0.05);
+      };
+      return {
+        label: contrast(getComputedStyle(button.querySelector("strong")!).color),
+        supportingCopy: contrast(getComputedStyle(button.querySelector("small")!).color),
+      };
+    });
+
+    expect(ratios.label, `${theme} primary label contrast`).toBeGreaterThanOrEqual(4.5);
+    expect(ratios.supportingCopy, `${theme} primary supporting-copy contrast`).toBeGreaterThanOrEqual(4.5);
+  }
+});
+
 test("food detail sheet passes axe audit", async ({ page }) => {
   await page.getByRole("button", { name: /시금치 개봉됨/ }).click();
   await openSheet(page, "시금치");
   await expectNoViolations(page, "food detail");
+});
+
+test("printed-date recheck sheet passes axe audit in light and dark themes", async ({ page }) => {
+  await page.setViewportSize({ width: 393, height: 852 });
+
+  for (const theme of ["light", "dark"] as const) {
+    await page.goto("/");
+    if (await page.locator("html").getAttribute("data-rescue-theme") !== theme) {
+      await page.getByTestId("theme-toggle").click();
+    }
+    await expect(page.locator("html")).toHaveAttribute("data-rescue-theme", theme);
+    await page.getByRole("button", { name: /시금치 개봉됨/ }).click();
+    const detail = await openSheet(page, "시금치");
+    await detail.getByRole("button", { name: "포장지에서 날짜 다시 확인" }).click();
+
+    const dateRecheck = await openSheet(page, "날짜 다시 살펴보기");
+    await expect(dateRecheck.getByRole("group", { name: /현재 기록된 날짜 포장 소비기한/ })).toBeVisible();
+    await expectNoViolations(page, `printed-date recheck ${theme}`);
+  }
 });
 
 test("account and notification surfaces pass axe audit", async ({ page }) => {
@@ -68,6 +125,6 @@ test("receipt review sheet passes axe audit", async ({ page }) => {
   await page.getByRole("button", { name: /식품 추가하기/ }).click();
   await openSheet(page, "영수증으로 추가");
   await page.getByRole("button", { name: "샘플 영수증으로 시작" }).click();
-  await expect(page.getByRole("button", { name: "3개 항목 반영하기" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "3개 식품 저장하기" })).toBeVisible();
   await expectNoViolations(page, "receipt review");
 });

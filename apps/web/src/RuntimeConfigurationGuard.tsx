@@ -4,16 +4,16 @@ type RuntimeConfigurationGuardProps = {
 
 export default function RuntimeConfigurationGuard({ message }: RuntimeConfigurationGuardProps) {
   return (
-    <main className="runtime-configuration-screen" aria-label="Rescue Meal 운영 설정 오류">
+    <main className="runtime-configuration-screen" aria-label="Rescue Meal 서비스 연결 안내">
       <div className="runtime-configuration-mark" aria-hidden="true">r</div>
-      <span className="runtime-configuration-kicker">RESCUE MEAL · 운영 설정 확인</span>
-      <h1>운영 앱 설정을<br /><em>확인해 주세요</em></h1>
-      <p>기록을 안전하게 보호하기 위해 임시 데이터를 보여주지 않고 있어요. 설정을 확인한 뒤 다시 확인해 주세요.</p>
+      <span className="runtime-configuration-kicker">RESCUE MEAL · 연결 안내</span>
+      <h1>서비스에 연결할 수<br /><em>없어요</em></h1>
+      <p>저장한 식품 기록을 불러오지 못했어요. 서비스 연결을 살펴본 뒤 다시 시도해 주세요.</p>
       <div className="runtime-configuration-alert" role="alert">
-        <strong>서비스 연결 설정이 필요해요</strong>
-        <span>운영 API 연결이 준비되지 않아 데이터를 불러올 수 없어요.</span>
+        <strong>식품 기록을 불러오지 못했어요</strong>
+        <span>서비스 연결 설정이 되어 있지 않거나 현재 사용할 수 없어요.</span>
       </div>
-      <button className="primary-sheet-button runtime-configuration-reload" type="button" onClick={() => window.location.reload()}>다시 확인하기</button>
+      <button className="primary-sheet-button runtime-configuration-reload" type="button" onClick={() => window.location.reload()}>다시 시도하기</button>
       <details className="runtime-configuration-details" style={{ marginTop: 16 }}>
         <summary style={{ cursor: "pointer", color: "inherit", fontSize: 11, fontWeight: 800 }}>배포 담당자용 설정 보기</summary>
         <div style={{ display: "grid", gap: 12, paddingTop: 10 }}>

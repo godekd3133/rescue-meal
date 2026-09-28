@@ -55,19 +55,19 @@ test("web surface renders the real app without phone simulator chrome", async ({
   await expect(page.locator(".app-bottom-nav-item-active")).toHaveText("홈");
 
   await page.getByRole("button", { name: "확인하고 오늘 식단 만들기" }).click();
-  await expect(page.getByRole("dialog", { name: "오늘의 Rescue Meal" })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "오늘의 식단" })).toBeVisible();
   await expect(page.locator(".app-bottom-nav-item-active")).toHaveText("식단");
   await page.keyboard.press("Escape");
-  await expect(page.getByRole("dialog", { name: "오늘의 Rescue Meal" })).toHaveCount(0);
+  await expect(page.getByRole("dialog", { name: "오늘의 식단" })).toHaveCount(0);
   await expect(page.locator(".app-bottom-nav-item-active")).toHaveText("홈");
 
   await page.getByRole("button", { name: "식품", exact: true }).click();
   await expect(page.locator(".app-bottom-nav-item-active")).toHaveText("식품");
   await page.getByRole("button", { name: "식단", exact: true }).click();
-  await expect(page.getByRole("dialog", { name: "오늘의 Rescue Meal" })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "오늘의 식단" })).toBeVisible();
   await expect(page.locator(".app-bottom-nav-item-active")).toHaveText("식단");
   await page.keyboard.press("Escape");
-  await expect(page.getByRole("dialog", { name: "오늘의 Rescue Meal" })).toHaveCount(0);
+  await expect(page.getByRole("dialog", { name: "오늘의 식단" })).toHaveCount(0);
   await expect(page.locator(".app-bottom-nav-item-active")).toHaveText("식품");
 });
 

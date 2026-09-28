@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { CameraIcon, CheckIcon, Cross2Icon, InfoCircledIcon, UploadIcon } from "@radix-ui/react-icons";
-import { revealAndFocus } from "./mobile/scroll";
+import { revealAndFocusWithinNearestContainer as revealAndFocus } from "./appScroll";
 
 export type CaptureFileHandler = (file: File) => void | Promise<void>;
 
@@ -219,7 +219,7 @@ export default function CameraCapture({ title, detail, onFile, onCancel }: Camer
           <CameraLibraryFallback onFile={onFileRef.current} />
           <button className="secondary-sheet-button" type="button" onClick={() => onCancelRef.current()}>입력 방법 다시 보기</button>
         </div>
-        <div className="capture-hint"><CheckIcon width={14} height={14} /> 사진을 선택해도 같은 품질 검사와 사진 인식 확인을 거쳐요.</div>
+        <div className="capture-hint"><CheckIcon width={14} height={14} /> 사진을 골라도 촬영한 사진처럼 상태를 살펴보고 내용을 읽어요.</div>
       </div>
     );
   }
@@ -234,14 +234,14 @@ export default function CameraCapture({ title, detail, onFile, onCancel }: Camer
       <div className="camera-capture-viewfinder">
         <video ref={videoRef} data-camera-facing="environment" aria-label={`${title} 카메라 미리보기`} autoPlay muted playsInline />
         <span ref={frameRef} className="camera-capture-frame" aria-hidden="true"><i /><i /><i /><i /></span>
-        <div className="camera-capture-guide" aria-hidden="true"><strong>{title === "영수증" ? "영수증 전체" : "날짜가 보이는 면"}</strong><small>테두리 안에 맞춰 주세요 · 안쪽만 분석해요</small></div>
+        <div className="camera-capture-guide" aria-hidden="true"><strong>{title === "영수증" ? "영수증 전체" : "날짜가 보이는 면"}</strong><small>테두리 안에 맞춰 촬영해 주세요</small></div>
       </div>
       <p className="camera-capture-status" role="status">{status === "starting" ? "카메라를 준비하고 있어요" : message || "흔들리지 않게 화면을 맞춘 뒤 촬영하세요"}</p>
       <div className="camera-capture-actions">
         <button ref={captureButtonRef} className="primary-sheet-button" type="button" disabled={status !== "ready"} onClick={capture}><CameraIcon width={17} height={17} /> 촬영하기</button>
         <CameraLibraryFallback onFile={onFileRef.current} />
       </div>
-      <p className="capture-hint"><InfoCircledIcon width={14} height={14} /> 원본 이미지는 촬영 후 사진 인식에만 사용하고 재고 기록에는 저장하지 않아요.</p>
+      <p className="capture-hint"><InfoCircledIcon width={14} height={14} /> 촬영한 사진은 내용을 읽는 데만 사용하고 식품 기록에는 저장하지 않아요.</p>
     </div>
   );
 }

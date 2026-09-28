@@ -55,7 +55,7 @@ def test_notification_rules_keep_printed_dates_separate_from_estimates() -> None
     assert "소비기한이 오늘" in notifications[0].message
     assert "안전" not in notifications[0].message
     assert notifications[1].source == "estimated_window"
-    assert "실제 소비기한이 아니므로" in notifications[1].message
+    assert "소비기한이나 식품 안전을 판정한 안내가 아니니" in notifications[1].message
     assert notifications[2].source == "unknown_date"
     assert notifications[2].action == "food"
 
@@ -227,7 +227,7 @@ def test_notification_api_marks_current_notification_read_and_filters_unread() -
             "테스트용 사용자 확인 날짜",
             1,
             "유제품",
-            "/assets/food/milk.png",
+            "/assets/food/milk-photo.jpg",
             "테스트",
         )
     )

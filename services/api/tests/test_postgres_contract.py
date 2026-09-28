@@ -902,7 +902,7 @@ def test_normalized_inventory_adapter_reconstructs_compatibility_state() -> None
                     "채소",
                     "시금치",
                     "국내산",
-                    "/assets/food/spinach.png",
+                    "/assets/food/spinach-photo.jpg",
                     "테스트",
                     datetime(2026, 9, 2, 12, 0, tzinfo=timezone.utc),
                     None,

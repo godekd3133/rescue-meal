@@ -1512,7 +1512,7 @@ class ManualFoodRequest(BaseModel):
     category: str = Field(default="기타", max_length=80)
     note: str = Field(default="날짜와 보관 방법을 확인해 주세요.", max_length=300)
     brand: str = Field(default="직접 추가한 식품", max_length=160)
-    image_path: str = Field(default="/assets/food/tomato.png", max_length=300)
+    image_path: str = Field(default="/assets/food/groceries-photo.jpg", max_length=300)
     date_kind: DateKind = "unknown"
     date_value: date | None = None
     date_source: DateSource = "unknown"
@@ -5657,25 +5657,25 @@ def _json_payload(payload: object) -> object:
 def _seed_foods() -> list[FoodResponse]:
     return [
         _food(
-            "spinach-1", "시금치", "국내산 시금치", 1, "팩", "refrigerated", "use_by", date(2026, 9, 2), "label_ocr", "포장지 표시", 1, "채소", "/assets/food/spinach.png", "포장지에서 유효년월일을 확인했어요.", opened=True,
+            "spinach-1", "시금치", "국내산 시금치", 1, "팩", "refrigerated", "use_by", date(2026, 9, 2), "label_ocr", "포장지 표시", 1, "채소", "/assets/food/spinach-photo.jpg", "포장지에서 유효년월일을 확인했어요.", opened=True,
         ),
         _food(
-            "tofu-1", "국산콩 두부", "풀무원", 1, "모", "refrigerated", "unknown", None, "unknown", "상품 유형 + 보관 방식", 2, "두부·콩", "/assets/food/tofu.png", "실제 소비기한이 아니라 먼저 먹기 위한 추정 순서예요.", estimate=(date(2026, 9, 3), date(2026, 9, 4), 0.72),
+            "tofu-1", "국산콩 두부", "풀무원", 1, "모", "refrigerated", "unknown", None, "unknown", "상품 유형 + 보관 방식", 2, "두부·콩", "/assets/food/tofu-photo.jpg", "실제 소비기한이 아니라 먼저 먹기 위한 추정 순서예요.", estimate=(date(2026, 9, 3), date(2026, 9, 4), 0.72),
         ),
         _food(
-            "chicken-1", "닭가슴살", "무항생제 닭가슴살", 2, "팩", "frozen", "user_reminder", date(2026, 9, 6), "user_input", "사용자 입력", 3, "육류", "/assets/food/chicken.png", "사용자가 확인한 날짜를 우선 사용하고 있어요.", confidence=0.9,
+            "chicken-1", "닭가슴살", "무항생제 닭가슴살", 2, "팩", "frozen", "user_reminder", date(2026, 9, 6), "user_input", "사용자 입력", 3, "육류", "/assets/food/chicken-photo.jpg", "사용자가 확인한 날짜를 우선 사용하고 있어요.", confidence=0.9,
         ),
         _food(
-            "mushroom-1", "맛타리버섯", "국내산 맛타리", 2, "팩", "refrigerated", "unknown", None, "unknown", "영수증 + 상품 유형", 4, "채소", "/assets/food/mushroom.png", "신선식품은 날짜가 인쇄되지 않을 수 있어 우선순위로만 안내해요.", estimate=(date(2026, 9, 4), date(2026, 9, 5), 0.64), confidence=0.64,
+            "mushroom-1", "맛타리버섯", "국내산 맛타리", 2, "팩", "refrigerated", "unknown", None, "unknown", "영수증 + 상품 유형", 4, "채소", "/assets/food/mushroom-photo.jpg", "신선식품은 날짜가 인쇄되지 않을 수 있어 우선순위로만 안내해요.", estimate=(date(2026, 9, 4), date(2026, 9, 5), 0.64), confidence=0.64,
         ),
         _food(
-            "egg-1", "동물복지 달걀", "10구", 1, "판", "refrigerated", "use_by", date(2026, 9, 9), "label_ocr", "포장지 표시", 5, "달걀", "/assets/food/eggs.png", "달걀 포장지에 있는 표시 날짜를 기록했어요.",
+            "egg-1", "동물복지 달걀", "10구", 1, "판", "refrigerated", "use_by", date(2026, 9, 9), "label_ocr", "포장지 표시", 5, "달걀", "/assets/food/eggs-photo.jpg", "달걀 포장지에 있는 표시 날짜를 기록했어요.",
         ),
         _food(
-            "milk-1", "저지방 우유", "900ml", 1, "개", "refrigerated", "unknown", None, "unknown", "영수증 + 상품 유형", 6, "유제품", "/assets/food/milk.png", "개봉 후에는 별도의 사용자 확인이 필요해요.", estimate=(date(2026, 9, 5), date(2026, 9, 6), 0.68), opened=True, confidence=0.68,
+            "milk-1", "저지방 우유", "900ml", 1, "개", "refrigerated", "unknown", None, "unknown", "영수증 + 상품 유형", 6, "유제품", "/assets/food/milk-photo.jpg", "개봉 후에는 별도의 사용자 확인이 필요해요.", estimate=(date(2026, 9, 5), date(2026, 9, 6), 0.68), opened=True, confidence=0.68,
         ),
         _food(
-            "tomato-1", "대추방울토마토", "국내산", 1, "팩", "ambient", "unknown", None, "unknown", "상품 유형 + 보관 방식", 7, "채소", "/assets/food/tomato.png", "실온 보관 중인 신선식품은 상태 확인과 함께 드세요.", estimate=(date(2026, 9, 5), date(2026, 9, 6), 0.58), confidence=0.58,
+            "tomato-1", "대추방울토마토", "국내산", 1, "팩", "ambient", "unknown", None, "unknown", "상품 유형 + 보관 방식", 7, "채소", "/assets/food/tomato-photo.jpg", "실온 보관 중인 신선식품은 상태 확인과 함께 드세요.", estimate=(date(2026, 9, 5), date(2026, 9, 6), 0.58), confidence=0.58,
         ),
     ]
 
@@ -5898,17 +5898,32 @@ def _receipt_food(
     barcode: str | None = None,
     storage_location_id: str | None = None,
 ) -> FoodResponse:
-    image = "/assets/food/tomato.png"
+    image = "/assets/food/groceries-photo.jpg"
+    if "시금치" in name:
+        image = "/assets/food/spinach-photo.jpg"
+    elif "두부" in name:
+        image = "/assets/food/tofu-photo.jpg"
+    elif "닭" in name:
+        image = "/assets/food/chicken-photo.jpg"
+    elif "버섯" in name:
+        image = "/assets/food/mushroom-photo.jpg"
+    elif "달걀" in name or "계란" in name:
+        image = "/assets/food/eggs-photo.jpg"
+    elif "우유" in name:
+        image = "/assets/food/milk-photo.jpg"
+    elif "토마토" in name:
+        image = "/assets/food/tomato-photo.jpg"
+
     category = category_override.strip() if category_override and category_override.strip() else "기타"
     if not category_override or not category_override.strip():
         if "시금치" in name:
-            image, category = "/assets/food/spinach.png", "채소"
+            category = "채소"
         elif "두부" in name:
-            image, category = "/assets/food/tofu.png", "두부·콩"
+            category = "두부·콩"
         elif "버섯" in name:
-            image, category = "/assets/food/mushroom.png", "채소"
+            category = "채소"
         elif "달걀" in name or "계란" in name:
-            image, category = "/assets/food/eggs.png", "달걀"
+            category = "달걀"
     inference = infer_priority(
         PriorityInferenceRequest(
             product_name=name,
@@ -10332,7 +10347,13 @@ def create_manual_food(http_request: Request, http_response: Response, request: 
         if request.target_food_id is not None:
             existing = store.foods.get(request.target_food_id)
             if existing is None:
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="대상 식품 lot을 찾을 수 없습니다.")
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail={
+                        "code": "food_lot_target_not_found",
+                        "detail": "대상 식품 lot을 찾을 수 없습니다.",
+                    },
+                )
             if normalize_product_name(existing.response.canonical_name) != canonical_key:
                 raise HTTPException(
                     status_code=status.HTTP_409_CONFLICT,
@@ -12307,18 +12328,22 @@ def _shopping_received_food(
     storage_location_id: str | None,
     purchased_at: datetime,
 ) -> FoodResponse:
-    image = "/assets/food/tomato.png"
+    image = "/assets/food/groceries-photo.jpg"
     category = "기타"
     if "시금치" in item.canonical_name:
-        image, category = "/assets/food/spinach.png", "채소"
+        image, category = "/assets/food/spinach-photo.jpg", "채소"
     elif "두부" in item.canonical_name:
-        image, category = "/assets/food/tofu.png", "두부·콩"
+        image, category = "/assets/food/tofu-photo.jpg", "두부·콩"
+    elif "닭" in item.canonical_name:
+        image = "/assets/food/chicken-photo.jpg"
     elif "버섯" in item.canonical_name:
-        image, category = "/assets/food/mushroom.png", "채소"
+        image, category = "/assets/food/mushroom-photo.jpg", "채소"
     elif "달걀" in item.canonical_name or "계란" in item.canonical_name:
-        image, category = "/assets/food/eggs.png", "달걀"
+        image, category = "/assets/food/eggs-photo.jpg", "달걀"
     elif "우유" in item.canonical_name:
-        image, category = "/assets/food/milk.png", "유제품"
+        image, category = "/assets/food/milk-photo.jpg", "유제품"
+    elif "토마토" in item.canonical_name:
+        image = "/assets/food/tomato-photo.jpg"
 
     inference = infer_priority(
         PriorityInferenceRequest(
@@ -12349,7 +12374,7 @@ def _shopping_received_food(
         1,
         category,
         image,
-        "소비기한은 포장지에서 확인해 주세요. 구매일과 AI 소비 우선순위만 기록했어요.",
+        "구매일을 기록했어요. 소비기한은 포장지에서 확인해 주세요. 먼저 볼 순서는 참고용이며, 먹어도 되는지를 판단하지 않아요.",
         estimate=estimate,
         inference=inference,
         confidence=inference.storage_confidence,

@@ -904,6 +904,10 @@ export function isMealApiFoodLotSelectionError(error: unknown): error is MealApi
   return error instanceof MealApiError && error.code === "food_lot_selection_required";
 }
 
+export function isMealApiFoodLotTargetMissingError(error: unknown): error is MealApiError {
+  return error instanceof MealApiError && error.code === "food_lot_target_not_found";
+}
+
 export function isMealApiFoodDateConfirmedError(error: unknown): error is MealApiError {
   return error instanceof MealApiError && error.code === "food_date_already_confirmed";
 }
@@ -1003,7 +1007,7 @@ export function isMealApiRecipePublishError(error: unknown): error is MealApiErr
   return error instanceof MealApiError && error.code === "recipe_review_publish_forbidden";
 }
 
-export const MEAL_API_WORKSPACE_CONFLICT_MESSAGE = "다른 기기에서 먼저 변경했어요. 최신 상태를 확인한 뒤 다시 시도해 주세요.";
+export const MEAL_API_WORKSPACE_CONFLICT_MESSAGE = "다른 기기에서 내용이 바뀌었어요. 다시 불러온 뒤 시도해 주세요.";
 
 export type ApiOcrReceiptIntake = {
   status: "review_required" | "needs_ocr_engine" | "failed";

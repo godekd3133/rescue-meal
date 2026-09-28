@@ -4,11 +4,11 @@ type ConnectionState = "fixture" | "checking" | "connected" | "offline" | "auth_
 type CachedAtFreshness = "recent" | "stale" | "old" | "unknown";
 
 const labels: Record<ConnectionState, string> = {
-  fixture: "게스트 기록",
-  checking: "서버 확인 중",
-  connected: "서버 연결됨",
-  offline: "오프라인 · 임시 화면",
-  auth_required: "로그인 다시 필요",
+  fixture: "게스트",
+  checking: "연결 중",
+  connected: "연결됨",
+  offline: "오프라인",
+  auth_required: "다시 로그인해 주세요",
 };
 
 export default function ConnectionStatus({ state, hasCachedData = false, cachedAtLabel, cachedAtFreshness, onOpenAccount }: { state: ConnectionState; hasCachedData?: boolean; cachedAtLabel?: string; cachedAtFreshness?: CachedAtFreshness; onOpenAccount: () => void }) {

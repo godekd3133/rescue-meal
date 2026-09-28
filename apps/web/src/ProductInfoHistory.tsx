@@ -4,15 +4,15 @@ import { mealApi, type ApiFoodProductInfoAuditEvent } from "./mealApi";
 import { formatHistoryTime, groupHistoryByDay, sortHistoryNewest } from "./historyDates";
 
 function actorLabel(role: ApiFoodProductInfoAuditEvent["actor_role"]) {
-  return role === "guest" ? "게스트 기록" : "내 계정 기록";
+  return role === "guest" ? "기기에서 기록" : "내 계정 기록";
 }
 
 function reasonLabel(reason: string) {
   return reason
     .replace(/workspace/gi, "기록 공간")
-    .replace(/recipe_admin/gi, "레시피 운영자")
+    .replace(/recipe_admin/gi, "관리자")
     .replace(/Open Food Facts/gi, "공개 상품 DB")
-    .replace(/Grocy/gi, "외부 재고 서비스");
+    .replace(/Grocy/gi, "재고 앱");
 }
 
 function eventDetail(event: ApiFoodProductInfoAuditEvent) {
