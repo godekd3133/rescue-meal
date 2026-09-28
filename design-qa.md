@@ -7912,3 +7912,54 @@ When introducing `smoke-runner-v2` or later:
 - At 320×740, rows grew by at most 1px, the meal CTA remains at y=398–452, document width stays 320px, and the fixed navigation begins at y=632. At 393×852, rows remain 65–66px and document width stays 393px. Captures `76-home-320-light-metadata-readable-2026-09-28.png`, `77-home-320-dark-metadata-readable-2026-09-28.png`, `78-home-393-dark-metadata-readable-2026-09-28.png`, and `79-home-393-light-metadata-readable-2026-09-28.png` were visually inspected.
 - The focused native readability regression passed across 320/393px and light/dark (4 combinations). The safe-area geometry regression passed, the Home Axe scan reported zero violations, `npm run build` passed (770 modules), the protected mobile runtime check passed (28 files), and `git diff --check` passed. Final preview capture is `80-home-393-dark-mobile-handoff-2026-09-28.png`; Home is restored at 393×852 dark.
 - Browser readback still reports zero JavaScript errors and one existing deprecated Apple web-app meta warning. No food/detail route, record save, consumption action, or API-backed flow was used.
+
+## Home shopping empty-state guidance — 2026-09-28
+
+- Applied the current KakaoPay principle-level benchmark: distinct main/support information, accessible color contrast, and explicit, transparent service information ([design article](https://story.kakaopay.com/225-kakaopay-design/), [consumer protection charter](https://www.kakaopay.com/qna/consumer/consumer_protection)); no KakaoPay visual assets or exact brand styling were copied.
+- The Home shopping summary already exposed its help sentence in the button's accessible name, but at 320/393px CSS clipped the visible helper to a 1×1px absolute element. The card was 50px high; at 320px its bottom was y=563 with the fixed nav beginning at y=632, so the extra vertical room could carry a visible next step without covering navigation.
+- Shortened the empty-state guidance to `식단에서 재료를 담거나 직접 추가해 보세요.` and restored it as a visible one-line 11px helper on mobile. Light mode uses the existing slate `#4e5968` text color; dark mode keeps its theme-muted color. At 320×740 the card is 68px high (y=513–580), the meal action remains y=400–454, and the nav starts at y=632. At 393×852 the card is y=550–618, well above the nav at y=744.
+- Baseline captures `81-home-shopping-empty-393-dark-before.png`, `82-home-shopping-empty-320-dark-before.png`, and `83-home-shopping-empty-320-light-before.png` show the missing visual guidance. Accepted after captures `84-home-shopping-empty-393-light-after.png`, `85-home-shopping-empty-320-light-after.png`, `86-home-shopping-empty-320-dark-after.png`, and `87-home-shopping-empty-393-dark-after.png` were inspected.
+- Updated narrow-home viewport tests to cover the current trust summary and priority-list order rather than the removed `rescue-status-card`, and fixed their `boundingBox()` geometry reads. Five bounded Home tests passed, including the new 320/393 light/dark helper visibility, contrast, single-line fit, CTA, and safe-area checks; the Home Axe scan passed. Production build passed (770 modules) and the protected runtime integrity check passed (28 files).
+- The shopping row was not opened; no shopping data, food record, or consumption state was changed. Browser state is restored to Home at 393×852 dark. Physical-device safe-area and assistive-technology behavior remain unverified.
+
+## Approved mobile date-review path readback — 2026-09-28
+
+- Current-run dark screenshots cover Home → spinach detail → printed-date recheck at 393×852 (`88`–`90`), plus the 320×740 date-recheck first fold and a 6px scroll to reveal the optional sample action (`91`–`92`). The browser was restored to Home at 393×852 dark.
+- Home clearly distinguishes the 3-item priority set from the 2-item date/storage review summary. The spinach row names `포장 소비기한`, shows the date, and says `날짜 확인`; the detail preserves the printed-date source and storage/opened state before offering a 44px recheck action.
+- The detail explains that the printed date is today or past and asks the user to recheck package date, storage, and opened state without declaring the food safe/unsafe. The recheck sheet repeats the current recorded date/source and says the record stays unchanged until saving; it asks users to verify date meaning before recording it as a use-by date.
+- At 320×740 dark, camera/photo actions are both 46px and fully visible (camera y=645–691); the optional sample action is y=699–745, 5px beyond the viewport. The sheet has 120px scroll range; scrolling 6px brings the full button to y=693–739. This is a minor optional-action first-fold miss, not a blocked primary path.
+- The focused date-recheck Axe test passed in light and dark with zero violations. Current browser has zero JavaScript errors, one existing deprecated Apple web-app meta warning, and no `/api/` request during this guest flow. No camera, photo chooser, sample OCR, date edit/save, consumption, or shopping action was activated. Physical-device safe-area and VoiceOver/TalkBack remain unverified.
+- Accepted screenshots: `88-date-flow-home-393-dark-current.png`, `89-date-flow-spinach-detail-393-dark-current.png`, `90-date-review-393-dark-current.png`, `91-date-review-320-dark-current.png`, and `92-date-review-320-dark-sample-revealed.png`.
+
+## Light-mode mobile date-review path — 2026-09-28
+
+- Replayed the same approved Home → spinach detail → printed-date recheck path in light mode at 393×852, then checked the date-recheck first fold at 320×740. The existing-date/source block, warning, and button order remain the same as dark mode; the blue camera action, outlined photo action, and coral-neutral guidance remain visually distinct. No copy or behavior change was needed in this pass.
+- At 320px, the two-line persistence description and date-meaning note remain readable; the 46px camera/photo actions are fully visible at y=645–691. The optional 46px sample action starts at y=699 and ends at y=745; a 6px scroll reveals it fully without moving the sheet header. Axe coverage for this sheet in both themes passed in the focused test.
+- Accepted current-run captures: `93-date-flow-home-393-light-current.png`, `94-date-flow-spinach-detail-393-light-current.png`, `95-date-review-393-light-current.png`, `96-date-review-320-light-current.png`, and `97-date-review-320-light-sample-revealed.png`. Browser is restored to Home at 393×852 dark; no camera, photo, OCR, save, or consume action was used.
+
+## Home date rollover freshness — 2026-09-29
+
+- After the local date changed to Tuesday, September 29, the already-open Home showed `화요일, 9월 29`; browser `Date` and the visible eyebrow agreed in `Asia/Seoul`. No stale-date UI defect was found. `Prototype.tsx` already refreshes `currentDate` every 60 seconds.
+- Added a timezone-aware native clock regression: starting at 23:59:30 on Monday September 28, advancing through the next minute changes the visible Home label to Tuesday September 29 without reloading. The focused test passed.
+- Accepted readback: `evidence/meal-plan-flow-review-2026-09-28/100-home-393-dark-date-rollover-2026-09-29.png`. Protected runtime integrity passed (28 files), production build passed (770 modules), and `git diff --check` passed. No inventory or date record was changed.
+
+## 320px date-review sample action fit — 2026-09-28
+
+- The current light/dark first-fold screenshots showed the optional `샘플 라벨 인식` action ending at y=745 in a 740px viewport. The primary camera/photo actions already fit at 46px, and the date-meaning guidance is essential, so only a small gap change was warranted.
+- Reduced the grid gap from 8px to 6px only inside the 320px existing-food label recheck panel (`.input-flow:has(.capture-date-meaning-note)`). Copy, 12px safety guidance, and action sizes are unchanged; other intake modes and wider screens keep their spacing.
+- At 320×740 in both themes, camera/photo remain y=637–683 and the optional 46px sample button now sits at y=689–735 with 5px bottom clearance and `scrollTop=0`. Screenshots `98-date-review-320-dark-sample-fit-after.png` and `99-date-review-320-light-sample-fit-after.png` were visually inspected.
+- The focused native regression passed in light and dark. Protected runtime integrity passed for 28 files and production build passed (770 modules). The app returned to Home at 393×852 dark; no input file, camera, OCR, date save, or consume action was triggered.
+
+## 320px light date-sheet focus return — 2026-09-29
+
+- Replayed Home → spinach detail → date recheck at 320×740 light and closed the sheet without saving. Focus returned to `포장지에서 날짜 다시 확인` inside the detail sheet; the existing `2026.09.02` printed date remained visible and unchanged, and the trigger stayed within the device screen bounds.
+- Added a focused native viewport regression for this exact width/theme/route. It passed; no app source behavior change was needed.
+- Accepted focus-return capture: `evidence/meal-plan-flow-review-2026-09-28/101-spinach-detail-320-light-focus-return.png`. The preview is restored to Home at 393×852 dark. Camera, photo, OCR, date mutation, save, and consume actions were not activated.
+
+## 320px light/dark date-action focus visibility — 2026-09-29
+
+- The 320px keyboard return check confirmed focus reached the right date-recheck trigger but its visible ring was suppressed by the protected device-screen runtime's `outline: 0 !important` and `box-shadow: none !important` rules.
+- Added a narrowly scoped `:focus-visible` treatment to that trigger in the app-owned stylesheet: a theme-aware 2px pistachio/blue border plus a subtle matching surface tint. No protected runtime file or date flow behavior changed.
+- The native regression passed in both light and dark at 320×740. After 16 Tab presses and Escape, focus returns to `포장지에서 날짜 다시 확인`; computed focus is visible, border is solid 2px, differs from the resting border, and has at least 3:1 contrast against the focused surface. The stored printed date remains unchanged.
+- Captures `evidence/meal-plan-flow-review-2026-09-28/102-date-action-focus-visible-320-light-after.png` and `103-date-action-focus-visible-320-dark-after.png` were inspected. The preview was restored to Home at 393×852 dark (`104-home-393-dark-focus-audit-restored.png`); current date reads `화요일, 9월 29`.
+- `npm run build` passed, including the protected runtime check (28 files) and Vite build (770 modules); `git diff --check` passed. Browser readback reports zero errors, one existing deprecated Apple web-app meta warning, and no `/api/` requests. No camera, photo, OCR, date save, consumption, or shopping action was activated. Physical keyboard, VoiceOver/TalkBack, and device safe-area acceptance remain separate checks.

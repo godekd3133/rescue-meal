@@ -2055,7 +2055,7 @@ export default function AddFoodSheet({
         </ol>
       </div> : null}
 
-      <div className="mode-tabpanel" id={`add-mode-panel-${mode}`} role="tabpanel" aria-labelledby={`add-mode-tab-${mode}`} tabIndex={0}>
+      <div className="mode-tabpanel" id={`add-mode-panel-${mode}`} role="tabpanel" aria-labelledby={`add-mode-tab-${mode}`} tabIndex={initialLabelTargetFoodId && mode === "label" ? -1 : 0}>
       {mode === "receipt" ? (
         cameraTarget === "receipt" ? (
           <CameraCapture title="영수증" detail="영수증 전체가 보이도록 맞춰 주세요." onFile={(file) => { setCameraTarget(null); void handleReceiptFile(file); }} onCancel={() => setCameraTarget(null)} />

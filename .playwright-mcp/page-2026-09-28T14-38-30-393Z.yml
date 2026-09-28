@@ -1,0 +1,288 @@
+- generic:
+  - generic:
+    - generic:
+      - generic:
+        - generic:
+          - generic:
+            - generic:
+              - generic [aria-hidden]:
+                - generic:
+                  - generic:
+                    - generic:
+                      - main:
+                        - generic:
+                          - img:
+                            - generic [aria-hidden]: rescue meal
+                          - generic:
+                            - button:
+                              - generic: 게스트
+                            - button
+                            - button:
+                              - generic [aria-hidden]: "3"
+                        - generic:
+                          - region:
+                            - generic:
+                              - paragraph: 월요일, 9월 28
+                              - heading [level=1]:
+                                - text: 냉장고에
+                                - emphasis: 뭐가 남았지?
+                              - paragraph: 있는 재료로 오늘 한 끼를 준비해요.
+                        - region:
+                          - generic:
+                            - generic:
+                              - heading [level=2]:
+                                - text: 먼저 살펴볼 식품
+                                - generic: 3개
+                            - button: 전체 식품 보기
+                          - generic:
+                            - generic:
+                              - generic: 날짜와 보관 방법을 더 살펴보려면 식품을 열어 주세요.
+                              - button:
+                                - generic:
+                                  - generic:
+                                    - strong: 시금치
+                                  - generic: 국내산 시금치 · 1팩
+                                  - generic:
+                                    - generic: 냉장
+                                    - generic: 포장 소비기한
+                                - generic:
+                                  - generic: 날짜 확인
+                                  - strong: 9월 2일
+                              - button:
+                                - generic:
+                                  - generic:
+                                    - strong: 국산콩 두부
+                                  - generic: 풀무원 · 1모
+                                  - generic:
+                                    - generic: 냉장
+                                    - generic: 먼저 살펴볼 시점
+                                - generic:
+                                  - generic: 먼저 살펴보기
+                                  - strong: 9월 4일
+                              - button:
+                                - generic:
+                                  - generic:
+                                    - strong: 닭가슴살
+                                  - generic: 무항생제 닭가슴살 · 2팩
+                                  - generic:
+                                    - generic: 냉동
+                                    - generic: 내가 확인한 날짜
+                                - generic:
+                                  - generic: 먼저 살펴보기
+                                  - strong: 9월 6일
+                          - generic:
+                            - button:
+                              - generic:
+                                - strong: 오늘 식단 만들기
+                            - button:
+                              - generic:
+                                - strong: 추가
+                        - button:
+                          - generic:
+                            - strong: 포장지 날짜를 살펴볼 식품 2개
+                        - button:
+                          - generic:
+                            - generic: 장보기
+                            - strong: 장보기 목록은 비어 있어요
+                            - generic: 식단에서 재료를 담거나 직접 추가해 보세요.
+                        - region:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - paragraph: 내 식품 목록
+                                - heading [level=2]: 내 식품 목록 7
+                              - generic:
+                                - button:
+                                  - generic: 추가
+                                - generic:
+                                  - generic: 보관 위치 필터
+                                  - combobox
+                            - generic:
+                              - searchbox
+                            - group:
+                              - button [pressed]:
+                                - text: 전체
+                                - generic: "7"
+                              - button:
+                                - text: 날짜·보관 확인
+                                - generic: "2"
+                              - button:
+                                - text: 먼저 살펴보기
+                                - generic: "3"
+                            - generic:
+                              - generic: 날짜·보관을 살펴볼 식품 2개
+                              - generic: 포장지 날짜와 보관 방법을 살펴봐 주세요
+                          - generic:
+                            - button:
+                              - generic:
+                                - strong: 시금치
+                                - generic: 국내산 시금치 · 1팩
+                                - generic: 냉장 · 포장지 표시
+                              - generic:
+                                - generic:
+                                  - generic: 날짜 확인
+                                  - generic: 조리 전 날짜 확인 · 9월 2일
+                            - button:
+                              - generic:
+                                - strong: 국산콩 두부
+                                - generic: 풀무원 · 1모
+                                - generic: 냉장 · 먼저 살펴볼 시점
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic: 먼저 살펴보기
+                                    - generic: ·
+                                    - text: 9월 4일
+                            - button:
+                              - generic:
+                                - strong: 닭가슴살
+                                - generic: 무항생제 닭가슴살 · 2팩
+                                - generic: 냉동 · 내가 확인
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic: 먼저 살펴보기
+                                    - generic: ·
+                                    - text: 9월 6일
+                            - button:
+                              - generic:
+                                - strong: 맛타리버섯
+                                - generic: 국내산 맛타리 · 2팩
+                                - generic: 냉장 · 먼저 살펴볼 시점
+                              - generic: 9월 5일
+                            - button:
+                              - generic:
+                                - strong: 동물복지 달걀
+                                - generic: 10구 · 1판
+                                - generic: 냉장 · 포장지 표시
+                              - generic:
+                                - generic:
+                                  - generic: 날짜 확인
+                                  - generic: 조리 전 날짜 확인 · 9월 9일
+                            - button:
+                              - generic:
+                                - strong: 저지방 우유
+                                - generic: 900ml · 1개
+                                - generic: 냉장 · 먼저 살펴볼 시점
+                              - generic: 9월 6일
+                            - button:
+                              - generic:
+                                - strong: 대추방울토마토
+                                - generic: 국내산 · 1팩
+                                - generic: 실온 · 먼저 살펴볼 시점
+                              - generic: 9월 6일
+                        - status:
+                          - generic:
+                            - generic:
+                              - strong: 앱처럼 더 편하게 써요
+                              - generic: 장보기 직후에도 빠르게 열고 기록을 이어가요.
+                            - button: 설치하기
+                            - button
+                        - paragraph: Rescue Meal은 기록을 돕는 생활 도구예요.
+                - navigation:
+                  - button:
+                    - generic: 홈
+                  - button:
+                    - generic: 식품
+                  - button:
+                    - generic: 식단
+              - dialog "날짜 다시 살펴보기":
+                - generic [aria-hidden]:
+                  - heading [level=2]: 날짜 다시 살펴보기
+                  - paragraph: 시금치의 포장지 날짜를 확인해요. 저장 전까지 기록은 그대로예요.
+                  - button
+                - generic:
+                  - generic:
+                    - tablist [aria-hidden]:
+                      - tab:
+                        - text: 영수증
+                        - generic [aria-hidden]: 추천
+                      - tab: 바코드
+                      - tab [selected]: 라벨
+                      - tab: 직접 입력
+                    - group [aria-hidden]:
+                      - generic: 현재 기록
+                      - strong: 포장 소비기한 · 2026.09.02 · 포장지 표시
+                    - status:
+                      - strong: 라벨
+                      - generic: ·포장지 날짜를 사진으로 읽어 기록해요.
+                    - group [aria-hidden]:
+                      - generic:
+                        - generic:
+                          - strong: 날짜가 보이는 면을 선택해요
+                          - generic: 살펴본 내용만 식품 기록에 저장돼요.
+                        - emphasis: 1/3
+                      - list:
+                        - listitem:
+                          - generic: "1"
+                          - generic: 입력
+                        - listitem:
+                          - generic: "2"
+                          - generic: 살펴보기
+                        - listitem:
+                          - generic: "3"
+                          - generic: 저장
+                    - tabpanel [aria-hidden]:
+                      - generic:
+                        - heading [level=3]: 포장지 날짜를 읽어볼게요
+                        - paragraph: 날짜가 보이는 면을 촬영하거나 사진을 선택하면 포장지의 날짜를 읽어드려요.
+                        - note:
+                          - generic:
+                            - strong: 읽은 날짜를 포장지에서 확인해 주세요.
+                            - generic: 날짜가 무엇을 뜻하는지 확인하기 전에는 소비기한으로 저장하지 않아요.
+                        - group:
+                          - button: 카메라로 촬영
+                          - generic:
+                            - generic: 사진 선택
+                            - button
+                        - button: 샘플 라벨 인식
+              - dialog [ref=f1e697]:
+                - generic [ref=f1e700]:
+                  - heading "시금치" [level=2] [ref=f1e701]
+                  - button "닫기" [ref=f1e702]
+                - generic [ref=f1e706]:
+                  - generic [ref=f1e709]:
+                    - group "보관 및 개봉 상태" [ref=f1e710]:
+                      - generic [ref=f1e711]: 냉장 보관 중
+                      - generic [ref=f1e712]: 개봉 상태 · 개봉됨
+                    - heading "시금치" [level=3] [ref=f1e713]
+                    - paragraph [ref=f1e714]: 국내산 시금치 · 남은 1팩
+                  - 'group "날짜 정보: 포장 소비기한" [ref=f1e715]':
+                    - generic [ref=f1e719]:
+                      - generic [ref=f1e720]: 포장 소비기한
+                      - strong [ref=f1e721]: 2026.09.02
+                      - generic [ref=f1e722]: 포장지 표시
+                    - button "날짜 안내 보기" [ref=f1e723]
+                  - status [ref=f1e726]:
+                    - generic [ref=f1e730]:
+                      - strong [ref=f1e731]: 조리 전에 포장지 날짜를 살펴봐 주세요
+                      - generic [ref=f1e732]: 표시 날짜가 오늘이거나 지났어요. 포장지 날짜와 보관·개봉 상태를 다시 살펴봐 주세요.
+                    - button "포장지에서 날짜 다시 확인" [active] [ref=f1e733]:
+                      - generic [ref=f1e736]: 날짜 다시 확인
+                  - button "상품 정보 수정 상품명이 다르면 직접 고칠 수 있어요." [ref=f1e737]:
+                    - generic [ref=f1e740]:
+                      - strong [ref=f1e741]: 상품 정보 수정
+                      - generic [ref=f1e742]: 상품명이 다르면 직접 고칠 수 있어요.
+                  - generic [ref=f1e745]:
+                    - note [ref=f1e746]:
+                      - strong [ref=f1e747]: 먹은 기록 안내
+                      - generic [ref=f1e748]: 이미 먹은 경우에만 기록해 주세요. 먹어도 되는지는 앱에서 판단할 수 없어요.
+                    - group "식품 기록 행동" [ref=f1e749]:
+                      - button "날짜와 보관 방법을 살펴본 뒤 먹은 기록 남기기" [ref=f1e750]: 먹은 기록 남기기
+                    - note [ref=f1e753]: 보관 위치나 개봉 여부를 바꾼 뒤 저장할 수 있어요.
+                  - group "폐기" [ref=f1e756]:
+                    - text: 폐기
+                    - button "상태가 이상해 폐기하기" [ref=f1e757]
+                  - generic [ref=f1e760]:
+                    - generic [ref=f1e761]:
+                      - generic [ref=f1e762]: 보관 위치
+                      - generic [ref=f1e765]: 냉장에 보관 중
+                    - group "보관 위치 선택" [ref=f1e766]:
+                      - button "냉장" [pressed] [ref=f1e767]
+                      - button "냉동" [ref=f1e771]
+                      - button "실온" [ref=f1e773]
+                  - generic [ref=f1e775]:
+                    - generic [ref=f1e779]:
+                      - strong [ref=f1e780]: 개봉했어요
+                      - generic [ref=f1e781]: 개봉 기록은 되돌릴 수 없어요.
+                    - switch "시금치 개봉 상태" [checked] [disabled] [ref=f1e782]

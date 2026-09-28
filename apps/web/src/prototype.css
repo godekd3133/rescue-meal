@@ -16591,6 +16591,14 @@ html[data-rescue-theme="dark"] .meal-home .connection-offline-old {
   background: color-mix(in srgb, var(--atelier-amber) 12%, var(--sheet-surface));
 }
 
+/* The simulator runtime suppresses native outlines inside the device screen.
+   Keep keyboard focus visible on the safety-critical date recheck action with
+   a theme-aware accent border instead of relying on outline or box-shadow. */
+.bottom-sheet .date-review-callout-compact > .date-edit-button-compact:focus-visible {
+  border-color: var(--atelier-pistachio);
+  background: color-mix(in srgb, var(--atelier-pistachio) 8%, var(--sheet-surface));
+}
+
 .bottom-sheet .detail-section-pending {
   border-color: color-mix(in srgb, var(--atelier-pistachio) 36%, var(--sheet-border));
   background: color-mix(in srgb, var(--atelier-pistachio) 5%, var(--sheet-surface));
@@ -17847,6 +17855,12 @@ html[data-rescue-theme="dark"] .bottom-sheet .recipe-completed-sync-note[data-sy
 }
 
 @media (max-width: 360px) {
+  .bottom-sheet .add-sheet-content-date-recheck .input-flow:has(.capture-date-meaning-note) {
+    gap: 6px;
+  }
+}
+
+@media (max-width: 360px) {
   /* Failure recovery must expose the reason, not truncate it to a one-line
      product label. Let the dead-letter row stack readable copy while the
      retry control keeps its independent touch target. */
@@ -18228,16 +18242,25 @@ html[data-rescue-theme="dark"] .bottom-sheet .recipe-completed-sync-note[data-sy
   .app-shell-web .shopping-summary-empty-help,
   .app-shell-preview .shopping-summary-empty-help,
   .app-shell-native .shopping-summary-empty-help {
-    position: absolute;
-    width: 1px;
-    height: 1px;
+    position: static;
+    width: auto;
+    height: auto;
     padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
+    margin: 0;
+    overflow: visible;
+    clip: auto;
+    font-size: 11px;
+    line-height: 1.35;
+    text-overflow: clip;
+    white-space: normal;
     border: 0;
   }
+}
+
+html[data-rescue-theme="light"] .app-shell-web .shopping-summary-empty-help,
+html[data-rescue-theme="light"] .app-shell-preview .shopping-summary-empty-help,
+html[data-rescue-theme="light"] .app-shell-native .shopping-summary-empty-help {
+  color: #4e5968;
 }
 
 /* Keep the warning state prominent, but expose the reason/date and storage
@@ -19923,4 +19946,35 @@ html[data-rescue-theme="light"] .app-shell-native .meal-home .priority-card .foo
 html[data-rescue-theme="light"] .app-shell-preview .meal-home .priority-card .date-source:not(.date-source-warning),
 html[data-rescue-theme="light"] .app-shell-native .meal-home .priority-card .date-source:not(.date-source-warning) {
   color: #4e5968;
+}
+
+/* The protected device shell deliberately clears native outlines and shadows.
+   Recreate a consistent, high-contrast keyboard ring for the reviewed date path. */
+.meal-home .priority-card,
+.bottom-sheet .date-proof-card > button,
+.bottom-sheet .capture-action-camera,
+.bottom-sheet .capture-sample-button,
+.bottom-sheet .date-review-callout-compact > .date-edit-button-compact {
+  position: relative;
+}
+
+.meal-home .priority-card:focus-visible::after,
+.bottom-sheet .date-proof-card > button:focus-visible::after,
+.bottom-sheet .sheet-close-button:focus-visible::after,
+.bottom-sheet .capture-action-camera:focus-visible::after,
+.bottom-sheet .capture-sample-button:focus-visible::after,
+.bottom-sheet .file-button:has(input[type="file"]:focus-visible)::after,
+.bottom-sheet .date-review-callout-compact > .date-edit-button-compact:focus-visible::after {
+  position: absolute;
+  z-index: 1;
+  inset: -4px;
+  border: 2px solid var(--atelier-pistachio);
+  border-radius: inherit;
+  content: "";
+  pointer-events: none;
+}
+
+.bottom-sheet .file-button:has(input[type="file"]:focus-visible) {
+  outline: 2px solid var(--atelier-pistachio);
+  outline-offset: 3px;
 }

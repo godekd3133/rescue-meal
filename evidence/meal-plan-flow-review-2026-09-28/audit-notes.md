@@ -129,3 +129,61 @@ Review the native guest/demo route Home → today’s meal preview → safety an
 - 320×740 rows are 57–58px; the meal action remains fully visible and the document width remains 320px. 393×852 rows are 65–66px with no horizontal overflow. Captures `76-home-320-light-metadata-readable-2026-09-28.png`, `77-home-320-dark-metadata-readable-2026-09-28.png`, `78-home-393-dark-metadata-readable-2026-09-28.png`, and `79-home-393-light-metadata-readable-2026-09-28.png` were saved and inspected.
 - The native readability regression passed at 320px and 393px in both themes (4 combinations); the focused safe-area regression passed; the Home Axe scan passed with zero violations. Production build and protected-runtime checks passed, and `git diff --check` was clean.
 - Final preview is restored to Home at 393×852 dark (`80-home-393-dark-mobile-handoff-2026-09-28.png`). Browser reported zero JavaScript errors and one existing deprecated Apple web-app meta warning. No other route or data-changing action was used; physical-device safe-area and VoiceOver/TalkBack remain unverified.
+
+## Home shopping empty state — 2026-09-28
+
+1. **Home, 393×852 dark and 320×740 light/dark — needs a visible next step.** The empty shopping button included guidance in its accessible name, but the mobile stylesheet clipped `.shopping-summary-empty-help` to a 1×1px absolutely positioned element. The card showed only `장보기 목록은 비어 있어요`; sighted users did not see how to add items. See current-run baseline captures `81`, `82`, and `83`.
+2. **Home, after copy/layout refinement — healthy.** The visible helper now says `식단에서 재료를 담거나 직접 추가해 보세요.` at 11px, one line across 320/393px. At 320px the card grows from 50px to 68px but remains 52px above the fixed nav; the primary meal action remains fully visible. At 393px there is 126px between the card and nav. See `84`–`87`.
+
+- KakaoPay was used as a principle-level comparator: keep main information distinct from its support, check graphic/text contrast, and provide clear and transparent service information ([design article](https://story.kakaopay.com/225-kakaopay-design/), [consumer protection charter](https://www.kakaopay.com/qna/consumer/consumer_protection)). Its logo, icons, typography, and palette were not copied.
+- Five Home-only native viewport tests passed, including 320/393px in light/dark, one-line helper fit, 44px-class action spacing, current CTA/list order, and safe-area surface. The scoped Home Axe scan passed. This does not prove VoiceOver/TalkBack or physical-device safe-area behavior.
+- The summary row was never opened, so no shopping item was added or changed; no food or consumption record was touched. Final preview remains Home at 393×852 dark. The current preview reports zero JavaScript errors and one existing deprecated Apple web-app meta warning.
+
+## Home → food detail → date recheck — 2026-09-28
+
+1. **Home, 393×852 dark — healthy.** Three priority foods and a separate two-item date/storage review summary are visible. The spinach row includes its source (`포장 소비기한`), date, and `날짜 확인` action. See `88-date-flow-home-393-dark-current.png`.
+2. **Spinach detail, 393×852 dark — healthy.** The screen shows the exact printed date (`2026.09.02`), source, refrigerated/opened state, and a neutral message that the date is today or past. It asks the user to recheck the package date and storage/opened state without claiming food safety. The date recheck action is 44px. See `89-date-flow-spinach-detail-393-dark-current.png`.
+3. **Date recheck, 393×852 dark — healthy.** The existing date/source is repeated before intake. Header copy says the current record stays unchanged until save; the label note asks the user to verify date meaning before storing it as a use-by date. Camera, photo, and optional sample actions are visible. See `90-date-review-393-dark-current.png`.
+4. **Date recheck, 320×740 dark — primary actions healthy; optional sample needs a small scroll.** Camera and photo actions are 46px and fully visible. The sample button extends 5px below the initial viewport, but a 6px scroll reveals the whole 46px action; the sheet has 120px of scroll range. See `91-date-review-320-dark-current.png` and `92-date-review-320-dark-sample-revealed.png`.
+
+- The focused Axe scan passed on the recheck sheet in light and dark with zero violations; this is not a substitute for VoiceOver/TalkBack or device testing.
+- The guest flow made no `/api/` request and did not open the camera, photo chooser, sample OCR, date save, consume, or shopping action. Browser readback found zero JavaScript errors and one existing deprecated Apple web-app meta warning. Physical-device safe-area behavior remains unverified.
+
+## Light-mode Home → food detail → date recheck — 2026-09-28
+
+1. **Home, 393×852 light — healthy.** The review-count shortcut is visually distinct from the primary meal action, and the priority rows preserve date source and review labels. See `93-date-flow-home-393-light-current.png`.
+2. **Spinach detail, 393×852 light — healthy.** The printed date/source and refrigerated/opened state appear before the action; the warning asks for a package check and does not label the food safe or unsafe. See `94-date-flow-spinach-detail-393-light-current.png`.
+3. **Date recheck, 393×852 light — healthy.** The sheet repeats the current record, says it remains unchanged until saving, and tells the user to confirm what the label date means before storing it as a use-by date. Camera and photo actions are both visible. See `95-date-review-393-light-current.png`.
+4. **Date recheck, 320×740 light — primary actions healthy; optional sample needs a small scroll.** The helper and date-meaning note wrap to two lines, while the 46px camera/photo actions stay fully visible. The sample button extends to y=745; scrolling 6px brings it to y=693–739. See `96-date-review-320-light-current.png` and `97-date-review-320-light-sample-revealed.png`.
+
+- Dark/light date-recheck Axe coverage passed with zero violations. The visual audit is screenshot/DOM evidence only; it does not prove actual device safe-area, screen-reader, or camera behavior.
+- No source code changed in this light-mode comparison. No camera, photo chooser, sample OCR, date edit/save, consumption, or shopping action was activated. Final browser state is Home at 393×852 dark.
+
+## Local-date rollover readback — 2026-09-29
+
+- At 00:05 Asia/Seoul, the loaded Home showed `화요일, 9월 29`, matching the browser's local `Date`; no stale `월요일, 9월 28` header remained. The app's current-date refresh is already scheduled every 60 seconds.
+- Added and passed a native regression that starts at 23:59:30 local time and verifies the Home eyebrow changes from Monday, September 28 to Tuesday, September 29 after advancing through midnight without a reload.
+- Screenshot: `100-home-393-dark-date-rollover-2026-09-29.png`. Build and protected-runtime checks passed. No data-changing action was performed.
+
+## Optional sample action first-fold fit — 2026-09-28
+
+1. **Date recheck, 320×740 dark — improved.** Before the spacing change, the 46px sample button ended at y=745 while the camera/photo buttons were fully visible. After reducing only the existing-food label recheck panel's repeated gap from 8px to 6px, camera/photo sit at y=637–683 and sample sits at y=689–735, leaving 5px at the viewport edge.
+2. **Date recheck, 320×740 light — improved.** Same geometry and 5px clearance; safety copy and button labels retain their original size. No horizontal overflow or scroll is needed to expose any of the three label actions.
+
+- Current-run after captures were saved and inspected: `98-date-review-320-dark-sample-fit-after.png` and `99-date-review-320-light-sample-fit-after.png`.
+- The dedicated native regression passed for both themes, asserting all three actions remain at least 43.5px high and fully within the 320×740 viewport. `npm run build` passed with 770 modules and the protected runtime check passed (28 files).
+- The modal was closed without saving; no camera, photo chooser, sample OCR, date edit, or consumption action ran. The app is restored to Home at 393×852 dark. Physical-device safe-area and VoiceOver/TalkBack remain unverified.
+
+## 320px light date-sheet focus return — 2026-09-29
+
+1. **Home → spinach detail → date recheck — healthy.** At 320×740 light, the detail still shows the existing printed date/source and the recheck button. Closing the recheck sheet returns focus to that same button; the date remains `2026.09.02`. The focused trigger is within the device screen bounds.
+
+- Added and passed a focused native Playwright regression for this exact light/320 route. Screenshot `101-spinach-detail-320-light-focus-return.png` captures the returned focus state. No camera, photo chooser, OCR, save, or consumption action was performed; physical keyboard and assistive-technology behavior remain separate acceptance checks.
+
+## 320px light/dark date-action focus visibility — 2026-09-29
+
+1. **Keyboard return target — improved.** In both themes at 320×740, dismissing the date-recheck sheet with Escape restores keyboard focus to `포장지에서 날짜 다시 확인`. The stored printed date stays `2026.09.02`; no camera, photo, OCR, or save action runs.
+2. **Visible location cue — improved.** The shared native runtime suppresses outlines and box shadows inside the device screen, so focus returned without a perceivable ring. A scoped, theme-aware 2px blue/pistachio border and subtle tint now identify the focused trigger. The focused border is solid, distinct from rest, and passes the 3:1 non-text focus contrast threshold in both themes.
+
+- Native Playwright regression passed for light and dark. Screenshots `102-date-action-focus-visible-320-light-after.png` and `103-date-action-focus-visible-320-dark-after.png` were saved and visually reviewed; `104-home-393-dark-focus-audit-restored.png` records the restored 393×852 dark Home handoff.
+- Build passed (protected runtime check: 28 files; Vite: 770 modules), and `git diff --check` passed. Current guest preview has zero JavaScript errors, one existing deprecated Apple web-app meta warning, and no `/api/` requests. Focus behavior on a physical keyboard, VoiceOver/TalkBack, and device safe-area behavior remain unverified.

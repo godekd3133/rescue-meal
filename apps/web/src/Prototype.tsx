@@ -2848,7 +2848,7 @@ function PrototypeContent() {
       ? shoppingRemainingCount > 0
         ? `${shoppingCompletedCount}개 구매 완료 · ${shoppingOriginLabel}`
         : `${shoppingCompletedCount}개 구매 완료 · 재고에 반영해 주세요 · ${shoppingOriginLabel}`
-      : "식단에서 부족한 재료를 담거나 필요한 물건을 직접 추가해 보세요.";
+      : "식단에서 재료를 담거나 직접 추가해 보세요.";
   const shoppingSummaryIsEmpty = !shoppingList.length && shoppingListStatus !== "loading" && shoppingListStatus !== "error";
   const showShoppingSummary = !mealApi.isConfigured || (connectionState === "connected" && shoppingListStatus !== "idle");
 
