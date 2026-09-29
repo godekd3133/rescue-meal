@@ -19,6 +19,7 @@ import {
   MoonIcon,
   PlusIcon,
   ReaderIcon,
+  ReloadIcon,
   SewingPinIcon,
   SunIcon,
   UploadIcon,
@@ -38,6 +39,7 @@ import { clearCompletedOutboxHandoff } from "./completedOutboxHandoff";
 import { runAuthoritativeMutation } from "./mutationReadback";
 import { runStorageMutationRecovery } from "./storageMutationRecovery";
 import { getDateBadge, getInventoryDateOriginLabel } from "./datePresentation";
+import { getHomeReviewTopicLabel } from "./homeReviewSummary";
 
 export type StorageType = "냉장" | "냉동" | "실온";
 type InventoryStorageFilter = StorageType | "전체" | `location:${string}`;
@@ -2132,9 +2134,7 @@ function PrototypeContent() {
       if (reason === "보관 방법 확인") topics.add("storage");
       else topics.add("date");
     });
-    if (topics.has("date") && topics.has("storage")) return "날짜와 보관 방법을";
-    if (topics.has("storage")) return "보관 방법을";
-    return "포장지 날짜를";
+    return getHomeReviewTopicLabel(topics);
   }, [currentDate, inventoryNeedsReviewFoods]);
   const homeTrustTitle = inventoryNeedsReviewCount
     ? `${inventoryReviewTopicLabel} 살펴볼 식품 ${inventoryNeedsReviewCount}개`
@@ -2196,7 +2196,8 @@ function PrototypeContent() {
   const priorityDataStatusDescription = connectionState === "offline" ? "연결되면 먼저 살펴볼 식품을 보여드려요." : inventoryDataStatusDescription;
   const inventoryListStatusLabel = connectionState === "offline" ? "인터넷에 연결되지 않았어요" : inventoryDataStatusLabel;
   const inventoryListStatusDescription = connectionState === "offline" ? "다시 연결하면 식품 목록을 불러올 수 있어요." : inventoryDataStatusDescription;
-  const mealPlanStatusDescription = connectionState === "offline" ? "다시 연결한 뒤 식단을 만들 수 있어요." : inventoryDataStatusDescription;
+  const mealPlanStatusDescription = connectionState === "offline" ? "최신 재고를 불러온 뒤 식단을 만들 수 있어요." : inventoryDataStatusDescription;
+  const demoOfflineFixturePreview = mealApi.deploymentMode === "demo" && connectionState === "offline" && !dashboardStaleAt && foods.length > 0;
   const priorityHeadingAccessibleName = inventoryDataUnknown
     ? priorityDataStatusLabel
     : connectionState === "offline" && dashboardStaleAt
@@ -2839,9 +2840,9 @@ function PrototypeContent() {
       ? "장보기 목록을 다시 확인해요"
       : shoppingRemainingCount > 0
         ? `장보기 ${shoppingRemainingCount}개가 남아 있어요`
-        : shoppingList.length
-          ? "모두 구매했어요 · 재고 반영 전"
-          : "장보기 목록은 비어 있어요";
+      : shoppingList.length
+        ? "모두 구매했어요 · 재고 반영 전"
+          : "아직 담은 재료가 없어요";
   const shoppingSummaryDescription = shoppingListStatus === "error"
     ? "탭해서 다시 동기화해 주세요."
     : shoppingList.length
@@ -5203,8 +5204,7 @@ function PrototypeContent() {
           {connectionState === "offline" ? (
             <div className="connection-retry-callout" role="alert">
               <InfoCircledIcon width={17} height={17} />
-              <span><strong>인터넷에 연결되지 않았어요</strong><small>{dashboardStaleAt ? `마지막으로 불러온 식품(${formatDashboardCacheTime(dashboardStaleAt)})을 보여드려요. 지금은 내용을 바꿀 수 없어요.` : "식품 목록을 불러오지 못했어요."} 연결되면 다시 불러와 주세요.</small></span>
-              <button type="button" onClick={retryConnection}>다시 연결</button>
+              <span><strong>{demoOfflineFixturePreview ? "예시 식품 미리보기" : "인터넷에 연결되지 않았어요"}</strong><small>{demoOfflineFixturePreview ? "실제 기록은 불러오지 못했어요. 연결하면 최신 재고를 확인할 수 있어요." : dashboardStaleAt ? `마지막으로 불러온 식품(${formatDashboardCacheTime(dashboardStaleAt)})을 보여드려요. 기록은 지금 수정할 수 없어요.` : "식품 목록을 불러오지 못했어요."}</small></span>
             </div>
           ) : null}
           {connectionState === "connected" && receiptSummariesStatus === "ready" && latestPendingReceipt ? (
@@ -5306,8 +5306,8 @@ function PrototypeContent() {
 
             <div className={`home-action-row${foods.length ? " home-action-row-with-add" : ""}`}>
               <button className="meal-plan-button" type="button" disabled={inventoryDataUnknown && connectionState === "checking"} onClick={() => inventoryDataUnknown ? connectionState === "auth_required" ? changeSheet("account") : retryConnection() : connectionState === "auth_required" ? changeSheet("account") : connectionState === "offline" ? retryConnection() : foods.length ? openMealPlan() : openAdd("receipt")}>
-                <span className="meal-plan-icon"><LightningBoltIcon width={17} height={17} /></span>
-                <span><strong>{inventoryDataUnknown ? connectionState === "auth_required" ? "다시 로그인하기" : connectionState === "checking" ? "기록을 불러오는 중" : "다시 연결하기" : connectionState === "auth_required" ? "다시 로그인하기" : connectionState === "offline" ? "다시 연결해 식단 보기" : foods.length ? "오늘 식단 만들기" : "식품 추가하기"}</strong><small>{inventoryDataUnknown ? mealPlanStatusDescription : connectionState === "auth_required" ? "기록을 이어서 볼 수 있어요." : connectionState === "offline" ? "인터넷에 연결한 뒤 식단을 만들 수 있어요." : currentMealPlanHint}</small></span>
+                <span className="meal-plan-icon">{connectionState === "offline" ? <ReloadIcon width={17} height={17} /> : <LightningBoltIcon width={17} height={17} />}</span>
+                <span><strong>{inventoryDataUnknown ? connectionState === "auth_required" ? "다시 로그인하기" : connectionState === "checking" ? "기록을 불러오는 중" : "다시 연결하기" : connectionState === "auth_required" ? "다시 로그인하기" : connectionState === "offline" ? "최신 재고 불러오기" : foods.length ? "오늘 식단 만들기" : "식품 추가하기"}</strong><small>{inventoryDataUnknown ? mealPlanStatusDescription : connectionState === "auth_required" ? "기록을 이어서 볼 수 있어요." : connectionState === "offline" ? mealPlanStatusDescription : currentMealPlanHint}</small></span>
                 <ArrowRightIcon width={18} height={18} />
               </button>
               {homeAddFoodAction}
@@ -5330,7 +5330,7 @@ function PrototypeContent() {
           <button
             className="trust-card"
             data-trust-state={inventoryNeedsReviewCount ? "needs-review" : "neutral"}
-            aria-label={`${homeTrustTitle}. ${homeTrustDescription}. ${inventoryNeedsReviewCount ? "식품 목록 보기" : "날짜 안내 보기"}`}
+            aria-label={`${homeTrustTitle}. ${homeTrustDescription} ${inventoryNeedsReviewCount ? "확인할 식품 목록 보기" : "날짜 안내 보기"}`}
             style={!IS_WEB_SURFACE ? { marginTop: 9 } : undefined}
             type="button"
             onClick={() => inventoryNeedsReviewCount ? openNeedsReviewInventory() : openGuidanceSheet()}
@@ -5341,12 +5341,12 @@ function PrototypeContent() {
           </button>
 
           {showShoppingSummary ? (
-            <button className={`shopping-summary-card${shoppingSummaryIsEmpty ? " shopping-summary-card-empty" : ""}`} type="button" onClick={openShoppingList}>
+            <button className={`shopping-summary-card${shoppingSummaryIsEmpty ? " shopping-summary-card-empty" : ""}`} type="button" aria-label={shoppingSummaryIsEmpty ? `장보기 목록 열기. ${shoppingSummaryTitle}` : undefined} aria-describedby={shoppingSummaryIsEmpty ? "shopping-summary-empty-help" : undefined} onClick={openShoppingList}>
               <span className="shopping-summary-icon"><ReaderIcon width={17} height={17} /></span>
               <span className="shopping-summary-copy">
                 <span className="shopping-summary-kicker">장보기</span>
                 <strong>{shoppingSummaryTitle}</strong>
-                <small className={shoppingSummaryIsEmpty ? "shopping-summary-empty-help" : undefined}>{shoppingSummaryDescription}</small>
+                <small id={shoppingSummaryIsEmpty ? "shopping-summary-empty-help" : undefined} className={shoppingSummaryIsEmpty ? "shopping-summary-empty-help" : undefined}>{shoppingSummaryDescription}</small>
               </span>
               <ChevronRightIcon width={16} height={16} />
             </button>
@@ -5529,7 +5529,7 @@ function PrototypeContent() {
           <Suspense fallback={<ProcessingState label="식품 상세를 준비하고 있어요" detail="보관 기록과 날짜 정보를 불러옵니다." />}>
             <FoodDetailSheet
               food={selectedFood}
-              readOnly={connectionState === "offline" && Boolean(dashboardStaleAt)}
+              readOnly={connectionState === "offline"}
               autoFocusDateReview={detailEntryIntent === "date-review"}
               autoFocusPrimaryAction={detailEntryIntent === "consume-action"}
               autoFocusProvenanceReview={detailEntryIntent === "provenance-review"}

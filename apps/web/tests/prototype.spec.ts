@@ -254,7 +254,13 @@ test("PWA manifest exposes standalone install metadata and reachable icons", asy
   }
   const indexResponse = await request.get("/");
   expect(indexResponse.ok()).toBeTruthy();
-  expect(await indexResponse.text()).toContain('<link rel="apple-touch-icon" sizes="180x180" href="/icons/rescue-meal-180.png" />');
+  const indexHtml = await indexResponse.text();
+  expect(indexHtml).toContain('<meta name="mobile-web-app-capable" content="yes" />');
+  expect(indexHtml).toContain('<link rel="icon" type="image/png" sizes="192x192" href="/icons/rescue-meal-192.png" />');
+  expect(indexHtml).toContain('<link rel="apple-touch-icon" sizes="180x180" href="/icons/rescue-meal-180.png" />');
+  const faviconResponse = await request.get("/icons/rescue-meal-192.png");
+  expect(faviconResponse.ok()).toBeTruthy();
+  expect(faviconResponse.headers()["content-type"]).toContain("image/png");
   const appleIconResponse = await request.get("/icons/rescue-meal-180.png");
   expect(appleIconResponse.ok()).toBeTruthy();
   expect(appleIconResponse.headers()["content-type"]).toContain("image/png");
@@ -349,7 +355,7 @@ test("Pixel preview anchors app navigation to the reserved Android viewport edge
   expect(layout.documentWidth).toBeLessThanOrEqual(1100);
   expect(layout.bodyWidth).toBeLessThanOrEqual(1100);
 
-  await page.getByRole("button", { name: "확인하고 오늘 식단 만들기" }).click();
+  await page.getByRole("button", { name: "오늘 식단 만들기" }).click();
   const mealDialog = page.getByRole("dialog", { name: "오늘의 식단" });
   await expect(mealDialog).toBeVisible();
   await page.waitForTimeout(650);
@@ -2040,7 +2046,7 @@ test("inventory search finds food by name and recovers from no results", async (
 });
 
 test("recipe sheet previews the pantry, saves a recipe, and records completion", async ({ page }) => {
-  await page.getByRole("button", { name: /확인하고 오늘 식단 만들기/ }).click();
+  await page.getByRole("button", { name: /오늘 식단 만들기/ }).click();
   const dialog = page.getByRole("dialog", { name: "오늘의 식단" });
 
   await expect(dialog.getByRole("heading", { name: "시금치 두부 닭가슴살 덮밥" })).toBeVisible();
@@ -2126,7 +2132,7 @@ test("recipe sheet previews the pantry, saves a recipe, and records completion",
 });
 
 test("meal completion reports a skipped ingredient that remains in inventory", async ({ page }) => {
-  await page.getByRole("button", { name: /확인하고 오늘 식단 만들기/ }).click();
+  await page.getByRole("button", { name: /오늘 식단 만들기/ }).click();
   const dialog = page.getByRole("dialog", { name: "오늘의 식단" });
   await expect(dialog.getByRole("heading", { name: "시금치 두부 닭가슴살 덮밥" })).toBeVisible();
 
@@ -2146,7 +2152,7 @@ test("meal completion reports a skipped ingredient that remains in inventory", a
 
 test("meal consumption controls reflow and retain 44px targets on narrow phones", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 740 });
-  await page.getByRole("button", { name: /확인하고 오늘 식단 만들기/ }).click();
+  await page.getByRole("button", { name: /오늘 식단 만들기/ }).click();
   const dialog = page.getByRole("dialog", { name: "오늘의 식단" });
   await expect(dialog.getByRole("heading", { name: "시금치 두부 닭가슴살 덮밥" })).toBeVisible();
   await dialog.getByRole("button", { name: "미리보기 저장", exact: true }).click();
@@ -2160,7 +2166,7 @@ test("meal consumption controls reflow and retain 44px targets on narrow phones"
 });
 
 test("fixture meal shortages can be added, received, and sent to date review", async ({ page }) => {
-  await page.getByRole("button", { name: /확인하고 오늘 식단 만들기/ }).click();
+  await page.getByRole("button", { name: /오늘 식단 만들기/ }).click();
   const meal = page.getByRole("dialog", { name: "오늘의 식단" });
   await meal.getByRole("button", { name: "4인분", exact: true }).click();
   await expect(meal.locator(".recipe-availability-summary strong")).toHaveText("필요량 충족 0/3종");
@@ -2232,7 +2238,7 @@ test("render failures show a recovery screen without exposing exception details"
 test("guest home can reopen the temporary shopping list and explains its lifetime", async ({ page }) => {
   const shoppingSummary = page.locator(".shopping-summary-card").filter({ hasText: "미리보기" });
   await expect(shoppingSummary).toBeVisible();
-  await expect(shoppingSummary).toContainText("장보기 목록은 비어 있어요");
+  await expect(shoppingSummary).toContainText("아직 담은 재료가 없어요");
   const shoppingFollowsSafetyGuidance = await page.locator(".trust-card").evaluate((element) => element.nextElementSibling?.classList.contains("shopping-summary-card"));
   expect(shoppingFollowsSafetyGuidance).toBe(true);
 

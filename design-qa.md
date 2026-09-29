@@ -7963,3 +7963,41 @@ When introducing `smoke-runner-v2` or later:
 - The native regression passed in both light and dark at 320×740. After 16 Tab presses and Escape, focus returns to `포장지에서 날짜 다시 확인`; computed focus is visible, border is solid 2px, differs from the resting border, and has at least 3:1 contrast against the focused surface. The stored printed date remains unchanged.
 - Captures `evidence/meal-plan-flow-review-2026-09-28/102-date-action-focus-visible-320-light-after.png` and `103-date-action-focus-visible-320-dark-after.png` were inspected. The preview was restored to Home at 393×852 dark (`104-home-393-dark-focus-audit-restored.png`); current date reads `화요일, 9월 29`.
 - `npm run build` passed, including the protected runtime check (28 files) and Vite build (770 modules); `git diff --check` passed. Browser readback reports zero errors, one existing deprecated Apple web-app meta warning, and no `/api/` requests. No camera, photo, OCR, date save, consumption, or shopping action was activated. Physical keyboard, VoiceOver/TalkBack, and device safe-area acceptance remain separate checks.
+
+## Mobile date-recheck keyboard path — 2026-09-29
+
+- A fresh screenshot/keyboard audit found the same missing focus cue on Home priority-food rows, Food Detail's `날짜 안내 보기` icon, and the date sheet's camera, sample, and close buttons. The 1×1 file input did focus in sequence; its visible photo-selection label was the correct place to show focus.
+- Added an app-owned, offset 2px accent-blue ring for those controls. In light and dark, the current accent is `#3182f6` / `#6f8dff`; the native regression verifies at least 3:1 contrast against the surface. The photo label gets the same ring while its child input is `:focus-visible`; its visible 156×46 / 121×46 target stays intact at 393 / 320px.
+- In the existing-food label recheck only, the tab panel now has `tabIndex=-1` because it contains actionable controls. Tab moves from the selected `라벨` tab directly to camera instead of pausing on a visually empty panel.
+- Focused native route regression passed at 320×740 in both themes: Home row → date-info button → recheck trigger → camera → photo input → sample → close → trigger → Home row. It verified focus return, ring geometry/contrast, the 2026.09.02 date remaining unchanged, and no camera/photo/OCR/save/consume activation. The existing focused date-return regression also passed.
+- Before captures `106`, `108`, `110`, and `112` show missing cues. Inspected after captures are `113`–`122`, including Home focus in both themes, date-info/trigger, camera, photo, sample, close, and the final 393×852 dark Home handoff.
+- `npm run build` passed (28 protected runtime files, 770 Vite modules); `git diff --check` passed. Browser readback: zero errors, one existing deprecated Apple web-app meta warning, no `/api/` request. The wider 12-case focus/backdrop suite was 9 passed / 3 failed: one receipt-preview test expects an absent `aria-live` node; two notification-dismissal tests time out looking for `/알림 확인/`. These unrelated paths were not changed. VoiceOver/TalkBack and physical-device keyboard/safe-area behavior remain unverified.
+
+## Food Detail safety and record controls keyboard focus — 2026-09-29
+
+- A Tab-only check of the visible Food Detail sequence found no distinguishing focus cue on `상품 정보 수정`, the safety-gated `먹은 기록 남기기`, `상태가 이상해 폐기하기`, or the three storage choices. Each received `:focus-visible`; the device runtime had cleared its outline/box-shadow and those controls had no app-owned replacement.
+- Added the same offset 2px blue ring to those controls, leaving their existing surface meanings intact: amber for the review-gated consume action, coral for discard, and blue-selected storage. The consume button keeps its `aria-describedby="consume-safety-hint"` relationship and the visible warning remains immediately above it.
+- The 320×740 light/dark route regression now Tab-checks the Home row, detail date controls, product edit, consume, discard, and each storage option. It asserts the selected storage remains `냉장`, the consume safety copy remains associated, every ring is 2px and at least 3:1 against the surface, and the existing date is unchanged. The test passed in both themes; none of the action buttons or storage options was activated.
+- Baseline captures `125`–`127` show absent cues. Inspected after captures `128`–`134` show discard, consume, product edit, storage choice, and light/dark narrow-screen focus. Final state is Home at 393×852 dark (`135`).
+- Protected runtime check passed (28 files), build passed (770 modules), and `git diff --check` passed. No API request or data change occurred. Physical keyboard and screen-reader behavior remain unverified.
+
+## Home keyboard entry-point focus — 2026-09-29
+
+- Tab-only inspection of the first Home viewport found missing focus cues on the guest/account, theme, notification, full-inventory link, meal CTA, add-food action, date-review summary, and shopping summary. The three priority-food rows already had the shared ring.
+- Extended the app-owned accent ring to all Home buttons, including controls below the first fold. The fixed bottom navigation uses a `::before` ring so its existing `::after` active-tab marker is unchanged. No copy, action order, selected state, or route behavior changed.
+- A native regression walks Home's keyboard sequence and bottom navigation at 320×740 and 393×852 in both light and dark themes. It checks 2px ring presence and ≥3:1 contrast on all first-fold entry points plus the Food/Meal tabs; the test passed.
+- Inspected screenshots: baseline `140`–`145`; after-state header, inventory link, CTA, add-food, date summary, shopping summary, and nav `146`–`156`; final restored Home `157`. No Home action was activated. Build passed (28 protected runtime files, 770 Vite modules); `git diff --check` passed.
+- Re-ran the approved-route Axe set after the Home focus-style update: Home, Food Detail, and date recheck light/dark passed (3 tests, 0 violations).
+- Re-ran Home's primary-action contrast check: the meal CTA label and supporting text remain ≥4.5:1 in both themes (2 Home tests passed with no code changes).
+
+## Home inventory scroll and bottom navigation — 2026-09-29
+
+- Scrolled the same Home surface to its maximum 393×852 content offset (`scrollTop=924`) without selecting a filter or opening a food. The 44px state filters, 44px storage combobox, and 72px inventory rows remain readable while the fixed navigation stays in place.
+- During the intermediate PageDown frame the install prompt crossed behind the navigation; at settled maximum scroll it is fully visible above the nav (banner y=588–654, supporting note y=678–692, nav y=744–818). No persistent overlap or horizontal overflow was found; the mobile scroll width equals the 393px viewport.
+- Captures `159` (intermediate diagnostic), `160` (settled bottom), and `161` (restored Home at scrollTop 0) were inspected. No filter, row, install, or navigation action was activated and no data changed.
+
+## Approved-route Axe recheck — 2026-09-29
+
+- Re-ran the existing Axe scan for Home, Food Detail, and the printed-date recheck sheet (light + dark only) on an isolated runtime port. All 3 tests passed: Home 0 violations, Food Detail 0, and date recheck 0 in each theme.
+- The scan includes `.device-screen` content and the portal-rendered sheets. It supports this route's DOM/ARIA checks only; it is not proof of VoiceOver/TalkBack or physical-device behavior.
+- Current-run live preview captures `136` Home, `137` Food Detail, `138` keyboard-focused safety-gated consume button, and `139` restored Home are saved and inspected. No data-writing control was activated.

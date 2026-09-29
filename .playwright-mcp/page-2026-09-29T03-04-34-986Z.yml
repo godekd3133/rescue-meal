@@ -1,0 +1,83 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - navigation [ref=e4]:
+      - generic [ref=e5]:
+        - button [ref=e6] [cursor=pointer]:
+          - img "페이어텐션 로고" [ref=e7]
+        - generic [ref=e8]:
+          - link "최신 콘텐츠" [ref=e9] [cursor=pointer]:
+            - /url: /browser/categories
+          - link "시리즈" [ref=e10] [cursor=pointer]:
+            - /url: /browser/series
+          - link "브랜드" [ref=e11] [cursor=pointer]:
+            - /url: /browser/brand
+    - main [ref=e13]:
+      - generic [ref=e16]:
+        - generic [ref=e17]:
+          - heading "새로 나온 결제탭, 이렇게 사용해보세요" [level=1] [ref=e18]
+          - generic [ref=e19]: 사용자님을 위해 달라졌어요
+        - button [ref=e20] [cursor=pointer]
+      - generic [ref=e23]:
+        - paragraph [ref=e24]:
+          - generic [ref=e25]:
+            - text: 카카오페이앱에 결제탭이 새로 생겼어요! 사용자님이 더 편하게 결제하고, 더 많은 혜택을 받아가실 수 있도록 바꾸었어요. 새로 나온 기능 어떻게 활용하면 좋을지 알려드릴게요. ⚡️ 빠르게 결제하고 싶어요!
+            - mark [ref=e26]: 바로 결제
+            - text: 를 설정하면 페이앱 가장 위에 항상 결제 바코드를 띄워둘 수 있어요. 결제하기 버튼을 누를 필요가 없어서 결제가 더 빨라져요.
+        - generic [ref=e27]:
+          - generic [ref=e29]:
+            - figure [ref=e31]:
+              - img "바로결제 바코드 화면" [ref=e33]
+            - figure "상단에서 바로 결제 기능을 켜거나" [ref=e35]:
+              - img "바로결제 토글 화면" [ref=e37]
+            - figure "''사용할게요'를 클릭해 설정할 수 있어요" [ref=e40]:
+              - img "바로결제 동의 화면" [ref=e42]
+          - button [ref=e44] [cursor=pointer]
+        - paragraph [ref=e47]:
+          - generic [ref=e48]:
+            - text: 💳 아까 결제한 거 얼마였지? 맨 위에 있는 알림카드에서 결제하거나 취소한 내역을 볼 수 있어요. 최근 3개월 동안 카카오페이 결제로
+            - mark [ref=e49]: 얼마나 아꼈는지
+            - text: 도 보여드려요.
+        - figure [ref=e50]:
+          - img "서비스화면1" [ref=e52]
+        - paragraph [ref=e53]:
+          - generic [ref=e54]:
+            - text: ♻️ 결제할 때마다 포인트 돌려준다고? 오프라인 매장에서 카카오페이머니로 1,000원 이상 결제할 때마다
+            - mark [ref=e55]: 0.5~1%
+            - text: 가 적립되고, 보너스 뽑기 기회도 생겨요. 최소 10원에서 최대 90원의 랜덤 포인트가 들어있는 보너스 뽑기는
+            - mark [ref=e56]: 카카오페이 앱
+            - text: 에서만 열어볼 수 있어요.
+        - paragraph [ref=e57]:
+          - generic [ref=e58]:
+            - text: 🥤 멤버십 적립, 잘 되고 있을까? 방금 전 결제한 곳의 멤버십을 새로 연결하거나, 그동안 적립된
+            - mark [ref=e59]: 멤버십 내역
+            - text: 을 확인할 수 있어요. 쿠폰도 다운로드 받아놓고 깜빡하지 않도록 만료되기 미리 알려드려요.
+        - figure [ref=e60]:
+          - img "서비스화면 2번째" [ref=e62]
+        - paragraph [ref=e63]:
+          - generic [ref=e64]: 📍 여기서 카카오페이 결제되나? 고민하지 말고 지도에서 찾아보세요. 💸 지금 할인받을 수 있는 카페는 어디? 내 위치를 기반으로 지금 받을 수 있는 주변 혜택도 쏙쏙 뽑아서 보여드려요.
+        - figure [ref=e65]:
+          - img "서비스화면3" [ref=e67]
+        - paragraph [ref=e68]: 지금 가장 인기 많은 혜택, 사용자님이 자주 가는 곳의 할인 소식도 모아서 알려드릴게요. 이제 카카오페이 결제탭에서 혜택도 챙기고, 더 편하게 결제해보세요!
+        - button [ref=e70] [cursor=pointer]:
+          - paragraph [ref=e71]: 결제탭 바로가기
+      - generic [ref=e73]:
+        - link "#사용팁" [ref=e75] [cursor=pointer]:
+          - /url: /tags/28
+        - link "#결제" [ref=e78] [cursor=pointer]:
+          - /url: /tags/4
+      - button "공유하기" [ref=e81] [cursor=pointer]
+    - contentinfo [ref=e85]:
+      - generic [ref=e86]:
+        - generic [ref=e87]: ©Kakaopay corp.
+        - generic [ref=e88]: "사업자 등록번호 : 527-88-00686주소 : 경기도 성남시 분당구 판교역로 166 카카오페이 판교아지트 B동 15층고객센터 : 1644-7405(유료), 운영시간 : 평일 9:00 ~ 18:00"
+        - generic [ref=e89]:
+          - button "유의사항" [ref=e90] [cursor=pointer]
+          - separator [ref=e92]
+          - button "카카오페이 이용약관" [ref=e93] [cursor=pointer]
+        - generic [ref=e95]:
+          - button [ref=e96] [cursor=pointer]
+          - button [ref=e100] [cursor=pointer]
+          - button [ref=e106] [cursor=pointer]
+          - button [ref=e112] [cursor=pointer]
+          - button [ref=e116] [cursor=pointer]
+  - alert [ref=e121]

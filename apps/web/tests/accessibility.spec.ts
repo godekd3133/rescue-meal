@@ -36,12 +36,21 @@ test.beforeEach(async ({ page }) => {
   await page.goto("/");
 });
 
-test("home surface passes axe audit", async ({ page }) => {
-  await expect(page.getByRole("main", { name: "Rescue Meal 홈" })).toBeVisible();
-  await expect(page.locator(".brand-lockup")).toHaveAttribute("aria-label", "Rescue Meal");
-  await expect(page.locator(".brand-mark")).toHaveAttribute("aria-hidden", "true");
-  await expect(page.locator(".brand-name")).toHaveAttribute("aria-hidden", "true");
-  await expectNoViolations(page, "home");
+test("home surface passes axe audit at narrow and standard mobile widths", async ({ page }) => {
+  for (const viewport of [{ width: 320, height: 740 }, { width: 393, height: 852 }]) {
+    for (const theme of ["light", "dark"] as const) {
+      await page.setViewportSize(viewport);
+      await page.goto("/");
+      await page.evaluate((nextTheme) => window.localStorage.setItem("rescue-meal.theme", nextTheme), theme);
+      await page.reload();
+      await expect(page.locator("html")).toHaveAttribute("data-rescue-theme", theme);
+      await expect(page.getByRole("main", { name: "Rescue Meal 홈" })).toBeVisible();
+      await expect(page.locator(".brand-lockup")).toHaveAttribute("aria-label", "Rescue Meal");
+      await expect(page.locator(".brand-mark")).toHaveAttribute("aria-hidden", "true");
+      await expect(page.locator(".brand-name")).toHaveAttribute("aria-hidden", "true");
+      await expectNoViolations(page, `home ${viewport.width}px ${theme}`);
+    }
+  }
 });
 
 test("primary home action text meets contrast in light and dark themes", async ({ page }) => {
@@ -89,21 +98,22 @@ test("food detail sheet passes axe audit", async ({ page }) => {
 });
 
 test("printed-date recheck sheet passes axe audit in light and dark themes", async ({ page }) => {
-  await page.setViewportSize({ width: 393, height: 852 });
+  for (const viewport of [{ width: 320, height: 740 }, { width: 393, height: 852 }]) {
+    for (const theme of ["light", "dark"] as const) {
+      await page.setViewportSize(viewport);
+      await page.goto("/");
+      if (await page.locator("html").getAttribute("data-rescue-theme") !== theme) {
+        await page.getByTestId("theme-toggle").click();
+      }
+      await expect(page.locator("html")).toHaveAttribute("data-rescue-theme", theme);
+      await page.getByRole("button", { name: /시금치 개봉됨/ }).click();
+      const detail = await openSheet(page, "시금치");
+      await detail.getByRole("button", { name: "포장지에서 날짜 다시 확인" }).click();
 
-  for (const theme of ["light", "dark"] as const) {
-    await page.goto("/");
-    if (await page.locator("html").getAttribute("data-rescue-theme") !== theme) {
-      await page.getByTestId("theme-toggle").click();
+      const dateRecheck = await openSheet(page, "날짜 다시 살펴보기");
+      await expect(dateRecheck.getByRole("group", { name: /현재 기록된 날짜 포장 소비기한/ })).toBeVisible();
+      await expectNoViolations(page, `printed-date recheck ${viewport.width}px ${theme}`);
     }
-    await expect(page.locator("html")).toHaveAttribute("data-rescue-theme", theme);
-    await page.getByRole("button", { name: /시금치 개봉됨/ }).click();
-    const detail = await openSheet(page, "시금치");
-    await detail.getByRole("button", { name: "포장지에서 날짜 다시 확인" }).click();
-
-    const dateRecheck = await openSheet(page, "날짜 다시 살펴보기");
-    await expect(dateRecheck.getByRole("group", { name: /현재 기록된 날짜 포장 소비기한/ })).toBeVisible();
-    await expectNoViolations(page, `printed-date recheck ${theme}`);
   }
 });
 

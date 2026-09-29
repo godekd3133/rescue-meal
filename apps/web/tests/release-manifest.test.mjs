@@ -20,6 +20,8 @@ function readPngDimensions(filePath) {
 test("PWA metadata carries native iOS and installable raster icons", () => {
   const indexHtml = readFileSync(path.join(webRoot, "index.html"), "utf8");
   const manifest = JSON.parse(readFileSync(path.join(webRoot, "public", "manifest.webmanifest"), "utf8"));
+  assert.match(indexHtml, /<meta name="mobile-web-app-capable" content="yes"\s*\/>/);
+  assert.match(indexHtml, /<link rel="icon" type="image\/png" sizes="192x192" href="\/icons\/rescue-meal-192\.png"\s*\/>/);
   assert.match(indexHtml, /<link rel="apple-touch-icon" sizes="180x180" href="\/icons\/rescue-meal-180\.png"\s*\/>/);
   assert.deepEqual(manifest.icons, [
     { src: "/icons/rescue-meal-192.png", sizes: "192x192", type: "image/png", purpose: "any" },

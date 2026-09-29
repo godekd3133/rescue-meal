@@ -1,4 +1,5 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
+import { getHomeReviewTopicLabel } from "../src/homeReviewSummary";
 
 type NarrowViewportMetrics = {
   viewportWidth: number;
@@ -132,7 +133,7 @@ test("keeps the native home inside a 320px viewport", async ({ page }) => {
   });
   expect(compactAddLabel.height).toBeLessThanOrEqual(compactAddLabel.fontSize * 1.5);
   await expect(page.getByRole("button", { name: "식품 추가하기" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "확인하고 오늘 식단 만들기" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "오늘 식단 만들기" })).toBeVisible();
 });
 
 test("updates the Home date after local midnight while the app stays open", async ({ page }) => {
@@ -157,6 +158,27 @@ test("keeps home food source details readable across narrow viewport themes", as
       await page.reload();
       if (theme === "dark") await page.getByTestId("theme-toggle").click();
       await expect(page.locator("html")).toHaveAttribute("data-rescue-theme", theme);
+
+      const priorityActionReadback = await page.locator(".priority-card .priority-state-label").evaluateAll((elements) =>
+        elements.map((element) => {
+          const label = element as HTMLElement;
+          const column = label.parentElement as HTMLElement;
+          const bounds = label.getBoundingClientRect();
+          const columnBounds = column.getBoundingClientRect();
+          return {
+            text: label.textContent?.trim() ?? "",
+            clipped: label.scrollWidth > label.clientWidth,
+            withinColumn: bounds.left >= columnBounds.left - 0.5 && bounds.right <= columnBounds.right + 0.5,
+          };
+        }),
+      );
+
+      expect(priorityActionReadback).toHaveLength(3);
+      for (const action of priorityActionReadback) {
+        expect(action.text).not.toBe("");
+        expect(action.clipped, `${action.text} action label clips at ${viewport.width}px in ${theme} mode`).toBe(false);
+        expect(action.withinColumn, `${action.text} action label escapes its date column`).toBe(true);
+      }
 
       const sourceDetails = page.locator(
         ".priority-card .food-subline, .priority-card .date-source:not(.date-source-warning), .priority-card .priority-date strong",
@@ -189,6 +211,7 @@ test("keeps the narrow home review summary concise and shopping shortcut tappabl
   const summary = page.locator(".trust-card");
   await expect(summary).toBeVisible();
   await expect(summary).toContainText("포장지 날짜를 살펴볼 식품 2개");
+  await expect(summary).toHaveAccessibleName("포장지 날짜를 살펴볼 식품 2개. 포장지 날짜와 보관 방법을 살펴봐 주세요. 확인할 식품 목록 보기");
   expect((await summary.boundingBox())?.height).toBeLessThanOrEqual(60);
 
   const priorityHeading = page.locator(".priority-section .section-heading h2");
@@ -209,10 +232,17 @@ test("keeps the narrow home review summary concise and shopping shortcut tappabl
   expect(shoppingSummary?.height).toBeGreaterThanOrEqual(44);
   expect((shoppingSummary?.y ?? Number.POSITIVE_INFINITY) + (shoppingSummary?.height ?? 0)).toBeLessThanOrEqual((navigation?.y ?? 0) + 1);
   await expect(page.locator(".shopping-summary-card")).toBeInViewport();
-  await expect(page.locator(".shopping-summary-card")).toHaveAccessibleName(/식단에서 재료를 담거나 직접 추가해 보세요/);
+  await expect(page.locator(".shopping-summary-card")).toHaveAccessibleName("장보기 목록 열기. 아직 담은 재료가 없어요");
+  await expect(page.locator(".shopping-summary-card")).toHaveAccessibleDescription("식단에서 재료를 담거나 직접 추가해 보세요.");
   await expect(page.locator(".shopping-summary-empty-help")).toBeVisible();
   await expect(page.locator(".shopping-summary-empty-help")).toHaveText("식단에서 재료를 담거나 직접 추가해 보세요.");
   await expect(page.locator(".install-prompt")).not.toBeInViewport();
+});
+
+test("home review summary title matches date-only, storage-only, and mixed review reasons", () => {
+  expect(getHomeReviewTopicLabel(new Set(["date"]))).toBe("포장지 날짜를");
+  expect(getHomeReviewTopicLabel(new Set(["storage"]))).toBe("보관 방법을");
+  expect(getHomeReviewTopicLabel(new Set(["date", "storage"]))).toBe("날짜와 보관 방법을");
 });
 
 test("shows a visible next step in the empty shopping state across narrow themes", async ({ page }) => {
@@ -228,6 +258,9 @@ test("shows a visible next step in the empty shopping state across narrow themes
       const card = page.locator(".shopping-summary-card-empty");
       const helper = card.locator(".shopping-summary-empty-help");
       await expect(card).toBeVisible();
+      await expect(card.locator("strong")).toHaveText("아직 담은 재료가 없어요");
+      await expect(card).toHaveAccessibleName("장보기 목록 열기. 아직 담은 재료가 없어요");
+      await expect(card).toHaveAccessibleDescription("식단에서 재료를 담거나 직접 추가해 보세요.");
       await expect(helper).toBeVisible();
       await expect(helper).toHaveText("식단에서 재료를 담거나 직접 추가해 보세요.");
       await expect(helper).toHaveCSS("font-size", "11px");
@@ -583,8 +616,13 @@ test("keeps the primary meal CTA discoverable in the 390px first viewport", asyn
   expect(layout.cta!.height).toBeGreaterThanOrEqual(49);
 });
 
-test("keeps the pantry below the initial mobile fold after the core home loop", async ({ page }) => {
-  for (const viewport of [{ width: 320, height: 740 }, { width: 393, height: 852 }]) {
+test("uses tall-phone fold space for pantry entry while keeping food rows below the fold", async ({ page }) => {
+  for (const viewport of [
+    { width: 320, height: 740 },
+    { width: 393, height: 844 },
+    { width: 393, height: 852 },
+    { width: 427, height: 952 },
+  ]) {
     await page.setViewportSize(viewport);
     await page.goto("/");
 
@@ -593,18 +631,32 @@ test("keeps the pantry below the initial mobile fold after the core home loop", 
       return {
         screen: rect("[data-testid=device-screen]"),
         navigation: rect(".app-bottom-nav"),
-        trust: rect(".trust-card"),
+        shoppingSummary: rect(".shopping-summary-card"),
         inventory: rect(".inventory-section"),
+        heading: rect(".inventory-heading"),
+        search: rect(".inventory-search"),
+        firstFoodImage: rect(".inventory-row .inventory-image-wrap"),
       };
     });
 
     expect(layout.screen).toBeTruthy();
     expect(layout.navigation).toBeTruthy();
-    expect(layout.trust).toBeTruthy();
+    expect(layout.shoppingSummary).toBeTruthy();
     expect(layout.inventory).toBeTruthy();
-    expect(layout.inventory!.top).toBeGreaterThanOrEqual(layout.screen!.bottom - 1);
-    expect(layout.inventory!.top).toBeGreaterThan(layout.navigation!.bottom - 1);
-    expect(layout.inventory!.top - layout.trust!.bottom).toBeLessThan(190);
+    expect(layout.heading).toBeTruthy();
+    expect(layout.search).toBeTruthy();
+    expect(layout.firstFoodImage).toBeTruthy();
+    expect(layout.shoppingSummary!.bottom).toBeLessThan(layout.navigation!.top);
+    expect(layout.inventory!.top - layout.shoppingSummary!.bottom).toBeLessThan(190);
+
+    if (viewport.width <= 360) {
+      expect(layout.inventory!.top).toBeGreaterThanOrEqual(layout.screen!.bottom - 1);
+    } else {
+      expect(layout.heading!.top).toBeGreaterThan(layout.shoppingSummary!.bottom);
+      expect(layout.heading!.bottom).toBeLessThanOrEqual(layout.navigation!.top);
+      expect(layout.search!.bottom).toBeLessThanOrEqual(layout.navigation!.top);
+      expect(layout.firstFoodImage!.top).toBeGreaterThanOrEqual(layout.screen!.bottom - 1);
+    }
   }
 });
 
@@ -619,12 +671,14 @@ test("keeps notification in the header on regular phones and reachable below it 
         screen: rect("[data-testid=device-screen]"),
         header: rect(".app-header"),
         notification: rect(".mobile-hero-notification"),
+        heroHeading: rect(".greeting-block h1"),
       };
     });
 
     expect(layout.screen).toBeTruthy();
     expect(layout.header).toBeTruthy();
     expect(layout.notification).toBeTruthy();
+    expect(layout.heroHeading).toBeTruthy();
     expect(layout.notification!.width).toBeGreaterThanOrEqual(43.5);
     expect(layout.notification!.height).toBeGreaterThanOrEqual(43.5);
     expect(layout.notification!.right).toBeLessThanOrEqual(layout.screen!.right + 1);
@@ -637,6 +691,7 @@ test("keeps notification in the header on regular phones and reachable below it 
       expect(layout.notification!.bottom).toBeLessThanOrEqual(layout.header!.bottom + 12);
     } else {
       expect(layout.notification!.top).toBeGreaterThanOrEqual(layout.header!.bottom - 1);
+      expect(layout.notification!.left).toBeGreaterThanOrEqual(layout.heroHeading!.right + 8);
     }
   }
 });
@@ -645,7 +700,7 @@ test("shows the meal result inside the first native sheet viewport", async ({ pa
   for (const viewport of [{ width: 393, height: 720 }, { width: 393, height: 852 }]) {
     await page.setViewportSize(viewport);
     await page.goto("/");
-    await page.getByRole("button", { name: "확인하고 오늘 식단 만들기" }).click();
+    await page.getByRole("button", { name: "오늘 식단 만들기" }).click();
     const dialog = page.getByRole("dialog", { name: "오늘의 식단" });
     await expect(dialog).toBeVisible();
     await waitForSheetSettled(page);
@@ -717,7 +772,7 @@ test("keeps the account login action in the first native sheet viewport", async 
 test("reveals the completion action after saving a meal plan", async ({ page }) => {
   await page.setViewportSize({ width: 393, height: 720 });
   await page.goto("/");
-  await page.getByRole("button", { name: "확인하고 오늘 식단 만들기" }).click();
+  await page.getByRole("button", { name: "오늘 식단 만들기" }).click();
   const dialog = page.getByRole("dialog", { name: "오늘의 식단" });
   await expect(dialog).toBeVisible();
   await waitForSheetSettled(page);
@@ -920,7 +975,7 @@ test("restores the home first fold after moving between bottom navigation destin
   await expect(foodNav).not.toHaveAttribute("aria-current", "page");
   await expect.poll(() => scroll.evaluate((element) => element.scrollTop)).toBe(0);
   await expect(page.getByRole("heading", { name: "오늘도, 남은 재료부터" })).toBeVisible();
-  await expect.poll(() => page.getByRole("button", { name: "확인하고 오늘 식단 만들기" }).evaluate((element) => {
+  await expect.poll(() => page.getByRole("button", { name: "오늘 식단 만들기" }).evaluate((element) => {
     const action = element.getBoundingClientRect();
     const nav = document.querySelector<HTMLElement>(".app-bottom-nav")?.getBoundingClientRect();
     return nav ? action.bottom <= nav.top + 1 : false;
@@ -1265,6 +1320,7 @@ test("returns focus to the printed-date recheck action after closing label revie
   await expect(currentDate).toBeInViewport();
   await expect(currentDate).toHaveText(/현재 기록.*포장 소비기한 · 2026\.09\.02 · 포장지 표시/);
   await expect(labelReview.locator(".sheet-description")).toContainText("저장 전까지 기록은 그대로예요");
+  await expect(labelReview.locator(".intake-method-hint")).toContainText("포장지 날짜를 다시 읽어 확인해요.");
   await expect(labelReview.locator(".sheet-description")).toHaveCSS("font-size", "12px");
   await expect(labelReview.locator(".capture-date-meaning-note strong")).toHaveCSS("font-size", "12px");
   await expect(labelReview.locator(".intake-method-hint")).toHaveCSS("font-size", "12px");
@@ -1334,11 +1390,26 @@ test("echoes the existing printed date before starting a label recheck", async (
   await detail.getByRole("button", { name: "포장지에서 날짜 다시 확인" }).click();
   await waitForSheetSettled(page);
   const labelReview = page.getByRole("dialog", { name: "날짜 다시 살펴보기" });
+  const methodTabs = labelReview.getByRole("tablist", { name: "식품 추가 방법" });
+  await expect(methodTabs.getByRole("tab", { name: "영수증" }).locator("span[aria-hidden='true']")).toHaveCount(0);
+  const recommendedTab = methodTabs.getByRole("tab", { name: "라벨" });
+  const recommendationBadge = recommendedTab.locator("span[aria-hidden='true']");
+  await expect(recommendationBadge).toHaveText("추천");
+  await expect(recommendationBadge).toHaveCSS("font-size", "9px");
   const currentDate = labelReview.getByRole("group", { name: "현재 기록된 날짜 포장 소비기한 · 2026.09.02 · 포장지 표시" });
   await expect(currentDate).toBeVisible();
   await expect(currentDate).toBeInViewport();
   await expect(currentDate).toHaveText(/현재 기록.*포장 소비기한 · 2026\.09\.02 · 포장지 표시/);
+  const dateContextPrecedesMethodChoices = await currentDate.evaluate((element) => {
+    const methodChoices = element.parentElement?.querySelector(".mode-tabs");
+    return Boolean(methodChoices && (element.compareDocumentPosition(methodChoices) & Node.DOCUMENT_POSITION_FOLLOWING));
+  });
+  expect(dateContextPrecedesMethodChoices).toBe(true);
+  const dateReviewProgress = labelReview.getByRole("group", { name: "날짜 확인 1단계" });
+  await expect(dateReviewProgress).toBeVisible();
+  await expect(dateReviewProgress).toContainText("날짜가 보이는 면을 선택해요");
   await expect(labelReview.locator(".sheet-description")).toContainText("저장 전까지 기록은 그대로예요");
+  await expect(labelReview.locator(".intake-method-hint")).toContainText("포장지 날짜를 다시 읽어 확인해요.");
   await expect(labelReview.locator(".sheet-description")).toHaveCSS("font-size", "12px");
   await expect(labelReview.locator(".capture-date-meaning-note strong")).toHaveCSS("font-size", "12px");
   await expect(labelReview.locator(".intake-method-hint")).toHaveCSS("font-size", "12px");
@@ -1554,6 +1625,29 @@ test("keeps the mobile date-recheck keyboard path visibly focused without an ext
     await page.keyboard.press("Tab");
     await expect(trigger).toBeFocused();
     await expectFocusRing(trigger, ".bottom-sheet");
+
+    const productInfo = detail.getByRole("button", { name: "상품 정보 수정" });
+    const consume = detail.getByRole("button", { name: "날짜와 보관 방법을 살펴본 뒤 먹은 기록 남기기" });
+    const discard = detail.getByRole("button", { name: "상태가 이상해 폐기하기" });
+    const storage = detail.getByRole("group", { name: "보관 위치 선택" });
+    await page.keyboard.press("Tab");
+    await expect(productInfo).toBeFocused();
+    await expectFocusRing(productInfo, ".bottom-sheet");
+    await page.keyboard.press("Tab");
+    await expect(consume).toBeFocused();
+    await expectFocusRing(consume, ".bottom-sheet");
+    await expect(consume).toHaveAttribute("aria-describedby", "consume-safety-hint");
+    await expect(detail.locator("#consume-safety-hint")).toContainText("이미 먹은 경우에만 기록해 주세요");
+    await page.keyboard.press("Tab");
+    await expect(discard).toBeFocused();
+    await expectFocusRing(discard, ".bottom-sheet");
+    for (const [label, pressed] of [["냉장", true], ["냉동", false], ["실온", false]] as const) {
+      const option = storage.getByRole("button", { name: label, exact: true });
+      await page.keyboard.press("Tab");
+      await expect(option).toBeFocused();
+      await expect(option).toHaveAttribute("aria-pressed", String(pressed));
+      await expectFocusRing(option, ".bottom-sheet");
+    }
     await trigger.click();
 
     const labelReview = page.getByRole("dialog", { name: "날짜 다시 살펴보기" });
@@ -1606,6 +1700,70 @@ test("keeps the mobile date-recheck keyboard path visibly focused without an ext
     await expect(detail).toHaveCount(0);
     await expect(firstPriority).toBeFocused();
     await expectFocusRing(firstPriority, ".meal-home");
+  }
+});
+
+test("shows visible keyboard focus across Home entry points and bottom navigation in both themes", async ({ page }) => {
+  const expectHomeRing = async (target: Locator, surfaceSelector: string, pseudo = "::after") => {
+    const style = await target.evaluate((element, options) => {
+      const ring = getComputedStyle(element, options.pseudo);
+      const surface = element.closest(options.surfaceSelector);
+      return {
+        focused: element.matches(":focus-visible"),
+        content: ring.content,
+        borderStyle: ring.borderTopStyle,
+        borderWidth: ring.borderTopWidth,
+        borderColor: ring.borderTopColor,
+        surface: surface ? getComputedStyle(surface).backgroundColor : "transparent",
+      };
+    }, { surfaceSelector, pseudo });
+    expect(style.focused).toBe(true);
+    expect(style.content).not.toBe("none");
+    expect(style.borderStyle).toBe("solid");
+    expect(style.borderWidth).toBe("2px");
+    expect(contrastRatio(style.borderColor, style.surface)).toBeGreaterThanOrEqual(3);
+  };
+
+  for (const viewport of [{ width: 320, height: 740 }, { width: 393, height: 852 }]) {
+    for (const theme of ["light", "dark"] as const) {
+      await page.setViewportSize(viewport);
+      await page.goto("/");
+      await page.evaluate((selectedTheme) => window.localStorage.setItem("rescue-meal.theme", selectedTheme), theme);
+      await page.reload();
+      await expect(page.locator("html")).toHaveAttribute("data-rescue-theme", theme);
+
+      const homeTargets = [
+        page.locator(".connection-pill"),
+        page.locator(".theme-toggle-button"),
+        page.locator(".notification-button"),
+        page.getByRole("button", { name: "전체 식품 보기" }),
+        page.locator(".priority-card").nth(0),
+        page.locator(".priority-card").nth(1),
+        page.locator(".priority-card").nth(2),
+        page.locator(".meal-plan-button"),
+        page.locator(".add-food-button"),
+        page.locator(".trust-card"),
+        page.locator(".shopping-summary-card"),
+      ];
+
+      for (const target of homeTargets) {
+        for (let index = 0; index < 32; index += 1) {
+          await page.keyboard.press("Tab");
+          if (await target.evaluate((element) => element === document.activeElement)) break;
+        }
+        await expect(target).toBeFocused();
+        await expectHomeRing(target, ".meal-home");
+      }
+
+      const homeTab = page.getByRole("navigation", { name: "주요 메뉴" }).getByRole("button", { name: "홈", exact: true });
+      await homeTab.evaluate((element) => element.focus({ preventScroll: true }));
+      for (const label of ["식품", "식단"]) {
+        const navTarget = page.getByRole("navigation", { name: "주요 메뉴" }).getByRole("button", { name: label, exact: true });
+        await page.keyboard.press("Tab");
+        await expect(navTarget).toBeFocused();
+        await expectHomeRing(navTarget, ".app-bottom-nav", "::before");
+      }
+    }
   }
 });
 
@@ -2366,7 +2524,7 @@ test("keeps the major native sheets inside a 320px viewport", async ({ page }) =
     await expect(dialog).toHaveCount(0);
   };
 
-  await openAndCheck({ name: "확인하고 오늘 식단 만들기" }, "오늘의 식단");
+  await openAndCheck({ name: "오늘 식단 만들기" }, "오늘의 식단");
   await openAndCheck({ name: /알림 확인/ }, "알림");
   await openAndCheck({ name: /연결 상태: 게스트 기록/ }, "내 계정");
 
@@ -2508,7 +2666,7 @@ test("raises contrast tokens without changing native geometry", async ({ page })
 });
 
 test("scales the major sheet reading hierarchy with a larger text preference", async ({ page }) => {
-  await page.getByRole("button", { name: "확인하고 오늘 식단 만들기" }).click();
+  await page.getByRole("button", { name: "오늘 식단 만들기" }).click();
   const mealDialog = page.getByRole("dialog", { name: "오늘의 식단" });
   await expect(mealDialog).toBeVisible();
   const mealBefore = await mealDialog.locator(".recipe-title-row h3").evaluate((element) => Number.parseFloat(getComputedStyle(element).fontSize));
@@ -2559,7 +2717,7 @@ test("keeps primary controls at a 44px touch target", async ({ page }) => {
   await page.keyboard.press("Escape");
   await expect(intakeDialog).toHaveCount(0);
 
-  await page.getByRole("button", { name: "확인하고 오늘 식단 만들기" }).click();
+  await page.getByRole("button", { name: "오늘 식단 만들기" }).click();
   const mealDialog = page.getByRole("dialog", { name: "오늘의 식단" });
   await expect(mealDialog).toBeVisible();
   await assertTarget(mealDialog.locator(".recipe-time-picker button").first(), "recipe time choice");

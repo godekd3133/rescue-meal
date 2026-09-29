@@ -1997,10 +1997,14 @@ export default function AddFoodSheet({
             ? "입력한 내용은 참고용이에요. 소비기한이나 먹어도 되는지를 알려주지 않아요."
         : "살펴본 내용만 식품 기록에 저장돼요.";
   const intakeStepNames = ["입력", "살펴보기", "저장"] as const;
+  const recommendedMode = initialLabelTargetFoodId ? "label" : "receipt";
   const intakeMethodHint = {
     receipt: { title: "영수증", detail: "여러 품목을 한 번에 가져와요." },
     barcode: { title: "바코드", detail: "상품명을 몰라도 코드로 찾을 수 있어요." },
-    label: { title: "라벨", detail: "포장지 날짜를 사진으로 읽어 기록해요." },
+    label: {
+      title: "라벨",
+      detail: initialLabelTargetFoodId ? "포장지 날짜를 다시 읽어 확인해요." : "포장지 날짜를 사진으로 읽어 기록해요.",
+    },
     manual: { title: "직접 입력", detail: "사진 없이 바로 기록할 수 있어요." },
   }[mode];
   const barcodeResultCallout = barcodeResult ? (
@@ -2013,6 +2017,7 @@ export default function AddFoodSheet({
 
   return (
     <div ref={addSheetContentRef} className={`add-sheet-content${initialLabelTargetFoodId ? " add-sheet-content-date-recheck" : ""}`}>
+      {initialLabelTargetFoodId && initialLabelTargetDateSummary && mode === "label" ? <div className="date-recheck-current-date" role="group" aria-label={`현재 기록된 날짜 ${initialLabelTargetDateSummary}`}><span>현재 기록</span><strong>{initialLabelTargetDateSummary}</strong></div> : null}
       <div className="mode-tabs" role="tablist" aria-label="식품 추가 방법">
         {([
           ["receipt", "영수증", FileTextIcon],
@@ -2025,7 +2030,7 @@ export default function AddFoodSheet({
             ref={(element) => { modeTabRefs.current[tabMode] = element; }}
             id={`add-mode-tab-${tabMode}`}
             className={`mode-tab ${mode === tabMode ? "mode-tab-active" : ""}`}
-            style={tabMode === "receipt" ? { position: "relative" } : undefined}
+            style={tabMode === recommendedMode ? { position: "relative" } : undefined}
             type="button"
             role="tab"
             aria-selected={mode === tabMode}
@@ -2035,17 +2040,16 @@ export default function AddFoodSheet({
             onKeyDown={handleModeTabKeyDown}
             onClick={() => focusModeTab(tabMode)}
           >
-            <Icon width={16} height={16} />{label}{tabMode === "receipt" ? <span aria-hidden="true" style={{ position: "absolute", top: 2, right: 3, color: "var(--meal-sage-dark)", fontSize: 7, fontWeight: 820, lineHeight: 1 }}>추천</span> : null}
+            <Icon width={16} height={16} />{label}{tabMode === recommendedMode ? <span aria-hidden="true" style={{ position: "absolute", top: 2, right: 3, color: "var(--meal-sage-dark)", fontSize: 9, fontWeight: 820, lineHeight: 1 }}>추천</span> : null}
           </button>
         ))}
       </div>
-      {initialLabelTargetFoodId && initialLabelTargetDateSummary && mode === "label" ? <div className="date-recheck-current-date" role="group" aria-label={`현재 기록된 날짜 ${initialLabelTargetDateSummary}`}><span>현재 기록</span><strong>{initialLabelTargetDateSummary}</strong></div> : null}
       {initialLabelTargetFoodId && initialLabelTargetFoodName && mode !== "label" ? <div className="date-recheck-context" role="status" aria-live="polite" aria-atomic="true"><InfoCircledIcon width={16} height={16} /><span><strong>기존 {initialLabelTargetFoodName} 날짜는 그대로예요</strong>{initialLabelTargetDateSummary ? <small className="date-recheck-saved-date">현재 기록 · {initialLabelTargetDateSummary}</small> : null}<small>다른 입력 방식은 새 식품을 추가해요. 기존 날짜를 확인하려면 라벨로 돌아가세요.</small></span><button type="button" onClick={() => switchMode("label")}>라벨 날짜 확인으로 돌아가기</button></div> : null}
       <p className="intake-method-hint" role="status" aria-live="polite" aria-atomic="true">
         <strong>{intakeMethodHint.title}</strong> <span>{intakeMethodHint.detail}</span>
       </p>
 
-      {!cameraTarget && mode !== "manual" ? <div className={`intake-flow-rail intake-flow-step-${intakeStep}`} role="group" aria-label={`식품 추가 ${intakeStep}단계`}>
+      {!cameraTarget && mode !== "manual" ? <div className={`intake-flow-rail intake-flow-step-${intakeStep}`} role="group" aria-label={`${initialLabelTargetFoodId ? "날짜 확인" : "식품 추가"} ${intakeStep}단계`}>
         <div className="intake-flow-rail-heading"><span><strong>{intakeStepTitle}</strong><small>{intakeStepDetail}</small></span><em>{intakeStep}/3</em></div>
         <ol>
           {intakeStepNames.map((label, index) => {
