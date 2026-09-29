@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
-import { ArchiveIcon, ArrowRightIcon, CalendarIcon, CheckCircledIcon, CheckIcon, FileTextIcon, InfoCircledIcon, LightningBoltIcon, Pencil1Icon, ReaderIcon, SewingPinIcon } from "@radix-ui/react-icons";
+import { ArchiveIcon, ArrowRightIcon, CalendarIcon, CheckCircledIcon, CheckIcon, FileTextIcon, InfoCircledIcon, Pencil1Icon, ReaderIcon, SewingPinIcon } from "@radix-ui/react-icons";
 import { KeyboardInput, useKeyboard } from "./mobile";
 import { getMobileScrollBehavior } from "./mobile/scroll";
 import { revealAndFocusWithinNearestContainer as revealAndFocus, scrollTargetWithinNearestContainer } from "./appScroll";
@@ -22,25 +22,28 @@ function getStorageClass(storage: StorageType) {
 function productSourceLabel(source: string) {
   if (source === "open_food_facts") return "공개 상품 정보";
   if (source === "mfds_c005" || source === "mfds_i1250") return "식품안전나라 상품 정보";
-  if (source === "user_confirmed_alias") return "사용자가 확인한 영수증 상품명";
-  if (source === "local_rule") return "확인된 영수증 상품명";
-  if (source === "parser") return "영수증에서 읽은 상품명 · 살펴봐 주세요";
+  if (source === "user_confirmed_alias") return "내가 확인한 영수증 상품명";
+  if (source === "local_rule") return "영수증에서 찾은 상품명";
+  if (source === "parser") return "영수증에서 읽은 상품명이에요. 맞는지 살펴봐 주세요.";
   return "서비스 상품 정보";
 }
 
 function productProvenanceNote(note: string) {
-  return note
+  const normalized = note
     .replaceAll("식품안전나라 C005 제품 기준 후보", "식품안전나라 상품 정보")
     .replaceAll("식품안전나라 C005 상품 후보", "식품안전나라 상품 정보")
     .replaceAll("식품안전나라 I1250 제품 기준 후보", "식품안전나라 상품 정보")
     .replaceAll("식품안전나라 I1250", "식품안전나라 상품 정보")
     .replaceAll("Open Food Facts 검색 후보", "공개 상품 정보")
     .replaceAll("Open Food Facts", "공개 상품 정보");
+  return /\b(?:workspace|canonical|candidate|confidence|provider|fixture|parser|provenance|source|snapshot|gate|validation|evidence|review)\b/i.test(normalized)
+    ? "참고 상품 정보예요. 실제 상품명과 포장지 날짜를 확인해 주세요."
+    : normalized;
 }
 
 function productFreshnessLabel(freshness: "current" | "legacy" | "unknown") {
-  if (freshness === "current") return "최근 상품 정보";
-  if (freshness === "legacy") return "오래된 상품 정보";
+  if (freshness === "current") return "최근 정보";
+  if (freshness === "legacy") return "오래된 정보";
   return "정보 날짜를 알 수 없어요";
 }
 
@@ -267,7 +270,7 @@ export default function FoodDetailSheet({
     openedSelectionChanged ? "개봉 상태" : null,
   ].filter((value): value is string => Boolean(value));
   const pendingConsumeStateCopy = pendingConsumeStateLabels.length
-    ? `저장되지 않은 ${pendingConsumeStateLabels.join(" · ")} 변경은 먹은 기록에 반영되지 않아요. 저장하려면 돌아가서 변경 저장을 눌러 주세요.`
+    ? `저장하지 않은 ${pendingConsumeStateLabels.join(" · ")} 변경은 먹은 기록에 포함되지 않아요. 저장하려면 돌아가서 변경 저장을 눌러 주세요.`
     : null;
   const dateStorageMismatch = Boolean(food.dateStorageHint && food.dateStorageHint !== selectedStorageCode);
   const productStorageMismatch = Boolean(!dateStorageMismatch && food.productProvenance?.storageHint && food.productProvenance.storageHint !== selectedStorageCode);
@@ -295,9 +298,6 @@ export default function FoodDetailSheet({
     && !manualPackageDateConfirmationNote;
   const detailNote = displayFoodNote(food.note);
   const hasReferenceSources = Boolean(hasReceiptProvenance || hasReceiptPurchase || hasShoppingPurchase || purchasedAtLabel || food.barcode || food.productProvenance);
-  const inferenceReasons = food.dateKind === "estimated_use_first"
-    ? [`날짜 정보 · ${dateSourceLabel(food.dateSource)}`, `${food.storage} 보관 · ${food.opened ? "개봉" : "미개봉"}`]
-    : [];
   const closeDateEditor = () => {
     setDateEditorOpen(false);
     window.requestAnimationFrame(() => revealAndFocus(dateConfirmationActionRef.current, { block: "nearest" }));
@@ -313,7 +313,7 @@ export default function FoodDetailSheet({
   };
   const dateConfirmationAction = canConfirmDate
     ? readOnly
-      ? <div className="detail-read-only-inline-note" role="note"><CalendarIcon width={15} height={15} /><span><strong>날짜 수정은 연결 후 가능해요</strong><small>포장지 날짜는 확인할 수 있지만, 저장은 서버에 다시 연결한 뒤 할 수 있어요.</small></span></div>
+      ? <div className="detail-read-only-inline-note" role="note"><CalendarIcon width={15} height={15} /><span><strong>날짜 수정은 연결 후 가능해요</strong><small>포장지 날짜는 볼 수 있어요. 연결이 복구되면 수정한 날짜를 저장할 수 있어요.</small></span></div>
       : dateEditorOpen
         ? <Suspense fallback={<div className="date-editor-loading" role="status">날짜 입력 화면을 준비하고 있어요</div>}><DateAssertionEditor initialValue={dateEditorValue(food)} initialKind={dateEditorKind(food)} title={editingUserReminder ? "확인한 알림 날짜 수정" : undefined} description={editingUserReminder ? "기존 알림 날짜와 의미를 다시 확인해요." : undefined} onCancel={closeDateEditor} onConfirm={(dateValue, kind) => onConfirmDate(food.id, dateValue, kind)} /></Suspense>
         : <button ref={dateConfirmationActionRef} data-testid="date-confirmation-action" className={`date-edit-button${food.dateKind === "unknown" ? " date-edit-button-needed" : ""}`} type="button" onClick={() => setDateEditorOpen(true)}><CalendarIcon width={15} height={15} /><span><strong>{dateConfirmationTitle}</strong><small>{dateConfirmationDescription}</small></span><ArrowRightIcon width={15} height={15} /></button>
@@ -406,7 +406,7 @@ export default function FoodDetailSheet({
   }, [keyboard, readOnly]);
 
   const detailSaveHint = availableQuantity.amount > 1
-    ? "보관 위치나 개봉 여부를 바꾼 뒤 저장할 수 있어요. 수량만 바꾸면 먹었어요·폐기 기록에 반영돼요."
+    ? "보관 위치나 개봉 여부는 저장할 수 있어요. 수량 변경은 먹거나 버린 기록에 함께 저장돼요."
     : "보관 위치나 개봉 여부를 바꾼 뒤 저장할 수 있어요.";
   const detailActionReviewCopy = "이미 먹은 경우에만 기록해 주세요. 먹어도 되는지는 앱에서 판단할 수 없어요.";
   const discardRemainingQuantity = Math.max(0, Number((availableQuantity.amount - eventQuantity).toFixed(3)));
@@ -420,7 +420,7 @@ export default function FoodDetailSheet({
         <>
           {needsSafetyReviewBeforeConsume ? <div id="consume-safety-hint" className="detail-actions-review-copy" role="note"><strong>먹은 기록 안내</strong><small>{detailActionReviewCopy}</small></div> : null}
           <div className={`detail-actions${needsSafetyReviewBeforeConsume ? " detail-actions-review" : ""}${hasPendingSaveChanges ? "" : " detail-actions-no-save"}`} role="group" aria-label="식품 기록 행동"><button ref={detailActionPrimaryRef} className={`secondary-sheet-button detail-consume-action${needsSafetyReviewBeforeConsume ? " detail-consume-action-review" : ""}`} type="button" aria-label={needsSafetyReviewBeforeConsume ? "날짜와 보관 방법을 살펴본 뒤 먹은 기록 남기기" : undefined} aria-describedby={needsSafetyReviewBeforeConsume ? "consume-safety-hint" : undefined} onClick={requestConsume}><CheckCircledIcon width={17} height={17} /> {needsSafetyReviewBeforeConsume ? "먹은 기록 남기기" : eventQuantity < availableQuantity.amount ? `${eventQuantity}${availableQuantity.unit} 먹었어요` : "먹었어요"}</button>{hasPendingSaveChanges ? <button className="primary-sheet-button detail-save-action detail-save-pending" type="button" aria-label={`${pendingDetailChangeSummary} 저장`} onClick={() => onSave(food.id, storage, opened, eventQuantity, storageLocationId)}>변경 저장 <ArrowRightIcon width={17} height={17} /></button> : null}</div>
-          <p className="detail-save-hint" role="note" style={{ display: "flex", gap: 6, alignItems: "flex-start", margin: "6px 2px 0", padding: 0, border: 0, background: "transparent", color: hasPendingSaveChanges ? "var(--atelier-amber)" : "var(--atelier-muted)", fontSize: 12, lineHeight: 1.45 }}><InfoCircledIcon width={14} height={14} />{hasPendingSaveChanges ? "저장하지 않고 닫으면 변경한 보관 상태는 반영되지 않아요." : detailSaveHint}</p>
+          <p className="detail-save-hint" role="note" style={{ display: "flex", gap: 6, alignItems: "flex-start", margin: "6px 2px 0", padding: 0, border: 0, background: "transparent", color: hasPendingSaveChanges ? "var(--atelier-amber)" : "var(--atelier-muted)", fontSize: 12, lineHeight: 1.45 }}><InfoCircledIcon width={14} height={14} />{hasPendingSaveChanges ? "저장하지 않고 닫으면 보관 상태가 바뀌지 않아요." : detailSaveHint}</p>
         </>
       )}
     </div>
@@ -446,7 +446,7 @@ export default function FoodDetailSheet({
     <div className="product-info-editor" role="group" aria-label="상품 정보 수정" aria-busy={productInfoSaving}>
       <div className="product-info-editor-heading">
         <span><Pencil1Icon width={16} height={16} /><strong>상품 정보 수정</strong></span>
-        <small>{productInfoSaving ? "서버에 저장 중이에요. 입력값은 유지돼요." : "상품명·브랜드·분류를 확인해요."}</small>
+        <small>{productInfoSaving ? "저장하고 있어요. 입력한 내용은 그대로 남아 있어요." : "상품명·브랜드·분류를 살펴봐요."}</small>
       </div>
       <label className="product-info-editor-field"><span>상품명</span><KeyboardInput className="app-input" value={productNameDraft} autoComplete="off" spellCheck={false} aria-label="상품명 수정" disabled={productInfoSaving} onChange={(event) => setProductNameDraft(event.target.value)} onBlur={() => keyboard.hide()} /></label>
       <label className="product-info-editor-field"><span>브랜드</span><KeyboardInput className="app-input" value={productBrandDraft} autoComplete="off" spellCheck={false} aria-label="브랜드 수정" disabled={productInfoSaving} onChange={(event) => setProductBrandDraft(event.target.value)} onBlur={() => keyboard.hide()} /></label>
@@ -471,8 +471,8 @@ export default function FoodDetailSheet({
       {readOnly ? <div className="detail-read-only-callout" role="status"><InfoCircledIcon width={16} height={16} /><span><strong>최근 확인한 화면이에요</strong><small>오프라인 상태라 변경할 수 없어요. 다시 연결하면 저장·소비·폐기를 기록할 수 있어요.</small></span></div> : null}
       {remoteRefreshRequired ? <div className="detail-remote-refresh" role="alert"><InfoCircledIcon width={16} height={16} /><span><strong>다른 기기에서 이 식품이나 재고가 바뀌었어요</strong><small>지금 입력한 내용은 그대로예요. 다시 불러오면 저장하지 않은 입력은 사라질 수 있어요.</small></span><button type="button" onPointerDown={(event) => event.preventDefault()} onClick={async () => { await onRefreshRemote?.(); window.requestAnimationFrame(() => detailActionPrimaryRef.current?.focus({ preventScroll: true })); }}>다시 불러오기</button></div> : null}
       {productInfoError ? <div className="account-error product-info-save-error" role="alert" aria-busy={productInfoSaving}><InfoCircledIcon width={15} height={15} /><span>{productInfoSaving ? "상품 정보를 다시 저장하는 중이에요." : productInfoError}</span>{onRetryProductInfo ? <button className="account-error-action" type="button" disabled={productInfoSaving} aria-busy={productInfoSaving} onPointerDown={(event) => event.preventDefault()} onClick={onRetryProductInfo}>{productInfoSaving ? "다시 시도 중" : "다시 시도"}</button> : null}</div> : null}
-      {productInfoNotice ? <div className="product-info-save-notice" role="status"><CheckCircledIcon width={15} height={15} /><span>{productInfoNotice}</span>{onRefreshProductInfo ? <button className="account-error-action" type="button" onPointerDown={(event) => event.preventDefault()} onClick={() => void onRefreshProductInfo()}>최신 목록 확인</button> : null}</div> : null}
-      {productProvenanceNotice ? <div className="product-provenance-save-notice" role="status"><CheckCircledIcon width={15} height={15} /><span>{productProvenanceNotice}</span>{onRefreshProductProvenance ? <button className="account-error-action" type="button" onPointerDown={(event) => event.preventDefault()} onClick={() => void onRefreshProductProvenance()}>최신 목록 확인</button> : null}</div> : null}
+      {productInfoNotice ? <div className="product-info-save-notice" role="status"><CheckCircledIcon width={15} height={15} /><span>{productInfoNotice}</span>{onRefreshProductInfo ? <button className="account-error-action" type="button" onPointerDown={(event) => event.preventDefault()} onClick={() => void onRefreshProductInfo()}>목록 새로고침</button> : null}</div> : null}
+      {productProvenanceNotice ? <div className="product-provenance-save-notice" role="status"><CheckCircledIcon width={15} height={15} /><span>{productProvenanceNotice}</span>{onRefreshProductProvenance ? <button className="account-error-action" type="button" onPointerDown={(event) => event.preventDefault()} onClick={() => void onRefreshProductProvenance()}>목록 새로고침</button> : null}</div> : null}
       {productProvenanceError ? <div className="account-error product-provenance-save-error" role="alert" aria-busy={productProvenanceMutating}><InfoCircledIcon width={15} height={15} /><span>{productProvenanceMutating ? "상품 정보를 지우는 중이에요." : productProvenanceError}</span>{onRetryProductProvenance ? <button className="account-error-action" type="button" disabled={productProvenanceMutating} aria-busy={productProvenanceMutating} onPointerDown={(event) => event.preventDefault()} onClick={onRetryProductProvenance}>{productProvenanceMutating ? "다시 시도 중" : "다시 시도"}</button> : null}</div> : null}
       <div ref={dateProofRef} tabIndex={-1} className={`date-proof-card date-proof-${food.dateKind === "user_confirmed" ? "user-confirmed" : food.dateKind === "unknown" ? "unknown" : food.dateKind === "estimated_use_first" ? "estimated" : "printed"}`} data-date-state={food.dateKind} role="group" aria-label={`날짜 정보: ${getDateBadge(food)}`}><div className="proof-icon"><CalendarIcon width={18} height={18} /></div><div><span>{getDateBadge(food)}</span><strong>{food.dateKind === "estimated_use_first" ? `먼저 살펴볼 시점 · ${food.dateLabel}` : food.dateKind === "unknown" ? "포장지 날짜를 기록하지 않았어요" : dateProofDetail}</strong><small>{food.dateKind === "unknown" ? "포장지 날짜를 직접 살펴봐 주세요." : dateSourceLabel(food.dateSource, food.dateKind)}</small></div><button type="button" onClick={onShowGuidance} aria-label="날짜 안내 보기"><InfoCircledIcon width={16} height={16} /></button></div>
       {dateReviewReason ? (
@@ -480,7 +480,7 @@ export default function FoodDetailSheet({
           <span className="date-review-icon"><InfoCircledIcon width={16} height={16} /></span>
           <span>
             <strong>{dateReviewReason === "날짜 의미 확인" ? "포장지 날짜 종류를 골라 주세요" : "조리 전에 포장지 날짜를 살펴봐 주세요"}</strong>
-    <small>{dateReviewReason === "날짜 의미 확인" ? "포장일·제조일은 소비기한이 아니에요. 이 날짜를 소비기한으로 바꾸지 않고, 소비기한이 적힌 면과 보관 방법을 따로 살펴봐 주세요." : dateReviewReason === "포장지 날짜 확인" ? "포장지 날짜를 기록하지 않았어요. 포장지와 보관 방법을 살펴본 뒤 조리해 주세요." : "표시 날짜가 오늘이거나 지났어요. 포장지 날짜와 보관·개봉 상태를 다시 살펴봐 주세요."}</small>
+    <small>{dateReviewReason === "날짜 의미 확인" ? "포장일·제조일은 소비기한이 아니에요. 이 날짜를 소비기한으로 바꾸지 않고, 소비기한이 적힌 면과 보관 방법을 따로 살펴봐 주세요." : dateReviewReason === "포장지 날짜 확인" ? "포장지 날짜를 기록하지 않았어요. 포장지와 보관 방법을 살펴본 뒤 조리해 주세요." : "표시 날짜가 오늘이거나 지났어요. 현재 보관·개봉 상태도 함께 확인해 주세요."}</small>
             {canRecheckPrintedLabel && dateReviewReason === "날짜 의미 확인" ? <button ref={dateReviewActionRef} className="date-edit-button" type="button" onClick={onOpenLabelReview}><CalendarIcon width={15} height={15} /><span><strong>포장지에서 소비기한 다시 확인</strong><small>날짜를 새 식품 기록에 저장하거나 기존 식품 기록을 수정할지 선택해요.</small></span><ArrowRightIcon width={15} height={15} /></button> : null}
           </span>
           {compactPrintedDateRecheck ? <button ref={dateReviewActionRef} className="date-edit-button date-edit-button-compact" type="button" aria-label="포장지에서 날짜 다시 확인" title="포장지에서 날짜 다시 확인" onClick={() => onOpenLabelReview?.()}><CalendarIcon width={17} height={17} /><span>날짜 다시 확인</span></button> : null}
@@ -490,12 +490,12 @@ export default function FoodDetailSheet({
       {productInfoSection}
       {detailActionsSection}
       <div className="detail-danger-zone" role="group" aria-label="폐기">{discardSection}</div>
-      {hasReferenceSources ? <section className="detail-source-group" aria-label="참고 정보" style={{ display: "grid", gap: 8 }}><div className="detail-source-group-heading" style={{ display: "flex", gap: 8, alignItems: "baseline", justifyContent: "space-between", padding: "1px 2px 0" }}><span style={{ color: "var(--atelier-muted)", fontSize: 12, fontWeight: 600 }}>참고 정보</span><small style={{ color: "var(--atelier-dim)", fontSize: 12 }}>소비기한은 포장지에서 확인해 주세요.</small></div>
-      {hasReceiptProvenance || hasReceiptPurchase || hasShoppingPurchase || purchasedAtLabel || food.barcode ? <div className="food-provenance-card" role="group" aria-label="구매 기록"><span className="food-provenance-icon"><FileTextIcon width={17} height={17} /></span><span className="food-provenance-copy"><span>구매 기록 <em className="provenance-role-label">기록 내용</em></span><strong>{hasReceiptProvenance || hasReceiptPurchase ? "영수증에서 추가" : hasShoppingPurchase ? "장보기 목록에서 구매" : "구매 기록"}</strong><small>{purchasedAtLabel ? `${purchasedAtLabel} 구매` : "구매일 미등록"} · {hasReceiptProvenance ? "영수증 상품 항목" : hasReceiptPurchase ? "영수증에서 추가" : hasShoppingPurchase ? "장보기 목록에서 추가" : "직접 입력"}</small>{food.barcode ? <small>상품 바코드 · {food.barcode}</small> : null}<small>구매 기록만으로 소비기한을 알 수는 없어요.</small></span></div> : null}
+      {hasReferenceSources ? <section className="detail-source-group" aria-label="구매와 상품 정보" style={{ display: "grid", gap: 8 }}><div className="detail-source-group-heading" style={{ display: "flex", gap: 8, alignItems: "baseline", justifyContent: "space-between", padding: "1px 2px 0" }}><span style={{ color: "var(--atelier-muted)", fontSize: 12, fontWeight: 600 }}>구매와 상품 정보</span><small style={{ color: "var(--atelier-dim)", fontSize: 12 }}>소비기한은 포장지에서 확인해 주세요.</small></div>
+      {hasReceiptProvenance || hasReceiptPurchase || hasShoppingPurchase || purchasedAtLabel || food.barcode ? <div className="food-provenance-card" role="group" aria-label="구매 기록"><span className="food-provenance-icon"><FileTextIcon width={17} height={17} /></span><span className="food-provenance-copy"><span>구매 내역</span><strong>{hasReceiptProvenance || hasReceiptPurchase ? "영수증에서 추가" : hasShoppingPurchase ? "장보기 목록에서 구매" : "구매 기록"}</strong><small>{purchasedAtLabel ? `${purchasedAtLabel} 구매` : "구매일 미등록"} · {hasReceiptProvenance ? "영수증 상품 항목" : hasReceiptPurchase ? "영수증에서 추가" : hasShoppingPurchase ? "장보기 목록에서 추가" : "직접 입력"}</small>{food.barcode ? <small>상품 바코드 · {food.barcode}</small> : null}<small>구매일만으로 소비기한을 알 수는 없어요.</small></span></div> : null}
       {food.productProvenance ? <div className="food-provenance-card product-provenance-card" role="group" aria-label="상품 정보"><span className="food-provenance-icon"><ReaderIcon width={17} height={17} /></span><span className="food-provenance-copy"><span>상품 정보 <em className="provenance-role-label">참고</em></span><strong>{productSourceLabel(food.productProvenance.source)}</strong><small>{productFreshnessLabel(food.productProvenance.sourceFreshness)}{storageHintLabel(food.productProvenance.storageHint) ? ` · 상품 정보에 나온 보관 방법 ${storageHintLabel(food.productProvenance.storageHint)}` : ""}</small><small>{productProvenanceNote(food.productProvenance.note)}</small>{productStorageMismatch ? <small className="storage-hint-mismatch-note">상품 정보에 나온 보관 방법과 현재 보관 위치가 달라요.</small> : null}{food.productProvenance.sourceUrl && /^https?:\/\//.test(food.productProvenance.sourceUrl) ? <a href={food.productProvenance.sourceUrl} target="_blank" rel="noreferrer">상품 정보 더 보기</a> : null}<small>상품 정보만으로 개별 포장의 소비기한을 알 수는 없어요. 포장지 날짜를 살펴봐 주세요.</small></span></div> : null}
       {food.productProvenance ? readOnly ? <p className="detail-read-only-inline-note" role="note"><ReaderIcon width={15} height={15} /><span><strong>상품 정보는 연결 후 바꿀 수 있어요</strong><small>현재 상품 정보를 보여드려요.</small></span></p> : removeProductProvenanceConfirm ? <div className="product-provenance-remove-confirm" role="alert" aria-busy={productProvenanceMutating}><small>{productProvenanceMutating ? "상품 정보를 지우고 있어요." : "상품명은 그대로 두고 참고한 상품 정보만 지워요."}</small><span><button type="button" disabled={productProvenanceMutating} onClick={closeProductProvenanceConfirm}>취소</button><button type="button" disabled={productProvenanceMutating} aria-busy={productProvenanceMutating} onClick={() => onRemoveProductProvenance(food.id)}>{productProvenanceMutating ? "지우는 중" : "정보 지우기"}</button></span></div> : <button ref={productProvenanceReviewActionRef} type="button" className="product-provenance-remove-button" onClick={() => setRemoveProductProvenanceConfirm(true)}>상품 정보 지우기</button> : null}
       </section> : null}
-      {food.dateKind === "estimated_use_first" ? <div className="inference-trace-card" role="group" aria-label="먼저 살펴볼 시점 안내"><div className="inference-trace-heading"><span className="inference-trace-icon"><LightningBoltIcon width={16} height={16} /></span><span><strong>먼저 살펴볼 시점은 어떻게 정했나요?</strong><small>식품 종류와 보관 위치, 개봉 여부를 참고했어요.</small></span></div><ul className="inference-trace-list">{inferenceReasons.map((reason) => <li key={reason}>{reason}</li>)}</ul><div className="inference-trace-footnote"><InfoCircledIcon width={14} height={14} /><span>소비기한이나 먹어도 되는지를 뜻하지 않아요. 포장지 날짜와 식품 상태를 직접 살펴봐 주세요.</span></div></div> : null}
+      {food.dateKind === "estimated_use_first" ? <p className="detail-note" role="note"><InfoCircledIcon width={15} height={15} />먼저 살펴볼 순서는 식품 종류와 보관 방법을 참고한 안내예요. 소비기한이나 먹어도 되는지를 뜻하지 않아요. 포장지 날짜와 식품 상태를 확인해 주세요.</p> : null}
       {showDetailNote ? <p className="detail-note"><InfoCircledIcon width={15} height={15} /> {detailNote}</p> : null}
       <div className={`detail-section${hasPendingSaveChanges && !readOnly ? " detail-section-pending" : ""}`}><div className="detail-section-heading"><span><SewingPinIcon width={16} height={16} /> 보관 위치</span><small className={hasPendingSaveChanges && !readOnly ? "detail-section-status-pending" : ""} aria-live={hasPendingSaveChanges && !readOnly ? "polite" : undefined}>{readOnly ? "연결 후 변경할 수 있어요" : hasPendingSaveChanges ? pendingDetailChangeSummary : `${selectedStorageLabel}에 보관 중`}</small></div><StoragePicker value={storage} locationId={storageLocationId} locations={storageLocations} readOnly={readOnly} onChange={(nextStorage, nextLocationId) => { setStorage(nextStorage); setStorageLocationId(nextLocationId); }} />{dateStorageMismatch ? <div className="storage-mismatch-callout" role="alert"><InfoCircledIcon width={16} height={16} /><span><strong>포장지 보관조건과 현재 위치가 달라요</strong><small>{food.dateStorageConditionText ?? `${storageHintLabel(food.dateStorageHint)} 보관 기준으로 표시된 날짜예요.`} 현재는 {selectedStorageLabel}에 보관 중이라 포장지와 실제 보관 상태를 다시 확인해 주세요. 날짜 자체는 자동으로 바꾸지 않아요.</small></span></div> : null}</div>
       {availableQuantity.amount > 1 ? <div className="quantity-row"><span><strong>변경할 수량</strong><small>일부만 옮기거나 먹을 수 있어요.</small></span><span className="quantity-stepper"><button type="button" aria-label="수량 줄이기" disabled={readOnly || eventQuantity <= 1} onClick={() => setEventQuantity((current) => Math.max(1, current - 1))}>−</button><strong>{eventQuantity}{availableQuantity.unit}</strong><button type="button" aria-label="수량 늘리기" disabled={readOnly || eventQuantity >= availableQuantity.amount} onClick={() => setEventQuantity((current) => Math.min(availableQuantity.amount, current + 1))}>+</button></span></div> : null}

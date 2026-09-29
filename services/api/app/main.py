@@ -11420,7 +11420,7 @@ def _build_meal_plan(
             completed_at=None,
             planner_version="recipe-planner-v2",
             source="recipe_fixture",
-            title="재료를 조금 더 추가해 주세요",
+            title="식단 조건에 맞는 메뉴가 없어요" if preference_filtered else "재료를 조금 더 추가해 주세요",
             minutes=0,
             max_minutes=request.max_minutes,
             servings=request.servings,
@@ -11430,14 +11430,14 @@ def _build_meal_plan(
             matched_ratio=0,
             score=0,
             reason=(
-                "현재 재료에 맞는 메뉴가 있지만, 설정한 알레르기 회피 조건을 확인할 수 없어 추천하지 않았어요."
+                "현재 재료에 맞는 메뉴는 있지만, 설정한 알레르기 조건을 적용해 제외했어요."
                 if preference_filtered
                 else "레시피 후보를 만들려면 식품을 먼저 추가해 주세요."
             ),
             steps=[],
             safety_note="식품 상태가 이상하면 사용하지 마세요.",
             preference_filtered=preference_filtered,
-            preference_note="알레르기 정보가 불명확한 recipe는 회피 조건이 설정된 동안 추천하지 않습니다." if preference_filtered else None,
+            preference_note="피하도록 설정한 알레르기가 있거나, 알레르기 정보를 확인할 수 없는 메뉴는 제외했어요." if preference_filtered else None,
         )
     date_review_records = _meal_plan_date_review_records(selected, planned)
     date_review_foods = [food.display_name for food in date_review_records]

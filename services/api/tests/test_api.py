@@ -4479,6 +4479,43 @@ def test_meal_preferences_filter_recipe_candidates_and_round_trip() -> None:
     assert payload["preference_filtered"] is False
 
 
+def test_meal_plan_no_match_copy_covers_known_allergen_exclusions(monkeypatch) -> None:
+    known_egg_recipe = RecipeSpec(
+        id="known-egg-recipe",
+        title="버섯 달걀 볶음",
+        minutes=15,
+        ingredients=(
+            RecipeIngredient(canonical_name="맛타리버섯", amount=1, unit="팩"),
+            RecipeIngredient(canonical_name="동물복지 달걀", amount=2, unit="개"),
+        ),
+        steps=("버섯과 달걀을 충분히 익혀 주세요.",),
+        safety_note="상태가 이상하면 조리하지 마세요.",
+        allergens=("egg",),
+    )
+    monkeypatch.setattr(main_module, "load_recipe_specs", lambda: (known_egg_recipe,))
+
+    baseline = client.post(
+        "/api/meal-plans/preview",
+        json={"inventory_ids": ["mushroom-1", "egg-1"], "max_minutes": 30},
+    )
+    assert baseline.status_code == 200
+    assert baseline.json()["recipe_id"] == "known-egg-recipe"
+
+    preferences = client.put("/api/meal-preferences", json={"avoid_allergens": ["egg"]})
+    assert preferences.status_code == 200
+    filtered = client.post(
+        "/api/meal-plans/preview",
+        json={"inventory_ids": ["mushroom-1", "egg-1"], "max_minutes": 30},
+    )
+
+    assert filtered.status_code == 200
+    payload = filtered.json()
+    assert payload["preference_filtered"] is True
+    assert payload["title"] == "식단 조건에 맞는 메뉴가 없어요"
+    assert payload["reason"] == "현재 재료에 맞는 메뉴는 있지만, 설정한 알레르기 조건을 적용해 제외했어요."
+    assert payload["preference_note"] == "피하도록 설정한 알레르기가 있거나, 알레르기 정보를 확인할 수 없는 메뉴는 제외했어요."
+
+
 def test_meal_plan_preview_honors_user_cooking_time_limit() -> None:
     response = client.post(
         "/api/meal-plans/preview",

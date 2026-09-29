@@ -2230,19 +2230,28 @@ test("shows the example source beside the label confirmation at 320px", async ({
   const actionSummary = dialog.locator(".label-result-action-summary");
   await expect(source).toHaveAttribute("data-label-source", "example");
   await expect(source.locator("strong")).toHaveText("예시 라벨 결과");
-  await expect(dialog.locator(".label-review-contract-example small")).toHaveText("날짜 종류와 숫자를 실제 포장지와 대조해 주세요.");
-  await expect(dialog.locator(".label-review-contract-example small")).toHaveCSS("font-size", "12px");
+  await expect(source.locator("span")).toHaveCSS("font-size", "11px");
+  await expect(source.locator("span")).toHaveCSS("text-align", "left");
+  await expect(source.locator("span")).toHaveText("예시예요. 날짜 이름과 숫자를 포장지와 비교해 주세요.");
   await expect(actionSummary).toContainText("예시 결과 · 저장 전 확인");
   await expect(dialog.locator(".label-storage-condition-note")).toHaveText("예시 보관 정보 · 냉장 보관");
   await expect(dialog.locator(".confirmed-badge")).toContainText("예시 정보 · 확인 필요");
   await expect(dialog.getByLabel("포장지 날짜")).toBeVisible();
   await expect(dialog.getByRole("button", { name: "새 식품 추가하기" })).toBeVisible();
+  await expect.poll(() => dialog.evaluate((element) => {
+    const content = element.querySelector<HTMLElement>(".sheet-content");
+    const date = element.querySelector<HTMLElement>(".label-result-date-field");
+    const action = element.querySelector<HTMLElement>(".label-result-action-bar");
+    return Boolean(content && date && action
+      && date.getBoundingClientRect().bottom <= action.getBoundingClientRect().top + 1
+      && action.getBoundingClientRect().bottom <= content.getBoundingClientRect().bottom + 1);
+  }), { timeout: 2_500 }).toBe(true);
 
-  await page.screenshot({ path: "../../evidence/mobile-flow-review-2026-09-29/08-example-label-result-320x740-dark-readable.png", scale: "css" });
+  await page.screenshot({ path: "../../evidence/mobile-flow-review-2026-09-29/12-example-label-result-320x740-dark-current-copy.png", scale: "css" });
   await dialog.locator(".sheet-content").evaluate((element) => { element.scrollTop = element.scrollHeight; });
   await expect(dialog.locator(".label-storage-condition-note")).toHaveText("예시 보관 정보 · 냉장 보관");
   await expect(dialog.locator(".confirmed-badge")).toContainText("예시 정보 · 확인 필요");
-  await page.screenshot({ path: "../../evidence/mobile-flow-review-2026-09-29/09-example-label-result-review-320x740-dark-readable.png", scale: "css" });
+  await page.screenshot({ path: "../../evidence/mobile-flow-review-2026-09-29/13-example-label-result-review-320x740-dark-current-copy.png", scale: "css" });
 });
 
 test("keeps the label date field clear of the sticky action at 320px", async ({ page }) => {
@@ -2251,8 +2260,8 @@ test("keeps the label date field clear of the sticky action at 320px", async ({ 
   const dialog = page.getByRole("dialog", { name: "라벨로 추가" });
   await dialog.getByRole("button", { name: "예시 라벨 결과 보기" }).click();
   await expect(dialog.locator(".label-result-provenance")).toHaveAttribute("data-label-source", "example");
+  await expect(dialog.locator(".label-result-provenance span")).toHaveText("예시예요. 날짜 이름과 숫자를 포장지와 비교해 주세요.");
   await expect(dialog.locator(".label-result-provenance strong")).toHaveCSS("font-size", "12px");
-  await expect(dialog.locator(".label-review-contract-example small")).toHaveText("날짜 종류와 숫자를 실제 포장지와 대조해 주세요.");
   await expect(dialog.locator(".label-result-action-summary")).toContainText("예시 결과 · 저장 전 확인");
   await expect.poll(() => dialog.evaluate((element) => {
     const content = element.querySelector<HTMLElement>(".sheet-content");
@@ -2710,32 +2719,60 @@ test("settles sheet motion immediately when reduced motion is requested", async 
 test("raises contrast tokens without changing native geometry", async ({ page }) => {
   const client = await page.context().newCDPSession(page);
   await client.send("Emulation.setEmulatedMedia", { features: [{ name: "prefers-contrast", value: "more" }] });
-  await page.reload();
-  await expect(page.getByRole("main", { name: "Rescue Meal 홈" })).toBeVisible();
+  for (const theme of ["light", "dark"] as const) {
+    await page.evaluate((nextTheme) => window.localStorage.setItem("rescue-meal.theme", nextTheme), theme);
+    await page.reload();
+    await expect(page.locator("html")).toHaveAttribute("data-rescue-theme", theme);
+    await expect(page.getByRole("main", { name: "Rescue Meal 홈" })).toBeVisible();
+    // Let the home surface finish its entrance motion before saving the
+    // high-contrast screenshots used for visual review.
+    await page.waitForTimeout(450);
 
-  const readback = await page.evaluate(() => {
-    const screen = document.querySelector<HTMLElement>("[data-testid=device-screen]")!;
-    const home = document.querySelector<HTMLElement>(".meal-home")!;
-    const add = document.querySelector<HTMLElement>(".add-food-button")!;
-    return {
-      contrast: window.matchMedia("(prefers-contrast: more)").matches,
-      mutedColor: getComputedStyle(home).getPropertyValue("--atelier-muted").trim(),
-      borderColor: getComputedStyle(home).getPropertyValue("--atelier-border-strong").trim(),
-      screen: screen.getBoundingClientRect().toJSON(),
-      add: add.getBoundingClientRect().toJSON(),
-      documentWidth: document.documentElement.scrollWidth,
-      bodyWidth: document.body.scrollWidth,
-    };
-  });
+    const readback = await page.evaluate(() => {
+      const screen = document.querySelector<HTMLElement>("[data-testid=device-screen]")!;
+      const home = document.querySelector<HTMLElement>(".meal-home")!;
+      const add = document.querySelector<HTMLElement>(".add-food-button")!;
+      const mealAction = document.querySelector<HTMLElement>(".meal-plan-button")!;
+      const mealActionLabel = mealAction.querySelector<HTMLElement>("strong")!;
+      const luminance = (color: string) => {
+        const channels = color.match(/[\d.]+/g)?.slice(0, 3).map(Number);
+        if (!channels || channels.length !== 3) throw new Error(`Unparseable CSS color: ${color}`);
+        const [red, green, blue] = channels.map((channel) => {
+          const normalized = channel / 255;
+          return normalized <= 0.04045 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
+        });
+        return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+      };
+      const foregroundLuminance = luminance(getComputedStyle(mealActionLabel).color);
+      const backgroundLuminance = luminance(getComputedStyle(mealAction).backgroundColor);
+      return {
+        contrast: window.matchMedia("(prefers-contrast: more)").matches,
+        mutedColor: getComputedStyle(home).getPropertyValue("--atelier-muted").trim(),
+        borderColor: getComputedStyle(home).getPropertyValue("--atelier-border-strong").trim(),
+        mealActionContrast: (Math.max(foregroundLuminance, backgroundLuminance) + 0.05)
+          / (Math.min(foregroundLuminance, backgroundLuminance) + 0.05),
+        screen: screen.getBoundingClientRect().toJSON(),
+        add: add.getBoundingClientRect().toJSON(),
+        documentWidth: document.documentElement.scrollWidth,
+        bodyWidth: document.body.scrollWidth,
+      };
+    });
 
-  expect(readback.contrast).toBeTruthy();
-  expect(readback.mutedColor).toBe("#4e5968");
-  expect(readback.borderColor).toBe("rgba(2, 32, 71, 0.38)");
-  expect(readback.screen.width).toBeCloseTo(320, 0);
-  expect(readback.screen.height).toBeCloseTo(740, 0);
-  expect(readback.add.height).toBeGreaterThanOrEqual(43.5);
-  expect(readback.documentWidth).toBeLessThanOrEqual(320);
-  expect(readback.bodyWidth).toBeLessThanOrEqual(320);
+    expect(readback.contrast).toBeTruthy();
+    expect(readback.mutedColor).toBe(theme === "light" ? "#4e5968" : "#b7c8bf");
+    expect(readback.borderColor).toBe(theme === "light" ? "rgba(2, 32, 71, 0.38)" : "rgba(235, 246, 238, 0.58)");
+    expect(readback.mealActionContrast).toBeGreaterThanOrEqual(4.5);
+    expect(readback.screen.width).toBeCloseTo(320, 0);
+    expect(readback.screen.height).toBeCloseTo(740, 0);
+    expect(readback.add.height).toBeGreaterThanOrEqual(43.5);
+    expect(readback.documentWidth).toBeLessThanOrEqual(320);
+    expect(readback.bodyWidth).toBeLessThanOrEqual(320);
+    await page.screenshot({
+      path: `../../evidence/mobile-flow-review-2026-09-29/${theme === "light" ? "17" : "18"}-home-320x740-high-contrast-${theme}.png`,
+      scale: "css",
+    });
+  }
+  await client.detach();
 });
 
 test("scales the major sheet reading hierarchy with a larger text preference", async ({ page }) => {
@@ -2873,7 +2910,7 @@ test("keeps date guidance in context when opening a review-required priority car
   const dateReviewCopy = dialog.locator(".date-review-callout > span:nth-child(2) > small");
 
   await expect(dateReviewHeading).toHaveText("조리 전에 포장지 날짜를 살펴봐 주세요");
-  await expect(dateReviewCopy).toContainText("포장지 날짜와 보관·개봉 상태를 다시 살펴봐 주세요.");
+  await expect(dateReviewCopy).toHaveText("표시 날짜가 오늘이거나 지났어요. 현재 보관·개봉 상태도 함께 확인해 주세요.");
   await expect(dateReviewHeading).toHaveCSS("font-size", "12px");
   await expect(dateReviewCopy).toHaveCSS("font-size", "12px");
   await expect(dialog.locator(".date-edit-button-compact > span")).toHaveCSS("font-size", "11px");

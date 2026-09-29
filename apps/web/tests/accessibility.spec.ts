@@ -63,6 +63,50 @@ test("primary home action text meets contrast in light and dark themes", async (
     }
     await expect(page.locator("html")).toHaveAttribute("data-rescue-theme", theme);
 
+    if (theme === "dark") {
+      const priorityStateColors = await page.evaluate(() => {
+        const context = document.createElement("canvas").getContext("2d")!;
+        context.canvas.width = 1;
+        context.canvas.height = 1;
+        const paint = (color: string) => {
+          context.fillStyle = color;
+          context.fillRect(0, 0, 1, 1);
+        };
+        const sample = () => Array.from(context.getImageData(0, 0, 1, 1).data).slice(0, 3);
+        const luminance = (rgb: number[]) => {
+          const channels = rgb.map((channel) => {
+            const normalized = channel / 255;
+            return normalized <= 0.04045 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
+          });
+          return 0.2126 * channels[0]! + 0.7152 * channels[1]! + 0.0722 * channels[2]!;
+        };
+        const measure = (selector: string) => {
+          const label = document.querySelector<HTMLElement>(selector)!;
+          const ancestors: HTMLElement[] = [];
+          for (let element: HTMLElement | null = label; element; element = element.parentElement) ancestors.push(element);
+          context.clearRect(0, 0, 1, 1);
+          for (const element of ancestors.reverse()) paint(getComputedStyle(element).backgroundColor);
+          const backgroundLuminance = luminance(sample());
+          context.clearRect(0, 0, 1, 1);
+          paint(getComputedStyle(label).color);
+          const foregroundLuminance = luminance(sample());
+          return {
+            color: getComputedStyle(label).color,
+            contrast: (Math.max(foregroundLuminance, backgroundLuminance) + 0.05)
+              / (Math.min(foregroundLuminance, backgroundLuminance) + 0.05),
+          };
+        };
+        return {
+          review: measure(".priority-state-review"),
+          action: measure(".priority-state-action"),
+        };
+      });
+      expect(priorityStateColors.review.color).toBe("rgb(255, 184, 166)");
+      expect(priorityStateColors.action.color).toBe("rgb(255, 211, 138)");
+      expect(priorityStateColors.review.contrast).toBeGreaterThanOrEqual(4.5);
+      expect(priorityStateColors.action.contrast).toBeGreaterThanOrEqual(4.5);
+    }
+
     const ratios = await page.locator(".meal-plan-button").evaluate((button) => {
       const luminance = (color: string) => {
         const channels = color.match(/[\d.]+/g)?.slice(0, 3).map(Number);
@@ -115,6 +159,63 @@ test("printed-date recheck sheet passes axe audit in light and dark themes", asy
       await expectNoViolations(page, `printed-date recheck ${viewport.width}px ${theme}`);
     }
   }
+});
+
+test("printed-date recheck keeps its current record clear with system high contrast", async ({ page }) => {
+  const client = await page.context().newCDPSession(page);
+  await client.send("Emulation.setEmulatedMedia", { features: [
+    { name: "prefers-contrast", value: "more" },
+    { name: "prefers-reduced-motion", value: "reduce" },
+  ] });
+  let screenshotIndex = 19;
+
+  for (const viewport of [{ width: 320, height: 740 }, { width: 393, height: 852 }]) {
+    for (const theme of ["light", "dark"] as const) {
+      await page.setViewportSize(viewport);
+      await page.goto("/");
+      await page.evaluate((nextTheme) => window.localStorage.setItem("rescue-meal.theme", nextTheme), theme);
+      await page.reload();
+      await expect(page.locator("html")).toHaveAttribute("data-rescue-theme", theme);
+      await expect(page.getByRole("main", { name: "Rescue Meal 홈" })).toBeVisible();
+
+      await page.getByRole("button", { name: /시금치 개봉됨/ }).click();
+      const detail = await openSheet(page, "시금치");
+      await detail.getByRole("button", { name: "포장지에서 날짜 다시 확인" }).click();
+      const dateRecheck = await openSheet(page, "날짜 다시 살펴보기");
+      await expect(dateRecheck.getByRole("heading", { name: "날짜 다시 살펴보기" })).toBeInViewport();
+      const currentRecord = dateRecheck.getByRole("group", { name: /현재 기록된 날짜 포장 소비기한/ });
+      await expect(currentRecord).toBeVisible();
+      await expect(currentRecord).toBeInViewport();
+      await expect(currentRecord.locator("span")).toHaveCSS("font-size", "10px");
+      await expect(currentRecord.locator("strong")).toHaveCSS("font-size", "12px");
+      await expect.poll(() => currentRecord.evaluate((group) => {
+        const value = group.querySelector<HTMLElement>("strong");
+        if (!value) return false;
+        const groupBox = group.getBoundingClientRect();
+        const valueBox = value.getBoundingClientRect();
+        return valueBox.left >= groupBox.left - 1 && valueBox.right <= groupBox.right + 1;
+      })).toBe(true);
+
+      const highContrastTokens = await dateRecheck.evaluate((dialog) => {
+        const style = getComputedStyle(dialog);
+        return {
+          contrast: window.matchMedia("(prefers-contrast: more)").matches,
+          muted: style.getPropertyValue("--atelier-muted").trim(),
+          border: style.getPropertyValue("--atelier-border-strong").trim(),
+        };
+      });
+      expect(highContrastTokens.contrast).toBe(true);
+      expect(highContrastTokens.muted).toBe(theme === "light" ? "#4e5968" : "#b7c8bf");
+      expect(highContrastTokens.border).toBe(theme === "light" ? "rgba(2, 32, 71, 0.38)" : "rgba(235, 246, 238, 0.58)");
+      await expectNoViolations(page, `printed-date recheck high contrast ${viewport.width}px ${theme}`);
+      await page.screenshot({
+        path: `../../evidence/mobile-flow-review-2026-09-29/${String(screenshotIndex++).padStart(2, "0")}-date-recheck-${viewport.width}x${viewport.height}-high-contrast-${theme}.png`,
+        scale: "css",
+      });
+    }
+  }
+
+  await client.detach();
 });
 
 test("account and notification surfaces pass axe audit", async ({ page }) => {

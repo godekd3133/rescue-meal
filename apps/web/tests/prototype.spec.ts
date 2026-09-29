@@ -10,32 +10,29 @@ test("Rescue Meal home opens detail and saves a storage change", async ({ page }
   const eyebrowParts = new Intl.DateTimeFormat("ko-KR", { weekday: "long", month: "long", day: "numeric" }).formatToParts(new Date());
   const expectedEyebrow = `${eyebrowParts.find((part) => part.type === "weekday")?.value ?? "오늘"}, ${eyebrowParts.find((part) => part.type === "month")?.value ?? ""} ${eyebrowParts.find((part) => part.type === "day")?.value ?? ""}`;
   await expect(page.locator(".eyebrow")).toHaveText(expectedEyebrow);
-  await expect(page.getByRole("heading", { name: "오늘 먼저 확인할 식품 3" })).toBeVisible();
-  await expect(page.locator(".connection-pill")).toHaveText("게스트 기록");
+  await expect(page.getByRole("heading", { name: "먼저 살펴볼 식품 3개" })).toBeVisible();
+  await expect(page.locator(".connection-pill")).toHaveText("게스트");
   await expect(page.locator(".trust-card")).toHaveAttribute("data-trust-state", "needs-review");
-  await expect(page.locator(".trust-card strong")).toHaveText("확인이 필요한 식품 2개 · 날짜를 살펴봐 주세요");
-  await expect(page.locator(".trust-card small")).toContainText("목록을 열어 식품마다 날짜와 보관 상태를 확인해 주세요.");
-  await expect(page.locator(".rescue-status-legend")).toContainText("보관 중");
-  await expect(page.locator(".rescue-status-legend")).toContainText("먼저 살펴봐 주세요");
-  await expect(page.locator(".rescue-status-legend")).not.toContainText("기록됨");
+  await expect(page.locator(".trust-card strong")).toHaveText("포장지 날짜를 살펴볼 식품 2개");
+  await expect(page.locator(".trust-card small")).toHaveText("포장지 날짜와 보관 방법을 살펴봐 주세요.");
   const spinachPriorityCard = page.locator(".priority-card").filter({ hasText: "시금치" });
-  await expect(spinachPriorityCard.locator(".date-source")).toHaveText("표시 소비기한");
+  await expect(spinachPriorityCard.locator(".date-source")).toHaveText("포장 소비기한");
   await expect(spinachPriorityCard.locator(".date-source")).not.toHaveClass(/date-source-warning/);
   await expect(spinachPriorityCard.locator(".priority-date small")).toHaveText("날짜 확인");
   await expect(spinachPriorityCard.locator(".priority-date small")).toHaveAttribute("title", "조리 전 날짜 확인");
-  await expect(page.locator(".priority-card").filter({ hasText: "국산콩 두부" }).locator(".date-source")).toHaveText("우선순위 참고");
-  await expect(page.locator(".priority-card").filter({ hasText: "국산콩 두부" }).locator(".priority-date small")).toHaveText("우선 확인");
+  await expect(page.locator(".priority-card").filter({ hasText: "국산콩 두부" }).locator(".date-source")).toHaveText("먼저 살펴볼 시점");
+  await expect(page.locator(".priority-card").filter({ hasText: "국산콩 두부" }).locator(".priority-date small")).toHaveText("먼저 살펴보기");
   await expect(page.locator(".priority-card").filter({ hasText: "시금치" })).toHaveAttribute("data-priority-state", "needs-review");
   await expect(page.locator(".priority-card").filter({ hasText: "국산콩 두부" })).toHaveAttribute("data-priority-state", "use-next");
-  await expect(page.locator(".meal-plan-button")).toContainText("우선 재료 3개 중 확인 필요 1개");
+  await expect(page.locator(".meal-plan-button")).toContainText("날짜나 보관 방법을 살펴볼 식품 1개");
 
   await page.getByRole("button", { name: /시금치 개봉됨/ }).click();
   const dialog = page.getByRole("dialog", { name: "시금치" });
   await expect(dialog).toBeVisible();
   await expect(page.getByTestId("keyboard-dock")).toHaveAttribute("data-visible", "false");
   await expect(dialog.locator(".detail-hero-copy p")).toHaveText("국내산 시금치 · 남은 1팩");
-  await expect(dialog.locator(".date-review-callout")).toContainText("조리 전 날짜 확인이 필요해요");
-  await expect(dialog.locator(".date-review-callout")).toContainText("포장지·보관 상태·개봉 여부");
+  await expect(dialog.locator(".date-review-callout")).toContainText("조리 전에 포장지 날짜를 살펴봐 주세요");
+  await expect(dialog.locator(".date-review-callout")).toContainText("현재 보관·개봉 상태도 함께 확인해 주세요.");
   await expect(dialog.locator(".date-review-callout")).toHaveAttribute("aria-live", "polite");
   await expect(dialog.locator(".detail-note")).toHaveCount(0);
   await expect(dialog.getByRole("button", { name: "닫기", exact: true })).toBeFocused();
@@ -55,7 +52,7 @@ test("Rescue Meal home opens detail and saves a storage change", async ({ page }
   await expect(dialog.getByRole("button", { name: "냉동", exact: true })).toHaveAttribute("aria-pressed", "true");
   await dialog.locator(".detail-actions .primary-sheet-button").click();
 
-  await expect(page.getByRole("status")).toHaveText("보관 상태를 저장했어요");
+  await expect(page.getByRole("status")).toHaveText("보관 위치를 저장했어요.");
   await expect(page.getByRole("button", { name: /시금치 개봉됨 .* 냉동/ })).toBeVisible();
 });
 
@@ -92,23 +89,23 @@ test("home safety summary counts all review foods and opens their filtered list"
   const safetySummary = page.locator(".trust-card");
   await expect(page.locator(".inventory-review-guide")).toHaveCount(0);
   await expect(safetySummary).toHaveAttribute("data-trust-state", "needs-review");
-  await expect(safetySummary).toHaveAttribute("aria-label", /확인 필요한 식품 목록 열기/);
-  await expect(safetySummary.locator("strong")).toHaveText("확인이 필요한 식품 2개 · 날짜를 살펴봐 주세요");
-  await expect(page.locator(".rescue-status-legend")).toContainText("먼저 살펴봐 주세요");
-  await expect(safetySummary).toContainText("목록을 열어 식품마다 날짜와 보관 상태를 확인해 주세요.");
+  await expect(safetySummary).toHaveAttribute("aria-label", /확인할 식품 목록 보기/);
+  await expect(safetySummary.locator("strong")).toHaveText("포장지 날짜를 살펴볼 식품 2개");
+  await expect(safetySummary).toContainText("포장지 날짜와 보관 방법을 살펴봐 주세요.");
 
   await safetySummary.click();
 
   await expect(page.locator(".app-bottom-nav-item-active")).toHaveText("식품");
-  const reviewFilter = page.locator(".inventory-status-filters button").filter({ hasText: "확인 필요" });
+  const reviewFilter = page.locator(".inventory-status-filters button").filter({ hasText: "날짜·보관 확인" });
   await expect(reviewFilter).toHaveAttribute("aria-pressed", "true");
+  await expect(reviewFilter).toBeFocused();
   await expect(reviewFilter).toContainText("2");
   const reviewRows = page.locator(".inventory-list .inventory-row");
   await expect(reviewRows).toHaveCount(2);
   await expect(reviewRows.filter({ hasText: "시금치" })).toBeVisible();
   await expect(reviewRows.filter({ hasText: "동물복지 달걀" })).toBeVisible();
 
-  const reviewGuide = page.getByRole("region", { name: "확인 순서" });
+  const reviewGuide = page.getByRole("region", { name: "식품을 살펴볼 때" });
   const reviewChecklist = reviewGuide.getByRole("list", { name: "식품 확인 항목" });
   await expect(reviewChecklist.getByRole("listitem")).toHaveCount(3);
   await expect(reviewChecklist).toContainText("포장지 날짜");
@@ -120,7 +117,7 @@ test("home safety summary counts all review foods and opens their filtered list"
   const guidance = page.getByRole("dialog", { name: "날짜를 읽는 방법" });
   await expect(guidance).toBeVisible();
   await expect(guidance.getByRole("list", { name: "식품 날짜와 보관 상태 확인 방법" })).toBeVisible();
-  await expect(guidance.getByRole("note", { name: "식품 상태 확인 안내" })).toBeVisible();
+  await expect(guidance.getByRole("note", { name: "식품 상태 안내" })).toBeVisible();
   await guidance.getByRole("button", { name: "닫기", exact: true }).click();
   await expect(guidance).toHaveCount(0);
   await expect(page.locator(".app-bottom-nav-item-active")).toHaveText("식품");
@@ -1268,10 +1265,7 @@ test("label date remains a candidate until the user confirms it", async ({ page 
   await expect(page.getByRole("group", { name: "식품 추가 2단계" })).toContainText("날짜와 보관 방법을 살펴봐요");
   await expect(page.locator(".label-result-provenance")).toHaveAttribute("data-label-source", "example");
   await expect(page.locator(".label-result-provenance strong")).toHaveText("예시 라벨 결과");
-  await expect(page.locator(".label-result-provenance span")).toHaveText("연습용 · 확인 필요");
-  await expect(page.locator(".label-review-contract strong")).toHaveText("예시 결과예요");
-  await expect(page.locator(".label-review-contract small")).toHaveText("날짜 종류와 숫자를 실제 포장지와 대조해 주세요.");
-  await expect(page.locator(".label-review-contract-example small")).toHaveCSS("font-size", "12px");
+  await expect(page.locator(".label-result-provenance span")).toHaveText("예시예요. 날짜 이름과 숫자를 포장지와 비교해 주세요.");
   await expect(page.locator(".label-result-provenance strong")).toHaveCSS("font-size", "12px");
   await expect(page.locator(".label-result-action-summary")).toContainText("예시 결과 · 저장 전 확인");
   await expect(page.locator(".label-result-card")).toHaveAttribute("data-label-source", "example");

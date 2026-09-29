@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { CheckCircledIcon, ChevronRightIcon, InfoCircledIcon } from "@radix-ui/react-icons";
 import type { ApiNotification } from "./mealApi";
 import { orderNotifications } from "./notificationOrdering";
-import { externalSyncLifecycleColor, externalSyncLifecycleLabel } from "./externalSyncPresentation";
+import { externalSyncLifecycleLabel } from "./externalSyncPresentation";
+import { notificationDisplayMessage, notificationDisplayTitle } from "./notificationPresentation";
 
 function formatNotificationTime(value: string) {
   const parsed = new Date(value);
@@ -10,40 +11,11 @@ function formatNotificationTime(value: string) {
   return new Intl.DateTimeFormat("ko-KR", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" }).format(parsed);
 }
 
-function notificationSeverityLabel(severity: ApiNotification["severity"]) {
-  if (severity === "urgent") return "지금 확인";
-  if (severity === "attention") return "살펴봐 주세요";
-  return "안내";
-}
-
 function notificationKindLabel(kind: ApiNotification["kind"]) {
   if (kind === "date_due") return "날짜 알림";
   if (kind === "date_check") return "날짜 확인";
   if (kind === "storage_mismatch") return "보관 상태";
   return "연동 상태";
-}
-
-function notificationDisplayTitle(notification: ApiNotification) {
-  if (notification.kind !== "grocy_sync" && notification.title === "확인할 식품이 있어요" && notification.canonical_name) {
-    return `${notification.canonical_name} 날짜를 살펴봐 주세요`;
-  }
-  const title = notification.title
-    .replaceAll("AI 소비 우선순위 범위", "먼저 살펴볼 날짜 범위")
-    .replaceAll("AI 소비 우선순위", "먼저 먹을 순서")
-    .replaceAll("오늘 먼저 확인할 식품이에요", "오늘 먼저 살펴볼 식품이에요");
-  if (notification.kind !== "grocy_sync" && notification.canonical_name) {
-    return title.replace(`${notification.canonical_name} 확인이 필요해요`, `${notification.canonical_name} 날짜를 살펴봐 주세요`);
-  }
-  return title;
-}
-
-function notificationDisplayMessage(notification: ApiNotification) {
-  return notification.message
-    .replaceAll("AI 소비 우선순위 범위", "먼저 살펴볼 날짜 범위")
-    .replaceAll("AI 소비 우선순위", "먼저 먹을 순서")
-    .replaceAll("먼저 확인해 보세요", "날짜를 확인해 주세요")
-    .replace(/(.+): 직접 확인해 기록한 날짜는 (.+)예요\. 포장지에 표시된 소비기한과는 별개이니, 포장지 날짜와 보관 상태도 확인해 주세요\./, "내가 기록한 날짜는 $2예요. 포장지 날짜와 보관 방법도 확인해 주세요.")
-    .replace(/(.+): (.+은) 먼저 살펴볼 참고 날짜예요\. 소비기한이나 안전 판정이 아니니 포장지 날짜와 식품 상태를 확인해 주세요\./, "$2 먼저 살펴볼 날짜예요. 소비기한과는 다르니 포장지 날짜를 확인해 주세요.");
 }
 
 type NotificationSyncState = NonNullable<ApiNotification["sync_state"]>;
@@ -57,21 +29,6 @@ function notificationSyncState(notification: ApiNotification): NotificationSyncS
 
 function notificationSyncStateLabel(state: NotificationSyncState) {
   return externalSyncLifecycleLabel(state);
-}
-
-function notificationSyncTone(state: NotificationSyncState) {
-  const color = externalSyncLifecycleColor(state);
-  return {
-    color,
-    borderColor: `color-mix(in srgb, ${color} 25%, var(--sheet-border))`,
-    background: `color-mix(in srgb, ${color} 7%, var(--atelier-surface))`,
-  };
-}
-
-function notificationTone(severity: ApiNotification["severity"]) {
-  if (severity === "urgent") return { background: "color-mix(in srgb, var(--atelier-coral) 14%, transparent)", color: "var(--atelier-coral)" };
-  if (severity === "attention") return { background: "color-mix(in srgb, var(--atelier-amber) 16%, transparent)", color: "var(--atelier-amber)" };
-  return { background: "color-mix(in srgb, var(--atelier-blue) 15%, transparent)", color: "var(--atelier-blue)" };
 }
 
 export default function NotificationSheet({
@@ -142,9 +99,14 @@ export default function NotificationSheet({
     const syncStateLabel = syncState ? notificationSyncStateLabel(syncState) : null;
     const displayTitle = notificationDisplayTitle(notification);
     const displayMessage = notificationDisplayMessage(notification);
+    const rowDetail = syncStateLabel ?? notificationKindLabel(notification.kind);
     return (
-    <button className={`notification-row notification-row-${notification.severity} ${notification.read_at ? "notification-row-read" : ""}`} type="button" key={notification.id} data-notification-id={notification.id} data-notification-returned={returnedNotificationId === notification.id ? "true" : undefined} style={returnedNotificationId === notification.id ? { boxShadow: "inset 0 0 0 2px color-mix(in srgb, var(--atelier-blue) 62%, transparent)", background: "color-mix(in srgb, var(--atelier-blue) 7%, var(--atelier-surface))" } : undefined} onClick={() => handleSelect(notification)} aria-label={`${displayTitle}: ${notification.canonical_name}. ${displayMessage}`} aria-describedby={`notification-status-${notification.id}`}>
-      <span className="notification-row-copy"><span className="notification-row-title" style={{ display: "flex", minWidth: 0, gap: 6, alignItems: "flex-start" }}><strong style={{ display: "-webkit-box", minWidth: 0, flex: "1 1 auto", overflow: "hidden", WebkitBoxOrient: "vertical", WebkitLineClamp: 2, whiteSpace: "normal" }}>{displayTitle}</strong>{syncState ? <span className="notification-state" data-notification-sync-state={syncState} style={{ ...notificationSyncTone(syncState), flex: "0 0 auto", padding: "3px 6px", border: "1px solid currentColor", borderRadius: 999, fontSize: 9, fontWeight: 820, lineHeight: 1.2, whiteSpace: "nowrap" }}>{syncStateLabel}</span> : null}</span><small>{displayMessage}</small><em style={{ color: notificationTone(notification.severity).color }}>{notificationKindLabel(notification.kind)} · {syncStateLabel ?? notificationSeverityLabel(notification.severity)} · {formatNotificationTime(notification.created_at)}</em></span>
+    <button className={`notification-row notification-row-${notification.severity} ${notification.read_at ? "notification-row-read" : ""}`} type="button" key={notification.id} data-notification-id={notification.id} data-notification-sync-state={syncState ?? undefined} data-notification-returned={returnedNotificationId === notification.id ? "true" : undefined} style={returnedNotificationId === notification.id ? { boxShadow: "inset 0 0 0 2px color-mix(in srgb, var(--atelier-blue) 62%, transparent)", background: "color-mix(in srgb, var(--atelier-blue) 7%, var(--atelier-surface))" } : undefined} onClick={() => handleSelect(notification)} aria-label={`${displayTitle}: ${notification.canonical_name}. ${displayMessage}${syncStateLabel ? `. ${syncStateLabel}` : ""}`} aria-describedby={`notification-status-${notification.id}`}>
+      <span className="notification-row-copy">
+        <span className="notification-row-title"><strong>{displayTitle}</strong></span>
+        <small>{displayMessage}</small>
+        <em>{rowDetail} · {formatNotificationTime(notification.created_at)}</em>
+      </span>
       <span id={`notification-status-${notification.id}`} className="sr-only">{notification.read_at ? "읽음" : "읽지 않음"}</span>
       <ChevronRightIcon width={15} height={15} />
     </button>
@@ -229,7 +191,7 @@ export default function NotificationSheet({
       </div>
       {notice ? <div className="notification-refresh-notice" role="status"><CheckCircledIcon width={15} height={15} /><span>{notice}</span></div> : null}
       {error ? <div className="account-error notification-error" data-readback-state={retryAction ? "stale" : undefined} role="alert"><InfoCircledIcon width={15} height={15} /><span>{error}</span>{retryAction ? <button ref={notificationRetryRef} className="account-error-action" type="button" disabled={loading || retryBusy} aria-busy={loading || retryBusy} onClick={() => { setRetryBusy(true); notificationRetryReadbackRef.current = true; retryAction.onRetry(); }}>{retryAction.label}</button> : null}</div> : null}
-      {retryBusy && !retryAction ? <div className="notification-refresh-notice" role="status" aria-live="polite"><InfoCircledIcon width={15} height={15} /><span>알림 읽음 상태를 저장하는 중이에요.</span></div> : null}
+      {retryBusy && !retryAction ? <div className="notification-refresh-notice" role="status" aria-live="polite"><InfoCircledIcon width={15} height={15} /><span>알림을 읽음으로 표시하고 있어요.</span></div> : null}
       {loading ? <div className="notification-loading" role="status">알림을 불러오는 중이에요.</div> : notifications.length ? (
         <div className="notification-list">
           {unreadNotifications.length && readNotifications.length ? <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "2px 2px 0", color: "var(--atelier-muted)", fontSize: 12, fontWeight: 550 }}><span>새 알림</span><span>{unreadNotifications.length}개</span></div> : null}
@@ -237,8 +199,8 @@ export default function NotificationSheet({
           {unreadNotifications.length && readNotifications.length ? <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "7px 2px 0", color: "var(--atelier-muted)", fontSize: 12, fontWeight: 550 }}><span>지난 알림</span><span>{readNotifications.length}개</span></div> : null}
           {readNotifications.map(renderNotificationRow)}
         </div>
-      ) : <div className="notification-empty"><CheckCircledIcon width={22} height={22} /><strong>지금 확인할 알림이 없어요</strong><small>확인이 필요한 날짜나 보관 상태가 생기면 여기에서 알려드릴게요.</small></div>}
-      <p className="notification-footnote"><InfoCircledIcon width={14} height={14} /> 날짜 알림만으로는 먹어도 되는지 알 수 없어요. 포장지 날짜와 식품 상태를 확인해 주세요.</p>
+      ) : <div className="notification-empty"><CheckCircledIcon width={22} height={22} /><strong>지금 확인할 알림이 없어요</strong><small>날짜나 보관 방법을 살펴볼 식품이 있으면 여기에 알려드릴게요.</small></div>}
+      <p className="notification-footnote"><InfoCircledIcon width={14} height={14} /> 날짜 알림만으로 먹어도 되는지는 알 수 없어요. 포장지 날짜와 식품 상태를 확인해 주세요.</p>
     </div>
   );
 }

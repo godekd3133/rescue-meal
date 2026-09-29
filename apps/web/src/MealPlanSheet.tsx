@@ -3,9 +3,9 @@ import { ArrowRightIcon, CalendarIcon, CheckCircledIcon, ChevronDownIcon, InfoCi
 import { BottomSheet, KeyboardInput, useKeyboard } from "./mobile";
 import { getMobileScrollBehavior } from "./mobile/scroll";
 import { revealAndFocusWithinNearestContainer as revealAndFocus, scrollTargetWithinNearestContainer } from "./appScroll";
-import { MEAL_API_WORKSPACE_CONFLICT_MESSAGE, isMealApiMealPlanCompletionPersistenceError, isMealApiMealPlanPersistenceError, isMealApiMealPreferencesPersistenceError, isMealApiMultiDayPlanPersistenceError, isMealApiShoppingListPersistenceError, isMealApiWorkspaceConflictError, mealApi, type ApiAllergenCode, type ApiGrocySyncStatus, type ApiMealPlan, type ApiMealPlanAuditEvent, type ApiMealPlanOptions, type ApiMealPreferences, type ApiMultiDayMealPlan, type ApiShoppingListItem } from "./mealApi";
+import { isMealApiAuthError, MEAL_API_WORKSPACE_CONFLICT_MESSAGE, isMealApiMealPlanCompletionPersistenceError, isMealApiMealPlanPersistenceError, isMealApiMealPreferencesPersistenceError, isMealApiMultiDayPlanPersistenceError, isMealApiShoppingListPersistenceError, isMealApiWorkspaceConflictError, mealApi, type ApiAllergenCode, type ApiGrocySyncStatus, type ApiMealPlan, type ApiMealPlanAuditEvent, type ApiMealPlanOptions, type ApiMealPreferences, type ApiMultiDayMealPlan, type ApiShoppingListItem } from "./mealApi";
 import { WorkspaceSyncCoordinator, type WorkspaceSyncInvalidation, type WorkspaceSyncTransport } from "./workspaceSync";
-
+import { getMealPlanErrorPresentation, mealPlanDisplayCopy } from "./mealPlanPresentation";
 type MealFood = {
   id: string;
   name: string;
@@ -103,18 +103,13 @@ function imageForFoodName(name: string) {
   return FOOD_IMAGES.groceries;
 }
 
-function mealPlanErrorMessage(reason: unknown, fallback: string) {
-  return isMealApiWorkspaceConflictError(reason) ? MEAL_API_WORKSPACE_CONFLICT_MESSAGE : fallback;
-}
-
-function mealPlanDisplayCopy(copy: string) {
-  return copy
-    .replace(/레시피 후보를 만들려면/g, "메뉴를 찾으려면")
-    .replace(/레시피 후보/g, "메뉴")
-    .replace(/\brecipe\b/gi, "메뉴")
-    .replace(/추천하지 않았어요/g, "메뉴에서 제외했어요")
-    .replace(/이 안내는 소비기한을 새로 판정하지 않습니다\.?/g, "소비기한이나 먹어도 되는지를 뜻하지 않아요. 포장지 날짜와 식품 상태를 살펴봐 주세요.")
-    .replace(/소비기한을 새로 판정하는 안내는 아닙니다\.?/g, "소비기한이나 먹어도 되는지를 뜻하지 않아요. 포장지 날짜와 식품 상태를 살펴봐 주세요.");
+function mealPlanErrorPresentation(reason: unknown, fallback: string) {
+  const kind = isMealApiAuthError(reason)
+    ? "authentication"
+    : isMealApiWorkspaceConflictError(reason)
+      ? "workspace-conflict"
+      : "other";
+  return getMealPlanErrorPresentation(kind, fallback, MEAL_API_WORKSPACE_CONFLICT_MESSAGE);
 }
 
 function ingredientAvailabilityCopy(ingredients: ApiMealPlan["ingredients"]) {
@@ -446,7 +441,7 @@ function createDemoPlan(foods: MealFood[], maxMinutes = 30, servings = 1, dateRe
   };
 }
 
-export default function MealPlanSheet({ foods, active = false, returningFromDetail = false, plannerContextKey = "", onOpenChange, initialMaxMinutes = 30, initialServings = 1, dateReviewFoods = [], onSaved, onCompleted, onOpenFoodDetail, onOpenAdd, onOpenSyncReview, onOpenShoppingList, onAddDemoShoppingItems, onOptionsChange, workspaceSync, workspaceTransport }: {
+export default function MealPlanSheet({ foods, active = false, returningFromDetail = false, plannerContextKey = "", onOpenChange, initialMaxMinutes = 30, initialServings = 1, dateReviewFoods = [], onSaved, onCompleted, onOpenFoodDetail, onOpenAdd, onOpenSyncReview, onOpenShoppingList, onAddDemoShoppingItems, onOptionsChange, onAuthenticationRequired, onOpenAccount, workspaceSync, workspaceTransport }: {
   foods: MealFood[];
   active?: boolean;
   returningFromDetail?: boolean;
@@ -463,6 +458,8 @@ export default function MealPlanSheet({ foods, active = false, returningFromDeta
   onOpenShoppingList?: () => void;
   onAddDemoShoppingItems?: (sourceType: "meal_plan" | "multi_day", sourceId: string, items: DemoShoppingListEntry[]) => Promise<ApiShoppingListItem[]>;
   onOptionsChange?: (options: { maxMinutes: number; servings: number }) => void;
+  onAuthenticationRequired?: () => void;
+  onOpenAccount?: () => void;
   workspaceSync: WorkspaceSyncCoordinator;
   workspaceTransport: WorkspaceSyncTransport | null;
 }) {
@@ -500,6 +497,7 @@ export default function MealPlanSheet({ foods, active = false, returningFromDeta
   const [completionRetryPayload, setCompletionRetryPayload] = useState<MealPlanConsumption[] | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [error, setError] = useState("");
+  const [authenticationExpired, setAuthenticationExpired] = useState(false);
   const [latestPlanReadbackNotice, setLatestPlanReadbackNotice] = useState("");
   const [alternatives, setAlternatives] = useState<ApiMealPlan[]>([]);
   const [alternativesOpen, setAlternativesOpen] = useState(false);
@@ -555,6 +553,8 @@ export default function MealPlanSheet({ foods, active = false, returningFromDeta
   const shoppingFirstItemRef = useRef<HTMLButtonElement | null>(null);
   const safetySummaryRef = useRef<HTMLElement | null>(null);
   const mealPreferencesSectionRef = useRef<HTMLElement | null>(null);
+  const authenticationExpiryHandledRef = useRef(false);
+  const authenticationRecoveryActionRef = useRef<HTMLButtonElement | null>(null);
   const revealMealPreferencesRef = useRef(false);
   const revealCompletionRef = useRef(false);
   const revealCompletionFocusRef = useRef(false);
@@ -577,9 +577,29 @@ export default function MealPlanSheet({ foods, active = false, returningFromDeta
     rememberMealPlanRevision(mealApi.workspaceRevision);
   };
 
+  const presentMealPlanError = (reason: unknown, fallback: string) => {
+    const presentation = mealPlanErrorPresentation(reason, fallback);
+    if (presentation.recovery === "account") {
+      setAuthenticationExpired(true);
+      if (!authenticationExpiryHandledRef.current) {
+        authenticationExpiryHandledRef.current = true;
+        onAuthenticationRequired?.();
+      }
+    }
+    return presentation.message;
+  };
+
+  useEffect(() => {
+    if (!authenticationExpired) return;
+    const frame = window.requestAnimationFrame(() => authenticationRecoveryActionRef.current?.focus({ preventScroll: true }));
+    return () => window.cancelAnimationFrame(frame);
+  }, [authenticationExpired]);
+
   useEffect(() => {
     if (!active) {
       if (!returningFromDetail) mealPreferencesSessionRef.current.active = false;
+      authenticationExpiryHandledRef.current = false;
+      setAuthenticationExpired(false);
       return;
     }
     const currentWorkspaceKey = workspaceSync.currentWorkspaceKey;
@@ -601,6 +621,8 @@ export default function MealPlanSheet({ foods, active = false, returningFromDeta
       && priorSession.inputSignature === currentInputSignature;
     mealPreferencesSessionRef.current = { active: true, workspaceKey: currentWorkspaceKey, inputSignature: currentInputSignature };
     if (startingPlannerSession || changingWorkspace) {
+      authenticationExpiryHandledRef.current = false;
+      setAuthenticationExpired(false);
       setMealPreferencesOpen(false);
       setMealPreferencesLoaded(false);
       setMealPreferencesError("");
@@ -698,7 +720,7 @@ export default function MealPlanSheet({ foods, active = false, returningFromDeta
         if (payload.preferences.error) {
           preferencesHandled = true;
           setMealPreferencesLoaded(false);
-          setMealPreferencesError(mealPlanErrorMessage(payload.preferences.error, "저장된 식단 조건을 불러오지 못했어요. 기존 조건은 그대로예요. 다시 불러와 주세요."));
+          setMealPreferencesError(presentMealPlanError(payload.preferences.error, "저장된 식단 조건을 불러오지 못했어요. 기존 조건은 그대로예요. 다시 불러와 주세요."));
           setMealPreferencesRetry(true);
         } else if (payload.preferences.value) {
           preferencesHandled = true;
@@ -751,7 +773,7 @@ export default function MealPlanSheet({ foods, active = false, returningFromDeta
       })
       .catch((reason) => {
         if (!cancelled) {
-          setError(mealPlanErrorMessage(reason, "현재 재료로 메뉴를 찾지 못했어요. 잠시 후 다시 찾아봐 주세요."));
+          setError(presentMealPlanError(reason, "메뉴를 불러오지 못했어요. 잠시 후 다시 시도해 주세요."));
           if (!preferencesHandled) {
             setMealPreferencesLoaded(false);
             setMealPreferencesError("저장한 식단 조건을 불러오지 못했어요. 다시 불러와 주세요.");
@@ -890,7 +912,7 @@ export default function MealPlanSheet({ foods, active = false, returningFromDeta
     } catch (reason) {
       setMealPreferencesError(isMealApiMealPreferencesPersistenceError(reason)
         ? "식단 조건을 저장하지 못했어요. 기존 조건을 유지했어요."
-        : mealPlanErrorMessage(reason, "식단 조건을 저장하지 못했어요. 잠시 후 다시 시도해 주세요."));
+        : presentMealPlanError(reason, "식단 조건을 저장하지 못했어요. 잠시 후 다시 시도해 주세요."));
       setMealPreferencesRetry(!isMealApiWorkspaceConflictError(reason));
     } finally {
       setMealPreferencesSaving(false);
@@ -957,7 +979,7 @@ export default function MealPlanSheet({ foods, active = false, returningFromDeta
       const persistenceFailure = isMealApiMealPlanPersistenceError(reason);
       setError(persistenceFailure
         ? "식단을 저장하지 못했어요. 기존 식단은 그대로예요."
-        : mealPlanErrorMessage(reason, "식단을 저장하지 못했어요. 네트워크를 확인한 뒤 다시 시도해 주세요."));
+        : presentMealPlanError(reason, "식단을 저장하지 못했어요. 잠시 후 다시 시도해 주세요."));
       setSaveRetryPayload(persistenceFailure ? payload : null);
     } finally {
       setSaving(false);
@@ -978,10 +1000,10 @@ export default function MealPlanSheet({ foods, active = false, returningFromDeta
   const consumptionSelectionNote = !consumptionRows.length
     ? "사용할 재료를 살펴봐 주세요."
     : !consumptionUsedRows
-      ? "사용량을 하나 이상 선택해야 조리 완료를 기록할 수 있어요. 재고는 그대로 남아요."
+      ? "사용할 재료를 하나 이상 골라 주세요. 선택하지 않은 재료는 그대로 남아요."
     : consumptionSkippedRows || consumptionPartialRows
-      ? `현재 ${consumptionUsedRows}개 사용${consumptionPartialRows ? ` · 일부 사용 ${consumptionPartialRows}개` : ""}${consumptionSkippedRows ? ` · ${consumptionSkippedRows}개는 재고에 남겨요` : ""}.`
-      : `기본값은 재료 ${consumptionRows.length}개 전부 사용 · 실제 사용량으로 조정해 주세요.`;
+      ? `${consumptionUsedRows}가지 재료를 사용해요${consumptionPartialRows ? ` · 일부만 쓸 재료 ${consumptionPartialRows}가지` : ""}${consumptionSkippedRows ? ` · ${consumptionSkippedRows}가지는 남겨요` : ""}.`
+      : `재료 ${consumptionRows.length}가지를 모두 사용해요. 필요하면 양을 바꿔 주세요.`;
   const allergenMetadataUnknown = Boolean(hasRecipe && plan?.allergen_metadata_status !== "known");
   const requiresSafetyAcknowledgement = Boolean(hasRecipe && (plan?.date_review_required || allergenMetadataUnknown));
   const safetyNoticeCount = [
@@ -990,7 +1012,6 @@ export default function MealPlanSheet({ foods, active = false, returningFromDeta
     Boolean(plan?.missing_ingredients.length),
     allergenMetadataUnknown,
   ].filter(Boolean).length;
-  const safetyNoticeDescription = "포장지 날짜와 재료 상태를 살펴봐 주세요.";
   const canAddMissingIngredientsToShopping = Boolean(mealApi.isConfigured || onAddDemoShoppingItems);
 
   const revealSafetySummary = () => {
@@ -1122,7 +1143,7 @@ export default function MealPlanSheet({ foods, active = false, returningFromDeta
       setAlternatives(response.options.filter((option) => option.recipe_id !== plan?.recipe_id));
       setAlternativesOpen(true);
     } catch (reason) {
-      setAlternativesError(mealPlanErrorMessage(reason, "다른 메뉴를 불러오지 못했어요. 잠시 후 다시 시도해 주세요."));
+      setAlternativesError(presentMealPlanError(reason, "다른 메뉴를 불러오지 못했어요. 잠시 후 다시 시도해 주세요."));
       setAlternativesOpen(true);
     } finally {
       setAlternativesLoading(false);
@@ -1165,7 +1186,7 @@ export default function MealPlanSheet({ foods, active = false, returningFromDeta
       setMultiDaySaved(Boolean(latestMatchesCurrentPreview && latest?.saved_at));
       setMultiDayOpen(true);
     } catch (reason) {
-      setMultiDayError(mealPlanErrorMessage(reason, "3일 식단을 만들지 못했어요. 잠시 후 다시 찾아봐 주세요."));
+      setMultiDayError(presentMealPlanError(reason, "3일 식단을 만들지 못했어요. 잠시 후 다시 찾아봐 주세요."));
       setMultiDayOpen(true);
     } finally {
       setMultiDayLoading(false);
@@ -1211,7 +1232,7 @@ export default function MealPlanSheet({ foods, active = false, returningFromDeta
       const persistenceFailure = isMealApiMultiDayPlanPersistenceError(reason);
       setMultiDayError(persistenceFailure
         ? "3일 식단을 저장하지 못했어요. 기존 식단은 그대로예요."
-        : mealPlanErrorMessage(reason, "3일 식단을 저장하지 못했어요. 네트워크를 확인한 뒤 다시 시도해 주세요."));
+        : presentMealPlanError(reason, "3일 식단을 저장하지 못했어요. 잠시 후 다시 시도해 주세요."));
       setMultiDaySaveRetryPayload(persistenceFailure ? payload : null);
     } finally {
       setMultiDaySaving(false);
@@ -1236,7 +1257,7 @@ export default function MealPlanSheet({ foods, active = false, returningFromDeta
       if (!history) throw new Error("multi-day-history-missing");
       setMultiDayHistory(history);
     } catch (reason) {
-      setMultiDayHistoryError(mealPlanErrorMessage(reason, "저장한 3일 식단을 불러오지 못했어요. 잠시 후 다시 시도해 주세요."));
+      setMultiDayHistoryError(presentMealPlanError(reason, "저장한 3일 식단을 불러오지 못했어요. 잠시 후 다시 시도해 주세요."));
     } finally {
       setMultiDayHistoryLoading(false);
     }
@@ -1273,7 +1294,7 @@ export default function MealPlanSheet({ foods, active = false, returningFromDeta
       setShoppingList(items);
       focusShoppingResult();
     } catch (reason) {
-      setShoppingError(mealPlanErrorMessage(reason, "장보기 목록을 불러오지 못했어요. 잠시 후 다시 시도해 주세요."));
+      setShoppingError(presentMealPlanError(reason, "장보기 목록을 불러오지 못했어요. 잠시 후 다시 시도해 주세요."));
       setShoppingRetryAction({ label: isMealApiWorkspaceConflictError(reason) ? "다시 불러오기" : "다시 시도", onRetry: () => void refreshShoppingList(true) });
     } finally {
       setShoppingLoading(false);
@@ -1328,7 +1349,7 @@ export default function MealPlanSheet({ foods, active = false, returningFromDeta
     } catch (reason) {
       setShoppingError(isMealApiShoppingListPersistenceError(reason)
         ? "장보기 목록을 저장하지 못했어요. 기존 목록을 유지했어요."
-        : mealPlanErrorMessage(reason, "장보기 목록을 만들지 못했어요. 현재 재료를 다시 확인해 주세요."));
+        : presentMealPlanError(reason, "장보기 목록을 만들지 못했어요. 현재 재료를 다시 확인해 주세요."));
       setShoppingOpen(true);
       setShoppingRetryAction({
         label: isMealApiWorkspaceConflictError(reason) ? "다시 불러오기" : "다시 시도",
@@ -1349,7 +1370,7 @@ export default function MealPlanSheet({ foods, active = false, returningFromDeta
       rememberCurrentWorkspaceRevision();
       setShoppingList((current) => current.map((candidate) => candidate.id === response.id ? response : candidate));
     } catch (reason) {
-      setShoppingError(mealPlanErrorMessage(reason, "장보기 항목을 저장하지 못했어요."));
+      setShoppingError(presentMealPlanError(reason, "장보기 항목을 저장하지 못했어요."));
     } finally {
       setShoppingMutating(false);
     }
@@ -1365,7 +1386,7 @@ export default function MealPlanSheet({ foods, active = false, returningFromDeta
       rememberCurrentWorkspaceRevision();
       setShoppingList((current) => current.filter((candidate) => candidate.id !== item.id));
     } catch (reason) {
-      setShoppingError(mealPlanErrorMessage(reason, "장보기 항목을 삭제하지 못했어요."));
+      setShoppingError(presentMealPlanError(reason, "장보기 항목을 삭제하지 못했어요."));
     } finally {
       setShoppingMutating(false);
     }
@@ -1452,7 +1473,7 @@ export default function MealPlanSheet({ foods, active = false, returningFromDeta
       if (!events) throw new Error("meal-plan-events-missing");
       setAuditEvents(events);
     } catch (reason) {
-      setAuditError(mealPlanErrorMessage(reason, "식단 기록을 불러오지 못했어요. 잠시 후 다시 시도해 주세요."));
+      setAuditError(presentMealPlanError(reason, "식단 기록을 불러오지 못했어요. 잠시 후 다시 시도해 주세요."));
     } finally {
       setAuditLoading(false);
     }
@@ -1480,7 +1501,7 @@ export default function MealPlanSheet({ foods, active = false, returningFromDeta
       if (!plans) throw new Error("meal-plan-history-missing");
       setHistoryPlans(plans);
     } catch (reason) {
-      setHistoryError(mealPlanErrorMessage(reason, "최근 식단 기록을 불러오지 못했어요. 잠시 후 다시 시도해 주세요."));
+      setHistoryError(presentMealPlanError(reason, "최근 식단 기록을 불러오지 못했어요. 잠시 후 다시 시도해 주세요."));
     } finally {
       setHistoryLoading(false);
     }
@@ -1510,7 +1531,7 @@ export default function MealPlanSheet({ foods, active = false, returningFromDeta
       const consumedAllocations = consumptions.filter((allocation) => allocation.quantity > 0);
       const nextSkippedCount = consumptions.filter((allocation) => allocation.quantity <= 0).length;
       if (!consumedAllocations.length) {
-        setError("사용량을 하나 이상 선택해 주세요.");
+      setError("사용할 재료를 하나 이상 골라 주세요.");
         setCompleting(false);
         return;
       }
@@ -1539,8 +1560,8 @@ export default function MealPlanSheet({ foods, active = false, returningFromDeta
     } catch (reason) {
       const persistenceFailure = isMealApiMealPlanCompletionPersistenceError(reason);
       setError(persistenceFailure
-        ? "조리 완료를 저장하지 못했어요. 기존 재고와 식단을 유지했어요."
-        : mealPlanErrorMessage(reason, "조리 완료를 기록하지 못했어요. 식품 목록과 사용할 양을 살펴봐 주세요."));
+        ? "조리 완료를 저장하지 못했어요. 식품 목록과 식단은 그대로예요."
+        : presentMealPlanError(reason, "조리 내용을 저장하지 못했어요. 식품 목록과 사용할 양을 살펴봐 주세요."));
       setCompletionRetry(persistenceFailure);
       setCompletionRetryPayload(persistenceFailure ? consumptions : null);
     } finally {
@@ -1549,6 +1570,13 @@ export default function MealPlanSheet({ foods, active = false, returningFromDeta
   };
 
   return <BottomSheet open={active} onOpenChange={onOpenChange} title="오늘의 식단" description="재료에 맞는 메뉴를 골라요." snap={0.86}>
+    {authenticationExpired ? (
+      <div className="recipe-error recipe-auth-expired" role="alert">
+        <InfoCircledIcon width={16} height={16} />
+        <span><strong>로그인 정보가 만료됐어요</strong><small>계정에 다시 연결한 뒤 식단을 다시 불러와 주세요.</small></span>
+        <button ref={authenticationRecoveryActionRef} className="recipe-error-action" type="button" onClick={() => onOpenAccount ? onOpenAccount() : onOpenChange(false)}>{onOpenAccount ? "계정 다시 연결" : "닫기"}</button>
+      </div>
+    ) : (
     <div className="meal-sheet-content">
     {shoppingOpen ? <span className="sr-only" role="status" aria-live="polite" aria-atomic="true" data-shopping-live-state={shoppingError ? "error" : shoppingLoading ? "loading" : shoppingMutating ? "mutating" : shoppingRefreshQueued ? "queued" : "current"} aria-busy={shoppingLoading || shoppingMutating}>{shoppingError ? "장보기 목록을 불러오지 못했어요. 다시 시도해 주세요" : shoppingLoading ? "장보기 목록을 불러오는 중이에요" : shoppingMutating ? "장보기 항목을 저장하는 중이에요" : shoppingRefreshQueued ? "장보기 목록을 다시 불러오고 있어요" : "장보기 목록을 불러왔어요"}</span> : null}
     {ingredients.length ? <>
@@ -1556,17 +1584,17 @@ export default function MealPlanSheet({ foods, active = false, returningFromDeta
     {mealPreferencesNotice ? <div className="recipe-preference-notice" role="status"><CheckCircledIcon width={15} height={15} />{mealPreferencesNotice}</div> : null}
     {mealPreferencesOpen ? <section ref={mealPreferencesSectionRef} className="recipe-preferences" tabIndex={-1} aria-label="식단 조건">
       <div className="recipe-alternatives-heading"><span>피할 알레르기</span><small>직접 선택한 조건만 적용해요</small></div>
-      {mealPreferencesLoading ? <small className="recipe-preferences-note" role="status" aria-live="polite">{mealPreferencesDraftDirty ? "저장된 조건을 불러오는 동안 현재 선택은 그대로예요." : "저장한 식단 조건을 불러오고 있어요."}</small> : mealPreferencesDraftDirty ? <small className="recipe-preferences-note" role="status">저장 전 변경한 조건이에요. 저장해야 다음 메뉴에 적용돼요.</small> : null}
+      {mealPreferencesLoading ? <small className="recipe-preferences-note" role="status" aria-live="polite">{mealPreferencesDraftDirty ? "저장된 조건을 불러오는 동안 현재 선택은 그대로예요." : "저장한 식단 조건을 불러오고 있어요."}</small> : mealPreferencesDraftDirty ? <small className="recipe-preferences-note" role="status">저장 전 변경한 조건이에요. 저장하면 앞으로 찾는 메뉴에 적용돼요.</small> : null}
       <div className="recipe-preferences-options" role="group" aria-label="피할 알레르기 선택">{ALLERGEN_OPTIONS.map((option) => <button className={mealPreferencesDraft.includes(option.value) ? "recipe-preference-chip recipe-preference-chip-active" : "recipe-preference-chip"} type="button" aria-pressed={mealPreferencesDraft.includes(option.value)} disabled={!mealPreferencesLoaded || mealPreferencesLoading || mealPreferencesSaving} key={option.value} onClick={() => toggleAllergen(option.value)}>{option.label}</button>)}</div>
       {mealPreferencesError ? <div className="recipe-error" role="alert"><InfoCircledIcon width={16} height={16} /><span>{mealPreferencesError}</span>{mealPreferencesRetry ? <button className="account-error-action" type="button" disabled={mealPreferencesLoading || mealPreferencesSaving} aria-busy={mealPreferencesLoading || mealPreferencesSaving} onClick={() => mealPreferencesLoaded ? void saveMealPreferences() : retryMealPreferencesLoad()}>{mealPreferencesLoaded ? mealPreferencesSaving ? "다시 저장 중" : "다시 시도" : mealPreferencesLoading ? "식단 조건 불러오는 중" : "다시 불러오기"}</button> : null}</div> : null}
       <button className="secondary-sheet-button" type="button" disabled={!mealPreferencesLoaded || mealPreferencesLoading || mealPreferencesSaving} aria-busy={mealPreferencesLoading || mealPreferencesSaving} onClick={() => void saveMealPreferences()}>{mealPreferencesSaving ? "식단 조건 저장 중" : mealPreferencesLoading ? "식단 조건을 불러오는 중" : !mealPreferencesLoaded ? "조건을 불러온 뒤 저장해 주세요" : "식단 조건 저장"}</button>
-      <small className="recipe-preferences-note">선택한 알레르기 정보가 분명하지 않은 메뉴는 보여주지 않아요. 먹기 전 포장지의 알레르기 표시를 확인해 주세요.</small>
+      <small className="recipe-preferences-note">알레르기 정보를 확인할 수 없는 메뉴는 추천하지 않아요. 먹기 전 포장지의 알레르기 표시를 살펴봐 주세요.</small>
     </section> : null}
     <div className="recipe-time-picker" role="group" aria-label="조리 가능 시간"><span>조리 가능 시간</span><div>{MEAL_TIME_OPTIONS.map((option) => <button className={maxMinutes === option ? "recipe-time-active" : ""} type="button" key={option} disabled={mealPreferencesSaving} aria-pressed={maxMinutes === option} onClick={() => updateMaxMinutes(option)}>{option}분</button>)}</div></div>
     <div className="recipe-serving-picker" role="group" aria-label="식사 인원"><span>몇 명이 먹나요?</span><div>{MEAL_SERVING_OPTIONS.map((option) => <button className={servings === option ? "recipe-time-active" : ""} type="button" key={option} aria-pressed={servings === option} disabled={loading || saving || saved || completed || mealPreferencesSaving} onClick={() => updateServings(option)}>{option}인분</button>)}</div></div>
     <p id="recipe-serving-note" className="recipe-serving-note">재료 양은 {plan?.servings ?? servings}인분 기준이에요.</p>
-    {safetyNoticeCount ? <button className="recipe-safety-summary-jump" type="button" aria-controls="recipe-safety-summary" aria-label="날짜와 알레르기 안내 보기" onClick={revealSafetySummary}>
-      <div className="recipe-safety-summary-heading"><span className="recipe-safety-summary-icon"><InfoCircledIcon width={16} height={16} /></span><span><strong>날짜·알레르기 안내</strong><small>{safetyNoticeCount}개 · {safetyNoticeDescription}</small></span><ArrowRightIcon width={15} height={15} /></div>
+    {safetyNoticeCount ? <button className="recipe-safety-summary-jump" type="button" aria-controls="recipe-safety-summary" aria-label={`조리 전에 확인할 내용 ${safetyNoticeCount}개 보기`} onClick={revealSafetySummary}>
+      <div className="recipe-safety-summary-heading"><span className="recipe-safety-summary-icon"><InfoCircledIcon width={16} height={16} /></span><span><strong>조리 전에 확인할 내용 {safetyNoticeCount}개</strong></span><ArrowRightIcon width={15} height={15} /></div>
     </button> : null}
     </> : null}
     {loading ? <div className="recipe-loading" role="status"><LightningBoltIcon width={18} height={18} /><span><strong>지금 있는 재료를 살펴보고 있어요</strong><small>먼저 먹을 재료와 조리 시간을 살펴보고 있어요.</small></span></div> : null}
@@ -1581,9 +1609,9 @@ export default function MealPlanSheet({ foods, active = false, returningFromDeta
       <div className="recipe-safety-summary-heading"><span className="recipe-safety-summary-icon"><InfoCircledIcon width={16} height={16} /></span><span><strong>조리 전에 살펴보세요</strong><small>포장지 날짜와 보관 방법, 알레르기 정보를 살펴봐 주세요.</small></span><em>{safetyNoticeCount}개</em></div>
       <div className="recipe-safety-summary-list">
         {plan?.date_review_required ? <div className="recipe-date-review-callout recipe-safety-summary-item" role="status"><InfoCircledIcon width={16} height={16} /><span><strong>조리 전에 포장지 날짜를 살펴봐 주세요</strong><small>{mealPlanDisplayCopy(plan.date_review_note ?? `${plan.date_review_foods?.join("·") || "사용할 재료"}의 포장지 날짜와 보관 방법을 살펴본 뒤 사용하세요. 소비기한이나 먹어도 되는지를 판단하지 않아요. 식품 상태도 직접 살펴봐 주세요.`)}</small>{plan.date_review_foods?.map((foodName, index) => { const foodId = plan.date_review_food_ids?.[index]; if (foodId && onOpenFoodDetail) return <button className="recipe-shopping-inline-button" type="button" data-meal-food-id={foodId} key={`${foodId}-${foodName}`} onClick={() => onOpenFoodDetail(foodId)}>식품 보기 · {foodName}</button>; return <small className="recipe-safety-targets" key={`${index}-${foodName}`}>살펴볼 식품 · {foodName}</small>; })}</span></div> : null}
-        {plan?.preference_filtered ? <div className="recipe-preference-callout recipe-safety-summary-item" role="status"><InfoCircledIcon width={16} height={16} /><span><strong>알레르기 정보가 불분명해 메뉴를 숨겼어요</strong><small>{mealPlanDisplayCopy(plan.preference_note ?? "알레르기 정보를 확인할 수 없어 메뉴를 고르지 않았어요.")}</small></span></div> : null}
+        {plan?.preference_filtered ? <div className="recipe-preference-callout recipe-safety-summary-item" role="status"><InfoCircledIcon width={16} height={16} /><span><strong>알레르기 조건을 확인해 주세요</strong><small>{mealPlanDisplayCopy(plan.preference_note ?? "피하도록 설정한 알레르기가 있거나 관련 정보를 확인할 수 없는 메뉴는 제외했어요.")}</small>{mealApi.isConfigured && !mealPreferencesOpen ? <button className="recipe-shopping-inline-button" type="button" disabled={mealPreferencesLoading || mealPreferencesSaving} aria-busy={mealPreferencesLoading || mealPreferencesSaving} onClick={openMealPreferencesFromSafety}>{mealPreferencesLoading ? "식단 조건 불러오는 중" : mealPreferencesSaving ? "식단 조건 저장 중" : "피할 알레르기 설정 열기"}</button> : null}</span></div> : null}
         {plan?.missing_ingredients.length ? <div className="recipe-missing-callout recipe-safety-summary-item" role="status"><InfoCircledIcon width={16} height={16} /><span><strong>부족한 재료 {plan.missing_ingredients.length}개</strong><small>필요한 재료: {plan.missing_ingredients.join(" · ")}. {canAddMissingIngredientsToShopping ? saved ? "장보기 목록에 추가할 수 있어요." : "식단을 저장한 뒤 장보기 목록에 추가할 수 있어요." : "장보기 목록은 현재 사용할 수 없어요."}</small>{saved && canAddMissingIngredientsToShopping ? <button className="recipe-shopping-inline-button" type="button" disabled={shoppingMutating} aria-busy={shoppingMutating} onClick={() => void addShoppingSource("meal_plan", plan.id)}>{shoppingMutating ? "장보기 목록에 담는 중" : "장보기 목록에 담기"}</button> : null}</span></div> : null}
-        {allergenMetadataUnknown ? <div className="recipe-allergen-callout recipe-safety-summary-item" role="status"><InfoCircledIcon width={16} height={16} /><span><strong>재료 일부의 알레르기 정보가 없어요</strong><small>먹기 전 포장지 표시와 개인 알레르기를 살펴봐 주세요.</small>{mealApi.isConfigured && !mealPreferencesOpen ? <button className="recipe-shopping-inline-button" type="button" disabled={mealPreferencesLoading || mealPreferencesSaving} aria-busy={mealPreferencesLoading || mealPreferencesSaving} onClick={openMealPreferencesFromSafety}>{mealPreferencesLoading ? "식단 조건 불러오는 중" : mealPreferencesSaving ? "식단 조건 저장 중" : "피할 알레르기 설정 열기"}</button> : null}</span></div> : null}
+        {allergenMetadataUnknown ? <div className="recipe-allergen-callout recipe-safety-summary-item" role="status"><InfoCircledIcon width={16} height={16} /><span><strong>재료 일부의 알레르기 정보를 확인할 수 없어요</strong><small>먹기 전 포장지 표시와 개인 알레르기를 살펴봐 주세요.</small>{mealApi.isConfigured && !mealPreferencesOpen ? <button className="recipe-shopping-inline-button" type="button" disabled={mealPreferencesLoading || mealPreferencesSaving} aria-busy={mealPreferencesLoading || mealPreferencesSaving} onClick={openMealPreferencesFromSafety}>{mealPreferencesLoading ? "식단 조건 불러오는 중" : mealPreferencesSaving ? "식단 조건 저장 중" : "피할 알레르기 설정 열기"}</button> : null}</span></div> : null}
       </div>
     </section> : null}
     {hasRecipe && !showDetails ? <button className="recipe-instructions-shortcut" type="button" onClick={revealRecipeInstructions}><span>조리 순서 바로 보기</span><ChevronDownIcon width={16} height={16} aria-hidden="true" /></button> : null}
@@ -1592,13 +1620,13 @@ export default function MealPlanSheet({ foods, active = false, returningFromDeta
     {remoteRefreshRequired ? <div className="recipe-error recipe-remote-refresh" role="alert" aria-busy={loading}><InfoCircledIcon width={16} height={16} /><span><strong>다른 기기에서 식단이나 재고가 변경됐어요</strong><small>{loading ? "식단을 다시 불러오고 있어요." : "지금 선택한 재료와 양은 그대로예요. 식단을 다시 불러온 뒤 메뉴를 찾아 주세요."}</small></span><button className="recipe-error-action" type="button" disabled={loading} aria-busy={loading} onPointerDown={(event) => event.preventDefault()} onClick={() => { setRemoteRefreshRequired(false); setMealPlanRefreshNonce((current) => current + 1); }}>{loading ? "식단 불러오는 중" : "식단 다시 불러오기"}</button></div> : null}
     {!loading && hasRecipe ? <div className="recipe-ingredients"><span>필요한 재료</span><div role="list">{planIngredients.map((ingredient) => <div className={`recipe-ingredient-row${ingredient.available ? "" : " recipe-ingredient-missing"}`} role="listitem" key={ingredient.canonical_name}><img src={imageForFoodName(ingredient.canonical_name)} alt="" draggable={false} /><span className="recipe-ingredient-copy"><strong>{ingredient.canonical_name}</strong><small>{ingredientStatus(ingredient)}</small></span></div>)}</div></div> : null}
     {!loading && hasRecipe && plan?.allergen_metadata_status === "known" ? <p className="recipe-allergen-note">알레르기 정보 · {plan.allergens?.length ? plan.allergens.map(allergenLabel).join("·") : "확인된 주요 항목 없음"}</p> : null}
-    {!loading && hasRecipe && plan?.recipe_source_name ? <p className="recipe-provenance">레시피: {plan.recipe_source_name}</p> : null}
+    {!loading && hasRecipe && plan?.recipe_source_name ? <p className="recipe-provenance">레시피 출처 · {plan.recipe_source_name}</p> : null}
     {!mealApi.isConfigured && hasRecipe && !completed ? <p id="recipe-preview-save-note" className="recipe-preview-save-note" role="note"><InfoCircledIcon width={14} height={14} /><span>임시 저장한 식단은 이 화면을 벗어나면 사라져요. 조리를 완료하기 전에는 식품 수량이 바뀌지 않아요.</span></p> : null}
     {hasRecipe ? <div className="recipe-actions detail-actions"><button className="secondary-sheet-button recipe-plan-save-button" type="button" aria-describedby={!mealApi.isConfigured && !completed ? "recipe-serving-note recipe-preview-save-note" : "recipe-serving-note"} disabled={loading || saving || saved} onClick={() => void persistPlan()}><CalendarIcon className="recipe-plan-save-icon" width={17} height={17} /><span className="recipe-plan-save-copy">{saved ? mealApi.isConfigured ? "저장됨" : "임시 저장됨" : saving ? mealApi.isConfigured ? "저장 중" : "임시 저장 중" : mealApi.isConfigured ? "식단 저장" : "임시 저장"}</span><small className="recipe-plan-save-serving" aria-hidden="true">{plan?.servings ?? servings}인분</small></button><button ref={recipeViewActionRef} className="primary-sheet-button recipe-instructions-toggle" type="button" aria-expanded={showDetails} disabled={loading || saving} onClick={() => setShowDetails((current) => !current)}>{showDetails ? "조리 방법 접기" : "조리 방법 보기"} <ChevronDownIcon width={17} height={17} aria-hidden="true" /></button></div> : demoTimeLimitNoMatch && nextDemoMealTime ? <button className="primary-sheet-button" type="button" disabled={loading || saving} onClick={() => updateMaxMinutes(nextDemoMealTime)}><TimerIcon width={17} height={17} /> {nextDemoMealTime}분으로 다시 찾아보기</button> : <button className="primary-sheet-button" type="button" disabled={!onOpenAdd} onClick={onOpenAdd}><PlusIcon width={17} height={17} /> {ingredients.length ? "식품 더 추가하기" : "식품 추가하기"}</button>}
     {saved ? <div className="saved-recipe" data-readback-state="confirmed" role="status" aria-live="polite" aria-atomic="true"><CheckCircledIcon width={16} height={16} /><span style={{ display: "grid", minWidth: 0, gap: 2 }}><strong>{mealApi.isConfigured ? "오늘의 식단에 저장했어요" : "임시 식단을 저장했어요"} · {plan?.servings ?? servings}인분</strong><small style={{ color: "var(--atelier-muted)", fontSize: 12, lineHeight: 1.4 }}>{plan?.missing_ingredients.length ? "부족한 재료를 장보기 목록에 담아 주세요." : "재료와 양을 살펴본 뒤 조리를 마치면 기록해 주세요."}</small></span></div> : null}
     {showDetails && hasRecipe ? <div ref={recipeDetailsRef} className="recipe-details"><div className="recipe-details-heading"><span>조리 순서</span><small>{plan?.minutes}분 기준</small></div><ol>{plan?.steps.map((step, index) => <li key={`${index}-${step}`}><b>{index + 1}</b><span>{step}</span></li>)}</ol><div className="recipe-safety"><InfoCircledIcon width={15} height={15} /><span><strong>조리 전 확인</strong><small>{mealPlanDisplayCopy(plan?.safety_note ?? "식품 상태가 이상하면 조리하지 마세요.")}</small></span></div></div> : null}
-    {saved && !completed ? <div ref={completionActionsRef} className="recipe-complete-actions"><div className="recipe-consumption-heading"><span>사용할 양</span><small role="status" aria-live="polite">{consumptionSelectionNote}</small></div><div className="recipe-consumption-list">{consumptionRows.map((row) => { const currentQuantity = consumptionDraft[row.foodId] ?? 0; return <div className="recipe-consumption-row" key={row.foodId}><span><strong>{row.name}</strong><small>최대 {formatQuantity(row.maxQuantity)}{row.unit}</small></span><div className="recipe-consumption-stepper"><button type="button" aria-label={`${row.name} 사용량 줄이기`} disabled={completing || currentQuantity <= 0} onClick={() => adjustConsumption(row, -row.step)}>-</button><label className="recipe-consumption-input-wrap"><span className="sr-only">{row.name} 사용량</span><KeyboardInput className="recipe-consumption-input" type="number" inputMode="decimal" min={0} max={row.maxQuantity} step={row.step} value={formatQuantity(currentQuantity)} aria-label={`${row.name} 사용량`} onFocus={revealCompletionControls} onChange={(event) => setConsumptionValue(row, event.target.value)} onBlur={() => keyboard.hide()} disabled={completing || row.maxQuantity <= 0} /><em>{row.unit}</em></label><button type="button" aria-label={`${row.name} 사용량 늘리기`} disabled={completing || currentQuantity >= row.maxQuantity} onClick={() => adjustConsumption(row, row.step)}>+</button></div></div>; })}</div>{requiresSafetyAcknowledgement ? <div className="recipe-date-review-callout recipe-safety-summary-item" role="group" aria-label="조리 전 기록 확인"><InfoCircledIcon width={16} height={16} /><span><strong>조리 전 확인을 완료했어요?</strong><small>포장지 표시·식품 상태·알레르기 정보를 확인한 뒤 소비 기록을 남겨요.</small><button className="recipe-shopping-inline-button" type="button" aria-pressed={safetyAcknowledged} onPointerDown={(event) => { event.preventDefault(); setSafetyAcknowledged((current) => !current); }} onClick={(event) => { if (event.detail === 0) setSafetyAcknowledged((current) => !current); }}>{safetyAcknowledged ? "살펴봤어요" : "조리 전에 살펴봤어요"}</button></span></div> : null}<button className="recipe-complete-button" type="button" disabled={completing || !consumptionUsedRows || (requiresSafetyAcknowledgement && !safetyAcknowledged)} aria-busy={completing} onPointerDown={(event) => { event.preventDefault(); void completePlan(); keyboard.hide(); }} onClick={(event) => { if (event.detail === 0) { void completePlan(); keyboard.hide(); } }}><CheckCircledIcon width={16} height={16} /> {completing ? "기록 중" : !consumptionUsedRows ? "사용량을 하나 이상 선택해 주세요" : requiresSafetyAcknowledgement && !safetyAcknowledged ? "조리 전 확인 후 기록" : "조리 완료로 기록"}</button><small>조리 완료를 기록하면 입력한 양만큼 재고에서 빠져요.</small></div> : null}
-    {completed ? <div className="recipe-completed" data-readback-state="confirmed" role="status"><CheckCircledIcon width={16} height={16} /><span><strong>조리 완료 기록을 남겼어요</strong><small>{skippedCount ? `차감할 수 있는 재료만 재고에서 뺐어요. ${skippedCount}개는 다시 살펴봐 주세요.` : "사용한 재료를 식품 목록에서 차감했습니다."}</small>{grocyCompletionDetail(completionGrocySyncStatus) ? <><small className="recipe-completed-sync-note" data-sync-state={grocyCompletionSyncState(completionGrocySyncStatus)}>{grocyCompletionDetail(completionGrocySyncStatus)}</small>{onOpenSyncReview ? <button className="recipe-shopping-inline-button recipe-sync-review-action" type="button" onClick={() => onOpenSyncReview(grocyCompletionSyncState(completionGrocySyncStatus) === "action_required" ? "action_required" : grocyCompletionSyncState(completionGrocySyncStatus) === "processing" ? "processing" : "queued")}>{grocyCompletionSyncState(completionGrocySyncStatus) === "action_required" ? "알림 열기" : "알림에서 보기"}</button> : null}</> : null}</span></div> : null}
+    {saved && !completed ? <div ref={completionActionsRef} className="recipe-complete-actions"><div className="recipe-consumption-heading"><span>이번에 사용할 양</span><small role="status" aria-live="polite">{consumptionSelectionNote}</small></div><div className="recipe-consumption-list">{consumptionRows.map((row) => { const currentQuantity = consumptionDraft[row.foodId] ?? 0; return <div className="recipe-consumption-row" key={row.foodId}><span><strong>{row.name}</strong><small>최대 {formatQuantity(row.maxQuantity)}{row.unit}</small></span><div className="recipe-consumption-stepper"><button type="button" aria-label={`${row.name} 사용할 양 줄이기`} disabled={completing || currentQuantity <= 0} onClick={() => adjustConsumption(row, -row.step)}>-</button><label className="recipe-consumption-input-wrap"><span className="sr-only">{row.name} 사용할 양</span><KeyboardInput className="recipe-consumption-input" type="number" inputMode="decimal" min={0} max={row.maxQuantity} step={row.step} value={formatQuantity(currentQuantity)} aria-label={`${row.name} 사용할 양`} onFocus={revealCompletionControls} onChange={(event) => setConsumptionValue(row, event.target.value)} onBlur={() => keyboard.hide()} disabled={completing || row.maxQuantity <= 0} /><em>{row.unit}</em></label><button type="button" aria-label={`${row.name} 사용할 양 늘리기`} disabled={completing || currentQuantity >= row.maxQuantity} onClick={() => adjustConsumption(row, row.step)}>+</button></div></div>; })}</div>{requiresSafetyAcknowledgement ? <div className="recipe-date-review-callout recipe-safety-summary-item" role="group" aria-label="조리 전 기록 확인"><InfoCircledIcon width={16} height={16} /><span><strong>조리 전에 살펴봐 주세요.</strong><small>포장지 표시·식품 상태·알레르기 정보를 확인한 뒤 소비 기록을 남겨요.</small><button className="recipe-shopping-inline-button" type="button" aria-pressed={safetyAcknowledged} onPointerDown={(event) => { event.preventDefault(); setSafetyAcknowledged((current) => !current); }} onClick={(event) => { if (event.detail === 0) setSafetyAcknowledged((current) => !current); }}>{safetyAcknowledged ? "살펴봤어요" : "포장지와 재료를 살펴봤어요"}</button></span></div> : null}<button className="recipe-complete-button" type="button" disabled={completing || !consumptionUsedRows || (requiresSafetyAcknowledgement && !safetyAcknowledged)} aria-busy={completing} onPointerDown={(event) => { event.preventDefault(); void completePlan(); keyboard.hide(); }} onClick={(event) => { if (event.detail === 0) { void completePlan(); keyboard.hide(); } }}><CheckCircledIcon width={16} height={16} /> {completing ? "기록 중" : !consumptionUsedRows ? "사용할 재료를 골라 주세요" : requiresSafetyAcknowledgement && !safetyAcknowledged ? "조리 전에 살펴보고 기록" : "조리 완료로 기록했어요"}</button><small>조리하면 입력한 양만큼 식품 목록에서 빠져요.</small></div> : null}
+    {completed ? <div className="recipe-completed" data-readback-state="confirmed" role="status"><CheckCircledIcon width={16} height={16} /><span><strong>조리 완료로 기록했어요</strong><small>{skippedCount ? `사용한 재료는 식품 목록에서 뺐어요. ${skippedCount}가지는 다시 살펴봐 주세요.` : "사용한 재료를 식품 목록에서 뺐어요."}</small>{grocyCompletionDetail(completionGrocySyncStatus) ? <><small className="recipe-completed-sync-note" data-sync-state={grocyCompletionSyncState(completionGrocySyncStatus)}>{grocyCompletionDetail(completionGrocySyncStatus)}</small>{onOpenSyncReview ? <button className="recipe-shopping-inline-button recipe-sync-review-action" type="button" onClick={() => onOpenSyncReview(grocyCompletionSyncState(completionGrocySyncStatus) === "action_required" ? "action_required" : grocyCompletionSyncState(completionGrocySyncStatus) === "processing" ? "processing" : "queued")}>{grocyCompletionSyncState(completionGrocySyncStatus) === "action_required" ? "알림 열기" : "알림에서 보기"}</button> : null}</> : null}</span></div> : null}
     {hasRecipe && mealApi.isConfigured && !saved && !completed ? <button className="recipe-alternatives-toggle" type="button" disabled={loading || saving || alternativesLoading} onClick={() => void loadAlternatives()}>{alternativesLoading ? "다른 메뉴 찾는 중" : alternativesOpen ? "다른 메뉴 접기" : "다른 메뉴 찾아보기"}<ArrowRightIcon width={14} height={14} /></button> : null}
     {alternativesOpen ? <section className="recipe-alternatives" aria-label="다른 메뉴"><div className="recipe-alternatives-heading"><span>다른 메뉴</span><small>현재 재료와 {maxMinutes}분 · {servings}인분 기준</small></div>{alternativesError ? <div className="recipe-error" role="alert"><InfoCircledIcon width={16} height={16} /><span>{alternativesError}</span><button className="recipe-error-action" type="button" disabled={alternativesLoading} aria-busy={alternativesLoading} onClick={() => void loadAlternatives(true)}>{alternativesLoading ? "다시 찾는 중" : "다시 시도"}</button></div> : alternatives.length ? <div className="recipe-alternatives-list" role="list">{alternatives.map((option) => <button className="recipe-alternative-row" type="button" role="listitem" key={option.recipe_id} onClick={() => selectAlternative(option)}><span><strong>{option.title}</strong><small>{option.minutes}분 · {ingredientAvailabilityCopy(option.ingredients)}{option.missing_ingredients.length ? ` · 부족 ${option.missing_ingredients.length}개` : ""}</small></span><ArrowRightIcon width={14} height={14} /></button>)}</div> : <p className="history-empty">다른 재료 조합을 찾지 못했어요. 조리 시간이나 식사 인원을 바꿔 다시 찾아보세요.</p>}</section> : null}
     {hasRecipe && mealApi.isConfigured && !saved && !completed ? <button ref={multiDayToggleRef} className="recipe-multi-day-toggle" type="button" disabled={loading || saving || multiDayLoading} onClick={() => void loadMultiDayPreview()}>{multiDayLoading ? "3일 식단 준비 중" : multiDayOpen ? "3일 식단 접기" : "3일 식단 미리보기"}<ArrowRightIcon width={14} height={14} /></button> : null}
@@ -1607,10 +1635,10 @@ export default function MealPlanSheet({ foods, active = false, returningFromDeta
         <div className="recipe-alternatives-heading"><span>3일 식단</span><small>각 날짜는 먼저 배정한 재료를 고려해요 · {multiDayPreview?.servings ?? servings}인분 기준</small></div>
         {multiDayError ? <div className="recipe-error" role="alert"><InfoCircledIcon width={16} height={16} /><span>{multiDayError}</span>{multiDaySaveRetryPayload ? <button className="recipe-error-action" type="button" disabled={multiDaySaving} aria-busy={multiDaySaving} onPointerDown={(event) => event.preventDefault()} onClick={() => void persistMultiDayPlan(multiDaySaveRetryPayload)}>{multiDaySaving ? "저장 중" : "다시 시도"}</button> : <button className="recipe-error-action" type="button" disabled={multiDayLoading} aria-busy={multiDayLoading} onClick={() => void loadMultiDayPreview(true)}>{multiDayLoading ? "다시 찾는 중" : "다시 찾아보기"}</button>}</div> : multiDayPreview?.days.length ? (
           <>
-            <p className="recipe-optimizer-note" role="status"><LightningBoltIcon width={14} height={14} />남은 재료를 나눠 쓸 수 있도록 3일 식단을 구성했어요.</p>
+            <p className="recipe-optimizer-note" role="status">남은 재료를 나눠 쓸 수 있게 3일 식단을 만들었어요.</p>
             <div className="recipe-multi-day-save">
               <button className="secondary-sheet-button" type="button" disabled={multiDaySaving || multiDaySaved} onClick={() => void persistMultiDayPlan()}><CalendarIcon width={15} height={15} /> {multiDaySaved ? "3일 식단 저장됨" : multiDaySaving ? "3일 식단 저장 중" : "3일 식단 저장"}</button>
-              {multiDaySaved ? <span className="recipe-multi-day-status" role="status">{multiDayPreview?.days.some((day) => day.status !== "completed" && day.plan.missing_ingredients.length > 0) ? "부족 재료를 장보기로 이어갈 수 있어요." : "다시 열어도 이 식단을 확인할 수 있어요."}</span> : <span className="recipe-multi-day-status">미리보기는 저장되지 않아요.</span>}
+              {multiDaySaved ? <span className="recipe-multi-day-status" role="status">{multiDayPreview?.days.some((day) => day.status !== "completed" && day.plan.missing_ingredients.length > 0) ? "부족한 재료는 장보기 목록에 담을 수 있어요." : "나중에 다시 볼 수 있어요."}</span> : <span className="recipe-multi-day-status">미리보기는 저장되지 않아요.</span>}
               {multiDaySaved && multiDayPreview?.days.some((day) => day.status !== "completed" && day.plan.missing_ingredients.length > 0) ? <button className="recipe-shopping-inline-button" type="button" disabled={shoppingMutating} aria-busy={shoppingMutating} onClick={() => void addShoppingSource("multi_day", multiDayPreview.id)}>{shoppingMutating ? "장보기 목록 저장 중" : "3일 부족 재료 장보기"}</button> : null}
             </div>
             <div className="recipe-multi-day-list" role="list">
@@ -1626,7 +1654,7 @@ export default function MealPlanSheet({ foods, active = false, returningFromDeta
     {mealApi.isConfigured && plan ? <button className="recipe-multi-day-history-toggle" type="button" disabled={multiDayHistoryLoading} onClick={() => void toggleMultiDayHistory()}>{multiDayHistoryLoading ? "저장한 3일 식단 불러오는 중" : multiDayHistoryOpen ? "저장한 3일 식단 접기" : "저장한 3일 식단 보기"}<ArrowRightIcon width={14} height={14} /></button> : null}
     {multiDayHistoryOpen ? <section className="recipe-multi-day-history" aria-label="저장한 3일 식단"><div className="recipe-alternatives-heading"><span>저장한 3일 식단</span><small>최근 10개</small></div>{multiDayHistoryError ? <div className="recipe-error" role="alert"><InfoCircledIcon width={16} height={16} /><span>{multiDayHistoryError}</span><button className="recipe-error-action" type="button" disabled={multiDayHistoryLoading} aria-busy={multiDayHistoryLoading} onClick={() => void toggleMultiDayHistory(true)}>{multiDayHistoryLoading ? "다시 불러오는 중" : "다시 시도"}</button></div> : multiDayHistory.length ? <div className="recipe-multi-day-history-list" role="list">{multiDayHistory.map((bundle) => { const firstDay = bundle.days[0]; const lastDay = bundle.days[bundle.days.length - 1]; return <button className="recipe-multi-day-history-row" type="button" role="listitem" key={bundle.id} onClick={() => openSavedMultiDayPlan(bundle)}><span className="recipe-multi-day-index">{bundle.days.length}일</span><span className="recipe-multi-day-copy"><strong>{firstDay?.plan.title ?? "저장한 3일 식단"}{bundle.days.length > 1 ? ` 외 ${bundle.days.length - 1}개` : ""}</strong><small>{firstDay ? formatPlanDate(firstDay.plan_date) : "날짜 미정"}{lastDay && lastDay !== firstDay ? ` ~ ${formatPlanDate(lastDay.plan_date)}` : ""} · {bundle.max_minutes}분</small></span><ArrowRightIcon width={14} height={14} /></button>; })}</div> : <p className="history-empty">저장한 3일 식단이 아직 없어요.</p>}</section> : null}
     {mealApi.isConfigured && plan ? <button ref={shoppingToggleRef} className="recipe-shopping-toggle" type="button" disabled={shoppingLoading || shoppingMutating} onClick={() => void toggleShoppingList()}>{shoppingLoading ? "장보기 목록 불러오는 중" : shoppingOpen ? "장보기 목록 접기" : shoppingRemainingCount ? `장보기 ${shoppingRemainingCount}개 보기` : "장보기 목록 보기"}<ArrowRightIcon width={14} height={14} /></button> : null}
-    {shoppingOpen ? <section className="recipe-shopping" aria-label="장보기 목록"><div className="recipe-alternatives-heading"><span>장보기 목록</span><small>{shoppingList.length ? `${shoppingList.filter((item) => !item.checked).length}개 남음` : "선택한 항목만 저장해요"}</small></div>{shoppingError ? <div className="recipe-error" role="alert"><InfoCircledIcon width={16} height={16} /><span>{shoppingError}</span>{shoppingRetryAction ? <button className="recipe-error-action" type="button" disabled={shoppingMutating} aria-busy={shoppingMutating} onClick={shoppingRetryAction.onRetry}>{shoppingMutating ? "불러오는 중" : shoppingRetryAction.label}</button> : null}</div> : shoppingList.length ? <><div className="recipe-shopping-list" role="list">{shoppingList.map((item, index) => <div className={`recipe-shopping-row${item.checked ? " recipe-shopping-row-checked" : ""}`} role="listitem" key={item.id}><button ref={index === 0 ? shoppingFirstItemRef : undefined} className="recipe-shopping-item" type="button" aria-pressed={item.checked} disabled={shoppingMutating} onClick={() => void toggleShoppingItem(item)}><span className="recipe-shopping-check" aria-hidden="true">{item.checked ? "✓" : ""}</span><span className="recipe-multi-day-copy"><strong>{item.canonical_name}</strong><small>{formatQuantity(item.quantity)}{item.unit} · {shoppingSourceLabel(item)}</small></span></button><button className="recipe-shopping-delete" type="button" aria-label={`${item.canonical_name} 장보기 항목 삭제`} disabled={shoppingMutating} onClick={() => void removeShoppingItem(item)}>삭제</button></div>)}</div><p className="recipe-shopping-note">재고에 추가한 뒤 같은 식단을 다시 동기화하면 보유한 재료는 목록에서 자동으로 빠져요.</p></> : <p data-testid="meal-shopping-empty" className="history-empty">아직 장보기 항목이 없어요. 부족한 재료에서 추가할 수 있어요.</p>}</section> : null}
+    {shoppingOpen ? <section className="recipe-shopping" aria-label="장보기 목록"><div className="recipe-alternatives-heading"><span>장보기 목록</span><small>{shoppingList.length ? `${shoppingList.filter((item) => !item.checked).length}개 남음` : "선택한 항목만 저장해요"}</small></div>{shoppingError ? <div className="recipe-error" role="alert"><InfoCircledIcon width={16} height={16} /><span>{shoppingError}</span>{shoppingRetryAction ? <button className="recipe-error-action" type="button" disabled={shoppingMutating} aria-busy={shoppingMutating} onClick={shoppingRetryAction.onRetry}>{shoppingMutating ? "불러오는 중" : shoppingRetryAction.label}</button> : null}</div> : shoppingList.length ? <><div className="recipe-shopping-list" role="list">{shoppingList.map((item, index) => <div className={`recipe-shopping-row${item.checked ? " recipe-shopping-row-checked" : ""}`} role="listitem" key={item.id}><button ref={index === 0 ? shoppingFirstItemRef : undefined} className="recipe-shopping-item" type="button" aria-pressed={item.checked} disabled={shoppingMutating} onClick={() => void toggleShoppingItem(item)}><span className="recipe-shopping-check" aria-hidden="true">{item.checked ? "✓" : ""}</span><span className="recipe-multi-day-copy"><strong>{item.canonical_name}</strong><small>{formatQuantity(item.quantity)}{item.unit} · {shoppingSourceLabel(item)}</small></span></button><button className="recipe-shopping-delete" type="button" aria-label={`${item.canonical_name} 장보기 항목 삭제`} disabled={shoppingMutating} onClick={() => void removeShoppingItem(item)}>삭제</button></div>)}</div><p className="recipe-shopping-note">식품 목록에 추가하면 장보기 목록에서 이미 가진 재료가 빠져요.</p></> : <p data-testid="meal-shopping-empty" className="history-empty">아직 장보기 항목이 없어요. 부족한 재료에서 추가할 수 있어요.</p>}</section> : null}
     {saved ? <button className="recipe-audit-toggle" type="button" disabled={auditLoading} onClick={() => void toggleAudit()}>{auditLoading ? "기록 불러오는 중" : auditOpen ? "식단 기록 접기" : "식단 기록 보기"} <ArrowRightIcon width={14} height={14} /></button> : null}
     {auditOpen ? <div className="recipe-audit" aria-label="식단 기록"><div className="recipe-audit-heading"><span>식단 기록</span><small>저장·조리 기록</small></div>{auditError ? <div className="recipe-error" role="alert"><InfoCircledIcon width={16} height={16} />{auditError}</div> : auditEvents.length ? <div className="recipe-audit-list">{auditEvents.map((event) => <div className="recipe-audit-row" key={event.id}><span className={`recipe-audit-icon recipe-audit-${event.event_type}`}><CheckCircledIcon width={13} height={13} /></span><span><strong>{event.event_type === "saved" ? "식단 저장" : "조리 완료"}</strong><small>{new Date(event.occurred_at).toLocaleString("ko-KR", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}{event.consumed_allocations.length ? ` · ${event.consumed_allocations.map((allocation) => `${formatQuantity(allocation.quantity)}${allocation.unit ?? ""}`).join(" + ")} 사용` : ""}</small></span></div>)}</div> : <p className="history-empty">아직 기록이 없어요.</p>}</div> : null}
     {plan ? <button className="recipe-history-toggle" type="button" aria-expanded={historyOpen} aria-controls="recipe-history-panel" aria-busy={historyLoading} disabled={historyLoading} onClick={() => void toggleHistory()}>{historyLoading ? "최근 식단 불러오는 중" : historyOpen ? "최근 식단 접기" : "최근 식단 보기"}<ChevronDownIcon width={14} height={14} aria-hidden="true" /></button> : null}
@@ -1638,5 +1666,6 @@ export default function MealPlanSheet({ foods, active = false, returningFromDeta
             : <div className="recipe-history-empty" role="status" aria-live="polite"><CalendarIcon width={16} height={16} aria-hidden="true" /><span><strong>{mealApi.isConfigured ? "저장된 식단이 아직 없어요" : "임시 저장한 식단이 아직 없어요"}</strong><small>{mealApi.isConfigured ? "식단을 저장하면 여기에서 다시 확인할 수 있어요." : "임시 저장하면 여기서 볼 수 있어요. 화면을 벗어나면 사라져요."}</small></span></div>}
     </section> : null}
     </div>
+    )}
   </BottomSheet>;
 }

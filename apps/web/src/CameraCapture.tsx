@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
-import { CameraIcon, CheckIcon, Cross2Icon, InfoCircledIcon, UploadIcon } from "@radix-ui/react-icons";
+import { CameraIcon, Cross2Icon, InfoCircledIcon, UploadIcon } from "@radix-ui/react-icons";
 import { revealAndFocusWithinNearestContainer as revealAndFocus } from "./appScroll";
 
 export type CaptureFileHandler = (file: File) => void | Promise<void>;
@@ -219,7 +219,7 @@ export default function CameraCapture({ title, detail, onFile, onCancel }: Camer
           <CameraLibraryFallback onFile={onFileRef.current} />
           <button className="secondary-sheet-button" type="button" onClick={() => onCancelRef.current()}>입력 방법 다시 보기</button>
         </div>
-        <div className="capture-hint"><CheckIcon width={14} height={14} /> 사진을 골라도 촬영한 사진처럼 상태를 살펴보고 내용을 읽어요.</div>
+        <div className="capture-hint"><InfoCircledIcon width={14} height={14} /> 사진을 선택해 상품명과 날짜를 읽을 수 있어요.</div>
       </div>
     );
   }

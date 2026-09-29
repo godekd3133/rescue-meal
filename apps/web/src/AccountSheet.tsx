@@ -121,14 +121,12 @@ function grocyStatusLabel(status: ApiGrocyStatus["status"] | undefined) {
 function externalInventoryDetail(detail: string | null | undefined, fallback: string) {
   const normalized = detail?.trim() ?? "";
   if (!normalized) return fallback;
-  return normalized
-    .replace(/system info readback/gi, "연결 상태 살펴보기")
-    .replace(/product mapping/gi, "상품 연결")
-    .replace(/stock sync/gi, "재고 앱 반영")
-    .replace(/reconciliation\s*확인이 필요합니다/gi, "재고 앱 반영 여부를 확인해 주세요")
-    .replace(/reconciliation/gi, "재고 앱에서 확인")
-    .replace(/Grocy/gi, "연결된 재고 앱")
-    .replace(/\boutbox\b/gi, "아직 반영되지 않은 항목");
+  if (/system info readback/i.test(normalized)) return "재고 앱에 연결돼 있어요.";
+  if (/product mapping/i.test(normalized)) return "재고 앱 상품 연결을 살펴봐 주세요.";
+  if (/reconciliation/i.test(normalized)) return "재고 앱에 추가됐는지 살펴봐 주세요.";
+  if (/stock sync|\boutbox\b/i.test(normalized)) return "재고 앱에 추가하지 못했어요. 연결을 살펴봐 주세요.";
+  if (/\b(?:workspace|payload|snapshot|status|provider|exception|traceback|request|response)\b/i.test(normalized)) return fallback;
+  return normalized.replace(/Grocy/gi, "연결된 재고 앱");
 }
 
 function grocyStatusDetail(detail: string | undefined, configured: boolean | undefined) {
@@ -166,20 +164,20 @@ function operationLabel(record: ApiGrocyOutboxRecord) {
 
 function outboxStatusLabel(status: ApiGrocyOutboxRecord["status"]) {
   if (status === "blocked") return "재고 앱 연결을 살펴봐 주세요";
-  if (status === "pending") return "재고 앱에 보낼 예정";
-  if (status === "in_flight") return "재고 앱에 보내고 있어요";
+  if (status === "pending") return "재고 앱에 추가할 예정이에요";
+  if (status === "in_flight") return "재고 앱에 추가하고 있어요";
   if (status === "succeeded") return "재고 앱에 추가했어요";
   if (status === "dead_letter") return "재고 앱에 추가하지 못했어요";
-  return "재고 앱에서 반영 여부를 살펴봐 주세요";
+  return "재고 앱에서 추가됐는지 살펴봐 주세요";
 }
 
 function statusHistorySourceLabel(source: ApiGrocyOutboxRecord["status_history"][number]["source"]) {
-  if (source === "created") return "추가 요청";
-  if (source === "mapping") return "상품 연결 변경";
-  if (source === "worker") return "자동 추가";
-  if (source === "retry") return "다시 시도";
-  if (source === "reconciliation") return "재고 앱 확인";
-  return "재고 앱 확인";
+  if (source === "created") return "추가를 요청했어요";
+  if (source === "mapping") return "상품 연결을 바꿨어요";
+  if (source === "worker") return "자동으로 추가했어요";
+  if (source === "retry") return "다시 보냈어요";
+  if (source === "reconciliation") return "재고 앱에서 확인했어요";
+  return "재고 앱에서 처리했어요";
 }
 
 function outboxFoodId(record: ApiGrocyOutboxRecord) {
@@ -188,7 +186,7 @@ function outboxFoodId(record: ApiGrocyOutboxRecord) {
 }
 
 function GrocyOutboxDetail({ record, onOpenFoodFromSync }: { record: ApiGrocyOutboxRecord; onOpenFoodFromSync?: (foodId: string, canonicalName: string, outboxId?: string) => void }) {
-  const transactionLabel = record.grocy_transaction_id ? `재고 앱 기록 #${record.grocy_transaction_id}` : "재고 앱 기록 번호 없음";
+  const transactionLabel = record.grocy_transaction_id ? `재고 앱 기록 번호 ${record.grocy_transaction_id}` : "";
   const foodId = outboxFoodId(record);
   const statusHistory = record.status_history?.length
     ? record.status_history
@@ -199,7 +197,7 @@ function GrocyOutboxDetail({ record, onOpenFoodFromSync }: { record: ApiGrocyOut
       occurredAt: record.created_at,
       kind: "food-record" as const,
       title: "식품 기록",
-      detail: `${operationLabel(record)} · ${record.quantity}${record.unit} · 식품 상세 최근 기록과 연결돼요.`,
+      detail: `${operationLabel(record)} · ${record.quantity}${record.unit} · 식품 상세에서도 볼 수 있어요.`,
       status: null,
       source: null,
       note: null,
@@ -208,8 +206,8 @@ function GrocyOutboxDetail({ record, onOpenFoodFromSync }: { record: ApiGrocyOut
       key: `status-${entry.occurred_at}-${index}`,
       occurredAt: entry.occurred_at,
       kind: entry.source === "reconciliation" ? "operator-decision" as const : entry.status === record.status ? "external-inventory" as const : "status-history" as const,
-      title: entry.source === "reconciliation" ? "담당자 확인" : entry.status === record.status ? "재고 앱" : "상태 변경",
-      detail: `${outboxStatusLabel(entry.status)} · ${statusHistorySourceLabel(entry.source)}`,
+      title: entry.source === "reconciliation" ? "확인 기록" : entry.status === record.status ? "재고 앱" : "이전 기록",
+      detail: outboxStatusLabel(entry.status),
       status: entry.status,
       source: entry.source,
       note: entry.note || (entry.status === "succeeded" && record.grocy_transaction_id ? transactionLabel : null),
@@ -218,29 +216,27 @@ function GrocyOutboxDetail({ record, onOpenFoodFromSync }: { record: ApiGrocyOut
   return (
     <details className="grocy-product-history" data-grocy-outbox-details={record.id} style={{ gridColumn: "1 / -1" }}>
       <summary className="grocy-product-history-heading" style={{ cursor: "pointer", listStyle: "none" }}>
-        <span className="grocy-product-history-heading-copy"><strong>{record.canonical_name} 재고 앱 반영</strong><small>{record.grocy_transaction_id ? transactionLabel : `앱 기록 번호 ${record.id}`}</small><small className="grocy-product-history-heading-time">최근 {formatMappingTime(record.updated_at)}</small></span>
+        <span className="grocy-product-history-heading-copy"><strong>{record.canonical_name} · 재고 앱 추가</strong><small className="grocy-product-history-heading-time">마지막 변경 {formatMappingTime(record.updated_at)}</small></span>
         <span className="grocy-task-state-badge" data-outbox-status={record.status}>{outboxStatusLabel(record.status)}</span>
       </summary>
       <div className="grocy-product-history" data-outbox-status-history={record.id} data-outbox-integrated-timeline={record.id} role="list">
-        <div className="grocy-product-history-heading"><strong>반영 내역</strong><small>시간순</small></div>
+        <div className="grocy-product-history-heading"><strong>변경 내역</strong><small>최근 순서</small></div>
         {timelineEntries.slice(-8).map((entry) => entry.kind === "food-record" ? <div className="grocy-product-history-event" data-outbox-timeline-step={entry.kind} role="listitem" key={`${record.id}:${entry.key}`}>
           <div><strong>{entry.title}</strong><small>{entry.detail} · {formatMappingTime(entry.occurredAt)}</small></div>
-          {foodId && onOpenFoodFromSync ? <button className="grocy-refresh-button" type="button" aria-label={`${record.canonical_name} 재고 앱 반영 내역의 식품 기록 보기`} onPointerDown={(event) => event.preventDefault()} onClick={() => onOpenFoodFromSync(foodId, record.canonical_name, record.id)}>식품 기록 보기</button> : null}
+          {foodId && onOpenFoodFromSync ? <button className="grocy-refresh-button" type="button" aria-label={`${record.canonical_name} 추가 기록에 연결된 식품 보기`} onPointerDown={(event) => event.preventDefault()} onClick={() => onOpenFoodFromSync(foodId, record.canonical_name, record.id)}>식품 보기</button> : null}
         </div> : <details className="grocy-product-history-event" data-outbox-timeline-step={entry.kind} data-outbox-status-history-entry={entry.status ?? undefined} role="listitem" key={`${record.id}:${entry.key}`}>
           <summary style={{ cursor: "pointer", listStyle: "none" }}><strong>{entry.title}</strong><small>{entry.detail} · {formatMappingTime(entry.occurredAt)}</small></summary>
           <div className="grocy-product-history-event" data-outbox-evidence-step={entry.kind}>
             {entry.source ? <small>{statusHistorySourceLabel(entry.source)}</small> : null}
-            {entry.note ? <small>{entry.note}</small> : null}
-            <small style={{ wordBreak: "break-all" }}>앱 기록 번호 · {record.id}</small>
+            {entry.note ? <small>{externalInventoryDetail(entry.note, "재고 앱에서 추가됐는지 살펴봐 주세요.")}</small> : null}
             {entry.status === "succeeded" && record.grocy_transaction_id ? <small style={{ wordBreak: "break-all" }}>{transactionLabel}</small> : null}
           </div>
         </details>)}
       </div>
       <div className="grocy-product-history-event" data-outbox-detail-id={record.id} data-outbox-status={record.status}>
-        <div><strong>반영한 내용</strong><small>{operationLabel(record)} · {record.quantity}{record.unit} · {outboxStatusLabel(record.status)}</small></div>
-        <small style={{ wordBreak: "break-all" }}>앱 기록 번호 · {record.id}</small>
+        <div><strong>재고 앱 기록</strong><small>{operationLabel(record)} · {record.quantity}{record.unit}</small></div>
         {record.grocy_transaction_id ? <small style={{ wordBreak: "break-all" }}>{transactionLabel}</small> : null}
-        <small>생성 {formatMappingTime(record.created_at)} · 최근 변경 {formatMappingTime(record.updated_at)}</small>
+        <small>요청한 시각 {formatMappingTime(record.created_at)} · 마지막 변경 {formatMappingTime(record.updated_at)}</small>
       </div>
     </details>
   );
@@ -254,11 +250,11 @@ function formatReceiptPurchaseDate(value: string | null) {
 }
 
 function receiptStatusLabel(status: ApiReceiptSummary["status"]) {
-  if (status === "committed") return "재고 반영됨";
-  if (status === "review_required") return "살펴봐 주세요";
-  if (status === "confirmed") return "확인됨";
-  if (status === "rejected") return "반려됨";
-  return "처리 중";
+  if (status === "committed") return "식품 목록에 추가했어요";
+  if (status === "review_required") return "내용을 살펴봐 주세요";
+  if (status === "confirmed") return "내용을 확인했어요";
+  if (status === "rejected") return "추가하지 않았어요";
+  return "확인 중";
 }
 
 function urlBase64ToUint8Array(value: string) {
@@ -555,7 +551,7 @@ function NotificationPreferencesPanel({ workspaceSync, refreshNonce }: { workspa
       {loading && !preferences ? <div className="account-loading" role="status">알림 설정을 불러오고 있어요</div> : (
         <>
           <div className="notification-preferences-card">
-            <div className="notification-preference-toggle-row"><span><strong>앱 내 알림</strong><small>확인할 날짜와 재고 앱 반영 상태를 알려드려요.</small></span><button className={`toggle ${draft.in_app_enabled ? "toggle-on" : ""}`} type="button" role="switch" aria-label="앱 내 알림" aria-checked={draft.in_app_enabled} onClick={() => setDraft((current) => ({ ...current, in_app_enabled: !current.in_app_enabled }))}><span /></button></div>
+            <div className="notification-preference-toggle-row"><span><strong>앱 내 알림</strong><small>날짜와 재고 앱에 추가한 식품을 알려드려요.</small></span><button className={`toggle ${draft.in_app_enabled ? "toggle-on" : ""}`} type="button" role="switch" aria-label="앱 내 알림" aria-checked={draft.in_app_enabled} onClick={() => setDraft((current) => ({ ...current, in_app_enabled: !current.in_app_enabled }))}><span /></button></div>
             <div className="notification-preference-row"><span><strong>알림을 미리 받을 기간</strong><small>날짜 안내와 먼저 살펴볼 식품 알림을 며칠 전부터 받을까요?</small></span><span className="notification-days-input"><KeyboardInput className="grocy-number-input" type="number" inputMode="numeric" min={0} max={14} value={leadDaysText} aria-label="알림 미리 받을 기간" onChange={(event) => setLeadDaysText(event.target.value)} onBlur={() => keyboard.hide()} /><small>일 전</small></span></div>
             <div className="notification-preference-row"><span><strong>알림 시간대</strong><small>날짜와 조용한 시간을 이 시간대 기준으로 계산해요.</small></span><span className="notification-timezone-control"><select className="notification-timezone-select" aria-label="알림 시간대" value={draft.timezone} onChange={(event) => setDraft((current) => ({ ...current, timezone: event.target.value }))}>{notificationTimezoneOptions(draft.timezone, detectedTimezone).map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select>{detectedTimezone && detectedTimezone !== draft.timezone ? <button className="notification-timezone-device-button" type="button" onClick={() => setDraft((current) => ({ ...current, timezone: detectedTimezone }))}>현재 기기 시간 사용</button> : null}</span></div>
             <div className="notification-preference-row"><span><strong>조용한 시간</strong><small>푸시 알림을 켠 경우 이 시간에는 보내지 않아요.</small></span><span className="notification-time-inputs"><KeyboardInput className="grocy-number-input" type="time" value={draft.quiet_hours_start ?? ""} aria-label="조용한 시간 시작" onChange={(event) => setDraft((current) => ({ ...current, quiet_hours_start: event.target.value || null }))} onBlur={() => keyboard.hide()} /><span>~</span><KeyboardInput className="grocy-number-input" type="time" value={draft.quiet_hours_end ?? ""} aria-label="조용한 시간 종료" onChange={(event) => setDraft((current) => ({ ...current, quiet_hours_end: event.target.value || null }))} onBlur={() => keyboard.hide()} /></span></div>
@@ -563,8 +559,8 @@ function NotificationPreferencesPanel({ workspaceSync, refreshNonce }: { workspa
           </div>
           <div className="push-subscription-card">
             <div className="push-subscription-heading"><span><strong>기기 알림</strong><small>브라우저를 닫아도 확인할 알림을 받을 수 있어요.</small></span><span className={`receipt-privacy-badge ${subscriptions.length ? "receipt-privacy-badge-redacted" : ""}`}>{subscriptions.length ? `연결된 기기 ${subscriptions.length}개` : "연결된 기기 없음"}</span></div>
-            <div className="notification-delivery-status"><span><strong>기기 알림</strong><small>{workerHeartbeat ? workerHeartbeat.push_configured ? workerHeartbeat.last_error ? "알림을 보내지 못했어요. 설정을 살펴봐 주세요." : `마지막 전송 ${formatWorkerTime(workerHeartbeat.last_tick_at)} · ${workerHeartbeat.succeeded}건${workerHeartbeat.cancelled ? ` · ${workerHeartbeat.cancelled}건 읽고 취소` : ""}` : "알림을 보낼 준비 중이에요." : "알림 내역을 불러오지 못했어요."}</small></span><span className={`notification-delivery-badge ${workerHeartbeat?.push_configured && !workerHeartbeat.last_error ? "notification-delivery-badge-ready" : ""}`}>{workerHeartbeat?.push_configured && !workerHeartbeat.last_error ? "사용 가능" : "준비 중"}</span></div>
-            <div className="notification-preference-toggle-row"><span><strong>기기 알림</strong><small>{subscriptions.length ? "연결한 기기에 날짜와 재고 앱 알림을 보내요." : "먼저 이 기기를 연결해 주세요."}</small></span><button className={`toggle ${draft.push_enabled ? "toggle-on" : ""}`} type="button" role="switch" aria-label="기기 알림" aria-checked={draft.push_enabled} disabled={!subscriptions.length && !draft.push_enabled} onClick={() => setDraft((current) => ({ ...current, push_enabled: !current.push_enabled }))}><span /></button></div>
+            <div className="notification-delivery-status"><span><strong>최근 전송</strong><small>{workerHeartbeat ? workerHeartbeat.push_configured ? workerHeartbeat.last_error ? "최근 알림을 보내지 못했어요. 설정을 살펴봐 주세요." : `최근 ${workerHeartbeat.succeeded}건 전송 · ${formatWorkerTime(workerHeartbeat.last_tick_at)}${workerHeartbeat.cancelled ? ` · 받지 못한 알림 ${workerHeartbeat.cancelled}건` : ""}` : "알림을 보낼 준비 중이에요." : "기기 알림 전송 정보를 불러오지 못했어요."}</small></span><span className={`notification-delivery-badge ${workerHeartbeat?.push_configured && !workerHeartbeat.last_error ? "notification-delivery-badge-ready" : ""}`}>{workerHeartbeat ? workerHeartbeat.push_configured ? workerHeartbeat.last_error ? "문제가 있어요" : "켜짐" : "설정이 필요해요" : "확인 중"}</span></div>
+            <div className="notification-preference-toggle-row"><span><strong>알림 받기</strong><small>{subscriptions.length ? "이 기기에서 날짜와 재고 앱 소식을 받아요." : "기기를 연결하면 알림을 받을 수 있어요."}</small></span><button className={`toggle ${draft.push_enabled ? "toggle-on" : ""}`} type="button" role="switch" aria-label="기기 알림" aria-checked={draft.push_enabled} disabled={!subscriptions.length && !draft.push_enabled} onClick={() => setDraft((current) => ({ ...current, push_enabled: !current.push_enabled }))}><span /></button></div>
             <button className="secondary-sheet-button push-subscribe-button" type="button" disabled={subscribing || !pushSupported || !configuredVapidPublicKey} onPointerDown={(event) => event.preventDefault()} onClick={() => { keyboard.hide(); void subscribePush(); }}>{subscribing ? "연결 중" : configuredVapidPublicKey ? "이 기기에서 알림 받기" : "알림을 사용할 수 없어요"}</button>
             {subscriptions.length ? <div className="push-subscription-list" role="list">{subscriptions.map((subscription) => <div className="push-subscription-row" role="listitem" key={subscription.endpoint_fingerprint}><span><strong>이 기기</strong><small>등록 {formatPushSubscriptionTime(subscription.created_at)} · 이 기기에서 연결됨</small></span><button type="button" disabled={removingFingerprint === subscription.endpoint_fingerprint} onClick={() => void removePushSubscription(subscription)}>{removingFingerprint === subscription.endpoint_fingerprint ? "해지 중" : "연결 해지"}</button></div>)}</div> : null}
             <p className="push-subscription-footnote"><InfoCircledIcon width={14} height={14} /> 알림은 직접 켠 경우에만 이 기기로 보내요.</p>
@@ -714,7 +710,7 @@ function AccountDeletionPanel({ onDeleted }: { onDeleted: () => void | Promise<v
             {error ? <div className="account-error" role="alert" aria-busy={busy}><InfoCircledIcon width={15} height={15} /><span>{busy ? "계정 삭제를 다시 처리하는 중이에요." : error}</span>{retryableFailure ? <button ref={retryButtonRef} className="account-error-action" type="button" disabled={busy} aria-busy={busy} onPointerDown={(event) => event.preventDefault()} onClick={() => void submit()}>{busy ? "다시 시도 중" : "다시 시도"}</button> : null}</div> : null}
             <button className="danger-sheet-button account-delete-submit" type="button" disabled={busy || currentPassword.length < 8 || confirmation.trim() !== "DELETE"} onPointerDown={(event) => event.preventDefault()} onClick={() => void submit()}>{busy ? "삭제 중" : "계정과 데이터 영구 삭제"}</button>
           </div>
-          <p className="account-delete-warning"><InfoCircledIcon width={14} height={14} /> 서버 백업·외부 재고 연동 서비스의 보존 정책은 별도일 수 있어요. 삭제 요청 후에는 다시 로그인할 수 없습니다.</p>
+          <p className="account-delete-warning"><InfoCircledIcon width={14} height={14} /> 서비스 백업과 재고 앱에는 별도의 보관 정책이 적용될 수 있어요. 계정을 삭제하면 다시 로그인할 수 없어요.</p>
         </>
       )}
     </section>
@@ -1131,7 +1127,7 @@ function StorageLocationPanel({ workspaceSync, refreshNonce }: { workspaceSync: 
         setEditingName("");
         setConfirmingDeleteId(null);
         keyboard.hide();
-        await refresh("다른 기기에서 보관 위치가 바뀌어 최신 목록을 불러왔어요.");
+        await refresh("다른 기기에서 보관 위치를 바꿨어요. 목록을 새로 불러왔어요.");
         return;
       }
       revisionRef.current = revision;
@@ -1280,7 +1276,7 @@ function StorageLocationPanel({ workspaceSync, refreshNonce }: { workspaceSync: 
         <div className="storage-location-type-field"><span>기본 분류</span><div className="storage-location-type-options" role="group" aria-label="새 보관 위치 기본 분류">{STORAGE_OPTIONS.map((option) => <button key={option.value} className={storageType === option.value ? "storage-location-type-option storage-location-type-option-active" : "storage-location-type-option"} type="button" aria-pressed={storageType === option.value} onPointerDown={(event) => event.preventDefault()} onClick={() => setStorageType(option.value)}>{option.label}</button>)}</div></div>
         <button className="primary-sheet-button storage-location-create-button" type="submit" disabled={busy || loading || !name.trim()} onPointerDown={(event) => event.preventDefault()}>{busy ? "저장 중" : "보관 위치 추가"}<ArrowRightIcon width={15} height={15} /></button>
       </form>
-      {loading && !locations.length ? <div className="account-loading" role="status">보관 위치를 불러오고 있어요</div> : customLocations.length ? <div className="storage-location-list" role="list" aria-label="사용자 정의 보관 위치 목록">{customLocations.map((location) => <div className="storage-location-row" role="listitem" key={location.id}>{editingId === location.id ? <div className="storage-location-edit"><KeyboardInput className="app-input" value={editingName} maxLength={80} autoComplete="off" aria-label={`${location.name} 보관 위치 이름 수정`} onChange={(event) => { setEditingName(event.target.value); setError(""); }} onBlur={() => keyboard.hide()} /><div><button className="grocy-refresh-button" type="button" disabled={busy || !editingName.trim()} onPointerDown={(event) => event.preventDefault()} onClick={() => void saveLocation(location)}>저장</button><button className="grocy-refresh-button" type="button" disabled={busy} onPointerDown={(event) => event.preventDefault()} onClick={cancelEdit}>취소</button></div></div> : <><span className="storage-location-row-copy"><strong>{location.name}</strong><small>{location.storage_type === "refrigerated" ? "냉장" : location.storage_type === "frozen" ? "냉동" : "실온"} 분류 · 식품 추가·입고에서 선택할 수 있어요.</small></span><span className="storage-location-row-actions"><button className="grocy-refresh-button" type="button" disabled={busy} onPointerDown={(event) => event.preventDefault()} onClick={() => beginEdit(location)}>이름 수정</button><button className="grocy-refresh-button storage-location-delete-button" type="button" disabled={busy} onPointerDown={(event) => event.preventDefault()} onClick={() => void deleteLocation(location)}>{confirmingDeleteId === location.id ? "한 번 더 삭제" : "삭제"}</button></span></>}</div>)}</div> : <div className="storage-location-empty" aria-live="polite"><strong>추가한 위치가 아직 없어요</strong><small>이름을 만들면 식품을 반영할 때 기본 분류와 함께 선택할 수 있어요.</small></div>}
+      {loading && !locations.length ? <div className="account-loading" role="status">보관 위치를 불러오고 있어요</div> : customLocations.length ? <div className="storage-location-list" role="list" aria-label="사용자 정의 보관 위치 목록">{customLocations.map((location) => <div className="storage-location-row" role="listitem" key={location.id}>{editingId === location.id ? <div className="storage-location-edit"><KeyboardInput className="app-input" value={editingName} maxLength={80} autoComplete="off" aria-label={`${location.name} 보관 위치 이름 수정`} onChange={(event) => { setEditingName(event.target.value); setError(""); }} onBlur={() => keyboard.hide()} /><div><button className="grocy-refresh-button" type="button" disabled={busy || !editingName.trim()} onPointerDown={(event) => event.preventDefault()} onClick={() => void saveLocation(location)}>저장</button><button className="grocy-refresh-button" type="button" disabled={busy} onPointerDown={(event) => event.preventDefault()} onClick={cancelEdit}>취소</button></div></div> : <><span className="storage-location-row-copy"><strong>{location.name}</strong><small>{location.storage_type === "refrigerated" ? "냉장" : location.storage_type === "frozen" ? "냉동" : "실온"} · 식품을 추가할 때 선택할 수 있어요.</small></span><span className="storage-location-row-actions"><button className="grocy-refresh-button" type="button" disabled={busy} onPointerDown={(event) => event.preventDefault()} onClick={() => beginEdit(location)}>이름 수정</button><button className="grocy-refresh-button storage-location-delete-button" type="button" disabled={busy} onPointerDown={(event) => event.preventDefault()} onClick={() => void deleteLocation(location)}>{confirmingDeleteId === location.id ? "한 번 더 삭제" : "삭제"}</button></span></>}</div>)}</div> : <div className="storage-location-empty" aria-live="polite"><strong>추가한 위치가 아직 없어요</strong><small>이름을 만들면 식품을 추가할 때 선택할 수 있어요.</small></div>}
       <p className="storage-location-footnote"><InfoCircledIcon width={14} height={14} />현재 식품이나 과거 보관·입고 기록이 참조하는 위치는 이름을 보존하기 위해 삭제할 수 없어요. 다른 기기 변경은 화면을 다시 볼 때 자동으로 확인해요.</p>
     </section>
   );
@@ -1334,8 +1330,8 @@ function ReceiptPrivacyPanel({ workspaceSync, refreshNonce }: { workspaceSync: W
       if (!result) throw new Error("receipt-privacy-erase-empty");
       setConfirmingId(null);
       setNotice(result.status === "deleted_draft"
-        ? "검토 중인 영수증 원본 정보를 삭제했어요"
-        : "영수증 원본 정보를 삭제했고 재고 기록은 유지했어요");
+        ? "확인 중인 영수증 정보를 삭제했어요"
+            : "영수증 정보를 삭제했어요. 식품 목록과 구매 기록은 그대로예요.");
       await refresh();
     } catch (reason) {
       if (isMealApiWorkspaceConflictError(reason)) {
@@ -1343,8 +1339,8 @@ function ReceiptPrivacyPanel({ workspaceSync, refreshNonce }: { workspaceSync: W
         setRetryAction({ kind: "refresh" });
       } else {
         setError(isMealApiReceiptPrivacyPersistenceError(reason)
-          ? "영수증 원본 정보를 저장하지 못했어요. 기존 영수증 상태를 유지했어요."
-          : "영수증 원본 정보를 삭제하지 못했어요. 잠시 후 다시 시도해 주세요.");
+          ? "영수증 정보를 저장하지 못했어요. 기존 기록은 그대로예요."
+          : "영수증 정보를 삭제하지 못했어요. 잠시 후 다시 시도해 주세요.");
         setRetryAction({ kind: "erase", receipt });
       }
     } finally {
@@ -1363,11 +1359,11 @@ function ReceiptPrivacyPanel({ workspaceSync, refreshNonce }: { workspaceSync: W
     <section className="receipt-privacy-panel" aria-labelledby="receipt-privacy-title">
       <div className="receipt-privacy-heading">
         <span className="receipt-privacy-icon"><ReaderIcon width={17} height={17} /></span>
-        <div><h3 id="receipt-privacy-title">영수증 원본 관리</h3><p>원본과 재고 기록을 분리해 관리해요.</p></div>
+        <div><h3 id="receipt-privacy-title">영수증 정보 관리</h3><p>영수증 정보를 삭제해도 식품 목록과 구매 기록은 남아요.</p></div>
         <button className="grocy-refresh-button" type="button" disabled={loading} onClick={() => void refresh()}>{loading ? "불러오는 중" : "새로고침"}</button>
       </div>
-      {policy ? <div className="privacy-policy-card" role="note"><InfoCircledIcon width={15} height={15} /><span><strong>원본 사진은 저장하지 않아요</strong><small>{policy.message}</small></span></div> : null}
-      {error ? <div className="account-error receipt-privacy-error" role="alert" aria-busy={busyId !== null}><InfoCircledIcon width={15} height={15} /><span>{busyId !== null ? "영수증 개인정보 상태를 다시 확인하는 중이에요." : error}</span>{retryAction ? <button className="account-error-action" type="button" onClick={retry} disabled={busyId !== null} aria-busy={busyId !== null}>{busyId !== null ? "확인 중" : retryAction.kind === "refresh" ? "다시 불러오기" : "다시 시도"}</button> : null}</div> : null}
+      {policy ? <div className="privacy-policy-card" role="note"><InfoCircledIcon width={15} height={15} /><span><strong>영수증 사진은 저장하지 않아요</strong><small>{policy.message}</small></span></div> : null}
+      {error ? <div className="account-error receipt-privacy-error" role="alert" aria-busy={busyId !== null}><InfoCircledIcon width={15} height={15} /><span>{busyId !== null ? "영수증 정보를 다시 불러오는 중이에요." : error}</span>{retryAction ? <button className="account-error-action" type="button" onClick={retry} disabled={busyId !== null} aria-busy={busyId !== null}>{busyId !== null ? "확인 중" : retryAction.kind === "refresh" ? "다시 불러오기" : "다시 시도"}</button> : null}</div> : null}
       {notice ? <div className="grocy-success" role="status"><CheckCircledIcon width={15} height={15} /><span>{notice}</span></div> : null}
       {loading && !receipts.length ? <div className="account-loading" role="status">영수증 기록을 불러오고 있어요</div> : receipts.length ? (
         <div className="receipt-privacy-list">
@@ -1376,17 +1372,17 @@ function ReceiptPrivacyPanel({ workspaceSync, refreshNonce }: { workspaceSync: W
             const confirming = confirmingId === receipt.id;
             return (
               <div className="receipt-privacy-row" key={receipt.id}>
-                <div className="receipt-privacy-copy"><strong>{receipt.merchant_name ? `${receipt.merchant_name} · ` : ""}{formatReceiptPurchaseDate(receipt.purchased_at)} 영수증</strong><small>{receiptStatusLabel(receipt.status)} · 상품 {receipt.line_count}개{receipt.stock_created ? " · 재고 연결됨" : " · 아직 재고에 반영하지 않음"}</small></div>
-                <span className={`receipt-privacy-badge ${receipt.source_redacted ? "receipt-privacy-badge-redacted" : ""}`}>{receipt.source_redacted ? "원본 정보 삭제됨" : "원본 정보 보관 중"}</span>
+                <div className="receipt-privacy-copy"><strong>{receipt.merchant_name ? `${receipt.merchant_name} · ` : ""}{formatReceiptPurchaseDate(receipt.purchased_at)} 영수증</strong><small>{receiptStatusLabel(receipt.status)} · 상품 {receipt.line_count}개{receipt.stock_created ? " · 식품 목록에 추가됨" : " · 식품 목록에 추가 전"}</small></div>
+                <span className={`receipt-privacy-badge ${receipt.source_redacted ? "receipt-privacy-badge-redacted" : ""}`}>{receipt.source_redacted ? "영수증 정보 삭제됨" : "영수증 정보 보관 중"}</span>
                 {receipt.source_redacted ? null : confirming ? (
-                  <div className="receipt-privacy-confirm" role="alert"><small>{receipt.stock_created ? "재고·거래 기록은 유지하고 파일 이름과 읽어낸 문자 내용만 삭제해요." : "아직 재고에 반영하지 않은 영수증 기본 기록 정보를 삭제해요."}</small><div><button className="secondary-sheet-button" type="button" disabled={busy} onClick={() => setConfirmingId(null)}>취소</button><button className="danger-sheet-button" type="button" disabled={busy} onClick={() => void erase(receipt)}>{busy ? "삭제 중" : "삭제 확인"}</button></div></div>
-                ) : <button className="receipt-privacy-delete" type="button" onClick={() => setConfirmingId(receipt.id)}>영수증 원본 정보 삭제</button>}
+                  <div className="receipt-privacy-confirm" role="alert"><small>{receipt.stock_created ? "식품 목록과 구매 기록은 그대로 두고 영수증 파일 이름과 읽은 문구만 삭제해요." : "식품 목록에 넣지 않은 영수증 정보만 삭제해요."}</small><div><button className="secondary-sheet-button" type="button" disabled={busy} onClick={() => setConfirmingId(null)}>취소</button><button className="danger-sheet-button" type="button" disabled={busy} onClick={() => void erase(receipt)}>{busy ? "삭제 중" : "삭제"}</button></div></div>
+                ) : <button className="receipt-privacy-delete" type="button" onClick={() => setConfirmingId(receipt.id)}>영수증 정보 삭제</button>}
               </div>
             );
           })}
         </div>
-      ) : <div className="receipt-privacy-empty"><CheckCircledIcon width={20} height={20} /><strong>등록된 영수증 기록이 없어요</strong><small>영수증을 사용한 뒤 원본 정보의 보관 여부를 여기에서 관리할 수 있어요.</small></div>}
-      <p className="receipt-privacy-footnote"><InfoCircledIcon width={14} height={14} /> 삭제 후에도 이미 식품 목록에 추가한 항목의 구매 정보와 수량 기록은 남아요. 소비기한이나 먹어도 되는지를 뜻하지는 않아요.</p>
+      ) : <div className="receipt-privacy-empty"><CheckCircledIcon width={20} height={20} /><strong>영수증 기록이 없어요</strong><small>식품 목록에 추가한 뒤 영수증 정보를 여기에서 지울 수 있어요.</small></div>}
+      <p className="receipt-privacy-footnote"><InfoCircledIcon width={14} height={14} /> 영수증 정보를 지워도 식품 목록과 구매일은 남아요. 구매일로 소비기한이나 먹어도 되는지를 알 수는 없어요.</p>
     </section>
   );
 }
@@ -1395,7 +1391,7 @@ function AccountArchiveDisclosure({ workspaceSync, refreshNonce }: { workspaceSy
   const [open, setOpen] = useState(false);
   return (
     <details className="grocy-settings-block account-archive-disclosure" onToggle={(event) => setOpen((event.currentTarget as HTMLDetailsElement).open)}>
-      <summary className="grocy-block-heading"><strong>기록 관리</strong><small>데이터 내보내기·영수증 원본 관리</small></summary>
+      <summary className="grocy-block-heading"><strong>기록 관리</strong><small>자료 내보내기·영수증 정보 관리</small></summary>
       {open ? <div>
         <WorkspaceDataExportPanel workspaceSync={workspaceSync} />
         <ReceiptPrivacyPanel refreshNonce={refreshNonce} workspaceSync={workspaceSync} />
@@ -1579,19 +1575,25 @@ function GrocyIntegrationPanel({ active, workspaceSync, refreshNonce, focusGrocy
     })
     .slice(0, 3);
   const outboxCardHeading = blockedOutbox.length || reconciliationOutbox.length || deadLetterOutbox.length || productTasks.length
-    ? "확인이 필요한 재고 앱 기록"
+    ? "재고 앱에서 살펴볼 식품"
     : inFlightOutbox.length
-      ? "재고 앱에 추가 중"
+      ? "재고 앱에 추가하고 있어요"
       : pendingOutbox.length
-        ? "재고 앱에 보낼 항목"
+        ? "재고 앱에 추가할 식품"
       : recentlySucceededOutbox.length
-        ? "최근 추가됨"
-        : "재고 앱에 보낼 항목 없음";
+        ? "최근에 재고 앱에 추가했어요"
+        : "추가할 식품이 없어요";
   const outboxCardSummary = blockedOutbox.length || pendingOutbox.length || inFlightOutbox.length || reconciliationOutbox.length || deadLetterOutbox.length
-    ? `${blockedOutbox.length ? `살펴볼 항목 ${blockedOutbox.length}개` : "추가로 살펴볼 항목 없음"} · ${pendingOutbox.length}개 대기${inFlightOutbox.length ? ` · ${inFlightOutbox.length}개 보내는 중` : ""}${reconciliationOutbox.length ? ` · 재고 앱에서 확인 ${reconciliationOutbox.length}개` : ""}${deadLetterOutbox.length ? ` · ${deadLetterOutbox.length}개 추가되지 않음` : ""}`
+    ? [
+      blockedOutbox.length ? `살펴볼 식품 ${blockedOutbox.length}개` : "",
+      reconciliationOutbox.length ? `재고 앱에 추가됐는지 볼 식품 ${reconciliationOutbox.length}개` : "",
+      deadLetterOutbox.length ? `추가하지 못한 식품 ${deadLetterOutbox.length}개` : "",
+      pendingOutbox.length ? `추가할 식품 ${pendingOutbox.length}개` : "",
+      inFlightOutbox.length ? `추가하는 중 ${inFlightOutbox.length}개` : "",
+    ].filter(Boolean).join(" · ")
     : recentlySucceededOutbox.length
-      ? `최근 ${recentlySucceededOutbox.length}건 반영 완료 · 대기 중인 기록 없음`
-      : "재고 앱에 보낼 기록이 없어요.";
+      ? `최근 ${recentlySucceededOutbox.length}개를 추가했어요`
+      : "추가할 식품이 없어요.";
   const outboxCardState = blockedOutbox.length || reconciliationOutbox.length || deadLetterOutbox.length || productTasks.length
     ? "attention"
     : inFlightOutbox.length
@@ -1677,10 +1679,10 @@ function GrocyIntegrationPanel({ active, workspaceSync, refreshNonce, focusGrocy
     if (!canonicalName || loading || error) return;
     const frame = window.requestAnimationFrame(() => {
       if (pendingOutbox.length) {
-        setNotice(`${canonicalName} 상품 연결을 저장했어요. 재고 앱에 반영할 기록 ${pendingOutbox.length}건이 있어요.`);
+        setNotice(`${canonicalName} 상품을 재고 앱에 연결했어요. 식품 ${pendingOutbox.length}개를 추가할 예정이에요.`);
         processOutboxButtonRef.current?.focus({ preventScroll: true });
       } else {
-        setNotice(`${canonicalName} 상품 매핑을 저장했어요.`);
+        setNotice(`${canonicalName} 상품 연결을 저장했어요.`);
       }
       mappingSaveNoticeRef.current = null;
     });
@@ -1706,8 +1708,8 @@ function GrocyIntegrationPanel({ active, workspaceSync, refreshNonce, focusGrocy
         setRetryAction({ kind: "refresh" });
       } else {
         setError(isMealApiGrocyLocationMappingPersistenceError(reason)
-          ? "보관 위치 연결을 저장하지 못했어요. 기존 연결과 재고 앱 반영 대기 상태를 유지했어요."
-          : "보관 위치 매핑을 저장하지 못했어요.");
+          ? "보관 위치를 저장하지 못했어요. 기존 설정은 그대로예요."
+          : "보관 위치 연결을 저장하지 못했어요.");
         setRetryAction({ kind: "location", storageType });
       }
     } finally {
@@ -1720,7 +1722,7 @@ function GrocyIntegrationPanel({ active, workspaceSync, refreshNonce, focusGrocy
     const productId = Number.parseInt(draft?.productId ?? "", 10);
     const unit = draft?.unit.trim() || fallbackUnit.trim();
     if (!Number.isInteger(productId) || productId <= 0 || !unit) {
-      setError("외부 상품 번호와 Rescue Meal 단위를 모두 입력해 주세요.");
+      setError("재고 앱 상품 번호와 단위를 모두 입력해 주세요.");
       return;
     }
     setSavingKey(`product:${draftKey}`);
@@ -1729,7 +1731,7 @@ function GrocyIntegrationPanel({ active, workspaceSync, refreshNonce, focusGrocy
     try {
       await mealApi.upsertGrocyProductMapping(canonicalName, { grocy_product_id: productId, grocy_unit: unit });
       mappingSaveNoticeRef.current = canonicalName;
-      setNotice(`${canonicalName} 상품 매핑을 저장했어요.`);
+      setNotice(`${canonicalName} 상품 연결을 저장했어요.`);
       setEditingProductKey("");
       await refresh();
     } catch (reason) {
@@ -1738,8 +1740,8 @@ function GrocyIntegrationPanel({ active, workspaceSync, refreshNonce, focusGrocy
         setRetryAction({ kind: "refresh" });
       } else {
         setError(isMealApiGrocyMappingPersistenceError(reason)
-          ? "상품 연결을 저장하지 못했어요. 기존 연결과 재고 앱 반영 대기 상태를 유지했어요."
-          : "상품 매핑을 저장하지 못했어요.");
+          ? "상품 연결을 저장하지 못했어요. 기존 설정은 그대로예요."
+          : "상품 연결을 저장하지 못했어요.");
         setRetryAction({ kind: "product", canonicalName, draftKey, fallbackUnit });
       }
     } finally {
@@ -1766,7 +1768,7 @@ function GrocyIntegrationPanel({ active, workspaceSync, refreshNonce, focusGrocy
       setMappingEvents((current) => ({ ...current, [key]: events }));
     } catch {
       setMappingHistoryKey("");
-      setError("상품 매핑 변경 이력을 불러오지 못했어요.");
+      setError("상품 연결 내역을 불러오지 못했어요.");
     } finally {
       setMappingEventsLoading("");
     }
@@ -1782,14 +1784,14 @@ function GrocyIntegrationPanel({ active, workspaceSync, refreshNonce, focusGrocy
       const completedOutboxId = result.records.find((record) => record.status === "succeeded")?.id ?? null;
       setCompletedOutboxFocusId(completedOutboxId);
       if (completedOutboxId) writeCompletedOutboxHandoff(completedOutboxId, workspaceSync.currentWorkspaceKey);
-      setNotice(`재고 앱에 ${result.succeeded}건을 반영했어요. ${result.retried}건은 다시 시도할 예정이에요.`);
+      setNotice(`재고 앱에 식품 ${result.succeeded}개를 추가했어요.${result.retried ? ` ${result.retried}개는 다시 시도할게요.` : ""}`);
       await refresh();
       const workspaceSynced = await refreshParentWorkspace();
       if (workspaceSynced === false) setNotice((current) => `${current} 홈과 알림은 다시 연결한 뒤 불러올 수 있어요.`);
     } catch (reason) {
       setError(isMealApiWorkspaceConflictError(reason)
         ? MEAL_API_WORKSPACE_CONFLICT_MESSAGE
-        : "재고 앱에 반영하지 못했어요. 연결 상태와 상품 연결을 확인해 주세요.");
+        : "재고 앱에 식품을 추가하지 못했어요. 연결과 상품 정보를 살펴봐 주세요.");
     } finally {
       setProcessing(false);
     }
@@ -1802,14 +1804,14 @@ function GrocyIntegrationPanel({ active, workspaceSync, refreshNonce, focusGrocy
     try {
       const result = await mealApi.scanGrocyOutboxReconciliation();
       if (!result) throw new Error("grocy-reconciliation-scan-empty");
-      setNotice(result.marked ? `재고 앱에 반영됐는지 확인할 기록 ${result.marked}건을 찾았어요.` : "확인이 필요한 오래된 기록이 없어요.");
+      setNotice(result.marked ? `재고 앱에 추가됐는지 살펴볼 식품 ${result.marked}개를 찾았어요.` : "재고 앱에서 살펴볼 오래된 식품이 없어요.");
       await refresh();
       const workspaceSynced = await refreshParentWorkspace();
       if (workspaceSynced === false) setNotice((current) => `${current} 홈과 알림은 다시 연결한 뒤 불러올 수 있어요.`);
     } catch (reason) {
       setError(isMealApiWorkspaceConflictError(reason)
         ? MEAL_API_WORKSPACE_CONFLICT_MESSAGE
-        : "재고 앱 반영 여부를 확인할 기록을 찾지 못했어요.");
+        : "재고 앱에 추가됐는지 확인하지 못했어요. 다시 시도해 주세요.");
     } finally {
       setScanning(false);
     }
@@ -1819,7 +1821,7 @@ function GrocyIntegrationPanel({ active, workspaceSync, refreshNonce, focusGrocy
     if (savingKey) return;
     const transactionId = reconciliationDrafts[record.id]?.trim() ?? "";
     if (decision === "already_applied" && !transactionId) {
-      setError("반영 완료로 표시하려면 재고 앱 기록 번호를 입력해 주세요.");
+      setError("재고 앱에 추가된 것을 확인했다면 기록 번호를 입력해 주세요.");
       return;
     }
     const key = `reconcile:${record.id}`;
@@ -1830,9 +1832,9 @@ function GrocyIntegrationPanel({ active, workspaceSync, refreshNonce, focusGrocy
       await mealApi.reconcileGrocyOutbox(record.id, {
         decision,
         grocy_transaction_id: decision === "already_applied" ? transactionId : undefined,
-        operator_note: decision === "already_applied" ? "담당자가 재고 앱 반영을 확인" : "담당자가 아직 반영되지 않은 것을 확인",
+        operator_note: decision === "already_applied" ? "재고 앱에서 추가된 것을 확인" : "재고 앱에서 찾지 못해 다시 추가",
       });
-      setNotice(decision === "already_applied" ? `${record.canonical_name}이 재고 앱에 반영된 것을 확인했어요.` : `${record.canonical_name}은 아직 반영되지 않은 것으로 확인돼 다시 시도할 수 있어요.`);
+      setNotice(decision === "already_applied" ? `${record.canonical_name} 상품을 재고 앱에서 찾았어요.` : `재고 앱에서 ${record.canonical_name} 상품을 찾지 못했어요. 다시 추가할 수 있어요.`);
       await refresh();
       const workspaceSynced = await refreshParentWorkspace();
       if (workspaceSynced === false) setNotice((current) => `${current} 홈과 알림은 다시 연결한 뒤 불러올 수 있어요.`);
@@ -1843,8 +1845,8 @@ function GrocyIntegrationPanel({ active, workspaceSync, refreshNonce, focusGrocy
         setRetryAction({ kind: "refresh" });
       } else {
         setError(isMealApiGrocyOutboxPersistenceError(reason)
-          ? "재고 앱 반영 여부를 저장하지 못했어요. 기존 상태를 유지했어요."
-          : "재고 앱 반영 여부를 저장하지 못했어요.");
+          ? "재고 앱 확인 내용을 저장하지 못했어요. 다시 시도해 주세요."
+          : "재고 앱 확인 내용을 저장하지 못했어요.");
         setRetryAction({ kind: "reconcile", record, decision });
       }
     } finally {
@@ -1870,8 +1872,8 @@ function GrocyIntegrationPanel({ active, workspaceSync, refreshNonce, focusGrocy
         setRetryAction({ kind: "refresh" });
       } else {
         setError(isMealApiGrocyOutboxPersistenceError(reason)
-          ? "실패한 기록을 다시 시도하도록 바꾸지 못했어요. 기존 상태를 유지했어요."
-          : "실패한 기록을 다시 시도하도록 바꾸지 못했어요.");
+          ? "재고 앱에 다시 추가할 수 없어요. 기존 기록은 그대로예요."
+          : "재고 앱에 다시 추가하지 못했어요. 잠시 후 다시 시도해 주세요.");
         setRetryAction({ kind: "retry", record });
       }
     } finally {
@@ -1897,7 +1899,7 @@ function GrocyIntegrationPanel({ active, workspaceSync, refreshNonce, focusGrocy
           <h3 id="grocy-integration-title">재고 앱 연결</h3>
           <p>식품 입고·먹음·폐기·보관 이동 기록을 함께 관리해요.</p>
         </div>
-        <button className="grocy-refresh-button" type="button" aria-label="재고 앱 연결 상태 새로고침" disabled={loading || refreshing} aria-busy={loading || refreshing} onPointerDown={(event) => { event.preventDefault(); keyboard.hide(); void refresh(); }} onClick={(event) => { if (event.detail === 0) void refresh(); }}>
+        <button className="grocy-refresh-button" type="button" aria-label="재고 앱 연결 새로고침" disabled={loading || refreshing} aria-busy={loading || refreshing} onPointerDown={(event) => { event.preventDefault(); keyboard.hide(); void refresh(); }} onClick={(event) => { if (event.detail === 0) void refresh(); }}>
           {refreshing ? "확인 중" : "새로고침"}
         </button>
       </div>
@@ -1908,20 +1910,20 @@ function GrocyIntegrationPanel({ active, workspaceSync, refreshNonce, focusGrocy
       </div>
 
       <div className={`grocy-worker-card ${workerHeartbeat?.last_error ? "grocy-worker-error" : ""}`} data-worker-state={workerHeartbeat ? workerHeartbeat.last_error ? "error" : "ready" : "unknown"}>
-        <div><strong>재고 앱 자동 반영</strong><small>{status?.configured !== true ? "재고 앱을 연결하면 자동으로 반영돼요." : workerHeartbeat ? workerHeartbeat.last_error ? `최근에 반영하지 못했어요: ${externalInventoryDetail(workerHeartbeat.last_error, "재고 앱 반영에 문제가 생겼어요.")}` : `마지막 반영 ${formatWorkerTime(workerHeartbeat.last_tick_at)} · ${workerHeartbeat.processed}개` : "반영 내역을 불러오지 못했어요."}</small></div>
+        <div><strong>재고 앱 자동 추가</strong><small>{status?.configured !== true ? "재고 앱을 연결하면 식품을 자동으로 추가할 수 있어요." : workerHeartbeat ? workerHeartbeat.last_error ? `최근에 추가하지 못했어요: ${externalInventoryDetail(workerHeartbeat.last_error, "재고 앱에 식품을 추가하지 못했어요.")}` : workerHeartbeat.succeeded ? `최근 ${workerHeartbeat.succeeded}개를 재고 앱에 추가했어요 · ${formatWorkerTime(workerHeartbeat.last_tick_at)}` : `최근 확인 ${formatWorkerTime(workerHeartbeat.last_tick_at)} · 추가한 식품 없음` : "추가 내역을 불러오지 못했어요."}</small></div>
         <span>{workerHeartbeat?.last_error ? "알림 문제" : workerHeartbeat ? "연결됨" : "불러오는 중"}</span>
       </div>
 
       {recentlySucceededOutbox.length ? (
         <div className="grocy-settings-block" data-testid="grocy-sync-history">
-          <div className="grocy-block-heading"><strong>최근 반영 완료</strong><small>재고 앱에 반영된 기록을 최근 순서로 보여드려요.</small></div>
-          <div className="grocy-product-history" role="list" aria-label="최근 재고 앱 반영 기록">
-            <div className="grocy-product-history-heading"><strong>{recentlySucceededOutbox.length}건 반영 완료</strong><small>최근 기록부터</small></div>
+          <div className="grocy-block-heading"><strong>최근 추가한 식품</strong><small>재고 앱에 추가한 식품이에요.</small></div>
+          <div className="grocy-product-history" role="list" aria-label="최근 재고 앱 추가 기록">
+            <div className="grocy-product-history-heading"><strong>식품 {recentlySucceededOutbox.length}개</strong><small>최근 추가한 순서</small></div>
             {recentlySucceededOutbox.map((record) => {
               const foodId = outboxFoodId(record);
               return <div className="grocy-product-history-event" data-history-action="created" data-sync-history-state="applied" role="listitem" key={`sync-history:${record.id}`}>
                 <div><strong>{record.canonical_name}</strong><small>{operationLabel(record)} · {formatMappingTime(record.updated_at)}</small></div>
-                <div style={{ display: "flex", gap: 8, alignItems: "center", justifyContent: "space-between" }}><small>{record.quantity}{record.unit} · 재고 앱 기록 {record.grocy_transaction_id ? `#${record.grocy_transaction_id}` : "번호 확인 안 됨"}</small>{foodId && onOpenFoodFromSync ? <button className="grocy-refresh-button" type="button" aria-label={`${record.canonical_name} 재고 앱 반영 기록의 식품 기록 보기`} onPointerDown={(event) => event.preventDefault()} onClick={() => onOpenFoodFromSync(foodId, record.canonical_name, record.id)}>식품 기록 보기</button> : null}</div>
+                <div style={{ display: "flex", gap: 8, alignItems: "center", justifyContent: "space-between" }}><small>{record.quantity}{record.unit}{record.grocy_transaction_id ? ` · 재고 앱 기록 번호 ${record.grocy_transaction_id}` : ""}</small>{foodId && onOpenFoodFromSync ? <button className="grocy-refresh-button" type="button" aria-label={`${record.canonical_name} 추가 기록에 연결된 식품 보기`} onPointerDown={(event) => event.preventDefault()} onClick={() => onOpenFoodFromSync(foodId, record.canonical_name, record.id)}>식품 보기</button> : null}</div>
                 <GrocyOutboxDetail record={record} onOpenFoodFromSync={onOpenFoodFromSync} />
               </div>;
             })}
@@ -1933,7 +1935,7 @@ function GrocyIntegrationPanel({ active, workspaceSync, refreshNonce, focusGrocy
       {notice ? <div className={`grocy-success${workspaceReadbackStale ? " grocy-success-stale" : ""}`} data-readback-state={workspaceReadbackStale ? "stale" : "confirmed"} role="status"><CheckCircledIcon width={15} height={15} /><span>{notice}</span>{workspaceReadbackStale && onRefreshWorkspace ? <button className="account-error-action" type="button" disabled={workspaceReadbackRefreshing} aria-busy={workspaceReadbackRefreshing} onClick={() => void refreshParentWorkspace()}>{workspaceReadbackRefreshing ? "불러오는 중" : "다시 불러오기"}</button> : null}</div> : null}
 
       <details ref={settingsBlockRef} className="grocy-settings-block" onToggle={(event) => setSettingsOpen(event.currentTarget.open)}>
-        <summary className="grocy-block-heading"><strong>재고 앱 설정</strong><small>{blockedOutbox.length + reconciliationOutbox.length + deadLetterOutbox.length + productTasks.length ? `확인이 필요한 기록 ${blockedOutbox.length + reconciliationOutbox.length + deadLetterOutbox.length + productTasks.length}건이 있어요.` : "보관 위치·상품 연결·실패 기록을 관리해요."}</small></summary>
+        <summary className="grocy-block-heading"><strong>재고 앱 설정</strong><small>{blockedOutbox.length + reconciliationOutbox.length + deadLetterOutbox.length + productTasks.length ? `살펴볼 식품 ${blockedOutbox.length + reconciliationOutbox.length + deadLetterOutbox.length + productTasks.length}개가 있어요.` : "보관 위치와 상품 연결을 관리해요."}</small></summary>
         <div>
       <div className="grocy-settings-block">
         <div className="grocy-block-heading"><strong>보관 위치 연결</strong><small>재고 앱에서 사용하는 위치 번호를 연결해요.</small></div>
@@ -2003,14 +2005,14 @@ function GrocyIntegrationPanel({ active, workspaceSync, refreshNonce, focusGrocy
                       <>
                         <div className="grocy-product-catalog-copy"><strong>{mapping.canonical_name}</strong><small>재고 앱 상품 #{mapping.grocy_product_id} · {mapping.grocy_unit ?? "단위 미설정"} · {mapping.updated_by_email ?? mapping.updated_by ?? "변경한 사람 정보 없음"} · {formatMappingTime(mapping.updated_at)}</small></div>
                         <div className="grocy-product-catalog-actions">
-                          <button className="grocy-refresh-button" type="button" aria-label={`${mapping.canonical_name} 매핑 수정`} onPointerDown={(event) => { event.preventDefault(); keyboard.hide(); setProductDrafts((current) => ({ ...current, [key]: { productId: String(mapping.grocy_product_id), unit: mapping.grocy_unit ?? "" } })); setEditingProductKey(key); }} onClick={(event) => { if (event.detail === 0) { setProductDrafts((current) => ({ ...current, [key]: { productId: String(mapping.grocy_product_id), unit: mapping.grocy_unit ?? "" } })); setEditingProductKey(key); } }}>수정</button>
-                          <button className="grocy-refresh-button" type="button" aria-label={`${mapping.canonical_name} 매핑 이력 보기`} aria-expanded={mappingHistoryKey === key} onPointerDown={(event) => { event.preventDefault(); keyboard.hide(); void toggleProductHistory(mapping); }} onClick={(event) => { if (event.detail === 0) void toggleProductHistory(mapping); }}>{mappingHistoryKey === key ? "닫기" : "이력"}</button>
+                          <button className="grocy-refresh-button" type="button" aria-label={`${mapping.canonical_name} 상품 연결 수정`} onPointerDown={(event) => { event.preventDefault(); keyboard.hide(); setProductDrafts((current) => ({ ...current, [key]: { productId: String(mapping.grocy_product_id), unit: mapping.grocy_unit ?? "" } })); setEditingProductKey(key); }} onClick={(event) => { if (event.detail === 0) { setProductDrafts((current) => ({ ...current, [key]: { productId: String(mapping.grocy_product_id), unit: mapping.grocy_unit ?? "" } })); setEditingProductKey(key); } }}>수정</button>
+                          <button className="grocy-refresh-button" type="button" aria-label={`${mapping.canonical_name} 상품 연결 내역 보기`} aria-expanded={mappingHistoryKey === key} onPointerDown={(event) => { event.preventDefault(); keyboard.hide(); void toggleProductHistory(mapping); }} onClick={(event) => { if (event.detail === 0) void toggleProductHistory(mapping); }}>{mappingHistoryKey === key ? "닫기" : "내역"}</button>
                         </div>
                       </>
                     )}
                   </div>
                   {mappingHistoryKey === key ? (
-                    <div className="grocy-product-history" role="region" aria-label={`${mapping.canonical_name} 매핑 변경 이력`}>
+                    <div className="grocy-product-history" role="region" aria-label={`${mapping.canonical_name} 상품 연결 내역`}>
                       <div className="grocy-product-history-heading"><strong>변경 기록</strong><small>최근 변경부터 보여드려요.</small></div>
                       {mappingEventsLoading === key ? <p className="grocy-inline-note">이력을 불러오는 중이에요.</p> : mappingEvents[key]?.length ? mappingEvents[key].map((event) => {
                         const actor = event.actor_email ?? event.actor_id;
@@ -2027,7 +2029,7 @@ function GrocyIntegrationPanel({ active, workspaceSync, refreshNonce, focusGrocy
                   ) : null}
                 </div>
               );
-            }) : <p className="grocy-inline-note">검색어와 일치하는 상품 매핑이 없어요.</p>}
+            }) : <p className="grocy-inline-note">검색어와 일치하는 상품 연결이 없어요.</p>}
           </div>
         </div>
       ) : null}
@@ -2056,13 +2058,13 @@ function GrocyIntegrationPanel({ active, workspaceSync, refreshNonce, focusGrocy
 
       {deadLetterOutbox.length ? (
         <div className="grocy-settings-block" ref={deadLetterBlockRef}>
-          <div className="grocy-block-heading"><strong>실패한 기록</strong><small>재고 앱에 반영되지 않았어요. 다시 시도할 수 있어요.</small></div>
+          <div className="grocy-block-heading"><strong>추가하지 못한 식품</strong><small>재고 앱에 식품을 추가하지 못했어요. 다시 시도할 수 있어요.</small></div>
           <div className="grocy-dead-letter-list">
             {deadLetterOutbox.map((record) => {
               const busy = savingKey === `retry:${record.id}`;
               return (
                 <div className="grocy-dead-letter-row" key={record.id}>
-                  <div><div className="grocy-task-state-line"><strong>{record.canonical_name}</strong><span className="grocy-task-state-badge grocy-task-state-retry">다시 시도할 수 있어요</span></div><small>{operationLabel(record)} · {externalInventoryDetail(record.last_error ?? record.last_dead_letter_error, "재고 앱 반영 실패")}</small></div>
+                  <div><div className="grocy-task-state-line"><strong>{record.canonical_name}</strong><span className="grocy-task-state-badge grocy-task-state-retry">다시 시도할 수 있어요</span></div><small>{operationLabel(record)} · {externalInventoryDetail(record.last_error ?? record.last_dead_letter_error, "재고 앱에 추가하지 못했어요.")}</small></div>
                   <button className="grocy-save-button" type="button" disabled={busy} aria-busy={busy} onPointerDown={(event) => { event.preventDefault(); keyboard.hide(); void retryOutbox(record); }} onClick={(event) => { if (event.detail === 0) void retryOutbox(record); }}>{busy ? "재시도 중" : "재시도"}</button>
                 <GrocyOutboxDetail record={record} onOpenFoodFromSync={onOpenFoodFromSync} />
                 </div>
@@ -2074,8 +2076,8 @@ function GrocyIntegrationPanel({ active, workspaceSync, refreshNonce, focusGrocy
 
       <div className={`grocy-outbox-card grocy-outbox-card-${outboxCardState}`} data-outbox-overall-state={outboxCardState} data-sync-state={outboxCardState === "pending" ? "queued" : outboxCardState === "processing" ? "processing" : outboxCardState === "clear" ? "applied" : "action_required"} data-outbox-attention-count={blockedOutbox.length + reconciliationOutbox.length + deadLetterOutbox.length} data-outbox-pending-count={pendingOutbox.length} data-outbox-processing-count={inFlightOutbox.length} data-outbox-applied-count={recentlySucceededOutbox.length} role="group" aria-live="polite" aria-atomic="true" aria-relevant="text" aria-busy={processing || inFlightOutbox.length > 0} aria-label={`재고 앱 목록 · ${outboxCardHeading} · ${outboxCardSummary}`}>
         <div><strong>{outboxCardHeading}</strong><small>{outboxCardSummary}</small></div>
-        {inFlightOutbox.length ? <button className="grocy-refresh-button" type="button" disabled={scanning} onPointerDown={(event) => { event.preventDefault(); keyboard.hide(); void scanReconciliation(); }} onClick={(event) => { if (event.detail === 0) void scanReconciliation(); }}>{scanning ? "살펴보는 중" : "오래 진행 중인 항목 살펴보기"}</button> : null}
-          <button ref={processOutboxButtonRef} className="secondary-sheet-button grocy-process-button" type="button" disabled={status?.configured !== true || !pendingOutbox.length || processing} aria-busy={processing} onPointerDown={(event) => { event.preventDefault(); keyboard.hide(); void processOutbox(); }} onClick={(event) => { if (event.detail === 0) void processOutbox(); }}>{processing ? "재고 앱에 추가 중" : inFlightOutbox.length ? "반영 중" : pendingOutbox.length ? "지금 반영하기" : recentlySucceededOutbox.length ? "반영 완료" : "지금 반영하기"}{pendingOutbox.length ? <ArrowRightIcon width={15} height={15} /> : <CheckCircledIcon width={15} height={15} />}</button>
+        {inFlightOutbox.length ? <button className="grocy-refresh-button" type="button" disabled={scanning} onPointerDown={(event) => { event.preventDefault(); keyboard.hide(); void scanReconciliation(); }} onClick={(event) => { if (event.detail === 0) void scanReconciliation(); }}>{scanning ? "재고 앱을 확인하는 중" : "재고 앱에서 추가됐는지 확인"}</button> : null}
+          <button ref={processOutboxButtonRef} className="secondary-sheet-button grocy-process-button" type="button" disabled={status?.configured !== true || !pendingOutbox.length || processing} aria-busy={processing} onPointerDown={(event) => { event.preventDefault(); keyboard.hide(); void processOutbox(); }} onClick={(event) => { if (event.detail === 0) void processOutbox(); }}>{processing || inFlightOutbox.length ? "재고 앱에 추가하는 중" : pendingOutbox.length ? "지금 추가하기" : recentlySucceededOutbox.length ? "추가했어요" : "지금 추가하기"}{pendingOutbox.length ? <ArrowRightIcon width={15} height={15} /> : <CheckCircledIcon width={15} height={15} />}</button>
       </div>
         </div>
       </details>
@@ -2344,7 +2346,7 @@ export default function AccountSheet({
       try {
         preview = await mealApi.previewGuestTransfer(pendingGuestTransfer.session, pendingGuestTransfer.guestAccessToken);
       } catch {
-        setPendingGuestTransfer((current) => current ? { ...current, preview: null, message: "아직 서버에서 게스트 기록을 확인하지 못했어요." } : current);
+        setPendingGuestTransfer((current) => current ? { ...current, preview: null, message: "게스트 기록을 불러오지 못했어요." } : current);
         return;
       }
       const hasGuestRecords = hasGuestTransferRecords(preview);

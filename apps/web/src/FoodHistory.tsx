@@ -32,36 +32,44 @@ function eventDetail(event: ApiStorageEvent, unit: string, locations: ApiStorage
 
 function syncStatusLabel(status?: ApiGrocySyncStatus) {
   if (!status) return null;
-  if (status === "not_configured") return "재고 앱 연결 안 됨";
-  if (status === "queued" || status === "in_flight") return "재고 앱 반영 대기";
-  if (status === "succeeded") return "재고 앱에 반영했어요";
-  if (status === "dead_letter") return "재고 앱에 반영하지 못했어요";
-  if (status === "needs_reconciliation") return "재고 앱에서 반영 여부를 살펴봐 주세요";
+  if (status === "not_configured") return "재고 앱 연결 전";
+  if (status === "queued") return "재고 앱에 추가할 예정";
+  if (status === "in_flight") return "재고 앱에 추가하는 중";
+  if (status === "succeeded") return "재고 앱에 추가했어요";
+  if (status === "dead_letter") return "재고 앱에 추가하지 못했어요";
+  if (status === "needs_reconciliation") return "재고 앱에서 추가됐는지 확인해 주세요";
   return "재고 앱 연결을 살펴봐 주세요";
-}
-
-function syncStatusTone(status?: ApiGrocySyncStatus) {
-  if (status === "succeeded") return { background: "color-mix(in srgb, var(--atelier-pistachio) 12%, transparent)", color: "var(--atelier-pistachio)" };
-  if (status === "queued" || status === "in_flight") return { background: "color-mix(in srgb, var(--atelier-blue) 12%, transparent)", color: "var(--atelier-blue)" };
-  if (status === "dead_letter" || status === "needs_reconciliation" || status === "needs_mapping") return { background: "color-mix(in srgb, var(--atelier-coral) 12%, transparent)", color: "var(--atelier-coral)" };
-  return { background: "color-mix(in srgb, var(--atelier-ink) 8%, transparent)", color: "var(--atelier-muted)" };
 }
 
 function outboxHistoryStatusLabel(status: ApiGrocyOutboxStatus) {
   if (status === "blocked") return "재고 앱 연결을 살펴봐 주세요";
-  if (status === "pending" || status === "in_flight") return "재고 앱 반영 대기";
-  if (status === "succeeded") return "재고 앱에 반영했어요";
-  if (status === "dead_letter") return "재고 앱에 반영하지 못했어요";
-  return "재고 앱에서 반영 여부를 살펴봐 주세요";
+  if (status === "pending") return "재고 앱에 추가할 예정이에요";
+  if (status === "in_flight") return "재고 앱에 추가하고 있어요";
+  if (status === "succeeded") return "재고 앱에 추가했어요";
+  if (status === "dead_letter") return "재고 앱에 추가하지 못했어요";
+  return "재고 앱에서 추가됐는지 살펴봐 주세요";
 }
 
 function statusHistorySourceLabel(source: ApiGrocyOutboxStatusHistory["source"]) {
-  if (source === "created") return "반영 요청";
-  if (source === "mapping") return "상품 연결 변경";
-  if (source === "worker") return "자동 반영";
-  if (source === "retry") return "다시 시도";
-  if (source === "reconciliation") return "담당자 확인";
-  return "반영 여부 살펴보기";
+  if (source === "created") return "추가를 요청했어요";
+  if (source === "mapping") return "상품 연결을 바꿨어요";
+  if (source === "worker") return "자동으로 추가했어요";
+  if (source === "retry") return "다시 보냈어요";
+  if (source === "reconciliation") return "재고 앱에서 확인했어요";
+  return "처리 내용을 확인했어요";
+}
+
+function outboxHistoryNote(note: string) {
+  if (/Grocy product mapping|PRODUCT_MAPPING_REQUIRED/i.test(note)) return "재고 앱에 등록된 상품과 단위를 연결해 주세요.";
+  if (/Grocy 외부 반영 여부|RECONCILIATION_REQUIRED/i.test(note)) return "재고 앱에서 식품이 추가됐는지 확인해 주세요.";
+  if (/외부 작업 #(\d+)/i.test(note)) return note.replace(/외부 작업 #(\d+)/i, "재고 앱 기록 번호 $1");
+  if (/운영자가 외부 반영을 확인/.test(note)) return "재고 앱에서 추가된 것을 확인했어요.";
+  if (/운영자가 미반영/.test(note)) return "재고 앱에서 찾지 못해 다시 추가할게요.";
+  if (/수동 재시도|외부 반영을 다시 시도/.test(note)) return "재고 앱에 다시 추가할게요.";
+  if (/재시도 한도/.test(note)) return "여러 번 시도했지만 재고 앱에 추가하지 못했어요.";
+  return /\b(?:Grocy|outbox|workspace|payload|status|reconciliation|provider|source|retry|worker)\b/i.test(note)
+    ? "재고 앱에서 처리한 기록이에요."
+    : note;
 }
 
 function eventIcon(eventType: ApiStorageEvent["event_type"]) {
@@ -74,10 +82,10 @@ function eventIcon(eventType: ApiStorageEvent["event_type"]) {
 }
 
 function eventTone(eventType: ApiStorageEvent["event_type"]) {
-  if (eventType === "discarded") return { background: "color-mix(in srgb, var(--atelier-coral) 14%, transparent)", color: "var(--atelier-coral)" };
-  if (eventType === "consumed") return { background: "color-mix(in srgb, var(--atelier-blue) 16%, transparent)", color: "var(--atelier-blue)" };
-  if (eventType === "moved" || eventType === "opened") return { background: "color-mix(in srgb, var(--atelier-pistachio) 14%, transparent)", color: "var(--atelier-pistachio)" };
-  return { background: "color-mix(in srgb, var(--atelier-amber) 14%, transparent)", color: "var(--atelier-amber)" };
+  if (eventType === "discarded") return { color: "var(--atelier-coral)" };
+  if (eventType === "consumed") return { color: "var(--atelier-blue)" };
+  if (eventType === "moved" || eventType === "opened") return { color: "var(--atelier-muted)" };
+  return { color: "var(--atelier-amber)" };
 }
 
 export default function FoodHistory({ foodId, unit, storageLocations = [], historyRefreshKey = 0, highlightSyncOutboxId, onOpenSyncRecord, onOpenSyncNotification }: { foodId: string; unit: string; storageLocations?: ApiStorageLocation[]; historyRefreshKey?: number; highlightSyncOutboxId?: string | null; onOpenSyncRecord?: (outboxId: string, foodId: string) => void; onOpenSyncNotification?: (outboxId: string) => void }) {
@@ -145,7 +153,7 @@ export default function FoodHistory({ foodId, unit, storageLocations = [], histo
       nextSnapshot.set(event.id, event.grocy_sync_status);
     });
     syncStatusSnapshotRef.current = nextSnapshot;
-    if (changedStatus) setSyncStatusNotice(`${syncStatusLabel(changedStatus)} 상태로 바뀌었어요.`);
+    if (changedStatus) setSyncStatusNotice(`${syncStatusLabel(changedStatus)}.`);
   }, [history, loading]);
 
   useEffect(() => {
@@ -167,7 +175,7 @@ export default function FoodHistory({ foodId, unit, storageLocations = [], histo
     const entries = Array.from(root.querySelectorAll<HTMLElement>("[data-history-sync-evidence-status]"));
     entries.forEach((entry) => {
       entry.tabIndex = 0;
-      entry.setAttribute("aria-label", `${outboxHistoryStatusLabel(entry.dataset.historySyncEvidenceStatus as ApiGrocyOutboxStatus)} 처리 기록`);
+      entry.setAttribute("aria-label", `${outboxHistoryStatusLabel(entry.dataset.historySyncEvidenceStatus as ApiGrocyOutboxStatus)} 재고 앱 기록`);
     });
     const handleFocusIn = (event: FocusEvent) => {
       const target = event.target instanceof Element
@@ -224,5 +232,60 @@ export default function FoodHistory({ foodId, unit, storageLocations = [], histo
   }, [highlightSyncOutboxId, history, loading]);
 
   const groups = groupHistoryByDay(sortHistoryNewest(history).slice(0, 4));
-  return <div ref={historyRootRef} className="detail-history"><span className="sr-only" role="status" aria-live="polite">{syncStatusNotice}</span><div className="detail-section-heading"><span><ReaderIcon width={16} height={16} /> 최근 기록</span><small>{loading ? "불러오는 중" : history.length ? `최신순 · ${history.length}건` : "0건"}</small></div>{groups.length ? <div className="history-list" role="list">{groups.map((group, groupIndex) => <div key={group.key} role="group" aria-label={`${group.label} 기록`} style={{ display: "grid", gap: 6 }}><div className="detail-section-heading" style={{ padding: "0 2px 3px", borderBottom: "1px solid color-mix(in srgb, var(--atelier-ink) 12%, transparent)" }}><span>{group.label}</span><small>{group.items.length}건</small></div>{group.items.map((event, itemIndex) => { const latest = groupIndex === 0 && itemIndex === 0; const highlighted = Boolean(highlightSyncOutboxId && event.grocy_outbox_id === highlightSyncOutboxId); const statusLabel = syncStatusLabel(event.grocy_sync_status); const syncReferenceLabel = event.grocy_transaction_id ? `재고 앱 기록 #${event.grocy_transaction_id}` : event.grocy_outbox_id ? "재고 앱 반영 요청" : null; const syncHistorySummary = event.grocy_status_history?.length ? `재고 앱 반영 내역 · ${event.grocy_status_history.slice(-4).map((entry) => outboxHistoryStatusLabel(entry.status)).join(" → ")}` : null; return <div className={`history-row history-row-${event.event_type}${latest ? " history-row-latest" : ""}`} data-history-sync-highlighted={highlighted ? "true" : undefined} role="listitem" key={event.id} style={highlighted ? { boxShadow: "inset 0 0 0 2px var(--atelier-pistachio)", background: "color-mix(in srgb, var(--atelier-pistachio) 8%, var(--atelier-surface))" } : latest ? { boxShadow: "inset 0 0 0 1px color-mix(in srgb, var(--atelier-pistachio) 30%, transparent)" } : undefined}><span className="history-icon" style={eventTone(event.event_type)}>{eventIcon(event.event_type)}</span><span><strong>{eventLabel(event)}</strong><small>{eventDetail(event, unit, storageLocations)}</small>{statusLabel ? <small data-history-sync-status={event.grocy_sync_status} style={{ ...syncStatusTone(event.grocy_sync_status), display: "inline-flex", width: "fit-content", padding: "2px 5px", borderRadius: 999, fontSize: 8, fontWeight: 800 }}>{statusLabel}</small> : null}{syncHistorySummary ? <small data-history-sync-timeline={event.id} style={{ color: "var(--atelier-muted)", fontSize: 8, fontWeight: 750 }}>{syncHistorySummary}</small> : null}{syncReferenceLabel ? <small data-history-sync-reference={event.grocy_outbox_id ?? undefined} title={event.grocy_outbox_id ?? undefined} style={{ color: "var(--atelier-muted)", fontSize: 8, fontWeight: 750 }}>{syncReferenceLabel}</small> : null}<time className="history-row-time" dateTime={event.occurred_at}>{formatHistoryTime(event.occurred_at)}</time></span>{event.grocy_status_history?.length ? <details open={openSyncEvidenceId === event.id} onToggle={(toggleEvent) => setOpenSyncEvidenceId(toggleEvent.currentTarget.open ? event.id : null)} className="history-sync-disclosure" data-history-sync-evidence={event.id} style={{ gridColumn: "2 / -1" }}><summary style={{ cursor: "pointer", color: "var(--atelier-muted)", fontSize: 8, fontWeight: 800 }}>재고 앱 반영 기록 보기</summary><div role="list" style={{ display: "grid", gap: 3, paddingTop: 4 }}>{event.grocy_status_history.slice(-6).reverse().map((entry, entryIndex) => <div role="listitem" data-history-sync-evidence-status={entry.status} key={`${event.id}:evidence:${entry.occurred_at}:${entryIndex}`} style={{ display: "grid", gap: 2, padding: "4px 6px", borderRadius: 8, background: "color-mix(in srgb, var(--atelier-ink) 5%, transparent)" }}><strong style={{ color: "var(--atelier-ink)", fontSize: 8 }}>{outboxHistoryStatusLabel(entry.status)}</strong><small style={{ color: "var(--atelier-muted)", fontSize: 8 }}>{statusHistorySourceLabel(entry.source)} · {formatHistoryTime(entry.occurred_at)}</small>{entry.note ? <small style={{ color: "var(--atelier-muted)", fontSize: 8 }}>{entry.note}</small> : null}{entry.status === "succeeded" && event.grocy_transaction_id ? <small style={{ color: "var(--atelier-muted)", fontSize: 8 }}>재고 앱 기록 #{event.grocy_transaction_id}</small> : null}</div>)}</div><div style={{ display: "flex", gap: 6, paddingTop: 5 }}>{event.grocy_outbox_id && onOpenSyncRecord ? <button className="grocy-refresh-button" type="button" onPointerDown={(clickEvent) => clickEvent.preventDefault()} onClick={() => onOpenSyncRecord(event.grocy_outbox_id!, event.food_id)}>자세히 보기</button> : null}{event.grocy_outbox_id && onOpenSyncNotification ? <button className="grocy-refresh-button" type="button" onPointerDown={(clickEvent) => clickEvent.preventDefault()} onClick={() => onOpenSyncNotification(event.grocy_outbox_id!)}>알림에서 보기</button> : null}</div></details> : null}</div>; })}</div>)}</div> : <p className="history-empty">아직 이 식품에 기록된 변경이 없어요.</p>}</div>;
+  return (
+    <div ref={historyRootRef} className="detail-history">
+      <span className="sr-only" role="status" aria-live="polite">{syncStatusNotice}</span>
+      <div className="detail-section-heading">
+        <span><ReaderIcon width={16} height={16} /> 최근 기록</span>
+        <small>{loading ? "불러오는 중" : history.length ? "최근 기록 " + history.length + "개" : "기록 없음"}</small>
+      </div>
+      {groups.length ? (
+        <div className="history-list" role="list">
+          {groups.map((group) => (
+            <div key={group.key} role="group" aria-label={group.label + " 기록"} className="history-day-group">
+              <div className="detail-section-heading">
+                <span>{group.label}</span><small>{group.items.length}개</small>
+              </div>
+              {group.items.map((event) => {
+                const highlighted = Boolean(highlightSyncOutboxId && event.grocy_outbox_id === highlightSyncOutboxId);
+                const statusLabel = syncStatusLabel(event.grocy_sync_status);
+                const transactionLabel = event.grocy_transaction_id ? "재고 앱 기록 번호 " + event.grocy_transaction_id : null;
+                return (
+                  <div className={"history-row history-row-" + event.event_type + (highlighted ? " history-row-highlighted" : "")} data-history-sync-highlighted={highlighted ? "true" : undefined} role="listitem" key={event.id}>
+                    <span className="history-icon" style={eventTone(event.event_type)}>{eventIcon(event.event_type)}</span>
+                    <span className="history-row-copy">
+                      <strong>{eventLabel(event)}</strong>
+                      <small>{eventDetail(event, unit, storageLocations)}</small>
+                      {statusLabel ? <small className="history-sync-status" data-history-sync-status={event.grocy_sync_status}>{statusLabel}</small> : null}
+                      {transactionLabel ? <small data-history-sync-reference={event.grocy_outbox_id ?? undefined}>{transactionLabel}</small> : null}
+                      <time className="history-row-time" dateTime={event.occurred_at}>{formatHistoryTime(event.occurred_at)}</time>
+                    </span>
+                    {event.grocy_status_history?.length ? (
+                      <details open={openSyncEvidenceId === event.id} onToggle={(toggleEvent) => setOpenSyncEvidenceId(toggleEvent.currentTarget.open ? event.id : null)} className="history-sync-disclosure" data-history-sync-evidence={event.id}>
+                        <summary>재고 앱 추가 내역 보기</summary>
+                        <div className="history-sync-list" role="list">
+                          {event.grocy_status_history.slice(-6).reverse().map((entry, entryIndex) => (
+                            <div className="history-sync-item" role="listitem" data-history-sync-evidence-status={entry.status} key={event.id + ":history:" + entryIndex}>
+                              <strong>{outboxHistoryStatusLabel(entry.status)}</strong>
+                              <small>{statusHistorySourceLabel(entry.source)} · {formatHistoryTime(entry.occurred_at)}</small>
+                              {entry.note ? <small>{outboxHistoryNote(entry.note)}</small> : null}
+                              {entry.status === "succeeded" && transactionLabel ? <small>{transactionLabel}</small> : null}
+                            </div>
+                          ))}
+                        </div>
+                        <div className="history-sync-actions">
+                          {event.grocy_outbox_id && onOpenSyncRecord ? <button className="grocy-refresh-button" type="button" onPointerDown={(clickEvent) => clickEvent.preventDefault()} onClick={() => onOpenSyncRecord(event.grocy_outbox_id!, event.food_id)}>추가 기록 열기</button> : null}
+                          {event.grocy_outbox_id && onOpenSyncNotification ? <button className="grocy-refresh-button" type="button" onPointerDown={(clickEvent) => clickEvent.preventDefault()} onClick={() => onOpenSyncNotification(event.grocy_outbox_id!)}>알림 열기</button> : null}
+                        </div>
+                      </details>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      ) : <p className="history-empty">아직 이 식품에 기록된 변경이 없어요.</p>}
+    </div>
+  );
 }

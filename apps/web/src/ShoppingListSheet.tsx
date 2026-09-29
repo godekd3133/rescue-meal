@@ -4,6 +4,7 @@ import { KeyboardInput, useKeyboard } from "./mobile/Keyboard";
 import { getMobileScrollBehavior } from "./mobile/scroll";
 import { revealAndFocusWithinNearestContainer as revealAndFocus, scrollTargetWithinNearestContainer } from "./appScroll";
 import type { ApiShoppingListItem, ApiStorageLocation, ApiStorageType } from "./mealApi";
+import { getShoppingListProgressCopy } from "./shoppingListPresentation";
 
 const shouldAutoFocusReceiveQuantity = ((import.meta.env.VITE_APP_SHELL as string | undefined)?.trim().toLowerCase() ?? "web") === "native";
 
@@ -108,6 +109,13 @@ export default function ShoppingListSheet({
   const completedCount = items.length - remainingCount;
   const customStorageLocations = storageLocations.filter((location) => !["ambient", "refrigerated", "frozen"].includes(location.id));
   const progressPercent = items.length ? Math.round((completedCount / items.length) * 100) : 0;
+  const progressCopy = getShoppingListProgressCopy({
+    loading: loading && items.length === 0,
+    error: Boolean(error),
+    itemCount: items.length,
+    completedCount,
+    remainingCount,
+  });
 
   const focusManualEntry = () => revealAndFocus(manualNameRef.current, { block: "center" });
 
@@ -341,10 +349,10 @@ export default function ShoppingListSheet({
   return (
     <div className="shopping-sheet-content" aria-label="장보기 목록" aria-busy={loading || mutating} data-received-food-name={recentlyReceivedFoodName || undefined}>
       {items.length || loading || error ? (
-        <section className={`shopping-sheet-progress${remainingCount ? " shopping-sheet-progress-active" : " shopping-sheet-progress-complete"}`} aria-label="구매 현황">
+        <section className={`shopping-sheet-progress${progressCopy.tone === "neutral" ? "" : ` shopping-sheet-progress-${progressCopy.tone}`}`} aria-label={progressCopy.tone === "neutral" ? "장보기 목록 상태" : "구매 현황"}>
           <div className="shopping-sheet-progress-heading">
-            <span><strong>{loading && !items.length ? "장보기 목록을 불러오고 있어요" : error && !items.length ? "목록을 불러오지 못했어요" : remainingCount ? "구매 현황" : "구매 완료 · 식품 목록에 추가 전"}</strong><small>{loading && !items.length ? "저장한 식단과 직접 추가한 재료를 불러오고 있어요." : error && !items.length ? "인터넷에 연결한 뒤 목록을 다시 불러와 주세요." : remainingCount ? `${remainingCount}개를 구매하면 식품 목록에 추가할 수 있어요.` : "구매한 식품을 목록에 추가한 뒤 포장지 날짜와 보관 방법을 살펴봐 주세요."}</small></span>
-            <em>{loading && !items.length ? "불러오는 중" : `${completedCount}/${items.length}`}</em>
+            <span><strong>{progressCopy.title}</strong><small>{progressCopy.description}</small></span>
+            {progressCopy.countLabel ? <em>{progressCopy.countLabel}</em> : null}
           </div>
           {items.length ? <div className="shopping-sheet-progress-track" role="progressbar" aria-label="장보기 완료율" aria-valuemin={0} aria-valuemax={items.length} aria-valuenow={completedCount}><span style={{ width: `${progressPercent}%` }} /></div> : null}
         </section>
@@ -378,7 +386,7 @@ export default function ShoppingListSheet({
         <section className="shopping-sheet-list-section" aria-label="장보기 항목">
           <div className="shopping-sheet-list-heading">
             <span><strong>{remainingCount ? "이번에 살 재료" : "구매한 재료"}</strong><small>{completedCount ? `${completedCount}개 구매 완료 · ` : ""}{remainingCount}개 남음</small></span>
-            {loading ? <span className="shopping-sheet-syncing" role="status">동기화 중</span> : null}
+            {loading ? <span className="shopping-sheet-syncing" role="status">목록 업데이트 중</span> : null}
           </div>
           <div className="shopping-sheet-list" role="list">
             {items.map((item) => (

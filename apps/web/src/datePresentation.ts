@@ -22,8 +22,8 @@ export function getDateBadge(food: Pick<DatePresentationFood, "dateKind" | "date
 
 export function dateSourceLabel(source: string, dateKind?: DatePresentationKind) {
   const normalized = source.trim();
-  if (!normalized || /fixture|revision|parser|metadata|endpoint|debug/i.test(normalized)) return "날짜 정보를 확인할 수 없어요";
-  if (normalized === "gs1" || normalized.startsWith("gs1:") || /^GS1(?:\s|$)/i.test(normalized)) return "바코드에서 읽은 날짜 · 포장지와 대조해 주세요";
+  if (!normalized || /fixture|revision|parser|metadata|endpoint|debug|candidate|confidence|provenance|snapshot|workspace|provider|inference|validation|evidence|\bgate\b/i.test(normalized)) return "날짜 정보를 확인할 수 없어요";
+  if (normalized === "gs1" || normalized.startsWith("gs1:") || /^GS1(?:\s|$)/i.test(normalized)) return "바코드에서 읽은 날짜예요. 포장지와 비교해 주세요.";
   if (normalized === "label_ocr" || normalized === "printed_date" || normalized === "label") return "포장지 표시";
   if (normalized === "user_input" || normalized === "사용자 입력") return dateKind === "actual_printed" ? "포장지에서 직접 확인" : "직접 입력";
   if (normalized === "user_confirmed") return "내가 확인한 날짜";
@@ -46,7 +46,7 @@ export function getInventoryDateOriginLabel(food: DatePresentationFood) {
 
   const source = food.dateSource.trim();
   const sourceLabel = dateSourceLabel(source, food.dateKind);
-  if (sourceLabel.startsWith("바코드에서 읽은 날짜")) return "바코드로 읽음";
+  if (sourceLabel.startsWith("바코드에서 읽은 날짜") || sourceLabel.startsWith("바코드에서 읽었어요")) return "바코드로 읽음";
   if (sourceLabel === "포장지에서 직접 확인") return "포장지 표시";
   if (sourceLabel === "직접 입력") return "직접 입력";
   if (sourceLabel === "내가 확인한 날짜") return "내가 확인";
