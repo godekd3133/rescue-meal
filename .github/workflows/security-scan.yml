@@ -16,7 +16,7 @@ permissions:
 jobs:
   fs-scan:
     name: Dependency and filesystem vulnerability scan
-    runs-on: [self-hosted, personal-mac]
+    runs-on: [self-hosted, macOS, X64, personal-mac]
     steps:
       - name: Check out source
         uses: actions/checkout@v4
@@ -45,7 +45,7 @@ jobs:
 
   image-scan:
     name: Container image vulnerability scan
-    runs-on: [self-hosted, personal-mac]
+    runs-on: [self-hosted, macOS, X64, personal-mac]
     steps:
       - name: Check out source
         uses: actions/checkout@v4

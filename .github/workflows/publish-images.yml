@@ -17,7 +17,7 @@ permissions:
 jobs:
   api:
     name: Build and push API image
-    runs-on: [self-hosted, personal-mac]
+    runs-on: [self-hosted, macOS, X64, personal-mac]
     steps:
       - name: Check out source
         uses: actions/checkout@v4
@@ -53,7 +53,7 @@ jobs:
 
   ocr-worker:
     name: Build and push OCR worker image
-    runs-on: [self-hosted, personal-mac]
+    runs-on: [self-hosted, macOS, X64, personal-mac]
     steps:
       - name: Check out source
         uses: actions/checkout@v4
