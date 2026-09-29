@@ -473,3 +473,51 @@ Review the native guest/demo route Home → today’s meal preview → safety an
 - The guide's embedded app capture places an always-visible barcode/payment balance first, then shortcut icons, then a recent-transaction/savings summary, followed by membership/benefit content (`256`). This supports a task-first hierarchy with concise status and a visible shortcut; it is a marketing guide's app capture, not a live authenticated session.
 - The official App Store listing separately describes payment preparation from any tab with a two-tap shortcut. I use this as interaction-priority context, not as a requirement to imitate its visual design: [KakaoPay payment-tab guide](https://contents.kakaopay.com/contents/1429), [official App Store listing](https://apps.apple.com/kr/app/%EC%B9%B4%EC%B9%B4%EC%98%A4%ED%8E%98%EC%9D%B4/id1464496236).
 - Accepted local captures: article overview (`255`) and embedded app screen (`256`); both were opened and visually inspected. The official page's asset descriptions were used only to identify the screen contents; the visual comparison is based on the actual browser capture.
+
+## Date-recheck recommendation badge contrast and accessible cue — 2026-09-29
+
+**Audit scope:** Existing Home → spinach detail → printed-date recheck at 320×740 in light and dark. The date remained unchanged; no camera, photo selection, sample OCR, consume/discard, or save action was activated.
+
+1. **Date-recheck method tabs — improved.** The small `추천` marker grew from 9px to 10px, uses the theme's readable blue token, and the recommended tab is now announced as `라벨, 추천`. At 320px the badge remains clear of the calendar icon.
+
+- Before the change, light-theme accent `#3182f6` on the date sheet's `#f2f4f6` surface measured **3.37:1**. After the change, the light foreground `#2368c8` measures **4.90:1**; dark foreground `#a4b7ff` on `#101419` measures **9.50:1**. The visible primary blue accent remains unchanged.
+- Accepted, opened, and visually inspected captures: dark (`271`) and light (`272`); their SHA-256 values differ. Earlier captures (`269`, `270`) were byte-identical and are retained but rejected as theme-comparison evidence.
+- The two focused native viewport regressions passed **2/2**, including the readable-tab name and ≥4.5:1 contrast in both themes at 320px. The date-recheck Axe test passed **1/1** across 320/393px light/dark, with zero violations. Protected mobile runtime **28 files** and production build **771 modules** passed; `git diff --check` passed.
+- The separate bundle-budget check remains **not passed**: CSS is **352.5KB** against a **260KB** budget. The source stylesheet was **435,752 bytes at HEAD** and is **436,047 bytes now** (+295 bytes), so this small badge change does not explain the existing-sized overage; the budget was not weakened. Full test suites, physical-device rendering, VoiceOver, and TalkBack remain unverified.
+- Final in-app preview restored to Home at 393×852 dark, with `scrollWidth=393` and no open dialog. No food, shopping, meal, or receipt record mutation was triggered.
+
+## CSS bundle budget overage diagnosis — 2026-09-29
+
+**Scope:** Read-only stylesheet/build-path analysis after the production bundle gate failed. No CSS thresholds or protected runtime files were changed.
+
+- The checked production stylesheet is **360,910 bytes (352.5KiB)** against the **260KiB** budget; Vite reported **53.07kB gzip**. `src/main.tsx` statically imports the single app-owned `prototype.css`, so the feature styles ship in one global CSS asset.
+- PostCSS parsed **2,879 rules**. It found **12 exact-repeat groups** with roughly **997 bytes** of theoretical duplicate payload; restricting to adjacent identical-declaration groups, where consolidation can preserve order, yields about **717 bytes** estimated savings. A Lightning CSS minification probe saved **634 bytes** (`360,910 → 360,276`) without warnings. Neither safe route explains the **92.5KiB** gap.
+- The source stylesheet is **435,752 bytes at HEAD** and **436,047 bytes now** (+295 bytes, the date-recommendation styling change). The measured budget failure is therefore not caused by this change. The budget was not raised and no selector was purged without screen coverage.
+- The import boundary `src/main.tsx` is protected by `apps/web/AGENTS.md`. A substantial reduction needs component/route-owned style loading and a separately authorized change to that boundary, followed by full runtime integrity and screen regression checks. Current evidence does not justify broad CSS deletion or a budget-policy change.
+
+## Date-recheck recommendation announcement scope — 2026-09-29
+
+- A follow-up producer/consumer check found that announcing `추천` on every default intake tab would change the ordinary receipt tab's existing accessible name (`prototype.spec.ts` asserts `영수증`). The `aria-label="라벨, 추천"` is now conditional on the existing-food date-recheck context; ordinary new-food intake keeps its prior tab name. This keeps the assistive cue aligned with the inspected date-recheck surface without expanding the current browser scope.
+- After scoping the announcement, the focused date-recheck native tests passed **2/2**, the date-recheck Axe test passed **1/1** across 320/393px light/dark, and the production build passed **771 modules** with protected runtime **28 files**. The normal receipt intake sheet was not opened in the browser in this pass; its accessible-name compatibility was source-checked against the existing test contract.
+
+## Superseded CSS declaration cleanup — 2026-09-29
+
+**Scope:** Remove only declarations whose exact selector and at-rule context repeat a later declaration of the same property with equal or stronger importance, then remove empty rule blocks left by that pruning. No selector with live declarations, breakpoint, or mobile-runtime file was removed.
+
+- PostCSS found **771** provably superseded declarations and no nested selector blocks. Removing them, plus **163** now-empty rule stubs, reduced `prototype.css` from **436,047 to 407,520 bytes** (−28,527). The production CSS asset fell from **360,910 to 341,832 bytes** (−19,078), with gzip from **53.07kB to 50.39kB**. The source now has **2,716** rules, **9,091** declarations, no empty rules, no nested rules, and **0** remaining shadowed declarations under the same test.
+- The raw CSS budget still fails at **333.8KiB / 260KiB**; it is **73.8KiB** over and remains unchanged. This cleanup improves size but is not claimed as bundle-gate closure.
+- Post-prune date-recheck captures at 320×740 light (`273`) and dark (`274`) are byte-identical to the pre-prune captures (`272`, `271`). Home at 393×852 dark was also captured and visually checked after the cleanup (`275` vs. prior baseline `264`). Removing empty rule stubs leaves the production CSS asset hash unchanged (`39eed1…06063`). Native date regressions **2/2**, date-recheck Axe **1/1** across 320/393px light/dark, production build **771 modules**, protected runtime **28 files**, and `git diff --check` passed.
+- The visible post-prune check used the approved Home → spinach detail → date recheck path; no photo/OCR/save/consume action or other sheet was opened. Real-device rendering and screen-reader speech remain unverified.
+
+## Food-detail first-fold contract revalidation — 2026-09-29
+
+**Scope:** Home → spinach detail at 393×852 dark, with native geometry checks at 320px. No storage, opened-state, consume, or discard control was activated.
+
+- The fresh 393px capture (`276`) shows the printed-date warning and recheck action first, the review-gated consume action and discard action above the calibrated safe-area boundary, and the storage section next. The opened-state switch falls below the initial fold but remains a 44px control that is reachable by scrolling.
+- Four focused native tests passed **4/4** after aligning stale assertions with the current copy (`먹은 기록 남기기`, `조리 전에 포장지 날짜를 살펴봐 주세요`). The first-fold contract now explicitly checks primary/destructive actions and state-summary visibility; the opened switch is verified as scroll-reachable instead of required above the fold. This matches `apps/web/AGENTS.md` and the earlier visual baseline (`224`).
+- The first two failures in the earlier run were old copy expectations; the 393px geometry assertion also incorrectly required the lower opened-state switch above the safe area. The reviewed screenshot confirms no change to primary/discard reachability.
+
+## Home summary style ownership follow-up — 2026-09-29
+
+- Current `Prototype.tsx` renders the Home review summary as `.trust-card`; a live 393×852 Home readback found one `.trust-card` and no `.rescue-status-card` or `.rescue-status-legend`. A repository source search also found no producer for the `rescue-status-*` classes.
+- The stylesheet still contains **55** rescue-status rules (**6,074 bytes**) while legacy prototype, connected, and production tests assert those classes. These rules were not removed because the consuming test scenarios include offline/connected states outside the current browser review scope; the next pass should reconcile those contracts before deleting the legacy style block.
