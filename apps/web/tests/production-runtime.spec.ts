@@ -61,5 +61,14 @@ test("production boot never presents demo inventory when the API is unreachable"
   await expect(intake).toContainText("바코드 숫자를 입력해 주세요");
 
   await intake.getByRole("tab", { name: "라벨" }).click();
-  await expect(intake.getByRole("button", { name: "샘플 라벨 인식" })).toHaveCount(0);
+  await expect(intake.getByRole("button", { name: "예시 라벨 결과 보기" })).toHaveCount(0);
+});
+
+test("production label intake never exposes the demo result shortcut", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "식품 목록에 추가" }).click();
+
+  const intake = page.getByRole("dialog", { name: "영수증으로 추가" });
+  await intake.getByRole("tab", { name: "라벨" }).click();
+  await expect(intake.getByRole("button", { name: "예시 라벨 결과 보기" })).toHaveCount(0);
 });

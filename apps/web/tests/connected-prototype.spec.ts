@@ -791,7 +791,7 @@ test("connected label review keeps an ambiguous date and storage unconfirmed", a
   await expect(dialog.getByRole("group", { name: "라벨 날짜 의미 확인" })).toHaveAttribute("aria-describedby", "label-date-meaning-hint");
   await expect(dialog.getByRole("group", { name: "라벨 식품 보관 위치" })).toHaveAttribute("aria-describedby", "label-storage-hint");
   await expect(dialog.getByRole("radio", { name: "포장일", exact: true })).toBeVisible();
-  await expect(dialog.getByRole("button", { name: "날짜·보관 위치를 확인해 주세요", exact: true })).toBeDisabled();
+  await expect(dialog.getByRole("button", { name: "날짜·보관 위치를 선택해 주세요", exact: true })).toBeDisabled();
   await expect(dialog.getByText("추가 확인 필요")).toBeVisible();
   const firstDateMeaning = dialog.getByRole("radio").first();
   await expect(firstDateMeaning).toBeFocused();
@@ -4251,7 +4251,7 @@ test("connected label correction readback preserves identity while updating date
   await expect(sourcePreview.locator(".label-source-box-active")).toHaveCount(1);
   await expect(sourcePreview.getByText("읽은 날짜가 있는 곳을 표시했어요. 포장지의 날짜 문구와 날짜를 확인한 뒤 저장해 주세요.")).toBeVisible();
   await dialog.getByRole("radio", { name: /기존 식품 · 1팩/ }).click();
-  await dialog.getByRole("button", { name: "확인 후 기존 식품 수정" }).click();
+  await dialog.getByRole("button", { name: "기존 식품 날짜 바꾸기" }).click();
 
   await expect.poll(() => createPayload).not.toBeNull();
   await expect.poll(() => createResponse).not.toBeNull();
@@ -4345,9 +4345,9 @@ test("connected missing label target returns the user to the refreshed inventory
   const detail = page.getByRole("dialog", { name: "시금치" });
   await detail.getByRole("button", { name: "포장지에서 날짜 다시 확인" }).click();
   const dialog = page.getByRole("dialog", { name: "날짜 다시 확인" });
-  await dialog.getByRole("button", { name: "샘플 라벨 인식" }).click();
+  await dialog.getByRole("button", { name: "예시 라벨 결과 보기" }).click();
   await expect(dialog.getByRole("radio", { name: /기존 식품 · 1팩/ })).toHaveAttribute("aria-checked", "true");
-  await dialog.getByRole("button", { name: "확인 후 기존 식품 수정" }).click();
+  await dialog.getByRole("button", { name: "기존 식품 날짜 바꾸기" }).click();
 
   await expect.poll(() => missingTargetRequest).not.toBeNull();
   expect(missingTargetRequest).toMatchObject({ lot_action: "correct", target_food_id: "spinach-1" });
@@ -9488,7 +9488,7 @@ test("connected label commit failure exposes the same manual-food retry contract
   const receiptDialog = page.getByRole("dialog", { name: "영수증으로 추가" });
   await receiptDialog.getByRole("tab", { name: "라벨" }).click();
   const labelDialog = page.getByRole("dialog", { name: "라벨로 추가" });
-  await labelDialog.getByRole("button", { name: "샘플 라벨 인식" }).click();
+  await labelDialog.getByRole("button", { name: "예시 라벨 결과 보기" }).click();
   await labelDialog.getByRole("textbox", { name: "라벨 상품명" }).fill("라벨 재고 테스트");
   await labelDialog.getByRole("button", { name: "확인 후 저장" }).click();
 

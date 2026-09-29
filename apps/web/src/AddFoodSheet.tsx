@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useRef, useState, type ChangeEvent, type Dis
 import { CalendarIcon, CameraIcon, CheckCircledIcon, CheckIcon, Cross2Icon, FileTextIcon, InfoCircledIcon, PlusIcon, ReaderIcon, UploadIcon } from "@radix-ui/react-icons";
 import { KeyboardInput, useKeyboard } from "./mobile";
 import { getMobileScrollBehavior } from "./mobile/scroll";
-import { scrollTargetWithinNearestContainer } from "./appScroll";
+import { scrollTargetWithinContainer, scrollTargetWithinNearestContainer } from "./appScroll";
 import { isStaleLabelLotTarget } from "./labelLotSelection";
 import CameraCapture, { type CaptureFileHandler } from "./CameraCapture";
 import { isMealApiProductEnrichmentPersistenceError, isMealApiReceiptDraftPersistenceError, mealApi, type ApiBarcodeParse, type ApiDateKind, type ApiOcrReviewObservation, type ApiPriorityInference, type ApiProductEnrichmentJob, type ApiProductLookup, type ApiProductNameLookup, type ApiReceiptDraft, type ApiStorageLocation, type ApiStorageType } from "./mealApi";
@@ -953,6 +953,8 @@ export default function AddFoodSheet({
   const [productEnrichmentJob, setProductEnrichmentJob] = useState<ApiProductEnrichmentJob | null>(null);
   const [productEnrichmentError, setProductEnrichmentError] = useState("");
   const [labelResult, setLabelResult] = useState(false);
+  const [labelResultFocusRequest, setLabelResultFocusRequest] = useState(0);
+  const [labelSampleApplied, setLabelSampleApplied] = useState(false);
   const [labelDetectedDate, setLabelDetectedDate] = useState("2026.09.02");
   const [labelDateKind, setLabelDateKind] = useState<LabelDateKind | null>("use_by");
   const [labelDetectedProductName, setLabelDetectedProductName] = useState("시금치");
@@ -1263,26 +1265,31 @@ export default function AddFoodSheet({
   }, [imageForFoodName, productEnrichmentJob?.status, receiptDraftId, receiptStage, storageFromApi]);
 
   useEffect(() => {
-    if (!labelResult) return;
+    if (!labelResult || mode !== "label") return;
     const frame = window.requestAnimationFrame(() => {
+      const activeElement = document.activeElement;
+      if (activeElement instanceof HTMLElement && activeElement.closest(".label-result-fields")) return;
       const action = labelResultActionRef.current;
-      const nextTarget = action && !action.disabled
-        ? action
-        : !labelDetectedProductName.trim()
-          ? document.querySelector<HTMLElement>(".label-result-name-field input")
-          : !labelDateKind
-            ? document.querySelector<HTMLElement>('.label-date-kind-options [role="radio"]')
-            : !isCompleteLabelDate(labelDetectedDate)
-              ? document.querySelector<HTMLElement>(".label-result-date-field input")
+      const nextTarget = !labelDetectedProductName.trim()
+        ? document.querySelector<HTMLElement>(".label-result-name-field input")
+        : !labelDateKind
+          ? document.querySelector<HTMLElement>('.label-date-kind-options [role="radio"]')
+          : !isCompleteLabelDate(labelDetectedDate)
+            ? document.querySelector<HTMLElement>(".label-result-date-field input")
             : !labelDetectedStorage
-            ? document.querySelector<HTMLElement>(".label-result-card .storage-option")
-            : action;
-      scrollTargetWithinNearestContainer(nextTarget, "center", getMobileScrollBehavior());
+              ? document.querySelector<HTMLElement>(".label-result-card .storage-option")
+              : document.querySelector<HTMLElement>(".label-result-provenance") ?? action;
+      const block: ScrollLogicalPosition = nextTarget?.classList.contains("label-result-provenance") ? "start" : "center";
+      const sheetContent = nextTarget?.closest<HTMLElement>(".sheet-content");
+      if (sheetContent && nextTarget) {
+        scrollTargetWithinContainer(sheetContent, nextTarget, block, getMobileScrollBehavior());
+      } else {
+        scrollTargetWithinNearestContainer(nextTarget, block, getMobileScrollBehavior());
+      }
       nextTarget?.focus({ preventScroll: true });
-      scrollTargetWithinNearestContainer(document.querySelector<HTMLElement>(".label-result-flow"), "nearest", getMobileScrollBehavior());
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [labelDateKind, labelDetectedDate, labelDetectedProductName, labelDetectedStorage, labelResult]);
+  }, [labelResult, labelResultFocusRequest, mode]);
 
   useEffect(() => {
     if (mode !== "label" || !labelError || labelResult) return;
@@ -1366,6 +1373,7 @@ export default function AddFoodSheet({
     setScannerOpen(false);
     if (!preserveLabelReview) {
       setLabelResult(false);
+      setLabelSampleApplied(false);
       setLabelDetectedDate("2026.09.02");
       setLabelDateKind("use_by");
       setLabelDetectedProductName("시금치");
@@ -1779,6 +1787,7 @@ export default function AddFoodSheet({
   const applyLabelSample = () => {
     keyboard.hide();
     replaceLabelPreview(null);
+    setLabelSampleApplied(true);
     setLabelReviewObservations([]);
     setLabelDateObservationIds([]);
     setLabelError("");
@@ -1791,8 +1800,9 @@ export default function AddFoodSheet({
     setLabelDetectedStorage("냉장");
     setLabelDetectedStorageLocationId(null);
     setLabelStorageHint("refrigerated");
-    setLabelDetectedStorageConditionText("포장지에 냉장 보관 표시");
+    setLabelDetectedStorageConditionText("냉장 보관");
     setLabelResult(true);
+    setLabelResultFocusRequest((current) => current + 1);
   };
 
   const handleLabelFile = async (file: File) => {
@@ -1803,6 +1813,7 @@ export default function AddFoodSheet({
     labelAbortController.current = abortController;
     keyboard.hide();
     replaceLabelPreview(file);
+    setLabelSampleApplied(false);
     setLabelReviewObservations([]);
     setLabelDateObservationIds([]);
     setLabelDetectedStorageConditionText(undefined);
@@ -1857,6 +1868,7 @@ export default function AddFoodSheet({
       setLabelDateKind(candidateKind);
       setLabelError(normalizeKnownProductWarning(candidateKind ? (intake.warnings?.[0] ?? "") : (intake.warnings?.[0] ?? "날짜 숫자는 읽었지만 의미를 확인하지 못했어요. 포장지에서 날짜 종류를 확인해 주세요.")));
       setLabelResult(true);
+      setLabelResultFocusRequest((current) => current + 1);
     } catch {
       if (abortController.signal.aborted || requestGeneration !== labelRequestGeneration.current) return;
       setLabelError("사진을 읽지 못했어요. 잠시 후 다시 시도해 주세요.");
@@ -2029,10 +2041,10 @@ export default function AddFoodSheet({
             key={tabMode}
             ref={(element) => { modeTabRefs.current[tabMode] = element; }}
             id={`add-mode-tab-${tabMode}`}
-            className={`mode-tab ${mode === tabMode ? "mode-tab-active" : ""}`}
-            style={tabMode === recommendedMode ? { position: "relative" } : undefined}
+            className={`mode-tab ${mode === tabMode ? "mode-tab-active" : ""} ${tabMode === recommendedMode ? "mode-tab-recommended" : ""}`}
             type="button"
             role="tab"
+            aria-label={initialLabelTargetFoodId && tabMode === recommendedMode ? `${label}, 추천` : undefined}
             aria-selected={mode === tabMode}
             aria-controls={`add-mode-panel-${tabMode}`}
             tabIndex={mode === tabMode ? 0 : -1}
@@ -2040,7 +2052,7 @@ export default function AddFoodSheet({
             onKeyDown={handleModeTabKeyDown}
             onClick={() => focusModeTab(tabMode)}
           >
-            <Icon width={16} height={16} />{label}{tabMode === recommendedMode ? <span aria-hidden="true" style={{ position: "absolute", top: 2, right: 3, color: "var(--meal-sage-dark)", fontSize: 9, fontWeight: 820, lineHeight: 1 }}>추천</span> : null}
+            <Icon width={16} height={16} />{label}{tabMode === recommendedMode ? <span aria-hidden="true" className="mode-tab-recommendation">추천</span> : null}
           </button>
         ))}
       </div>
@@ -2147,31 +2159,31 @@ export default function AddFoodSheet({
                 </div>
                 {labelError ? <div className="result-callout result-callout-warning result-callout-manual-fallback label-result-error-callout" role="alert"><InfoCircledIcon width={17} height={17} /><span><strong>{normalizeKnownProductWarning(labelError)}</strong><small>날짜가 없는 면이면 다른 면을 촬영하거나 직접 입력해 주세요.</small></span><button ref={labelErrorActionRef} className="result-callout-action" type="button" onPointerDown={(event) => event.preventDefault()} onClick={continueWithManual}>직접 입력으로 계속</button></div> : null}
                 <CaptureActions label="라벨 이미지 입력 방법" onFile={handleLabelFile} onCameraOpen={() => setCameraTarget("label")} disabled={labelProcessing} />
-                {demoInputsAvailable ? <button className="secondary-sheet-button capture-sample-button" type="button" onClick={applyLabelSample} disabled={labelProcessing} aria-busy={labelProcessing}><CameraIcon width={17} height={17} /> {labelProcessing ? "라벨 읽는 중" : "샘플 라벨 인식"}</button> : null}
+                {demoInputsAvailable ? <button className="secondary-sheet-button capture-sample-button" type="button" onClick={applyLabelSample} disabled={labelProcessing} aria-busy={labelProcessing}><FileTextIcon width={17} height={17} aria-hidden="true" /> {labelProcessing ? "라벨 읽는 중" : "예시 라벨 결과 보기"}</button> : null}
               </>
             ) : null}
             {labelProcessing ? <ProcessingState label="포장지를 읽고 있어요" detail="표시된 날짜와 보관 방법을 확인하고 있어요." /> : null}
             {labelPreviewUrl ? <LabelSourcePreview sourcePreviewUrl={labelPreviewUrl} sourceAspectRatio={labelSourceAspectRatio} reviewObservations={labelReviewObservations} activeObservationIds={labelDateObservationIds} onImageLoad={(event) => { const image = event.currentTarget; if (image.naturalWidth && image.naturalHeight) setLabelSourceAspectRatio(image.naturalWidth / image.naturalHeight); }} /> : null}
-            {labelResult ? <details className="label-recapture-details"><summary><span><strong>다른 라벨로 다시 읽기</strong><small>현재 결과는 이 시트 안에서만 유지돼요.</small></span><CameraIcon width={17} height={17} /></summary><div className="label-recapture-options"><CaptureActions label="다른 라벨 이미지 입력 방법" onFile={handleLabelFile} onCameraOpen={() => setCameraTarget("label")} disabled={labelProcessing} />{demoInputsAvailable ? <button className="secondary-sheet-button capture-sample-button" type="button" onClick={applyLabelSample} disabled={labelProcessing} aria-busy={labelProcessing}><CameraIcon width={17} height={17} /> 샘플 라벨 인식</button> : null}</div></details> : null}
+            {labelResult ? <details className="label-recapture-details"><summary><span><strong>다른 라벨로 다시 읽기</strong><small>현재 결과는 이 시트 안에서만 유지돼요.</small></span><CameraIcon width={17} height={17} /></summary><div className="label-recapture-options"><CaptureActions label="다른 라벨 이미지 입력 방법" onFile={handleLabelFile} onCameraOpen={() => setCameraTarget("label")} disabled={labelProcessing} />{demoInputsAvailable ? <button className="secondary-sheet-button capture-sample-button" type="button" onClick={applyLabelSample} disabled={labelProcessing} aria-busy={labelProcessing}><FileTextIcon width={17} height={17} aria-hidden="true" /> 예시 라벨 결과 보기</button> : null}</div></details> : null}
             {labelError && labelResult ? <div className="result-callout result-callout-warning" role="alert"><InfoCircledIcon width={17} height={17} /><span><strong>{normalizeKnownProductWarning(labelError)}</strong><small>{labelDateKind ? "포장지에 적힌 날짜를 확인한 뒤 저장해 주세요." : "날짜가 무엇을 뜻하는지 확인하기 전에는 저장하지 않아요."}</small></span></div> : null}
             {labelResult ? (
               <div className="label-result-flow" data-testid="label-result-flow">
                   {labelRecheckMismatch ? <div className="result-callout result-callout-warning label-recheck-mismatch" role="alert"><InfoCircledIcon width={17} height={17} /><span><strong>{labelRecheckMismatchTitle}</strong><small>{labelRecheckMismatchGuidance}</small></span></div> : null}
-                  <div className={`label-result-card ${!labelDateKind || !labelDetectedStorage ? "label-result-card-ambiguous" : ""}`} data-date-state={labelDateKind ? "actual_printed" : "unknown"} data-date-confirmation="candidate">
-                  <div className="label-result-provenance" aria-label="포장지에서 읽은 날짜"><strong>포장지에서 읽은 날짜</strong><span>저장하기 전에 날짜 종류를 골라 주세요.</span></div>
-                  <div className="label-review-contract" role="status" aria-live="polite" aria-atomic="true"><InfoCircledIcon width={15} height={15} /><span><strong>포장지 날짜를 살펴봐 주세요</strong><small>날짜 종류와 숫자가 포장지에 적힌 내용과 같은지 비교해 주세요.</small></span></div>
+                  <div className={`label-result-card ${!labelDateKind || !labelDetectedStorage ? "label-result-card-ambiguous" : ""}`} data-date-state={labelDateKind ? "actual_printed" : "unknown"} data-date-confirmation="candidate" data-label-source={labelSampleApplied ? "example" : "recognized"}>
+                  <div className="label-result-provenance" data-label-source={labelSampleApplied ? "example" : "recognized"} role="group" tabIndex={-1} aria-label={labelSampleApplied ? "예시 라벨 결과" : "포장지에서 읽은 날짜"}><strong>{labelSampleApplied ? "예시 라벨 결과" : "포장지에서 읽은 날짜"}</strong><span>{labelSampleApplied ? "연습용 · 확인 필요" : "저장하기 전에 날짜 종류를 골라 주세요."}</span></div>
+                  <div className={`label-review-contract${labelSampleApplied ? " label-review-contract-example" : ""}`} role="status" aria-live="polite" aria-atomic="true"><InfoCircledIcon width={15} height={15} /><span><strong>{labelSampleApplied ? "예시 결과예요" : "포장지 날짜를 살펴봐 주세요"}</strong><small>{labelSampleApplied ? "날짜 종류와 숫자를 실제 포장지와 대조해 주세요." : "날짜 종류와 숫자가 포장지에 적힌 내용과 같은지 비교해 주세요."}</small></span></div>
                   <div className="label-result-fields">
                     {labelDateKind ? (
                       <div className="label-date-kind-summary">
                         <strong data-label-date-candidate="true">{labelDateKindChoiceLabel(labelDateKind)} {labelDetectedDate}</strong>
-                        <button className="label-date-kind-edit" type="button" onPointerDown={(event) => event.preventDefault()} onClick={() => setLabelDateKind(null)}>날짜 의미 변경</button>
+                        <button className="label-date-kind-edit" type="button" onPointerDown={(event) => event.preventDefault()} onClick={() => { keyboard.hide(); setLabelDateKind(null); window.requestAnimationFrame(() => document.querySelector<HTMLElement>('.label-date-kind-options [role="radio"]')?.focus({ preventScroll: true })); }}>날짜 의미 변경</button>
                       </div>
                     ) : (
                       <div className="label-date-meaning-review" role="group" aria-label="라벨 날짜 의미 확인" aria-describedby="label-date-meaning-hint">
                         <strong>포장지에 적힌 날짜 이름을 골라 주세요</strong>
                         <small id="label-date-meaning-hint">날짜 옆에 적힌 이름을 그대로 선택해 주세요. 확실하지 않으면 소비기한으로 짐작하지 않아도 돼요.</small>
                         <div className="label-date-kind-options" role="radiogroup" aria-label="표시 날짜 종류">
-                          {LABEL_DATE_KINDS.map((kind) => <button key={kind} className={`label-date-kind-option ${labelDateKind === kind ? "label-date-kind-option-active" : ""}`} type="button" role="radio" aria-checked={labelDateKind === kind} onPointerDown={(event) => event.preventDefault()} onClick={() => setLabelDateKind(kind)}>{labelDateKindChoiceLabel(kind)}</button>)}
+                          {LABEL_DATE_KINDS.map((kind) => <button key={kind} className={`label-date-kind-option ${labelDateKind === kind ? "label-date-kind-option-active" : ""}`} type="button" role="radio" aria-checked={labelDateKind === kind} onPointerDown={(event) => event.preventDefault()} onClick={() => { keyboard.hide(); setLabelDateKind(kind); window.requestAnimationFrame(() => document.querySelector<HTMLElement>(".label-date-kind-edit")?.focus({ preventScroll: true })); }}>{labelDateKindChoiceLabel(kind)}</button>)}
                         </div>
                       </div>
                     )}
@@ -2208,13 +2220,13 @@ export default function AddFoodSheet({
                     ) : labelLotAction === "correct" && labelLotDecisionMade && labelSelectedTargetFood ? (
                       <p className="label-lot-quantity-preserved" role="status">기존 수량 {labelSelectedTargetFood.quantity}은 그대로 두고, 선택한 날짜와 보관 정보만 바꿔요.</p>
                     ) : null}
-                    {labelDetectedStorageConditionText ? <small id="label-storage-hint" className="label-storage-condition-note">포장지에 적힌 보관 방법: {labelDetectedStorageConditionText}</small> : !labelDetectedStorage ? <small id="label-storage-hint" className="label-storage-required">보관 위치를 선택해 주세요.</small> : <span id="label-storage-hint" className="sr-only">보관 위치를 선택했어요.</span>}
+                    {labelDetectedStorageConditionText ? <small id="label-storage-hint" className="label-storage-condition-note">{labelSampleApplied ? `예시 보관 정보 · ${labelDetectedStorageConditionText}` : `포장지에 적힌 보관 방법: ${labelDetectedStorageConditionText}`}</small> : !labelDetectedStorage ? <small id="label-storage-hint" className="label-storage-required">보관 위치를 선택해 주세요.</small> : <span id="label-storage-hint" className="sr-only">보관 위치를 선택했어요.</span>}
                     <StoragePicker value={labelDetectedStorage} locationId={labelDetectedStorageLocationId} locations={storageLocations} onChange={(nextStorage, nextLocationId) => { setLabelDetectedStorage(nextStorage); setLabelDetectedStorageLocationId(nextLocationId); }} label="라벨 식품 보관 위치" descriptionId="label-storage-hint" />
                   </div>
-                  <span className={`confirmed-badge ${!labelDateKind || !labelDetectedStorage ? "review-badge" : ""}`}>{labelDateKind && labelDetectedStorage ? <CheckIcon width={13} height={13} /> : <InfoCircledIcon width={13} height={13} />} {labelDateKind && labelDetectedStorage ? "날짜 종류를 골랐어요" : "포장지 날짜를 살펴봐 주세요"}</span>
+                  <span className={`confirmed-badge ${labelSampleApplied || !labelDateKind || !labelDetectedStorage ? "review-badge" : ""}`}>{!labelSampleApplied && labelDateKind && labelDetectedStorage ? <CheckIcon width={13} height={13} /> : <InfoCircledIcon width={13} height={13} />} {labelSampleApplied ? "예시 정보 · 확인 필요" : labelDateKind && labelDetectedStorage ? "날짜 종류를 골랐어요" : "포장지 날짜를 살펴봐 주세요"}</span>
                 </div>
                 <div className="receipt-review-submit-bar label-result-action-bar">
-                  <div id="label-result-action-summary" className="label-result-action-summary" role="note">저장할 내용 · {labelActionDateSummary} · {labelActionLotSummary} · {labelActionStorageSummary}</div>
+                  <div id="label-result-action-summary" className="label-result-action-summary" role="note">{labelSampleApplied ? "예시 결과 · 저장 전 확인" : "저장할 내용"} · {labelActionDateSummary} · {labelActionLotSummary} · {labelActionStorageSummary}</div>
                   <button
                     ref={labelResultActionRef}
                     className="primary-sheet-button label-result-action"

@@ -462,7 +462,7 @@ test("notification date review returns to the exact notification row after savin
   await detail.getByRole("button", { name: "포장지에서 날짜 다시 확인" }).click();
   const labelDialog = page.getByRole("dialog", { name: "날짜 다시 확인" });
   await expect(labelDialog).toBeVisible();
-  await labelDialog.getByRole("button", { name: "샘플 라벨 인식" }).click();
+  await labelDialog.getByRole("button", { name: "예시 라벨 결과 보기" }).click();
   await expect(labelDialog.getByRole("group", { name: "식품 추가 2단계" })).toContainText("날짜와 보관 위치를 확인해요");
   await expect(labelDialog.getByRole("radio", { name: /기존 식품 · 1팩/ })).toHaveAttribute("aria-checked", "true");
   const recaptureOptions = labelDialog.locator(".label-recapture-details");
@@ -474,7 +474,7 @@ test("notification date review returns to the exact notification row after savin
   await expect(recaptureOptions.getByRole("button", { name: "카메라로 촬영" })).toBeHidden();
   await recaptureSummary.click();
   await expect(recaptureOptions.getByRole("button", { name: "카메라로 촬영" })).toBeVisible();
-  await expect(recaptureOptions.getByRole("button", { name: "샘플 라벨 인식" })).toBeVisible();
+  await expect(recaptureOptions.getByRole("button", { name: "예시 라벨 결과 보기" })).toBeVisible();
   await recaptureSummary.click();
   await labelDialog.getByRole("tab", { name: "직접 입력" }).click();
   const alternateEntryDialog = page.getByRole("dialog", { name: "직접 추가" });
@@ -485,7 +485,7 @@ test("notification date review returns to the exact notification row after savin
   await expect(resumedLabelDialog).toBeVisible();
   await expect(resumedLabelDialog.getByRole("group", { name: "식품 추가 2단계" })).toContainText("날짜와 보관 위치를 확인해요");
   await expect(resumedLabelDialog.getByRole("radio", { name: /기존 식품 · 1팩/ })).toHaveAttribute("aria-checked", "true");
-  await resumedLabelDialog.getByRole("button", { name: "확인 후 기존 식품 수정" }).click();
+  await resumedLabelDialog.getByRole("button", { name: "기존 식품 날짜 바꾸기" }).click();
   await expect(detail).toBeVisible();
   await detail.getByRole("button", { name: "닫기", exact: true }).click();
 
@@ -1044,7 +1044,7 @@ test("intake methods explain what will be checked and offer the matching capture
   const labelInputs = labelDialog.getByRole("group", { name: "라벨 이미지 입력 방법" });
   await expect(labelInputs.locator('input[type="file"][data-input-source="library"]')).toHaveCount(1);
   await expect(labelInputs.getByRole("button", { name: "카메라로 촬영" })).toBeVisible();
-  await expect(labelDialog.getByRole("button", { name: "샘플 라벨 인식" })).toBeVisible();
+  await expect(labelDialog.getByRole("button", { name: "예시 라벨 결과 보기" })).toBeVisible();
   await expect(labelDialog.getByText("날짜가 무엇을 뜻하는지 확인하기 전에는 소비기한으로 저장하지 않아요.")).toBeVisible();
 
   await labelDialog.getByRole("tab", { name: "직접 입력" }).click();
@@ -1263,13 +1263,18 @@ test("camera surface keeps capture disabled until the video is ready", async ({ 
 test("label date remains a candidate until the user confirms it", async ({ page }) => {
   await page.getByRole("button", { name: /식품 추가하기/ }).click();
   await page.getByRole("tab", { name: "라벨" }).click();
-  await page.getByRole("button", { name: "샘플 라벨 인식" }).click();
+  await page.getByRole("button", { name: "예시 라벨 결과 보기" }).click();
 
-  await expect(page.getByRole("group", { name: "식품 추가 2단계" })).toContainText("날짜와 보관 위치를 확인해요");
-  await expect(page.locator(".label-review-contract")).toContainText("읽은 날짜는 후보예요");
-  await expect(page.locator(".label-review-contract")).toContainText("포장지에서 날짜 종류와 숫자를 대조해 주세요.");
-  await expect(page.locator(".label-result-provenance")).toContainText("읽은 날짜 확인");
-  await expect(page.locator(".label-result-provenance")).toContainText("저장 전 확인 필요");
+  await expect(page.getByRole("group", { name: "식품 추가 2단계" })).toContainText("날짜와 보관 방법을 살펴봐요");
+  await expect(page.locator(".label-result-provenance")).toHaveAttribute("data-label-source", "example");
+  await expect(page.locator(".label-result-provenance strong")).toHaveText("예시 라벨 결과");
+  await expect(page.locator(".label-result-provenance span")).toHaveText("연습용 · 확인 필요");
+  await expect(page.locator(".label-review-contract strong")).toHaveText("예시 결과예요");
+  await expect(page.locator(".label-review-contract small")).toHaveText("날짜 종류와 숫자를 실제 포장지와 대조해 주세요.");
+  await expect(page.locator(".label-review-contract-example small")).toHaveCSS("font-size", "12px");
+  await expect(page.locator(".label-result-provenance strong")).toHaveCSS("font-size", "12px");
+  await expect(page.locator(".label-result-action-summary")).toContainText("예시 결과 · 저장 전 확인");
+  await expect(page.locator(".label-result-card")).toHaveAttribute("data-label-source", "example");
   await expect(page.locator(".label-result-card")).toHaveAttribute("data-date-state", "actual_printed");
   await expect(page.locator(".label-result-card")).toHaveAttribute("data-date-confirmation", "candidate");
   await expect(page.getByRole("textbox", { name: "포장지 날짜" })).toHaveAttribute("aria-describedby", "label-result-date-readable label-date-review-guidance");
@@ -1280,52 +1285,49 @@ test("label date remains a candidate until the user confirms it", async ({ page 
     return Boolean(dateEvidence.compareDocumentPosition(lotTargets) & Node.DOCUMENT_POSITION_FOLLOWING);
   })).toBe(true);
   await expect(page.locator(".label-date-kind-edit")).toHaveCSS("min-height", "44px");
+  await expect(page.locator(".label-result-action-summary")).toBeInViewport();
+  await expect(page.locator(".label-result-action-summary")).toContainText("예시 결과 · 저장 전 확인");
+  await page.locator("[data-label-date-candidate]").scrollIntoViewIfNeeded();
   await expect(page.locator("[data-label-date-candidate]")).toBeInViewport();
   await page.getByRole("button", { name: "날짜 의미 변경" }).click();
-  await expect(page.getByText("포장지에서 날짜 옆에 적힌 이름을 그대로 선택해 주세요. 확실하지 않으면 저장하지 않아도 돼요.", { exact: true })).toBeVisible();
+  await expect(page.getByText("날짜 옆에 적힌 이름을 그대로 선택해 주세요. 확실하지 않으면 소비기한으로 짐작하지 않아도 돼요.", { exact: true })).toBeVisible();
   const sellByChoice = page.getByRole("radio", { name: "유통기한", exact: true });
   await sellByChoice.click();
-  await expect(page.getByText("숫자가 다르면 아래 날짜를 수정해 주세요.", { exact: true })).toBeVisible();
+  await expect(page.getByText("숫자가 다르면 아래 날짜를 바꿔 주세요.", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "날짜 의미 변경" }).click();
   const useByChoice = page.getByRole("radio", { name: "소비기한", exact: true });
   await expect(useByChoice).toHaveCSS("min-height", "44px");
   await useByChoice.click();
-  await expect.poll(() => page.locator(".label-result-card").evaluate((element) => {
-    const content = element.closest<HTMLElement>(".sheet-content");
-    if (!content) return false;
-    const resultBox = element.getBoundingClientRect();
-    const contentBox = content.getBoundingClientRect();
-    return resultBox.top >= contentBox.top - 1 && resultBox.top <= contentBox.bottom;
-  })).toBe(true);
   await expect(page.getByText("소비기한 2026.09.02")).toBeVisible();
-  await expect(page.getByText("숫자가 다르면 아래 날짜를 수정해 주세요.", { exact: true })).toBeVisible();
+  await expect(page.getByText("숫자가 다르면 아래 날짜를 바꿔 주세요.", { exact: true })).toBeVisible();
   await expect(page.getByText("선택한 날짜 · 2026.09.02", { exact: true })).toBeVisible();
-  await expect(page.getByText("확인할 날짜")).toBeVisible();
-  await expect(page.getByRole("button", { name: "확인 후 새 식품 추가" })).toBeFocused();
-  await page.getByRole("button", { name: "확인 후 새 식품 추가" }).click();
+  await expect(page.getByText("예시 정보 · 확인 필요")).toBeVisible();
+  await expect(page.getByRole("button", { name: "날짜 의미 변경" })).toBeFocused();
+  await expect(page.getByRole("button", { name: "새 식품 추가하기" })).toBeVisible();
+  await page.getByRole("button", { name: "새 식품 추가하기" }).click();
   await expect(page.locator(".toast")).toHaveText(/시금치/);
 
   const savedPriorityCard = page.locator(".priority-card").first();
-  await expect(savedPriorityCard.locator(".date-source")).toHaveText("표시 소비기한");
+  await expect(savedPriorityCard.locator(".date-source")).toHaveText("포장 소비기한");
   await expect(savedPriorityCard.locator(".priority-state-label")).toHaveText("날짜 확인");
   await savedPriorityCard.click();
-  const savedDateProof = page.getByRole("group", { name: "날짜 근거: 표시 소비기한" });
+  const savedDateProof = page.getByRole("group", { name: "날짜 정보: 포장 소비기한" });
   await expect(savedDateProof).toContainText("2026.09.02");
   await expect(savedDateProof.locator("small")).toHaveText("포장지 표시");
-  await expect(page.locator(".date-review-callout")).toContainText("조리 전 날짜 확인이 필요해요");
+  await expect(page.locator(".date-review-callout")).toContainText("조리 전에 포장지 날짜를 살펴봐 주세요");
 
   await page.getByRole("button", { name: "포장지에서 날짜 다시 확인" }).click();
-  await page.getByRole("button", { name: "샘플 라벨 인식" }).click();
+  await page.getByRole("button", { name: "예시 라벨 결과 보기" }).click();
   await page.getByRole("button", { name: "날짜 의미 변경" }).click();
   await page.getByRole("radio", { name: "제조일", exact: true }).click();
-  await expect(page.getByRole("button", { name: "확인 후 기존 식품 수정" })).toBeEnabled();
-  await page.getByRole("button", { name: "확인 후 기존 식품 수정" }).click();
+  await expect(page.getByRole("button", { name: "기존 식품 날짜 바꾸기" })).toBeEnabled();
+  await page.getByRole("button", { name: "기존 식품 날짜 바꾸기" }).click();
 
-  const manufacturingDateProof = page.getByRole("group", { name: "날짜 근거: 표시 제조일" });
+  const manufacturingDateProof = page.getByRole("group", { name: "날짜 정보: 포장 제조일" });
   await expect(manufacturingDateProof).toContainText("2026.09.02");
   await expect(manufacturingDateProof.locator("small")).toHaveText("포장지 표시");
   const dateKindReview = page.locator(".date-review-callout");
-  await expect(dateKindReview).toContainText("포장지 날짜의 종류를 확인해 주세요");
+  await expect(dateKindReview).toContainText("포장지 날짜 종류를 골라 주세요");
   await expect(dateKindReview).toContainText("포장일·제조일은 소비기한이 아니에요.");
   await expect(dateKindReview).not.toContainText("표시 날짜가 오늘이거나 지났어요");
   await expect(dateKindReview.locator(".date-edit-button")).toBeFocused();
@@ -1337,9 +1339,9 @@ test("focuses the updated date proof when a label recheck clears the review warn
   await detail.getByRole("button", { name: "포장지에서 날짜 다시 확인" }).click();
 
   const labelReview = page.getByRole("dialog", { name: "날짜 다시 확인" });
-  await labelReview.getByRole("button", { name: "샘플 라벨 인식" }).click();
+  await labelReview.getByRole("button", { name: "예시 라벨 결과 보기" }).click();
   await labelReview.getByLabel("포장지 날짜").fill("2026-10-01");
-  await labelReview.getByRole("button", { name: "확인 후 기존 식품 수정" }).click();
+  await labelReview.getByRole("button", { name: "기존 식품 날짜 바꾸기" }).click();
 
   const returnedDetail = page.getByRole("dialog", { name: "시금치" });
   const updatedDateProof = returnedDetail.getByRole("group", { name: "날짜 근거: 표시 소비기한" });
@@ -1353,12 +1355,12 @@ test("label review lets the user choose a new lot or an existing matching lot", 
   await page.getByRole("tab", { name: "라벨" }).click();
   const dialog = page.getByRole("dialog", { name: "라벨로 추가" });
   await expect(dialog.locator(".input-flow > p")).toHaveText("날짜가 보이는 면을 촬영하거나 사진을 선택하면 포장지의 날짜를 읽어드려요.");
-  await dialog.getByRole("button", { name: "샘플 라벨 인식" }).click();
+  await dialog.getByRole("button", { name: "예시 라벨 결과 보기" }).click();
 
   const saveSummary = dialog.locator("#label-result-action-summary");
-  const saveAction = dialog.getByRole("button", { name: "확인 후 새 식품 추가" });
+  const saveAction = dialog.getByRole("button", { name: "새 식품 추가하기" });
   await expect(page.locator(".keyboard-dock")).toHaveAttribute("data-visible", "false");
-  await expect(saveSummary).toHaveText("저장 전 확인 요약 · 소비기한 후보 2026.09.02 · 새 식품 1개 · 냉장");
+  await expect(saveSummary).toHaveText("예시 결과 · 저장 전 확인 · 소비기한 · 2026.09.02 · 새 식품 1개 · 냉장");
   await expect(saveAction).toHaveAttribute("aria-describedby", "label-result-action-summary");
   await expect.poll(() => saveSummary.evaluate((element) => Number.parseFloat(getComputedStyle(element).fontSize))).toBeGreaterThanOrEqual(12);
 
@@ -1373,27 +1375,27 @@ test("label review lets the user choose a new lot or an existing matching lot", 
   await expect(dialog.locator("#label-new-food-quantity-hint")).toHaveText("기본값 1개예요. 실제 보유 수량을 확인해 주세요.");
 
   await quantity.fill("0팩");
-  await expect(dialog.getByRole("button", { name: "수량을 확인해 주세요" })).toBeDisabled();
-  await expect(dialog.locator(".label-result-action-summary")).toContainText("새 식품 수량 확인 필요");
+  await expect(dialog.getByRole("button", { name: "수량을 입력해 주세요" })).toBeDisabled();
+  await expect(dialog.locator(".label-result-action-summary")).toContainText("새 식품 수량을 입력해 주세요");
   await quantity.fill("2팩");
   await expect(dialog.locator("#label-new-food-quantity-hint")).toHaveText("입력한 수량 2팩을 새 기록에 저장해요.");
-  await expect(dialog.getByRole("button", { name: "확인 후 새 식품 추가" })).toBeEnabled();
-  await expect(dialog.locator(".label-result-action-summary")).toContainText("소비기한 후보 2026.09.02 · 새 식품 2팩 · 냉장");
+  await expect(dialog.getByRole("button", { name: "새 식품 추가하기" })).toBeEnabled();
+  await expect(dialog.locator(".label-result-action-summary")).toContainText("소비기한 · 2026.09.02 · 새 식품 2팩 · 냉장");
 
   await existingLot.click();
   await expect(existingLot).toHaveAttribute("aria-checked", "true");
   await expect(newLot).toHaveAttribute("aria-checked", "false");
   await expect(quantity).toHaveCount(0);
   await expect(dialog.locator(".label-lot-quantity-preserved")).toContainText("기존 수량 1팩은 그대로 두고");
-  await expect(dialog.getByRole("button", { name: "확인 후 기존 식품 수정" })).toBeEnabled();
-  await expect(saveSummary).toHaveText("저장 전 확인 요약 · 소비기한 후보 2026.09.02 · 기존 식품 1팩 · 냉장");
-  await expect(dialog.getByRole("button", { name: "확인 후 기존 식품 수정" })).toHaveAttribute("aria-describedby", "label-result-action-summary");
+  await expect(dialog.getByRole("button", { name: "기존 식품 날짜 바꾸기" })).toBeEnabled();
+  await expect(saveSummary).toHaveText("예시 결과 · 저장 전 확인 · 소비기한 · 2026.09.02 · 기존 식품 1팩 · 냉장");
+  await expect(dialog.getByRole("button", { name: "기존 식품 날짜 바꾸기" })).toHaveAttribute("aria-describedby", "label-result-action-summary");
 
   await newLot.click();
   await expect(newLot).toHaveAttribute("aria-checked", "true");
   await expect(quantity).toHaveValue("2팩");
-  await expect(dialog.getByRole("button", { name: "확인 후 새 식품 추가" })).toBeEnabled();
-  await expect(saveSummary).toHaveText("저장 전 확인 요약 · 소비기한 후보 2026.09.02 · 새 식품 2팩 · 냉장");
+  await expect(dialog.getByRole("button", { name: "새 식품 추가하기" })).toBeEnabled();
+  await expect(saveSummary).toHaveText("예시 결과 · 저장 전 확인 · 소비기한 · 2026.09.02 · 새 식품 2팩 · 냉장");
 });
 
 test("label read failure reveals a reachable recovery action without changing the existing date", async ({ page }) => {
@@ -1611,8 +1613,8 @@ test("preserves Pixel 10 label-date review across input tabs", async ({ page }) 
   const receiptDialog = page.getByRole("dialog", { name: "영수증으로 추가" });
   await receiptDialog.getByRole("tab", { name: "라벨" }).click();
   const labelDialog = page.getByRole("dialog", { name: "라벨로 추가" });
-  await labelDialog.getByRole("button", { name: "샘플 라벨 인식" }).click();
-  await expect(labelDialog.getByText("읽은 날짜는 후보예요")).toBeVisible();
+  await labelDialog.getByRole("button", { name: "예시 라벨 결과 보기" }).click();
+  await expect(labelDialog.locator(".label-result-provenance")).toHaveAttribute("data-label-source", "example");
   await expect(labelDialog.getByLabel("포장지 날짜")).toHaveValue("2026-09-02");
 
   await labelDialog.getByRole("tab", { name: "영수증" }).click();
@@ -1621,17 +1623,17 @@ test("preserves Pixel 10 label-date review across input tabs", async ({ page }) 
   await switchedReceiptDialog.getByRole("tab", { name: "라벨" }).click();
 
   const returnedLabelDialog = page.getByRole("dialog", { name: "라벨로 추가" });
-  await expect(returnedLabelDialog.getByText("읽은 날짜는 후보예요")).toBeVisible();
+  await expect(returnedLabelDialog.locator(".label-result-provenance")).toHaveAttribute("data-label-source", "example");
   await expect(returnedLabelDialog.getByLabel("포장지 날짜")).toHaveValue("2026-09-02");
   await returnedLabelDialog.getByRole("button", { name: "날짜 의미 변경" }).click();
   await returnedLabelDialog.getByRole("radio", { name: "포장일" }).click();
   await expect(returnedLabelDialog.getByText("포장일 2026.09.02", { exact: true })).toBeVisible();
-  await expect(returnedLabelDialog.getByRole("button", { name: "확인 후 새 식품 추가" })).toBeEnabled();
+  await expect(returnedLabelDialog.getByRole("button", { name: "새 식품 추가하기" })).toBeEnabled();
   const labelQuantity = returnedLabelDialog.getByRole("textbox", { name: "새 식품 수량" });
   await labelQuantity.scrollIntoViewIfNeeded();
   await labelQuantity.click();
   await expect(page.locator(".keyboard-dock")).toHaveAttribute("data-visible", "true");
-  await expect(returnedLabelDialog.locator(".label-result-action-summary")).toContainText("포장일 후보 2026.09.02 · 새 식품 1개 · 냉장");
+  await expect(returnedLabelDialog.locator(".label-result-action-summary")).toContainText("예시 결과 · 저장 전 확인 · 포장일 · 2026.09.02 · 새 식품 1개 · 냉장");
   await expect.poll(() => page.evaluate(() => {
     const field = document.querySelector<HTMLElement>("#label-new-food-quantity");
     const storage = document.querySelector<HTMLElement>(".label-result-card .storage-picker");
@@ -1658,26 +1660,28 @@ test("preserves Pixel 10 label-date review across input tabs", async ({ page }) 
   await expect(returnedLabelDialog.locator(".label-lot-quantity-preserved")).toContainText("기존 수량 1팩은 그대로 두고");
 
   await returnedLabelDialog.getByRole("button", { name: "날짜 의미 변경" }).click();
-  const missingMeaningAction = returnedLabelDialog.getByRole("button", { name: "날짜·보관 위치를 확인해 주세요" });
+  const missingMeaningAction = returnedLabelDialog.getByRole("button", { name: "날짜·보관 위치를 선택해 주세요" });
   await expect(missingMeaningAction).toBeDisabled();
   await returnedLabelDialog.getByLabel("라벨 상품명").click();
   await expect(page.locator(".keyboard-dock")).toHaveAttribute("data-visible", "true");
-  await expect(returnedLabelDialog.locator(".label-result-action-summary")).toHaveText("저장 전 확인 요약 · 날짜 의미 확인 필요 · 2026.09.02 · 기존 식품 1팩 · 냉장");
+  await expect(returnedLabelDialog.locator(".label-result-action-summary")).toHaveText("예시 결과 · 저장 전 확인 · 날짜 종류를 골라 주세요 · 2026.09.02 · 기존 식품 1팩 · 냉장");
   await expect(missingMeaningAction).toBeDisabled();
 
-  await returnedLabelDialog.getByRole("radio", { name: "제조일" }).click();
+  const manufacturingDateChoice = returnedLabelDialog.getByRole("radio", { name: "제조일", exact: true });
+  await manufacturingDateChoice.click();
   await expect(returnedLabelDialog.getByText("제조일 2026.09.02", { exact: true })).toBeVisible();
-  await expect(returnedLabelDialog.getByText("숫자가 다르면 아래 날짜를 수정해 주세요. 소비기한이 아닐 수 있으니 보관 방법도 확인해 주세요.", { exact: true })).toBeVisible();
-  const correctExistingLot = returnedLabelDialog.getByRole("button", { name: "확인 후 기존 식품 수정" });
+  await expect(returnedLabelDialog.getByText("숫자가 다르면 아래 날짜를 바꿔 주세요. 이 날짜는 소비기한이 아닐 수 있어요. 보관 방법도 살펴봐 주세요.", { exact: true })).toBeVisible();
+  const correctExistingLot = returnedLabelDialog.getByRole("button", { name: "기존 식품 날짜 바꾸기" });
   await expect(page.locator(".keyboard-dock")).toHaveAttribute("data-visible", "false");
   await expect(correctExistingLot).toBeEnabled();
-  await expect(correctExistingLot).toBeFocused();
-  await expect(returnedLabelDialog.locator(".label-result-action-summary")).toHaveText("저장 전 확인 요약 · 제조일 후보 2026.09.02 · 기존 식품 1팩 · 냉장");
+  await expect(returnedLabelDialog.getByRole("button", { name: "날짜 의미 변경" })).toBeFocused();
+  await expect(correctExistingLot).toBeVisible();
+  await expect(returnedLabelDialog.locator(".label-result-action-summary")).toHaveText("예시 결과 · 저장 전 확인 · 제조일 · 2026.09.02 · 기존 식품 1팩 · 냉장");
   await expect(correctExistingLot).toHaveAttribute("aria-describedby", "label-result-action-summary");
 
   await returnedLabelDialog.getByLabel("라벨 상품명").click();
   await expect(page.locator(".keyboard-dock")).toHaveAttribute("data-visible", "true");
-  await expect(returnedLabelDialog.locator(".label-result-action-summary")).toContainText("제조일 후보 2026.09.02 · 기존 식품 1팩 · 냉장");
+  await expect(returnedLabelDialog.locator(".label-result-action-summary")).toContainText("예시 결과 · 저장 전 확인 · 제조일 · 2026.09.02 · 기존 식품 1팩 · 냉장");
 });
 
 test("barcode camera shows a manual fallback when media devices are unavailable", async ({ page }) => {

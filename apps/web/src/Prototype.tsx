@@ -5250,7 +5250,7 @@ function PrototypeContent() {
                 </h2>
               </div>
               <button className="text-button" type="button" disabled={inventoryDataUnknown && connectionState === "checking"} onClick={() => inventoryDataUnknown ? connectionState === "auth_required" ? changeSheet("account") : retryConnection() : openInventory()}>
-                {inventoryDataUnknown ? connectionState === "auth_required" ? "다시 로그인" : "다시 연결" : "전체 식품 보기"}
+                {inventoryDataUnknown ? connectionState === "auth_required" ? "다시 로그인" : "다시 연결" : <><MagnifyingGlassIcon width={14} height={14} aria-hidden="true" /><span>식품 찾기</span></>}
                 <ChevronRightIcon width={14} height={14} aria-hidden="true" />
               </button>
             </div>
