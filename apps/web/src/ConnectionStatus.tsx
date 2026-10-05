@@ -4,7 +4,7 @@ type ConnectionState = "fixture" | "checking" | "connected" | "offline" | "auth_
 type CachedAtFreshness = "recent" | "stale" | "old" | "unknown";
 
 const labels: Record<ConnectionState, string> = {
-  fixture: "게스트",
+  fixture: "체험 중",
   checking: "연결 중",
   connected: "연결됨",
   offline: "오프라인",
@@ -17,7 +17,9 @@ export default function ConnectionStatus({ state, hasCachedData = false, cachedA
     : labels[state];
   const freshnessClass = state === "offline" && hasCachedData ? ` connection-offline-${cachedAtFreshness ?? "unknown"}` : "";
   const actionLabel = state === "auth_required" ? "로그인 화면 열기" : "계정 열기";
-  const accessibleLabel = state === "offline"
+  const accessibleLabel = state === "fixture"
+    ? `예시 식품으로 체험 중. 변경 내용은 새로고침하면 사라져요. ${actionLabel}`
+    : state === "offline"
     ? hasCachedData
       ? `인터넷에 연결되지 않았어요. 마지막으로 불러온 식품 목록을 보여드려요. ${actionLabel}`
       : `인터넷에 연결되지 않아 식품 목록을 불러올 수 없어요. ${actionLabel}`

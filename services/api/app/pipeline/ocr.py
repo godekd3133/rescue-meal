@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from math import isfinite
 import mimetypes
+import os
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Any, Literal
@@ -127,15 +128,18 @@ class RemoteOcrEngine:
 
     def __init__(self, base_url: str) -> None:
         self.base_url = base_url.rstrip("/")
+        self._bearer_token = os.getenv("RESCUE_MEAL_OCR_TOKEN", "").strip()
 
     def extract(self, image_bytes: bytes, filename: str = "upload.jpg") -> OcrRun:
         import httpx
 
+        headers = {"Authorization": f"Bearer {self._bearer_token}"} if self._bearer_token else None
         try:
             with httpx.Client(timeout=45.0) as client:
                 response = client.post(
                     f"{self.base_url}/ocr",
                     files={"file": (filename, image_bytes, mimetypes.guess_type(filename)[0] or "image/jpeg")},
+                    headers=headers,
                 )
             response.raise_for_status()
             payload = response.json()

@@ -1,0 +1,185 @@
+.bottom-sheet .shopping-sheet-quantity-with-unit {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.bottom-sheet .shopping-sheet-quantity-with-unit .app-input {
+  min-width: 0;
+  flex: 1;
+}
+
+.bottom-sheet .shopping-sheet-quantity-with-unit > span {
+  flex: 0 0 auto;
+  color: var(--atelier-ink);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.bottom-sheet .shopping-sheet-receive-fields {
+  grid-template-columns: minmax(108px, 0.8fr) minmax(0, 1.3fr);
+  align-items: start;
+}
+
+.bottom-sheet .shopping-sheet-save-summary,
+.bottom-sheet .shopping-sheet-manual-stock,
+.bottom-sheet .recipe-save-effect,
+.bottom-sheet .recipe-recovery-note {
+  margin: 0;
+  color: var(--atelier-muted);
+  font-size: 12px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.bottom-sheet .shopping-sheet-save-summary {
+  display: grid;
+  gap: 2px;
+  padding-top: 10px;
+  border-top: 1px solid var(--sheet-border);
+}
+
+.bottom-sheet .shopping-sheet-save-summary strong {
+  color: var(--atelier-ink);
+  font-size: 12px;
+}
+
+.bottom-sheet .shopping-sheet-existing-stock {
+  padding: 0 12px 8px;
+  color: var(--atelier-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.bottom-sheet .shopping-sheet-existing-stock summary {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.bottom-sheet .shopping-sheet-existing-stock ul {
+  margin: 0;
+  padding-left: 17px;
+}
+
+.bottom-sheet .shopping-sheet-existing-stock p {
+  margin: 4px 0 0;
+}
+
+.bottom-sheet .shopping-sheet-stock-refresh {
+  justify-self: start;
+  min-height: 44px;
+  padding: 8px 0;
+  border: 0;
+  background: transparent;
+  color: var(--atelier-ink);
+  font-size: 12px;
+  font-weight: 650;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.bottom-sheet .shopping-sheet-stock-refresh:disabled {
+  color: var(--atelier-muted);
+  cursor: default;
+}
+
+.bottom-sheet .recipe-no-match-actions {
+  display: grid;
+  gap: 10px;
+}
+
+.bottom-sheet .recipe-no-match-secondary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.bottom-sheet .recipe-consumption-row.recipe-consumption-choice {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+  padding: 12px;
+}
+
+.bottom-sheet .recipe-consumption-choice .recipe-consumption-choice-copy strong {
+  font-size: 13px;
+  line-height: 1.4;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.bottom-sheet .recipe-consumption-choice .recipe-consumption-choice-copy small {
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.bottom-sheet .recipe-consumption-choice-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.bottom-sheet .recipe-consumption-toggle {
+  min-height: 44px;
+  padding: 8px 0;
+  border: 0;
+  background: transparent;
+  color: var(--atelier-muted);
+  font-size: 12px;
+  font-weight: 650;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.bottom-sheet .recipe-consumption-toggle[aria-pressed="true"] {
+  color: var(--atelier-pistachio);
+}
+
+.bottom-sheet .recipe-consumption-toggle:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.bottom-sheet .recipe-consumption-toggle:focus-visible {
+  outline: 2px solid var(--atelier-pistachio);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+.bottom-sheet .recipe-consumption-choice .recipe-consumption-stepper button {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+}
+
+.bottom-sheet .recipe-consumption-choice .recipe-consumption-input-wrap {
+  height: 44px;
+}
+
+.bottom-sheet .recipe-consumption-choice .recipe-consumption-input {
+  min-height: 40px;
+  font-size: 13px;
+}
+
+.bottom-sheet .recipe-consumption-choice .recipe-consumption-input-wrap em {
+  font-size: 12px;
+}
+
+@media (max-width: 380px) {
+  .bottom-sheet .shopping-sheet-receive-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .bottom-sheet .shopping-sheet-quantity-with-unit {
+    max-width: 180px;
+  }
+}

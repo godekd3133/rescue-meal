@@ -204,39 +204,73 @@ test("keeps home food source details readable across narrow viewport themes", as
   }
 });
 
-test("keeps the narrow home review summary concise and shopping shortcut tappable", async ({ page }) => {
+test("places the narrow home review summary before meal actions in both themes and keeps shopping tappable", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 740 });
-  await page.goto("/");
 
-  const summary = page.locator(".trust-card");
-  await expect(summary).toBeVisible();
-  await expect(summary).toContainText("포장지 날짜를 살펴볼 식품 2개");
-  await expect(summary).toHaveAccessibleName("포장지 날짜를 살펴볼 식품 2개. 포장지 날짜와 보관 방법을 살펴봐 주세요. 확인할 식품 목록 보기");
-  expect((await summary.boundingBox())?.height).toBeLessThanOrEqual(60);
+  for (const theme of ["light", "dark"] as const) {
+    await page.goto("/");
+    await page.evaluate((nextTheme) => window.localStorage.setItem("rescue-meal.theme", nextTheme), theme);
+    await page.reload();
 
-  const priorityHeading = page.locator(".priority-section .section-heading h2");
-  await expect(priorityHeading).toContainText("먼저 살펴볼 식품");
+    const summary = page.locator(".trust-card");
+    await expect(summary).toBeVisible();
+    await expect(summary).toContainText("포장지 날짜를 살펴볼 식품 2개");
+    await expect(summary).toHaveAccessibleName("포장지 날짜를 살펴볼 식품 2개. 포장지 날짜와 보관 방법을 살펴봐 주세요. 확인할 식품 목록 보기");
+    await expect(summary.locator(".trust-card-action")).toHaveText("목록 보기");
+    await expect(summary.locator(".trust-card-action")).toHaveCSS("font-size", "12px");
+    const actionColors = await summary.locator(".trust-card-action").evaluate((element) => ({
+      foreground: getComputedStyle(element).color,
+      background: getComputedStyle(document.querySelector<HTMLElement>(".app-screen")!).backgroundColor,
+    }));
+    expect(contrastRatio(actionColors.foreground, actionColors.background)).toBeGreaterThanOrEqual(4.5);
+    expect((await summary.boundingBox())?.height).toBeLessThanOrEqual(60);
 
-  const [reviewShortcut, navigation, mealAction, shoppingSummary] = await Promise.all([
-    page.locator(".trust-card").boundingBox(),
-    page.locator(".app-bottom-nav").boundingBox(),
-    page.locator(".meal-plan-button").boundingBox(),
-    page.locator(".shopping-summary-card").boundingBox(),
-  ]);
-  const priorityRowHeights = await page.locator(".priority-card").evaluateAll((rows) => rows.map((row) => row.getBoundingClientRect().height));
-  expect(reviewShortcut?.height).toBeGreaterThanOrEqual(44);
-  expect((reviewShortcut?.y ?? Number.POSITIVE_INFINITY) + (reviewShortcut?.height ?? 0)).toBeLessThanOrEqual((navigation?.y ?? 0) + 1);
-  expect((mealAction?.y ?? Number.POSITIVE_INFINITY) + (mealAction?.height ?? 0)).toBeLessThanOrEqual((navigation?.y ?? 0) + 1);
-  expect(priorityRowHeights).toHaveLength(3);
-  expect(Math.min(...priorityRowHeights)).toBeGreaterThanOrEqual(44);
-  expect(shoppingSummary?.height).toBeGreaterThanOrEqual(44);
-  expect((shoppingSummary?.y ?? Number.POSITIVE_INFINITY) + (shoppingSummary?.height ?? 0)).toBeLessThanOrEqual((navigation?.y ?? 0) + 1);
-  await expect(page.locator(".shopping-summary-card")).toBeInViewport();
-  await expect(page.locator(".shopping-summary-card")).toHaveAccessibleName("장보기 목록 열기. 아직 담은 재료가 없어요");
-  await expect(page.locator(".shopping-summary-card")).toHaveAccessibleDescription("식단에서 재료를 담거나 직접 추가해 보세요.");
-  await expect(page.locator(".shopping-summary-empty-help")).toBeVisible();
-  await expect(page.locator(".shopping-summary-empty-help")).toHaveText("식단에서 재료를 담거나 직접 추가해 보세요.");
-  await expect(page.locator(".install-prompt")).not.toBeInViewport();
+    const actionLayout = await summary.evaluate((card) => {
+      const copy = card.querySelector<HTMLElement>(".trust-card-copy");
+      const action = card.querySelector<HTMLElement>(".trust-card-action");
+      if (!copy || !action) return null;
+      const copyBox = copy.getBoundingClientRect();
+      const actionBox = action.getBoundingClientRect();
+      const cardBox = card.getBoundingClientRect();
+      return { copyRight: copyBox.right, actionLeft: actionBox.left, actionRight: actionBox.right, cardRight: cardBox.right };
+    });
+    expect(actionLayout).toBeTruthy();
+    expect(actionLayout!.copyRight).toBeLessThanOrEqual(actionLayout!.actionLeft);
+    expect(actionLayout!.actionRight).toBeLessThanOrEqual(actionLayout!.cardRight);
+
+    const priorityHeading = page.locator(".priority-section .section-heading h2");
+    await expect(priorityHeading).toContainText("먼저 살펴볼 식품");
+
+    const [lastPriority, reviewShortcut, navigation, mealAction, shoppingSummary] = await Promise.all([
+      page.locator(".priority-card").last().boundingBox(),
+      summary.boundingBox(),
+      page.locator(".app-bottom-nav").boundingBox(),
+      page.locator(".meal-plan-button").boundingBox(),
+      page.locator(".shopping-summary-card").boundingBox(),
+    ]);
+    const priorityRowHeights = await page.locator(".priority-card").evaluateAll((rows) => rows.map((row) => row.getBoundingClientRect().height));
+    expect(reviewShortcut?.height).toBeGreaterThanOrEqual(44);
+    expect((lastPriority?.y ?? 0) + (lastPriority?.height ?? 0)).toBeLessThanOrEqual(reviewShortcut?.y ?? 0);
+    expect((reviewShortcut?.y ?? Number.POSITIVE_INFINITY) + (reviewShortcut?.height ?? 0)).toBeLessThanOrEqual(mealAction?.y ?? 0);
+    expect((mealAction?.y ?? Number.POSITIVE_INFINITY) + (mealAction?.height ?? 0)).toBeLessThanOrEqual(shoppingSummary?.y ?? 0);
+    expect((reviewShortcut?.y ?? Number.POSITIVE_INFINITY) + (reviewShortcut?.height ?? 0)).toBeLessThanOrEqual((navigation?.y ?? 0) + 1);
+    expect((mealAction?.y ?? Number.POSITIVE_INFINITY) + (mealAction?.height ?? 0)).toBeLessThanOrEqual((navigation?.y ?? 0) + 1);
+    expect(priorityRowHeights).toHaveLength(3);
+    expect(Math.min(...priorityRowHeights)).toBeGreaterThanOrEqual(44);
+    expect(shoppingSummary?.height).toBeGreaterThanOrEqual(44);
+    expect((shoppingSummary?.y ?? Number.POSITIVE_INFINITY) + (shoppingSummary?.height ?? 0)).toBeLessThanOrEqual((navigation?.y ?? 0) + 1);
+    await expect(page.locator(".shopping-summary-card")).toBeInViewport();
+    await expect(page.locator(".shopping-summary-card")).toHaveAccessibleName("장보기 목록 열기. 아직 담은 재료가 없어요");
+    await expect(page.locator(".shopping-summary-card")).toHaveAccessibleDescription("식단에서 재료를 담거나 직접 추가해 보세요.");
+    await expect(page.locator(".shopping-summary-empty-help")).toBeVisible();
+    await expect(page.locator(".shopping-summary-empty-help")).toHaveText("식단에서 재료를 담거나 직접 추가해 보세요.");
+    await expect(page.locator(".install-prompt")).not.toBeInViewport();
+
+    if (theme === "dark") {
+      await page.setViewportSize({ width: 393, height: 852 });
+      await page.screenshot({ path: "../../evidence/mobile-home-priority-order-dark-2026-09-30.png", scale: "css" });
+    }
+  }
 });
 
 test("home review summary title matches date-only, storage-only, and mixed review reasons", () => {
@@ -840,8 +874,8 @@ test("keeps detail review and storage cues across light and dark themes", async 
     const detailOrder = await dialog.locator(".detail-sheet-content").evaluate((element) => Array.from(element.children).map((child) => child.className));
     expect(detailOrder.indexOf("date-edit-button")).toBeGreaterThan(detailOrder.indexOf("date-proof-card"));
     const provenanceIndex = detailOrder.indexOf("detail-source-group");
-    const inferenceIndex = detailOrder.indexOf("inference-trace-card");
-    if (provenanceIndex >= 0 && inferenceIndex >= 0) expect(provenanceIndex).toBeLessThan(inferenceIndex);
+    const priorityNoteIndex = detailOrder.indexOf("detail-note");
+    if (provenanceIndex >= 0 && priorityNoteIndex >= 0) expect(provenanceIndex).toBeLessThan(priorityNoteIndex);
     await dialog.getByRole("button", { name: "냉동", exact: true }).click();
     await expect(dialog.locator(".detail-section")).toHaveClass(/detail-section-pending/);
     await expect(dialog.locator(".detail-save-pending")).toBeVisible();
@@ -1338,10 +1372,17 @@ test("returns focus to the printed-date recheck action after closing label revie
   await expect(currentDate).toBeInViewport();
   await expect(currentDate).toHaveText(/현재 기록.*포장 소비기한 · 2026\.09\.02 · 포장지 표시/);
   await expect(labelReview.locator(".sheet-description")).toContainText("저장 전까지 기록은 그대로예요");
-  await expect(labelReview.locator(".intake-method-hint")).toContainText("포장지 날짜를 다시 읽어 확인해요.");
+  const dateStep = labelReview.locator(".intake-flow-rail");
+  await expect(dateStep).toHaveAttribute("aria-label", "날짜 확인 1단계");
+  await expect(dateStep.locator(".intake-flow-rail-heading")).toHaveAttribute("aria-live", "polite");
+  await expect(dateStep.locator(".intake-flow-rail-heading")).toHaveAttribute("aria-atomic", "true");
+  await expect(dateStep.locator(".intake-flow-rail-heading strong")).toHaveText("날짜가 보이는 면을 선택해요");
+  await expect(dateStep.locator(".intake-flow-rail-heading small")).toHaveText("날짜 종류와 보관 방법을 포장지에서 확인해요.");
+  await expect(dateStep.locator(".intake-flow-rail-heading em")).toHaveCount(0);
+  await expect(dateStep.locator('li[aria-current="step"]')).toContainText("1입력");
   await expect(labelReview.locator(".sheet-description")).toHaveCSS("font-size", "12px");
   await expect(labelReview.locator(".capture-date-meaning-note strong")).toHaveCSS("font-size", "12px");
-  await expect(labelReview.locator(".intake-method-hint")).toHaveCSS("font-size", "12px");
+  await expect(dateStep.locator(".intake-flow-rail-heading small")).toHaveCSS("font-size", "12px");
   await expect(labelReview.locator(".intake-flow-rail-heading strong")).toHaveCSS("font-size", "12px");
   await expect(labelReview.locator(".input-flow > p").first()).toHaveCSS("font-size", "12px");
   await expect(labelReview.locator(".capture-date-meaning-note small")).toHaveCSS("font-size", "12px");
@@ -1389,9 +1430,17 @@ test("returns focus to the printed-date recheck action after closing label revie
   await expect(labelReview).toHaveCount(0);
   await expect(trigger).toBeFocused();
   await expect(detail.getByRole("group", { name: "날짜 정보: 포장 소비기한" })).toContainText("2026.09.02");
+  await expect.poll(async () => {
+    const [screenBox, actionBox] = await Promise.all([
+      page.getByTestId("device-screen").boundingBox(),
+      trigger.boundingBox(),
+    ]);
+    return Boolean(screenBox && actionBox
+      && actionBox.y >= screenBox.y - 1
+      && actionBox.y + actionBox.height <= screenBox.y + screenBox.height + 1);
+  }, { timeout: 2_500 }).toBe(true);
   const [screenBox, actionBox] = await Promise.all([
-    page.getByTestId("device-screen").boundingBox(),
-    trigger.boundingBox(),
+    page.getByTestId("device-screen").boundingBox(), trigger.boundingBox(),
   ]);
   expect(screenBox).toBeTruthy();
   expect(actionBox).toBeTruthy();
@@ -1437,12 +1486,14 @@ test("echoes the existing printed date before starting a label recheck", async (
   await expect(dateReviewProgress).toBeVisible();
   await expect(dateReviewProgress).toContainText("날짜가 보이는 면을 선택해요");
   await expect(labelReview.locator(".sheet-description")).toContainText("저장 전까지 기록은 그대로예요");
-  await expect(labelReview.locator(".intake-method-hint")).toContainText("포장지 날짜를 다시 읽어 확인해요.");
+  await expect(dateReviewProgress.locator(".intake-flow-rail-heading strong")).toHaveText("날짜가 보이는 면을 선택해요");
   await expect(labelReview.locator(".sheet-description")).toHaveCSS("font-size", "12px");
   await expect(labelReview.locator(".capture-date-meaning-note strong")).toHaveCSS("font-size", "12px");
-  await expect(labelReview.locator(".intake-method-hint")).toHaveCSS("font-size", "12px");
+  await expect(dateReviewProgress.locator(".intake-flow-rail-heading small")).toHaveCSS("font-size", "12px");
   await expect(labelReview.locator(".intake-flow-rail-heading strong")).toHaveCSS("font-size", "12px");
-  await expect(labelReview.locator(".input-flow > p").first()).toHaveCSS("font-size", "12px");
+  const labelImageGuidance = labelReview.locator(".input-flow > p").first();
+  await expect(labelImageGuidance).toHaveText("사진에서 포장지 날짜를 읽어드려요. 사진은 식품 기록에 저장하지 않아요.");
+  await expect(labelImageGuidance).toHaveCSS("font-size", "12px");
   await expect(labelReview.locator(".capture-date-meaning-note small")).toHaveCSS("font-size", "12px");
   const cameraAction = labelReview.getByRole("button", { name: "카메라로 촬영" });
   await expect(cameraAction).toBeInViewport();
@@ -2885,13 +2936,40 @@ test("places detail primary actions directly after safety guidance", async ({ pa
   await expect(dialog.locator(".detail-actions")).toBeVisible();
   await expect(dialog.locator(".detail-actions .secondary-sheet-button")).toContainText("먹은 기록 남기기");
   await expect(dialog.locator(".detail-actions .secondary-sheet-button")).toHaveAttribute("aria-label", "날짜와 보관 방법을 살펴본 뒤 먹은 기록 남기기");
+  const dateWarningCopy = dialog.locator(".date-review-callout-compact > span:nth-child(2) > small");
+  await expect(dateWarningCopy).toHaveText("표시 날짜가 오늘이거나 지났어요. 보관·개봉 상태도 확인해 주세요.");
+  const dateWarningCopyLayout = await dateWarningCopy.evaluate((element) => ({
+    height: element.getBoundingClientRect().height,
+    lineHeight: Number.parseFloat(getComputedStyle(element).lineHeight),
+  }));
+  expect(dateWarningCopyLayout.height).toBeLessThanOrEqual(dateWarningCopyLayout.lineHeight * 2 + 1);
+  const productInfoHint = dialog.locator(".product-info-edit-button small");
+  await expect(productInfoHint).toHaveText("상품명이 다르면 고칠 수 있어요.");
+  await expect(productInfoHint).toHaveCSS("font-size", "12px");
+  const productInfoHintLayout = await productInfoHint.evaluate((element) => ({
+    height: element.getBoundingClientRect().height,
+    lineHeight: Number.parseFloat(getComputedStyle(element).lineHeight),
+  }));
+  expect(productInfoHintLayout.height).toBeLessThanOrEqual(productInfoHintLayout.lineHeight + 1);
+  await expect(dialog.locator(".detail-save-hint")).toContainText("보관 위치·개봉 상태를 바꾸면 저장할 수 있어요.");
   const reviewActionLayout = await dialog.locator(".detail-actions .secondary-sheet-button").evaluate((element) => {
     const rect = element.getBoundingClientRect();
     const style = getComputedStyle(element);
     return { height: rect.height, lineHeight: Number.parseFloat(style.lineHeight) };
   });
   expect(reviewActionLayout.height).toBeLessThanOrEqual(Math.ceil(reviewActionLayout.lineHeight * 2 + 18));
-  const safetyHintFontSize = await dialog.locator(".detail-actions-review-copy small").evaluate((element) => getComputedStyle(element).fontSize);
+  const safetyHintLines = dialog.locator(".detail-actions-review-copy small");
+  await expect(safetyHintLines).toHaveText([
+    "이미 먹은 경우에만 기록해 주세요.",
+    "먹어도 되는지는 앱에서 판단할 수 없어요.",
+  ]);
+  const safetyHintLineHeights = await safetyHintLines.evaluateAll((elements) => elements.map((element) => {
+    const style = getComputedStyle(element);
+    return { height: element.getBoundingClientRect().height, lineHeight: Number.parseFloat(style.lineHeight) };
+  }));
+  expect(safetyHintLineHeights).toHaveLength(2);
+  for (const line of safetyHintLineHeights) expect(line.height).toBeLessThanOrEqual(line.lineHeight + 1);
+  const safetyHintFontSize = await safetyHintLines.first().evaluate((element) => getComputedStyle(element).fontSize);
   expect(safetyHintFontSize).toBe("12px");
   const followsSafetyGuidance = await dialog.locator(".date-review-callout").evaluate((node) => {
     const actions = node.parentElement?.querySelector(".detail-actions");
@@ -2909,11 +2987,11 @@ test("keeps date guidance in context when opening a review-required priority car
   const dateReviewHeading = dialog.locator(".date-review-callout > span:nth-child(2) > strong");
   const dateReviewCopy = dialog.locator(".date-review-callout > span:nth-child(2) > small");
 
-  await expect(dateReviewHeading).toHaveText("조리 전에 포장지 날짜를 살펴봐 주세요");
-  await expect(dateReviewCopy).toHaveText("표시 날짜가 오늘이거나 지났어요. 현재 보관·개봉 상태도 함께 확인해 주세요.");
+  await expect(dateReviewHeading).toHaveText("조리 전 확인이 필요해요");
+  await expect(dateReviewCopy).toHaveText("표시 날짜가 오늘이거나 지났어요. 보관·개봉 상태도 확인해 주세요.");
   await expect(dateReviewHeading).toHaveCSS("font-size", "12px");
   await expect(dateReviewCopy).toHaveCSS("font-size", "12px");
-  await expect(dialog.locator(".date-edit-button-compact > span")).toHaveCSS("font-size", "11px");
+  await expect(dialog.locator(".date-edit-button-compact > span")).toHaveCSS("font-size", "12px");
   const dateReviewLayout = await dialog.locator(".date-review-callout").evaluate((element) => {
     const copy = element.querySelector<HTMLElement>(":scope > span:nth-child(2) > small");
     const action = element.querySelector<HTMLElement>(".date-edit-button-compact");
@@ -2928,6 +3006,113 @@ test("keeps date guidance in context when opening a review-required priority car
   expect(dateReviewLayout!.actionHeight).toBeGreaterThanOrEqual(44);
   await expect(dateReviewAction).toHaveText("날짜 다시 확인");
   await expect(dialog.getByRole("button", { name: "닫기", exact: true })).toBeFocused();
+});
+
+test("date warning and recheck action keep readable contrast in both themes", async ({ page }) => {
+  await page.setViewportSize({ width: 393, height: 852 });
+
+  for (const theme of ["light", "dark"] as const) {
+    await page.goto("/");
+    await page.evaluate((nextTheme) => window.localStorage.setItem("rescue-meal.theme", nextTheme), theme);
+    await page.reload();
+    await expect(page.locator("html")).toHaveAttribute("data-rescue-theme", theme);
+    await page.getByRole("button", { name: /시금치 개봉됨/ }).click();
+
+    const dialog = page.getByRole("dialog", { name: "시금치" });
+    const callout = dialog.locator(".date-review-callout-compact");
+    await expect(callout).toBeVisible();
+    const contrast = await callout.evaluate((element) => {
+      const context = document.createElement("canvas").getContext("2d");
+      if (!context) throw new Error("Canvas context is unavailable");
+      context.canvas.width = 1;
+      context.canvas.height = 1;
+      const paint = (color: string) => {
+        context.fillStyle = color;
+        context.fillRect(0, 0, 1, 1);
+      };
+      const samplePixel = () => Array.from(context.getImageData(0, 0, 1, 1).data).slice(0, 3);
+      const luminance = (channels: number[]) => {
+        const normalized = channels.map((channel) => channel / 255);
+        const linear = normalized.map((channel) => channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4);
+        return 0.2126 * linear[0]! + 0.7152 * linear[1]! + 0.0722 * linear[2]!;
+      };
+      const measure = (target: Element | null) => {
+        if (!(target instanceof HTMLElement)) throw new Error("Date review text is unavailable");
+        const ancestors: HTMLElement[] = [];
+        for (let current: HTMLElement | null = target; current; current = current.parentElement) ancestors.push(current);
+        context.clearRect(0, 0, 1, 1);
+        for (const ancestor of ancestors.reverse()) paint(getComputedStyle(ancestor).backgroundColor);
+        const background = samplePixel();
+        context.clearRect(0, 0, 1, 1);
+        paint(getComputedStyle(target).color);
+        const foreground = samplePixel();
+        const foregroundLuminance = luminance(foreground);
+        const backgroundLuminance = luminance(background);
+        return {
+          foreground: getComputedStyle(target).color,
+          foregroundPixel: foreground,
+          background,
+          ratio: (Math.max(foregroundLuminance, backgroundLuminance) + 0.05)
+            / (Math.min(foregroundLuminance, backgroundLuminance) + 0.05),
+        };
+      };
+      return {
+        heading: measure(element.querySelector(":scope > span:nth-child(2) > strong")),
+        copy: measure(element.querySelector(":scope > span:nth-child(2) > small")),
+        action: measure(element.querySelector(".date-edit-button-compact > span")),
+      };
+    });
+
+    expect(contrast.heading.ratio, theme + " warning heading " + JSON.stringify(contrast.heading)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast.copy.ratio, theme + " warning copy " + JSON.stringify(contrast.copy)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast.action.ratio, theme + " recheck action " + JSON.stringify(contrast.action)).toBeGreaterThanOrEqual(4.5);
+    await dialog.getByRole("button", { name: "닫기", exact: true }).click();
+  }
+});
+
+test("date recheck active tab uses the selected theme ink and a full touch target", async ({ page }) => {
+  await page.setViewportSize({ width: 393, height: 852 });
+
+  for (const theme of ["light", "dark"] as const) {
+    await page.goto("/");
+    await page.evaluate((nextTheme) => window.localStorage.setItem("rescue-meal.theme", nextTheme), theme);
+    await page.reload();
+    await expect(page.locator("html")).toHaveAttribute("data-rescue-theme", theme);
+    await page.getByRole("button", { name: /시금치 개봉됨/ }).click();
+
+    const detail = page.getByRole("dialog", { name: "시금치" });
+    await detail.getByRole("button", { name: "포장지에서 날짜 다시 확인" }).click();
+    const dateReview = page.getByRole("dialog", { name: "날짜 다시 살펴보기" });
+    await expect(dateReview).toBeVisible();
+    await waitForSheetSettled(page);
+    const activeLabelTab = dateReview.getByRole("tab", { name: "라벨" });
+
+    await expect(activeLabelTab).toHaveAttribute("aria-selected", "true");
+    await expect(activeLabelTab).toHaveCSS("color", theme === "light" ? "rgb(36, 49, 40)" : "rgb(241, 236, 223)");
+    await expect(activeLabelTab).toHaveCSS("min-height", "44px");
+    await expect(activeLabelTab).toHaveAccessibleName("라벨, 추천");
+    await expect(activeLabelTab.locator("span[aria-hidden='true']")).toHaveText("추천");
+    await expect(activeLabelTab.locator("span[aria-hidden='true']")).toHaveCSS("font-size", "10px");
+    await expect(dateReview.getByRole("heading", { name: "포장지 날짜를 읽어볼게요" })).toBeVisible();
+    const imageGuidance = dateReview.locator(".input-flow > p").first();
+    await expect(imageGuidance).toHaveText("사진에서 포장지 날짜를 읽어드려요. 사진은 식품 기록에 저장하지 않아요.");
+    await expect(imageGuidance).toHaveCSS("font-size", "12px");
+    const imageGuidanceColors = await imageGuidance.evaluate((element) => ({
+      foreground: getComputedStyle(element).color,
+      background: getComputedStyle(element.closest<HTMLElement>(".bottom-sheet")!).backgroundColor,
+    }));
+    expect(contrastRatio(imageGuidanceColors.foreground, imageGuidanceColors.background)).toBeGreaterThanOrEqual(4.5);
+    await expect(dateReview.locator(".intake-flow-rail")).toHaveAttribute("aria-label", "날짜 확인 1단계");
+    await expect(dateReview.locator(".intake-flow-rail-heading em")).toHaveCount(0);
+    await expect(dateReview.locator('.intake-flow-rail li[aria-current="step"]')).toContainText("1입력");
+
+    if (theme === "dark") {
+      await page.screenshot({ path: "../../evidence/mobile-date-recheck-stepper-dark-2026-09-30.png", scale: "css" });
+    }
+
+    await dateReview.getByRole("button", { name: "닫기", exact: true }).click();
+    await detail.getByRole("button", { name: "닫기", exact: true }).click();
+  }
 });
 
 test("routes a use-next priority card to the consume action", async ({ page }) => {
@@ -2996,4 +3181,34 @@ test("keeps food detail primary actions above the safe area at 320px", async ({ 
   expect(screenBox, "native screen has no bounding box").toBeTruthy();
   expect(actionBox, "food detail primary actions have no bounding box").toBeTruthy();
   expect(actionBox!.y + actionBox!.height).toBeLessThanOrEqual(screenBox!.y + screenBox!.height - 34);
+});
+
+test("phone-shell width keeps the date recheck action below its copy in a wide simulator window", async ({ page }) => {
+  await page.setViewportSize({ width: 639, height: 858 });
+  await page.goto("/");
+
+  const viewportMetrics = await page.evaluate(() => ({
+    viewportWidth: window.innerWidth,
+    phoneWidth: document.querySelector<HTMLElement>(".app-screen")?.getBoundingClientRect().width ?? 0,
+  }));
+  expect(viewportMetrics.viewportWidth).toBe(639);
+  expect(viewportMetrics.phoneWidth).toBeLessThanOrEqual(420);
+
+  await page.getByRole("button", { name: /시금치 개봉됨/ }).click();
+  const dialog = page.getByRole("dialog", { name: "시금치" });
+  const callout = dialog.locator(".date-review-callout-compact");
+  await expect(callout).toBeVisible();
+
+  const layout = await callout.evaluate((element) => {
+    const copy = element.querySelector<HTMLElement>(":scope > span:nth-child(2) > small");
+    const action = element.querySelector<HTMLElement>(":scope > .date-edit-button-compact");
+    if (!copy || !action) return null;
+    const copyBox = copy.getBoundingClientRect();
+    const actionBox = action.getBoundingClientRect();
+    return { copyBottom: copyBox.bottom, actionTop: actionBox.top, actionWidth: actionBox.width, actionHeight: actionBox.height };
+  });
+  expect(layout).toBeTruthy();
+  expect(layout!.actionTop).toBeGreaterThanOrEqual(layout!.copyBottom);
+  expect(layout!.actionWidth).toBeGreaterThan(180);
+  expect(layout!.actionHeight).toBeGreaterThanOrEqual(44);
 });

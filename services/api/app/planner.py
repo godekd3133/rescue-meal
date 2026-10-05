@@ -314,8 +314,7 @@ def plan_recipe(
     avoided = set(avoid_allergens or ())
     if avoided:
         recipes = tuple(recipe for recipe in recipes if recipe.allergens is not None and not avoided.intersection(recipe.allergens))
-    time_limited = tuple(recipe for recipe in recipes if recipe.minutes <= max_minutes)
-    candidates = time_limited or recipes
+    candidates = tuple(recipe for recipe in recipes if recipe.minutes <= max_minutes)
     if preferred_recipe_id is not None:
         candidates = tuple(recipe for recipe in candidates if recipe.id == preferred_recipe_id)
         if not candidates:
@@ -326,6 +325,7 @@ def plan_recipe(
         matches: dict[str, IngredientMatch] = {}
         matched_foods: list[FoodLike] = []
         missing: list[RecipeIngredient] = []
+        priority_bonus = 0
         for ingredient in recipe.ingredients:
             required_amount = round(ingredient.amount * servings, 3)
             matched_candidates, match_type = _find_ingredient_match(ingredient, available_by_name)
@@ -366,6 +366,13 @@ def plan_recipe(
             )
             if enough:
                 allocated_ids = {allocation.food_id for allocation in allocations}
+                # A split stock lot still supplies one recipe ingredient. Use its
+                # earliest-use lot once so splitting stock cannot inflate rank.
+                priority_bonus += max(
+                    max(0, 12 - food.priority)
+                    for food, _, _ in compatible
+                    if food.id in allocated_ids
+                )
                 matched_ids = {food.id for food in matched_foods}
                 for food, _, _ in compatible:
                     if food.id in allocated_ids and food.id not in matched_ids:
@@ -375,8 +382,7 @@ def plan_recipe(
                 missing.append(ingredient)
         if not matched_foods:
             continue
-        ratio = len(matched_foods) / len(recipe.ingredients)
-        priority_bonus = sum(max(0, 12 - food.priority) for food in matched_foods)
+        ratio = (len(recipe.ingredients) - len(missing)) / len(recipe.ingredients)
         score = round(ratio * 100 + priority_bonus - len(missing) * 8 - recipe.minutes * 0.6, 2)
         scored.append((score, ratio, recipe.minutes, recipe.id, recipe, matched_foods, missing))
         candidate_matches[recipe.id] = matches

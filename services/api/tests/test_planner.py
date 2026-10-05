@@ -99,6 +99,65 @@ def test_planner_uses_time_limit_and_returns_no_match_without_foods() -> None:
     assert planned.minutes == 10
 
 
+def test_planner_does_not_relax_time_limit_when_all_recipes_take_longer() -> None:
+    recipe = load_recipe_specs()[0]
+    foods = _seed_foods()[:3]
+
+    assert recipe.minutes == 15
+    assert plan_recipe(foods, 10, specs=(recipe,)) is None
+    assert plan_recipe(foods, 10, specs=(recipe,), preferred_recipe_id=recipe.id) is None
+    planned = plan_recipe(foods, 15, specs=(recipe,))
+    assert planned is not None
+    assert planned.recipe_id == recipe.id
+
+
+def test_planner_score_and_coverage_do_not_increase_when_stock_is_split_into_lots() -> None:
+    food = _seed_foods()[0].model_copy(update={"quantity": 100, "unit": "g", "priority": 1})
+    recipe = RecipeSpec(
+        id="spinach-100g",
+        title="시금치 나물",
+        minutes=10,
+        ingredients=(RecipeIngredient(canonical_name="시금치", amount=100, unit="g"),),
+        steps=("조리합니다.",),
+        safety_note="상태를 확인하세요.",
+    )
+    whole = plan_recipe([food], 10, specs=(recipe,))
+    split = plan_recipe([
+        food.model_copy(update={"id": "spinach-a", "quantity": 50}),
+        food.model_copy(update={"id": "spinach-b", "quantity": 50, "priority": 2}),
+    ], 10, specs=(recipe,))
+
+    assert whole is not None and split is not None
+    assert split.matched_ratio == whole.matched_ratio == 1
+    assert split.score == whole.score
+    assert split.inventory_ids == ("spinach-a", "spinach-b")
+    assert sum(allocation.quantity for allocation in split.ingredients[0].allocations) == 100
+
+
+def test_planner_counts_split_lots_as_one_ingredient_when_other_ingredients_are_missing() -> None:
+    food = _seed_foods()[0].model_copy(update={"quantity": 50, "unit": "g", "priority": 1})
+    recipe = RecipeSpec(
+        id="spinach-and-onion",
+        title="시금치 양파 볶음",
+        minutes=10,
+        ingredients=(
+            RecipeIngredient(canonical_name="시금치", amount=100, unit="g"),
+            RecipeIngredient(canonical_name="양파", amount=1, unit="개"),
+        ),
+        steps=("조리합니다.",),
+        safety_note="상태를 확인하세요.",
+    )
+    planned = plan_recipe([
+        food.model_copy(update={"id": "spinach-a"}),
+        food.model_copy(update={"id": "spinach-b"}),
+    ], 10, specs=(recipe,))
+
+    assert planned is not None
+    assert planned.matched_ratio == 0.5
+    assert planned.missing_ingredients == ("양파",)
+    assert planned.score == 47
+
+
 def test_planner_accepts_curated_product_aliases_without_losing_provenance() -> None:
     seed = _seed_foods()
     foods = [seed[0].model_copy(update={"canonical_name": "국내산 시금치"}), seed[1], seed[2]]

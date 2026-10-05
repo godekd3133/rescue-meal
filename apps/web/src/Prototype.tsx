@@ -40,6 +40,7 @@ import { runAuthoritativeMutation } from "./mutationReadback";
 import { runStorageMutationRecovery } from "./storageMutationRecovery";
 import { getDateBadge, getInventoryDateOriginLabel } from "./datePresentation";
 import { getHomeReviewTopicLabel } from "./homeReviewSummary";
+import { isValidEventQuantity, parseDisplayQuantity } from "./quantitySelection";
 
 export type StorageType = "냉장" | "냉동" | "실온";
 type InventoryStorageFilter = StorageType | "전체" | `location:${string}`;
@@ -838,8 +839,7 @@ function priorityActionLabel(food: FoodItem, reviewReason: string | null) {
 }
 
 function quantityParts(quantity: string) {
-  const match = quantity.match(/^(\d+(?:\.\d+)?)(.*)$/);
-  return { amount: match ? Number.parseFloat(match[1]) : 1, unit: match?.[2] || "개" };
+  return parseDisplayQuantity(quantity) ?? { amount: 0, unit: "개" };
 }
 
 function imageForFoodName(name: string) {
@@ -960,6 +960,20 @@ function PrototypeContent() {
   keyboardHideRef.current = keyboard.hide;
   const viewportMetrics = useViewportMetrics();
   const viewportHeight = viewportMetrics.height;
+  const [isCompactWebViewport, setIsCompactWebViewport] = useState(() =>
+    !IS_WEB_SURFACE || typeof window === "undefined" || window.matchMedia("(max-width: 600px)").matches,
+  );
+
+  useEffect(() => {
+    if (!IS_WEB_SURFACE) return;
+    const compactViewport = window.matchMedia("(max-width: 600px)");
+    const syncCompactViewport = () => setIsCompactWebViewport(compactViewport.matches);
+    syncCompactViewport();
+    compactViewport.addEventListener("change", syncCompactViewport);
+    return () => compactViewport.removeEventListener("change", syncCompactViewport);
+  }, []);
+
+  const homeTrustBeforeActions = !IS_WEB_SURFACE || isCompactWebViewport;
   const [themeMode, setThemeMode] = useState<ThemeMode>(getInitialTheme);
 
   useEffect(() => {
@@ -2604,6 +2618,10 @@ function PrototypeContent() {
       else rememberCurrentShoppingListRevision();
       if (nextNotice) setShoppingListNotice(nextNotice);
       setShoppingListStatus("ready");
+      // The shopping screen also shows quantities already in the pantry.
+      // Refresh both read models together, without recursively refreshing
+      // dependent sheets or replacing an in-progress purchase form.
+      if (sheetRef.current === "shopping") await syncDashboard(false, false);
       return true;
     } catch (reason) {
       if (isMealApiAuthError(reason)) {
@@ -4071,6 +4089,11 @@ function PrototypeContent() {
     });
   };
 
+  const openStorageInventory = (storage: StorageType) => {
+    openInventory("", true);
+    setStorageFilter(storage);
+  };
+
   const navigateFromBottom = (destination: "home" | "food") => {
     keyboard.hide();
     restoreContentNavigation(destination);
@@ -4343,6 +4366,10 @@ function PrototypeContent() {
 
   const saveFood = (foodId: string, storage: StorageType, opened: boolean, eventQuantity: number, storageLocationId: string | null = null) => {
     const previousFood = findFoodById(foodId);
+    if (!previousFood || !isValidEventQuantity(eventQuantity, quantityParts(previousFood.quantity).amount)) {
+      setToast("현재 보관 수량 안에서 기록할 양을 입력해 주세요.");
+      return;
+    }
     const storageMutationKey = createId("storage-event");
     const previousQuantity = previousFood ? quantityParts(previousFood.quantity) : { amount: eventQuantity, unit: "개" };
     const isPartial = Boolean(previousFood && eventQuantity < previousQuantity.amount);
@@ -4489,20 +4516,24 @@ function PrototypeContent() {
 
   const consumeFood = (foodId: string, eventQuantity?: number) => {
     const food = findFoodById(foodId);
+    if (!food || !isValidEventQuantity(eventQuantity ?? quantityParts(food.quantity).amount, quantityParts(food.quantity).amount)) {
+      setToast("현재 보관 수량 안에서 먹은 양을 입력해 주세요.");
+      return;
+    }
     const consumeMutationKey = createId("consume-event");
     const quantity = food ? quantityParts(food.quantity) : { amount: eventQuantity ?? 1, unit: "개" };
-    const isPartial = Boolean(eventQuantity && eventQuantity < quantity.amount);
+    const isPartial = eventQuantity !== undefined && eventQuantity < quantity.amount;
     const consumeSuccessMessage = food ? `${withKoreanObjectParticle(food.name)} 먹은 기록으로 남겼어요` : "먹은 기록을 저장했어요";
     const consumeScopeMessage = `기록 범위: ${isPartial ? `${eventQuantity}${quantity.unit}` : `전체 ${quantity.amount}${quantity.unit}`}`;
     const withConsumeScope = (includeScope: boolean) => includeScope ? `${consumeSuccessMessage} · ${consumeScopeMessage}` : consumeSuccessMessage;
     const previousFoods = foods;
     const optimisticFoods = (isPartial
-      ? previousFoods.map((item) => item.id === foodId ? { ...item, quantity: `${quantity.amount - (eventQuantity ?? 0)}${quantity.unit}` } : item)
+      ? previousFoods.map((item) => item.id === foodId ? { ...item, quantity: `${Number((quantity.amount - (eventQuantity ?? 0)).toFixed(3))}${quantity.unit}` } : item)
       : previousFoods.filter((item) => item.id !== foodId)
     ).map((item, index) => ({ ...item, priority: index + 1 }));
     const applyOptimistic = () => {
       if (isPartial) {
-        setFoods((current) => current.map((item) => item.id === foodId ? { ...item, quantity: `${quantity.amount - (eventQuantity ?? 0)}${quantity.unit}` } : item));
+        setFoods((current) => current.map((item) => item.id === foodId ? { ...item, quantity: `${Number((quantity.amount - (eventQuantity ?? 0)).toFixed(3))}${quantity.unit}` } : item));
       } else {
         setFoods((current) => current.filter((item) => item.id !== foodId));
       }
@@ -4555,9 +4586,13 @@ function PrototypeContent() {
 
   const discardFood = (foodId: string, eventQuantity?: number) => {
     const food = findFoodById(foodId);
+    if (!food || !isValidEventQuantity(eventQuantity ?? quantityParts(food.quantity).amount, quantityParts(food.quantity).amount)) {
+      setToast("현재 보관 수량 안에서 폐기할 양을 입력해 주세요.");
+      return;
+    }
     const discardMutationKey = createId("discard-event");
     const quantity = food ? quantityParts(food.quantity) : { amount: eventQuantity ?? 1, unit: "개" };
-    const isPartial = Boolean(eventQuantity && eventQuantity < quantity.amount);
+    const isPartial = eventQuantity !== undefined && eventQuantity < quantity.amount;
     const discardSuccessMessage = food
       ? isPartial ? `${food.name} ${eventQuantity}${quantity.unit}을 폐기 기록으로 남겼어요` : `${food.name} 폐기 기록을 남겼어요`
       : "폐기 기록을 저장했어요";
@@ -4566,7 +4601,7 @@ function PrototypeContent() {
     const previousFoods = foods;
     const applyOptimistic = () => {
       if (isPartial) {
-        setFoods((current) => current.map((item) => item.id === foodId ? { ...item, quantity: `${quantity.amount - (eventQuantity ?? 0)}${quantity.unit}` } : item));
+        setFoods((current) => current.map((item) => item.id === foodId ? { ...item, quantity: `${Number((quantity.amount - (eventQuantity ?? 0)).toFixed(3))}${quantity.unit}` } : item));
       } else {
         setFoods((current) => current.filter((item) => item.id !== foodId));
       }
@@ -5134,6 +5169,21 @@ function PrototypeContent() {
     <span><strong><span className="add-food-label-prefix">식품 </span>추가</strong><small>영수증·바코드·라벨·직접 입력</small></span>
     <ArrowRightIcon width={18} height={18} />
   </button> : null;
+  const homeTrustCard = (
+    <button
+      className="trust-card"
+      data-trust-state={inventoryNeedsReviewCount ? "needs-review" : "neutral"}
+      aria-label={`${homeTrustTitle}. ${homeTrustDescription} ${inventoryNeedsReviewCount ? "확인할 식품 목록 보기" : "날짜 안내 보기"}`}
+      style={!IS_WEB_SURFACE ? { marginTop: 9 } : undefined}
+      type="button"
+      onClick={() => inventoryNeedsReviewCount ? openNeedsReviewInventory() : openGuidanceSheet()}
+    >
+      <span className="trust-icon"><InfoCircledIcon width={18} height={18} /></span>
+      <span className="trust-card-copy"><strong style={inventoryNeedsReviewCount ? { color: "var(--atelier-coral)" } : undefined}>{homeTrustTitle}</strong><small>{homeTrustDescription}</small></span>
+      <span className="trust-card-action" aria-hidden="true">{inventoryNeedsReviewCount ? "목록 보기" : "안내 보기"}</span>
+      <ChevronRightIcon width={16} height={16} />
+    </button>
+  );
 
   return (
     <MotionConfig reducedMotion="user">
@@ -5201,25 +5251,38 @@ function PrototypeContent() {
             <section className="greeting-block" aria-labelledby="greeting-title">
               <div>
                 <p className="eyebrow">{todayEyebrow}</p>
-                <h1 id="greeting-title">냉장고에<br /><em>뭐가 남았지?</em></h1>
-                <p className="hero-description">있는 재료로 오늘 한 끼를 준비해요.</p>
+                <h1 id="greeting-title">{!inventoryDataUnknown && !foods.length ? <>오늘 먹을 재료,<br /><em>하나부터 기록해요.</em></> : <>오늘은,<br /><em>있는 재료로 한 끼.</em></>}</h1>
+                <p className="hero-description">{inventoryDataUnknown ? inventoryDataStatusDescription : foods.length ? "뭘 먹을지 고르고, 부족한 재료만 장보세요." : "냉장고를 전부 정리할 필요 없어요. 손에 있는 식품부터 시작하세요."}</p>
               </div>
             </section>
 
-            <section className="mini-summary" aria-label="냉장고 요약">
-              <div className="summary-item">
-                <ArchiveIcon width={17} height={17} />
-                <span><strong>{inventoryDataUnknown ? "—" : `${foods.length}개`}</strong> {inventoryDataUnknown ? "식품 목록을 볼 수 없어요" : "보관 중"}</span>
-              </div>
-              <div className="summary-divider" />
-              <div className="summary-item">
-                <LightningBoltIcon width={17} height={17} />
-                <span><strong>{inventoryDataUnknown ? "—" : `${priorityFoods.length}개`}</strong> {inventoryDataUnknown ? "식품 목록을 볼 수 없어요" : "먼저 살펴볼 식품"}</span>
-              </div>
-            </section>
+            {!inventoryDataUnknown && foods.length > 0 ? <nav className="pantry-shortcuts" aria-label="보관 중인 식품 바로 찾기">
+              {(["냉장", "냉동", "실온"] as const).map((storage) => {
+                const count = foods.filter((food) => food.storage === storage).length;
+                return <button key={storage} type="button" onClick={() => openStorageInventory(storage)} aria-label={`${storage} 보관 식품 ${count}개 보기`}>
+                  <span className={`storage-dot ${getStorageClass(storage)}`} aria-hidden="true" />
+                  <span>{storage}</span><strong>{count}</strong><ChevronRightIcon width={13} height={13} aria-hidden="true" />
+                </button>;
+              })}
+            </nav> : null}
+            {!mealApi.isConfigured ? <p className="home-demo-note"><InfoCircledIcon width={14} height={14} aria-hidden="true" />예시 식품으로 체험 중이에요. 변경 내용은 새로고침하면 사라져요.</p> : null}
           </div>
 
           <section className="priority-section" aria-labelledby="priority-title">
+            {homeTrustBeforeActions ? homeTrustCard : null}
+
+            <div className={`home-action-row${foods.length ? " home-action-row-with-add" : ""}`}>
+              <button className="meal-plan-button" type="button" disabled={inventoryDataUnknown && connectionState === "checking"} onClick={() => inventoryDataUnknown ? connectionState === "auth_required" ? changeSheet("account") : retryConnection() : connectionState === "auth_required" ? changeSheet("account") : connectionState === "offline" ? retryConnection() : foods.length ? openMealPlan() : openAdd("manual")}>
+                <span className="meal-plan-icon">{connectionState === "offline" ? <ReloadIcon width={17} height={17} /> : <LightningBoltIcon width={17} height={17} />}</span>
+                <span><strong>{inventoryDataUnknown ? connectionState === "auth_required" ? "다시 로그인하기" : connectionState === "checking" ? "기록을 불러오는 중" : "다시 연결하기" : connectionState === "auth_required" ? "다시 로그인하기" : connectionState === "offline" ? "식품 목록 다시 불러오기" : foods.length ? "오늘 식단 만들기" : "첫 식품 직접 추가"}</strong><small>{inventoryDataUnknown ? mealPlanStatusDescription : connectionState === "auth_required" ? "기록을 이어서 볼 수 있어요." : connectionState === "offline" ? mealPlanStatusDescription : currentMealPlanHint}</small></span>
+                <ArrowRightIcon width={18} height={18} />
+              </button>
+              {homeAddFoodAction}
+            </div>
+
+            {!inventoryDataUnknown && !foods.length ? <button className="first-food-receipt" type="button" onClick={() => openAdd("receipt")}><ReaderIcon width={16} height={16} aria-hidden="true" /><span>장을 보고 왔다면 영수증으로 한 번에 추가</span><ChevronRightIcon width={14} height={14} aria-hidden="true" /></button> : null}
+
+
             <div className="section-heading">
               <div>
                 <h2 id="priority-title" aria-label={priorityHeadingAccessibleName}>
@@ -5276,20 +5339,12 @@ function PrototypeContent() {
               </div> : <div className={`priority-empty-state${inventoryDataUnknown ? " priority-unknown-state" : ""}`}>
                 <span className="priority-empty-icon"><ArchiveIcon width={19} height={19} /></span>
                 <span className="priority-empty-copy">
-                  <strong>{inventoryDataUnknown ? priorityDataStatusLabel : foods.length ? "오늘 먼저 살펴볼 식품이 없어요" : "아직 식품을 등록하지 않았어요"}</strong>
-                  <small>{inventoryDataUnknown ? priorityDataStatusDescription : foods.length ? "포장지 날짜와 보관 방법을 살펴봐 주세요." : "영수증·바코드·라벨 중 편한 방법으로 추가해 보세요."}</small>
+                  <strong>{inventoryDataUnknown ? priorityDataStatusLabel : foods.length ? "오늘 먼저 살펴볼 식품이 없어요" : "이름 · 수량 · 보관 위치만 입력하세요"}</strong>
+                  <small>{inventoryDataUnknown ? priorityDataStatusDescription : foods.length ? "포장지 날짜와 보관 방법을 살펴봐 주세요." : "날짜는 나중에 포장지를 보고 추가해도 돼요. 기록한 재료로 만들 메뉴를 찾아드려요."}</small>
                 </span>
               </div>}
             </div>
 
-            <div className={`home-action-row${foods.length ? " home-action-row-with-add" : ""}`}>
-              <button className="meal-plan-button" type="button" disabled={inventoryDataUnknown && connectionState === "checking"} onClick={() => inventoryDataUnknown ? connectionState === "auth_required" ? changeSheet("account") : retryConnection() : connectionState === "auth_required" ? changeSheet("account") : connectionState === "offline" ? retryConnection() : foods.length ? openMealPlan() : openAdd("receipt")}>
-                <span className="meal-plan-icon">{connectionState === "offline" ? <ReloadIcon width={17} height={17} /> : <LightningBoltIcon width={17} height={17} />}</span>
-                <span><strong>{inventoryDataUnknown ? connectionState === "auth_required" ? "다시 로그인하기" : connectionState === "checking" ? "기록을 불러오는 중" : "다시 연결하기" : connectionState === "auth_required" ? "다시 로그인하기" : connectionState === "offline" ? "식품 목록 다시 불러오기" : foods.length ? "오늘 식단 만들기" : "식품 추가하기"}</strong><small>{inventoryDataUnknown ? mealPlanStatusDescription : connectionState === "auth_required" ? "기록을 이어서 볼 수 있어요." : connectionState === "offline" ? mealPlanStatusDescription : currentMealPlanHint}</small></span>
-                <ArrowRightIcon width={18} height={18} />
-              </button>
-              {homeAddFoodAction}
-            </div>
 
             {showHomeSyncSummary ? (
               <button className="shopping-summary-card" type="button" aria-label={homeSyncSummaryAccessibleName} data-sync-focus={homeSyncFocus} data-sync-state={homeSyncFocus} data-sync-attention-count={homeSyncAttentionCount} data-sync-queued-count={homeSyncQueuedCount} data-sync-processing-count={homeSyncProcessingCount} onClick={() => openNotifications(homeSyncFocus)}>
@@ -5305,18 +5360,7 @@ function PrototypeContent() {
 
           </section>
 
-          <button
-            className="trust-card"
-            data-trust-state={inventoryNeedsReviewCount ? "needs-review" : "neutral"}
-            aria-label={`${homeTrustTitle}. ${homeTrustDescription} ${inventoryNeedsReviewCount ? "확인할 식품 목록 보기" : "날짜 안내 보기"}`}
-            style={!IS_WEB_SURFACE ? { marginTop: 9 } : undefined}
-            type="button"
-            onClick={() => inventoryNeedsReviewCount ? openNeedsReviewInventory() : openGuidanceSheet()}
-          >
-            <span className="trust-icon"><InfoCircledIcon width={18} height={18} /></span>
-            <span><strong style={inventoryNeedsReviewCount ? { color: "var(--atelier-coral)" } : undefined}>{homeTrustTitle}</strong><small>{homeTrustDescription}</small></span>
-            <ChevronRightIcon width={16} height={16} />
-          </button>
+          {!homeTrustBeforeActions ? homeTrustCard : null}
 
           {showShoppingSummary ? (
             <button className={`shopping-summary-card${shoppingSummaryIsEmpty ? " shopping-summary-card-empty" : ""}`} type="button" aria-label={shoppingSummaryIsEmpty ? `장보기 목록 열기. ${shoppingSummaryTitle}` : undefined} aria-describedby={shoppingSummaryIsEmpty ? "shopping-summary-empty-help" : undefined} onClick={openShoppingList}>
@@ -5449,17 +5493,21 @@ function PrototypeContent() {
       </MobileScroll>
 
       <nav className="app-bottom-nav" aria-label="주요 메뉴">
-        <button className={`app-bottom-nav-item${activeNav === "home" ? " app-bottom-nav-item-active" : ""}`} type="button" aria-current={activeNav === "home" ? "page" : undefined} onClick={() => navigateFromBottom("home")}>
+        <button className={`app-bottom-nav-item${sheet !== "shopping" && activeNav === "home" ? " app-bottom-nav-item-active" : ""}`} type="button" aria-current={sheet !== "shopping" && activeNav === "home" ? "page" : undefined} onClick={() => navigateFromBottom("home")}>
           <HomeIcon width={19} height={19} aria-hidden="true" />
           <span>홈</span>
         </button>
-        <button className={`app-bottom-nav-item${activeNav === "food" ? " app-bottom-nav-item-active" : ""}`} type="button" aria-current={activeNav === "food" ? "page" : undefined} onClick={() => navigateFromBottom("food")}>
+        <button className={`app-bottom-nav-item${sheet !== "shopping" && activeNav === "food" ? " app-bottom-nav-item-active" : ""}`} type="button" aria-current={sheet !== "shopping" && activeNav === "food" ? "page" : undefined} onClick={() => navigateFromBottom("food")}>
           <ArchiveIcon width={19} height={19} aria-hidden="true" />
           <span>식품</span>
         </button>
-        <button className={`app-bottom-nav-item${activeNav === "meal" ? " app-bottom-nav-item-active" : ""}`} type="button" aria-current={activeNav === "meal" ? "page" : undefined} onClick={openMealPlan}>
+        <button className={`app-bottom-nav-item${sheet !== "shopping" && activeNav === "meal" ? " app-bottom-nav-item-active" : ""}`} type="button" aria-current={sheet !== "shopping" && activeNav === "meal" ? "page" : undefined} onClick={openMealPlan}>
           <CalendarIcon width={19} height={19} aria-hidden="true" />
           <span>식단</span>
+        </button>
+        <button className={`app-bottom-nav-item${sheet === "shopping" ? " app-bottom-nav-item-active" : ""}`} type="button" data-testid="shopping-nav" aria-current={sheet === "shopping" ? "page" : undefined} aria-label={`장보기${showShoppingSummary && shoppingRemainingCount > 0 ? `, 살 재료 ${shoppingRemainingCount}가지` : ""}`} onClick={openShoppingList}>
+          <span className="nav-shopping-icon"><ReaderIcon width={19} height={19} aria-hidden="true" />{showShoppingSummary && shoppingRemainingCount > 0 ? <span className="nav-shopping-count" aria-hidden="true">{shoppingRemainingCount > 9 ? "9+" : shoppingRemainingCount}</span> : null}</span>
+          <span>장보기</span>
         </button>
       </nav>
 
@@ -5581,7 +5629,7 @@ function PrototypeContent() {
         description="살 재료를 모아 구매 여부를 기록해요."
         snap={0.82}
       >
-        <Suspense fallback={<ProcessingState label="장보기 목록을 준비하고 있어요" detail="저장한 식단과 식품 목록을 살펴보고 있어요." />}><ShoppingListSheet items={shoppingList} loading={shoppingListStatus === "loading"} mutating={shoppingListMutating} error={shoppingListError} notice={shoppingListNotice} retryAction={shoppingListRetryAction} recentlyReceivedFoodName={recentlyReceivedFood?.name ?? recentlyReceivedFoodRef.current?.name} onOpenReceivedFood={openRecentlyReceivedFood} onOpenMeal={openMealPlan} initialFocus={shoppingInitialFocusRef.current} demoMode={!mealApi.isConfigured} storageLocations={storageLocations} onRefresh={() => void refreshShoppingList()} onToggle={(item) => void toggleShoppingItem(item)} onDelete={(item) => void removeShoppingItem(item)} onAddManual={addManualShoppingItem} onReceive={receiveShoppingItem} /></Suspense>
+        <Suspense fallback={<ProcessingState label="장보기 목록을 준비하고 있어요" detail="저장한 식단과 식품 목록을 살펴보고 있어요." />}><ShoppingListSheet inventoryFoods={connectionState === "connected" || !mealApi.isConfigured ? foods : []} items={shoppingList} loading={shoppingListStatus === "loading"} mutating={shoppingListMutating} error={shoppingListError} notice={shoppingListNotice} retryAction={shoppingListRetryAction} recentlyReceivedFoodName={recentlyReceivedFood?.name ?? recentlyReceivedFoodRef.current?.name} onOpenReceivedFood={openRecentlyReceivedFood} onOpenMeal={openMealPlan} initialFocus={shoppingInitialFocusRef.current} demoMode={!mealApi.isConfigured} storageLocations={storageLocations} onRefresh={() => void refreshShoppingList()} onToggle={(item) => void toggleShoppingItem(item)} onDelete={(item) => void removeShoppingItem(item)} onAddManual={addManualShoppingItem} onReceive={receiveShoppingItem} /></Suspense>
       </DeferredBottomSheet>
 
       <DeferredBottomSheet

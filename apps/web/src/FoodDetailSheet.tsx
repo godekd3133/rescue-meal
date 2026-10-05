@@ -8,6 +8,8 @@ import type { ApiStorageLocation } from "./mealApi";
 import type { DateConfirmationKind } from "./DateAssertionEditor";
 import type { FoodItem, StorageType } from "./Prototype";
 import { dateSourceLabel, getDateBadge } from "./datePresentation";
+import { halfEventQuantity, isValidEventQuantity, MIN_EVENT_QUANTITY, parseDisplayQuantity, quantityStep, reconcileQuantityDraft, stepEventQuantity, validateQuantitySelection } from "./quantitySelection";
+import "./foodQuantityControls.css";
 
 const FoodHistory = lazy(() => import("./FoodHistory"));
 const ProductProvenanceHistory = lazy(() => import("./ProductProvenanceHistory"));
@@ -95,11 +97,6 @@ function displayFoodNote(note: string) {
     return "구매일은 기록했어요. 소비기한은 포장지에서 확인해 주세요. 먼저 살펴볼 순서는 참고용이에요.";
   }
   return note;
-}
-
-function quantityParts(quantity: string) {
-  const match = quantity.trim().match(/^([0-9]+(?:\.[0-9]+)?)(.*)$/);
-  return { amount: match ? Number(match[1]) : 1, unit: match?.[2] || "개" };
 }
 
 function formatQuantityAmount(value: number) {
@@ -237,8 +234,30 @@ export default function FoodDetailSheet({
       onHistoryDisclosureChange?.(true);
     }
   }, [focusSyncOutboxId, onHistoryDisclosureChange]);
-  const availableQuantity = quantityParts(food.quantity);
-  const [eventQuantity, setEventQuantity] = useState(availableQuantity.amount);
+  const availableQuantity = parseDisplayQuantity(food.quantity) ?? { amount: 0, unit: "개" };
+  const [quantityDraft, setQuantityDraft] = useState(String(availableQuantity.amount));
+  const quantitySourceRef = useRef({ foodId: food.id, ...availableQuantity });
+  const currentQuantityDraft = quantitySourceRef.current.foodId === food.id && quantitySourceRef.current.unit === availableQuantity.unit
+    ? quantityDraft
+    : String(availableQuantity.amount);
+  const quantitySelection = validateQuantitySelection(currentQuantityDraft, availableQuantity.amount);
+  const eventQuantity = quantitySelection.quantity ?? 0;
+  const canRecordQuantity = quantitySelection.error === null;
+  const halfQuantity = halfEventQuantity(availableQuantity.amount);
+  const step = quantityStep(availableQuantity.amount, availableQuantity.unit);
+  const updateQuantityDraft = (next: string) => {
+    setQuantityDraft(next);
+    setConsumeConfirm(false);
+    setDiscardConfirm(false);
+  };
+  useEffect(() => {
+    const previous = quantitySourceRef.current;
+    const next = parseDisplayQuantity(food.quantity) ?? { amount: 0, unit: "개" };
+    setQuantityDraft((current) => previous.foodId === food.id && previous.unit === next.unit
+      ? reconcileQuantityDraft(current, previous.amount, next.amount)
+      : String(next.amount));
+    quantitySourceRef.current = { foodId: food.id, ...next };
+  }, [food.id, food.quantity]);
   const purchasedAtLabel = formatPurchasedAt(food.purchasedAt);
   const openedAtLabel = formatOpenedAt(food.openedAt);
   const hasReceiptProvenance = Boolean(food.sourceReceiptId || food.sourceReceiptLineId);
@@ -331,7 +350,6 @@ export default function FoodDetailSheet({
     setProductNameDraft(food.name);
     setProductBrandDraft(food.brand);
     setProductCategoryDraft(food.category);
-    setEventQuantity(quantityParts(food.quantity).amount);
   }, [food.brand, food.category, food.id, food.name, food.opened, food.openedAt, food.quantity, food.storage, food.storageLocationId, productInfoError, productInfoNotice, productInfoSaving]);
 
   useEffect(() => {
@@ -351,6 +369,8 @@ export default function FoodDetailSheet({
   }, [autoFocusDateReview, autoFocusPrimaryAction, autoFocusProvenanceReview, canConfirmDate, dateEditorOpen, dateReviewReason, dateStorageMismatch, food.dateAssertionKind, food.dateKind, food.dateLabel, food.id, readOnly]);
 
   const requestConsume = () => {
+    if (readOnly || !isValidEventQuantity(eventQuantity, availableQuantity.amount)) return;
+    keyboard.hide();
     if (needsSafetyReviewBeforeConsume) {
       setConsumeConfirm(true);
       return;
@@ -405,22 +425,25 @@ export default function FoodDetailSheet({
     keyboard.hide();
   }, [keyboard, readOnly]);
 
-  const detailSaveHint = availableQuantity.amount > 1
-    ? "보관 위치나 개봉 여부는 저장할 수 있어요. 수량 변경은 먹거나 버린 기록에 함께 저장돼요."
-    : "보관 위치나 개봉 여부를 바꾼 뒤 저장할 수 있어요.";
-  const detailActionReviewCopy = "이미 먹은 경우에만 기록해 주세요. 먹어도 되는지는 앱에서 판단할 수 없어요.";
-  const discardRemainingQuantity = Math.max(0, Number((availableQuantity.amount - eventQuantity).toFixed(3)));
+  const detailSaveHint = canRecordQuantity && eventQuantity < availableQuantity.amount
+    ? "수량만 바꿨다면 먹었어요·폐기 기록에 적용돼요."
+    : "보관 위치·개봉 상태를 바꾸면 저장할 수 있어요.";
+  const detailActionReviewCopy = [
+    "이미 먹은 경우에만 기록해 주세요.",
+    "먹어도 되는지는 앱에서 판단할 수 없어요.",
+  ] as const;
+  const discardRemainingQuantity = quantitySelection.remaining ?? availableQuantity.amount;
   const discardConsequenceCopy = discardRemainingQuantity > 0
     ? `폐기 후 남는 수량: ${formatQuantityAmount(discardRemainingQuantity)}${availableQuantity.unit}.`
     : "폐기 기록 후 이 식품은 목록에서 사라져요.";
   const detailActionsSection = (
     <div className="detail-actions-anchor" ref={detailActionsAnchorRef}>
       <span className="detail-actions-sentinel" aria-hidden="true" />
-      {readOnly ? <div className="detail-actions detail-actions-read-only" role="note"><InfoCircledIcon width={16} height={16} /><span><strong>기록 기능은 잠시 쉬고 있어요</strong><small>다시 연결하면 보관 상태 저장과 소비 기록을 이어갈 수 있어요.</small></span></div> : consumeConfirm ? <div ref={consumeConfirmRef} className="discard-confirm consume-confirm" role="group" aria-labelledby="consume-confirm-title" aria-describedby="consume-confirm-description" aria-live="polite"><div><strong id="consume-confirm-title">이 수량을 먹은 기록으로 남길까요?</strong><div className="consume-confirm-quantity" role="group" aria-label="이번 소비 기록"><span>{food.name}</span><strong>{formatQuantityAmount(eventQuantity)}{availableQuantity.unit}</strong></div><div id="consume-confirm-description" className="consume-confirm-description">{pendingConsumeStateCopy ? <small className="consume-confirm-unsaved-copy">{pendingConsumeStateCopy}</small> : null}<small className="consume-confirm-safety-copy">이미 먹은 경우에만 기록해 주세요. 포장지 날짜와 보관 상태를 살펴봐 주세요. 먹어도 되는지는 앱에서 판단할 수 없어요.</small></div></div><div className="discard-confirm-actions"><button className="secondary-sheet-button" type="button" onClick={() => setConsumeConfirm(false)}>{pendingConsumeStateCopy ? "돌아가서 변경 저장" : "돌아가기"}</button><button className="primary-sheet-button" type="button" onClick={() => onConsume(food.id, eventQuantity)}>먹었어요</button></div></div> : (
+      {readOnly ? <div className="detail-actions detail-actions-read-only" role="note"><InfoCircledIcon width={16} height={16} /><span><strong>기록 기능은 잠시 쉬고 있어요</strong><small>다시 연결하면 보관 상태 저장과 소비 기록을 이어갈 수 있어요.</small></span></div> : consumeConfirm ? <div ref={consumeConfirmRef} className="discard-confirm consume-confirm" role="group" aria-labelledby="consume-confirm-title" aria-describedby="consume-confirm-description" aria-live="polite"><div><strong id="consume-confirm-title">이 수량을 먹은 기록으로 남길까요?</strong><div className="consume-confirm-quantity" role="group" aria-label="이번 소비 기록"><span>{food.name}</span><strong>{formatQuantityAmount(eventQuantity)}{availableQuantity.unit}</strong></div><div id="consume-confirm-description" className="consume-confirm-description">{pendingConsumeStateCopy ? <small className="consume-confirm-unsaved-copy">{pendingConsumeStateCopy}</small> : null}<small className="consume-confirm-safety-copy">이미 먹은 경우에만 기록해 주세요. 포장지 날짜와 보관 상태를 살펴봐 주세요. 먹어도 되는지는 앱에서 판단할 수 없어요.</small></div></div><div className="discard-confirm-actions"><button className="secondary-sheet-button" type="button" onClick={() => setConsumeConfirm(false)}>{pendingConsumeStateCopy ? "돌아가서 변경 저장" : "돌아가기"}</button><button className="primary-sheet-button" type="button" disabled={!canRecordQuantity} onClick={() => { if (!readOnly && isValidEventQuantity(eventQuantity, availableQuantity.amount)) onConsume(food.id, eventQuantity); }}>먹었어요</button></div></div> : (
         <>
-          {needsSafetyReviewBeforeConsume ? <div id="consume-safety-hint" className="detail-actions-review-copy" role="note"><strong>먹은 기록 안내</strong><small>{detailActionReviewCopy}</small></div> : null}
-          <div className={`detail-actions${needsSafetyReviewBeforeConsume ? " detail-actions-review" : ""}${hasPendingSaveChanges ? "" : " detail-actions-no-save"}`} role="group" aria-label="식품 기록 행동"><button ref={detailActionPrimaryRef} className={`secondary-sheet-button detail-consume-action${needsSafetyReviewBeforeConsume ? " detail-consume-action-review" : ""}`} type="button" aria-label={needsSafetyReviewBeforeConsume ? "날짜와 보관 방법을 살펴본 뒤 먹은 기록 남기기" : undefined} aria-describedby={needsSafetyReviewBeforeConsume ? "consume-safety-hint" : undefined} onClick={requestConsume}><CheckCircledIcon width={17} height={17} /> {needsSafetyReviewBeforeConsume ? "먹은 기록 남기기" : eventQuantity < availableQuantity.amount ? `${eventQuantity}${availableQuantity.unit} 먹었어요` : "먹었어요"}</button>{hasPendingSaveChanges ? <button className="primary-sheet-button detail-save-action detail-save-pending" type="button" aria-label={`${pendingDetailChangeSummary} 저장`} onClick={() => onSave(food.id, storage, opened, eventQuantity, storageLocationId)}>변경 저장 <ArrowRightIcon width={17} height={17} /></button> : null}</div>
-          <p className="detail-save-hint" role="note" style={{ display: "flex", gap: 6, alignItems: "flex-start", margin: "6px 2px 0", padding: 0, border: 0, background: "transparent", color: hasPendingSaveChanges ? "var(--atelier-amber)" : "var(--atelier-muted)", fontSize: 12, lineHeight: 1.45 }}><InfoCircledIcon width={14} height={14} />{hasPendingSaveChanges ? "저장하지 않고 닫으면 보관 상태가 바뀌지 않아요." : detailSaveHint}</p>
+          {needsSafetyReviewBeforeConsume ? <div id="consume-safety-hint" className="detail-actions-review-copy" role="note"><strong>먹은 기록 안내</strong>{detailActionReviewCopy.map((message) => <small key={message}>{message}</small>)}</div> : null}
+          <div className={`detail-actions${needsSafetyReviewBeforeConsume ? " detail-actions-review" : ""}${hasPendingSaveChanges ? "" : " detail-actions-no-save"}`} role="group" aria-label="식품 기록 행동"><button ref={detailActionPrimaryRef} className={`secondary-sheet-button detail-consume-action${needsSafetyReviewBeforeConsume ? " detail-consume-action-review" : ""}`} type="button" aria-label={needsSafetyReviewBeforeConsume ? "날짜와 보관 방법을 살펴본 뒤 먹은 기록 남기기" : undefined} aria-describedby={needsSafetyReviewBeforeConsume ? "consume-safety-hint" : undefined} disabled={!canRecordQuantity} onClick={requestConsume}><CheckCircledIcon width={17} height={17} /> {needsSafetyReviewBeforeConsume ? "먹은 기록 남기기" : canRecordQuantity && eventQuantity < availableQuantity.amount ? `${formatQuantityAmount(eventQuantity)}${availableQuantity.unit} 먹었어요` : "먹었어요"}</button>{hasPendingSaveChanges ? <button className="primary-sheet-button detail-save-action detail-save-pending" type="button" aria-label={`${pendingDetailChangeSummary} 저장`} disabled={!canRecordQuantity} onClick={() => { if (!readOnly && isValidEventQuantity(eventQuantity, availableQuantity.amount)) { keyboard.hide(); onSave(food.id, storage, opened, eventQuantity, storageLocationId); } }}>변경 저장 <ArrowRightIcon width={17} height={17} /></button> : null}</div>
+          <p className="detail-save-hint" role="note" style={{ display: "flex", gap: 6, alignItems: "flex-start", margin: "6px 2px 0", padding: 0, border: 0, background: "transparent", color: hasPendingSaveChanges ? "var(--atelier-amber)" : "var(--atelier-muted)", fontSize: 12, lineHeight: 1.45, wordBreak: "keep-all" }}><InfoCircledIcon width={14} height={14} />{hasPendingSaveChanges ? "저장하지 않고 닫으면 보관 상태가 바뀌지 않아요." : detailSaveHint}</p>
         </>
       )}
     </div>
@@ -438,10 +461,10 @@ export default function FoodDetailSheet({
       </div>
       <div className="discard-confirm-actions">
         <button className="secondary-sheet-button" type="button" onClick={closeDiscardConfirmation}>취소</button>
-        <button className="danger-sheet-button" type="button" onClick={() => onDiscard(food.id, eventQuantity)}>폐기 기록</button>
+        <button className="danger-sheet-button" type="button" disabled={!canRecordQuantity} onClick={() => { if (!readOnly && isValidEventQuantity(eventQuantity, availableQuantity.amount)) onDiscard(food.id, eventQuantity); }}>폐기 기록</button>
       </div>
     </div>
-  ) : readOnly ? <div className="detail-read-only-inline-note detail-read-only-danger" role="note"><InfoCircledIcon width={15} height={15} /><span><strong>폐기 기록은 연결 후 가능해요</strong><small>현재 화면은 마지막으로 확인한 재고를 보여주고 있어요.</small></span></div> : <button ref={discardActionRef} className="danger-text-button" type="button" onClick={() => setDiscardConfirm(true)}><InfoCircledIcon width={14} height={14} /> 상태가 이상해 폐기하기</button>;
+  ) : readOnly ? <div className="detail-read-only-inline-note detail-read-only-danger" role="note"><InfoCircledIcon width={15} height={15} /><span><strong>폐기 기록은 연결 후 가능해요</strong><small>현재 화면은 마지막으로 확인한 재고를 보여주고 있어요.</small></span></div> : <button ref={discardActionRef} className="danger-text-button" type="button" disabled={!canRecordQuantity} onClick={() => { if (!isValidEventQuantity(eventQuantity, availableQuantity.amount)) return; keyboard.hide(); setDiscardConfirm(true); }}><InfoCircledIcon width={14} height={14} /> 상태가 이상해 폐기하기</button>;
   const productInfoSection = editProductInfoOpen ? (
     <div className="product-info-editor" role="group" aria-label="상품 정보 수정" aria-busy={productInfoSaving}>
       <div className="product-info-editor-heading">
@@ -460,7 +483,7 @@ export default function FoodDetailSheet({
   ) : (
     <button ref={productInfoEditActionRef} type="button" className="product-info-edit-button" disabled={readOnly} onClick={() => setEditProductInfoOpen(true)}>
       <Pencil1Icon width={15} height={15} />
-      <span><strong>{readOnly ? "상품 정보 수정은 연결 후 가능" : "상품 정보 수정"}</strong><small>{readOnly ? "최근 화면에서는 변경할 수 없어요." : "상품명이 다르면 직접 고칠 수 있어요."}</small></span>
+      <span><strong>{readOnly ? "상품 정보 수정은 연결 후 가능" : "상품 정보 수정"}</strong><small>{readOnly ? "최근 화면에서는 변경할 수 없어요." : "상품명이 다르면 고칠 수 있어요."}</small></span>
       <ArrowRightIcon width={15} height={15} />
     </button>
   );
@@ -479,8 +502,8 @@ export default function FoodDetailSheet({
         <div className={`date-review-callout${compactPrintedDateRecheck ? " date-review-callout-compact" : ""}`} role="status" aria-live="polite" aria-atomic="true">
           <span className="date-review-icon"><InfoCircledIcon width={16} height={16} /></span>
           <span>
-            <strong>{dateReviewReason === "날짜 의미 확인" ? "포장지 날짜 종류를 골라 주세요" : "조리 전에 포장지 날짜를 살펴봐 주세요"}</strong>
-    <small>{dateReviewReason === "날짜 의미 확인" ? "포장일·제조일은 소비기한이 아니에요. 이 날짜를 소비기한으로 바꾸지 않고, 소비기한이 적힌 면과 보관 방법을 따로 살펴봐 주세요." : dateReviewReason === "포장지 날짜 확인" ? "포장지 날짜를 기록하지 않았어요. 포장지와 보관 방법을 살펴본 뒤 조리해 주세요." : "표시 날짜가 오늘이거나 지났어요. 현재 보관·개봉 상태도 함께 확인해 주세요."}</small>
+            <strong>{dateReviewReason === "날짜 의미 확인" ? "포장지 날짜 종류를 골라 주세요" : dateReviewReason === "포장지 날짜 확인" ? "포장지 날짜를 확인해 주세요" : "조리 전 확인이 필요해요"}</strong>
+    <small>{dateReviewReason === "날짜 의미 확인" ? "포장일·제조일은 소비기한이 아니에요. 이 날짜를 소비기한으로 바꾸지 않고, 소비기한이 적힌 면과 보관 방법을 따로 살펴봐 주세요." : dateReviewReason === "포장지 날짜 확인" ? "포장지 날짜를 기록하지 않았어요. 포장지와 보관 방법을 살펴본 뒤 조리해 주세요." : "표시 날짜가 오늘이거나 지났어요. 보관·개봉 상태도 확인해 주세요."}</small>
             {canRecheckPrintedLabel && dateReviewReason === "날짜 의미 확인" ? <button ref={dateReviewActionRef} className="date-edit-button" type="button" onClick={onOpenLabelReview}><CalendarIcon width={15} height={15} /><span><strong>포장지에서 소비기한 다시 확인</strong><small>날짜를 새 식품 기록에 저장하거나 기존 식품 기록을 수정할지 선택해요.</small></span><ArrowRightIcon width={15} height={15} /></button> : null}
           </span>
           {compactPrintedDateRecheck ? <button ref={dateReviewActionRef} className="date-edit-button date-edit-button-compact" type="button" aria-label="포장지에서 날짜 다시 확인" title="포장지에서 날짜 다시 확인" onClick={() => onOpenLabelReview?.()}><CalendarIcon width={17} height={17} /><span>날짜 다시 확인</span></button> : null}
@@ -488,6 +511,22 @@ export default function FoodDetailSheet({
       ) : null}
       {dateConfirmationAction}
       {productInfoSection}
+      <section className="detail-quantity-controls" aria-label="기록 수량 선택">
+        <div className="detail-quantity-heading"><label htmlFor="food-event-quantity">기록할 수량</label><span id="food-event-quantity-available">남은 {food.quantity}</span></div>
+        <div className="detail-quantity-presets" role="group" aria-label="수량 빠르게 선택">
+          <button type="button" onPointerDown={(event) => event.preventDefault()} disabled={readOnly || !isValidEventQuantity(availableQuantity.amount, availableQuantity.amount)} aria-pressed={canRecordQuantity && eventQuantity === availableQuantity.amount} onClick={() => { keyboard.hide(); updateQuantityDraft(String(availableQuantity.amount)); }}>전체</button>
+          {halfQuantity !== null ? <button type="button" onPointerDown={(event) => event.preventDefault()} disabled={readOnly} aria-pressed={eventQuantity === halfQuantity} onClick={() => { keyboard.hide(); updateQuantityDraft(String(halfQuantity)); }}>절반 · {formatQuantityAmount(halfQuantity)}{availableQuantity.unit}</button> : null}
+        </div>
+        <div className="detail-quantity-editor">
+          <button type="button" onPointerDown={(event) => event.preventDefault()} aria-label={`수량 줄이기 (${formatQuantityAmount(step)}${availableQuantity.unit}씩)`} disabled={readOnly || !canRecordQuantity || eventQuantity <= MIN_EVENT_QUANTITY} onClick={() => { keyboard.hide(); updateQuantityDraft(String(stepEventQuantity(eventQuantity, -1, availableQuantity.amount, availableQuantity.unit))); }}>−</button>
+          <div className="detail-quantity-input-wrap">
+            <KeyboardInput id="food-event-quantity" type="text" inputMode="decimal" autoComplete="off" enterKeyHint="done" value={currentQuantityDraft} disabled={readOnly} aria-invalid={!canRecordQuantity} aria-describedby="food-event-quantity-available food-event-quantity-note" onChange={(event) => updateQuantityDraft(event.target.value)} onBlur={() => keyboard.hide()} onKeyDown={(event) => { if (event.key === "Enter" && !event.nativeEvent.isComposing) { event.preventDefault(); keyboard.hide(); } }} />
+            <span>{availableQuantity.unit}</span>
+          </div>
+          <button type="button" onPointerDown={(event) => event.preventDefault()} aria-label={`수량 늘리기 (${formatQuantityAmount(step)}${availableQuantity.unit}씩)`} disabled={readOnly || !canRecordQuantity || eventQuantity >= availableQuantity.amount} onClick={() => { keyboard.hide(); updateQuantityDraft(String(stepEventQuantity(eventQuantity, 1, availableQuantity.amount, availableQuantity.unit))); }}>+</button>
+        </div>
+        <p id="food-event-quantity-note" className={`detail-quantity-note${canRecordQuantity ? "" : " detail-quantity-error"}`} role="status">{quantitySelection.error ?? (quantitySelection.remaining > 0 ? `먹거나 폐기한 뒤 ${formatQuantityAmount(quantitySelection.remaining)}${availableQuantity.unit} 남아요.` : "먹거나 폐기하면 목록에서 사라져요.")}</p>
+      </section>
       {detailActionsSection}
       <div className="detail-danger-zone" role="group" aria-label="폐기">{discardSection}</div>
       {hasReferenceSources ? <section className="detail-source-group" aria-label="구매와 상품 정보" style={{ display: "grid", gap: 8 }}><div className="detail-source-group-heading" style={{ display: "flex", gap: 8, alignItems: "baseline", justifyContent: "space-between", padding: "1px 2px 0" }}><span style={{ color: "var(--atelier-muted)", fontSize: 12, fontWeight: 600 }}>구매와 상품 정보</span><small style={{ color: "var(--atelier-dim)", fontSize: 12 }}>소비기한은 포장지에서 확인해 주세요.</small></div>
@@ -498,7 +537,6 @@ export default function FoodDetailSheet({
       {food.dateKind === "estimated_use_first" ? <p className="detail-note" role="note"><InfoCircledIcon width={15} height={15} />먼저 살펴볼 순서는 식품 종류와 보관 방법을 참고한 안내예요. 소비기한이나 먹어도 되는지를 뜻하지 않아요. 포장지 날짜와 식품 상태를 확인해 주세요.</p> : null}
       {showDetailNote ? <p className="detail-note"><InfoCircledIcon width={15} height={15} /> {detailNote}</p> : null}
       <div className={`detail-section${hasPendingSaveChanges && !readOnly ? " detail-section-pending" : ""}`}><div className="detail-section-heading"><span><SewingPinIcon width={16} height={16} /> 보관 위치</span><small className={hasPendingSaveChanges && !readOnly ? "detail-section-status-pending" : ""} aria-live={hasPendingSaveChanges && !readOnly ? "polite" : undefined}>{readOnly ? "연결 후 변경할 수 있어요" : hasPendingSaveChanges ? pendingDetailChangeSummary : `${selectedStorageLabel}에 보관 중`}</small></div><StoragePicker value={storage} locationId={storageLocationId} locations={storageLocations} readOnly={readOnly} onChange={(nextStorage, nextLocationId) => { setStorage(nextStorage); setStorageLocationId(nextLocationId); }} />{dateStorageMismatch ? <div className="storage-mismatch-callout" role="alert"><InfoCircledIcon width={16} height={16} /><span><strong>포장지 보관조건과 현재 위치가 달라요</strong><small>{food.dateStorageConditionText ?? `${storageHintLabel(food.dateStorageHint)} 보관 기준으로 표시된 날짜예요.`} 현재는 {selectedStorageLabel}에 보관 중이라 포장지와 실제 보관 상태를 다시 확인해 주세요. 날짜 자체는 자동으로 바꾸지 않아요.</small></span></div> : null}</div>
-      {availableQuantity.amount > 1 ? <div className="quantity-row"><span><strong>변경할 수량</strong><small>일부만 옮기거나 먹을 수 있어요.</small></span><span className="quantity-stepper"><button type="button" aria-label="수량 줄이기" disabled={readOnly || eventQuantity <= 1} onClick={() => setEventQuantity((current) => Math.max(1, current - 1))}>−</button><strong>{eventQuantity}{availableQuantity.unit}</strong><button type="button" aria-label="수량 늘리기" disabled={readOnly || eventQuantity >= availableQuantity.amount} onClick={() => setEventQuantity((current) => Math.min(availableQuantity.amount, current + 1))}>+</button></span></div> : null}
       <div className="opened-row"><span><ArchiveIcon width={17} height={17} /><span><strong>개봉했어요</strong><small>{opened ? (openedAtLabel ? `${openedAtLabel}에 개봉 기록했어요.` : "개봉 기록은 되돌릴 수 없어요.") : readOnly ? "연결 후 개봉 기록을 남길 수 있어요." : "개봉한 식품은 먼저 살펴볼 수 있도록 보여드려요."}</small></span></span><button className={`toggle ${opened ? "toggle-on" : ""}`} type="button" role="switch" aria-label={`${food.name} 개봉 상태`} aria-checked={opened} disabled={readOnly || opened} onClick={() => setOpened(true)}><span /></button></div>
       {mealApi.isConfigured ? <details className="detail-history-disclosure" open={historyDisclosureOpen} onToggle={(event) => { const open = event.currentTarget.open; setHistoryDisclosureOpen(open); onHistoryDisclosureChange?.(open); }} style={{ marginTop: 4, border: "1px solid var(--sheet-border)", borderRadius: 14, background: "color-mix(in srgb, var(--atelier-surface) 78%, transparent)" }}><summary style={{ display: "flex", minHeight: 44, alignItems: "center", justifyContent: "space-between", gap: 8, padding: "0 12px", color: "var(--atelier-ink)", cursor: "pointer", listStyle: "none" }}><span style={{ display: "inline-flex", gap: 7, alignItems: "center", fontSize: 13, fontWeight: 600 }}><ReaderIcon width={16} height={16} style={{ color: "var(--atelier-pistachio)" }} />변경 기록</span><span style={{ display: "inline-flex", gap: 4, alignItems: "center", color: "var(--atelier-muted)", fontSize: 12 }}>{historyDisclosureOpen ? "접기" : "기록 보기"} <ArrowRightIcon width={14} height={14} /></span></summary>{historyDisclosureOpen ? <div style={{ display: "grid", gap: 8, padding: "0 12px 12px" }}><Suspense fallback={null}><FoodHistory foodId={food.id} unit={availableQuantity.unit} storageLocations={storageLocations} historyRefreshKey={historyRefreshKey} highlightSyncOutboxId={focusSyncOutboxId} onOpenSyncRecord={onOpenSyncRecord} onOpenSyncNotification={onOpenSyncNotification} /><ProductProvenanceHistory foodId={food.id} refreshKey={food.productProvenance ? `${food.productProvenance.source}:${food.productProvenance.confidence}:${food.productProvenance.note}` : "none"} /><ProductInfoHistory foodId={food.id} refreshKey={`${food.name}:${food.brand}:${food.category}`} /></Suspense></div> : null}</details> : null}
     </div>

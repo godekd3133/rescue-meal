@@ -11413,6 +11413,28 @@ def _build_meal_plan(
             servings=request.servings,
         ) is not None
     if planned is None:
+        if preference_filtered:
+            no_match_title = "식단 조건에 맞는 메뉴가 없어요"
+            no_match_reason = "현재 재료에 맞는 메뉴는 있지만, 설정한 알레르기 조건을 적용해 제외했어요."
+        elif not selected:
+            no_match_title = "냉장고에 재료를 추가해 주세요"
+            no_match_reason = "식품을 먼저 추가하면 냉장고에 있는 재료로 만들 메뉴를 찾아드려요."
+        else:
+            longer_plan = plan_recipe(
+                selected,
+                max((recipe.minutes for recipe in recipe_specs), default=request.max_minutes),
+                specs=recipe_specs,
+                exclude_recipe_ids=exclude_recipe_ids,
+                preferred_recipe_id=request.recipe_id,
+                avoid_allergens=avoided_allergens,
+                servings=request.servings,
+            )
+            if longer_plan is not None:
+                no_match_title = f"{request.max_minutes}분 안에 만들 메뉴를 찾지 못했어요"
+                no_match_reason = f"현재 재료에 맞는 메뉴는 있지만 {request.max_minutes}분보다 오래 걸려요. 조리 시간을 늘려 다시 찾아보세요."
+            else:
+                no_match_title = "현재 재료로 만들 메뉴를 찾지 못했어요"
+                no_match_reason = f"선택한 재료와 수량으로 {request.servings}인분을 만들 메뉴가 없어요. 다른 재료를 함께 고르거나 수량·단위를 확인해 주세요."
         return MealPlanResponse(
             id=create_id("meal"),
             recipe_id="no-match",
@@ -11420,7 +11442,7 @@ def _build_meal_plan(
             completed_at=None,
             planner_version="recipe-planner-v2",
             source="recipe_fixture",
-            title="식단 조건에 맞는 메뉴가 없어요" if preference_filtered else "재료를 조금 더 추가해 주세요",
+            title=no_match_title,
             minutes=0,
             max_minutes=request.max_minutes,
             servings=request.servings,
@@ -11429,11 +11451,7 @@ def _build_meal_plan(
             missing_ingredients=[],
             matched_ratio=0,
             score=0,
-            reason=(
-                "현재 재료에 맞는 메뉴는 있지만, 설정한 알레르기 조건을 적용해 제외했어요."
-                if preference_filtered
-                else "레시피 후보를 만들려면 식품을 먼저 추가해 주세요."
-            ),
+            reason=no_match_reason,
             steps=[],
             safety_note="식품 상태가 이상하면 사용하지 마세요.",
             preference_filtered=preference_filtered,
@@ -11994,7 +12012,9 @@ def _current_plan_for_shopping(plan: MealPlanResponse, selected_foods: list[Food
     current = _build_meal_plan(
         MealPlanRequest(
             inventory_ids=inventory_ids,
-            max_minutes=plan.max_minutes,
+            # Recheck stock for the already chosen recipe, including legacy
+            # plans whose duration exceeded the original search time limit.
+            max_minutes=max(plan.max_minutes, plan.minutes),
             recipe_id=plan.recipe_id,
             servings=plan.servings,
         ),

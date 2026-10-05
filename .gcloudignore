@@ -1,0 +1,24 @@
+# Cloud Build source upload scope: image builds only need services/ and the
+# packaged recipe fixture catalog.
+.git/
+.gitignore
+.gcloudignore
+**/node_modules/
+**/dist/
+**/.venv/
+**/.pytest_cache/
+**/__pycache__/
+**/test-results/
+.playwright-mcp/
+apps/
+docs/
+evidence/
+infra/
+work/
+services/*/tests/
+*.md
+.env
+.env.*
+data/*
+!data/fixtures/
+.DS_Store

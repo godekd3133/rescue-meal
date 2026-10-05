@@ -7,6 +7,8 @@ import { isStaleLabelLotTarget } from "./labelLotSelection";
 import CameraCapture, { type CaptureFileHandler } from "./CameraCapture";
 import { isMealApiProductEnrichmentPersistenceError, isMealApiReceiptDraftPersistenceError, mealApi, type ApiBarcodeParse, type ApiDateKind, type ApiOcrReviewObservation, type ApiPriorityInference, type ApiProductEnrichmentJob, type ApiProductLookup, type ApiProductNameLookup, type ApiReceiptDraft, type ApiStorageLocation, type ApiStorageType } from "./mealApi";
 import type { AddMode, FoodItem, ReceiptCommitPayload, ReceiptLine, StorageType } from "./Prototype";
+import { changeManualQuantityUnit, getManualFoodNameSuggestions, MANUAL_QUANTITY_UNITS, parseManualQuantity } from "./manualEntryConvenience";
+import "./manualEntryConvenience.css";
 
 const STORAGE_OPTIONS: StorageType[] = ["냉장", "냉동", "실온"];
 const DEMO_BARCODE = "8801114167523";
@@ -1922,6 +1924,15 @@ export default function AddFoodSheet({
     switchMode("manual");
   };
 
+  const changeManualFoodName = (name: string) => {
+    setFoodName(name);
+    priorityInferenceGeneration.current += 1;
+    setPriorityInference(null);
+    setPriorityInferenceError("");
+    setPriorityInferenceLoading(false);
+    clearProductCandidate();
+  };
+
   const submitManual = () => {
     const normalizedName = foodName.trim();
     if (!normalizedName || manualQuantityInvalid) return;
@@ -1929,7 +1940,7 @@ export default function AddFoodSheet({
     keyboard.hide();
     onAddManual(createFood({
       name: normalizedName,
-      quantity: quantity.trim() || "1개",
+      quantity: quantity.trim(),
       storage,
       storageLocationId: storageLocationId ?? undefined,
       storageLocationName: storageLocationId ? storageLocations.find((location) => location.id === storageLocationId)?.name : undefined,
@@ -1982,8 +1993,11 @@ export default function AddFoodSheet({
   const manualDateSummary = barcodeDateCandidate
     ? ` · ${barcodeDateKindLabel(barcodeDateCandidate.kind)} ${barcodeDateCandidate.value.replaceAll("-", ".")}`
     : "";
-  const manualQuantityValue = Number.parseFloat(quantity);
-  const manualQuantityInvalid = quantity.trim() !== "" && (!Number.isFinite(manualQuantityValue) || manualQuantityValue <= 0);
+  const manualQuantity = parseManualQuantity(quantity);
+  const manualQuantityInvalid = manualQuantity === null;
+  const manualNameSuggestions = productProvenance || barcodeDateCandidate
+    ? []
+    : getManualFoodNameSuggestions(existingFoods, foodName);
   const intakeStep = mode === "receipt"
     ? receiptStage === "review" ? 2 : 1
     : mode === "barcode" ? barcodeCanReview ? 2 : 1
@@ -2001,7 +2015,7 @@ export default function AddFoodSheet({
     : mode === "label"
       ? labelResult
         ? "날짜 종류와 보관 위치를 살펴본 뒤 저장해 주세요."
-        : "날짜 이름과 보관 방법을 포장지에서 확인해요."
+        : "날짜 종류와 보관 방법을 포장지에서 확인해요."
       : mode === "barcode"
         ? barcodeManualFallback
           ? "바코드 숫자를 다시 살펴보거나 다른 방법으로 추가해요."
@@ -2034,6 +2048,7 @@ export default function AddFoodSheet({
           ["label", "라벨", CalendarIcon],
           ["manual", "직접 입력", PlusIcon],
         ] as const).map(([tabMode, label, Icon]) => {
+          const recommendForCurrentTask = initialLabelTargetFoodId ? tabMode === "label" : tabMode === "receipt";
           return <button
             key={tabMode}
             ref={(element) => { modeTabRefs.current[tabMode] = element; }}
@@ -2041,6 +2056,7 @@ export default function AddFoodSheet({
             className={`mode-tab ${mode === tabMode ? "mode-tab-active" : ""}`}
             type="button"
             role="tab"
+            aria-label={recommendForCurrentTask ? `${label}, 추천` : undefined}
             aria-selected={mode === tabMode}
             aria-controls={`add-mode-panel-${tabMode}`}
             tabIndex={mode === tabMode ? 0 : -1}
@@ -2048,13 +2064,13 @@ export default function AddFoodSheet({
             onKeyDown={handleModeTabKeyDown}
             onClick={() => focusModeTab(tabMode)}
           >
-            <Icon width={16} height={16} />{label}
+            <Icon width={16} height={16} />{label}{recommendForCurrentTask ? <span className="mode-tab-recommendation" aria-hidden="true">추천</span> : null}
           </button>
         })}
       </div>
       {initialLabelTargetFoodId && initialLabelTargetFoodName && mode !== "label" ? <div className="date-recheck-context" role="status" aria-live="polite" aria-atomic="true"><InfoCircledIcon width={16} height={16} /><span><strong>기존 {initialLabelTargetFoodName} 날짜는 그대로예요</strong>{initialLabelTargetDateSummary ? <small className="date-recheck-saved-date">현재 기록 · {initialLabelTargetDateSummary}</small> : null}<small>다른 입력 방식은 새 식품을 추가해요. 기존 날짜를 확인하려면 라벨로 돌아가세요.</small></span><button type="button" onClick={() => switchMode("label")}>라벨 날짜 확인으로 돌아가기</button></div> : null}
       {!cameraTarget && mode !== "manual" ? <div className={`intake-flow-rail intake-flow-step-${intakeStep}`} role="group" aria-label={`${initialLabelTargetFoodId ? "날짜 확인" : "식품 추가"} ${intakeStep}단계`}>
-        <div className="intake-flow-rail-heading"><span><strong>{intakeStepTitle}</strong><small>{intakeStepDetail}</small></span><em>{intakeStep}/3</em></div>
+        <div className="intake-flow-rail-heading" aria-live="polite" aria-atomic="true"><span><strong>{intakeStepTitle}</strong><small>{intakeStepDetail}</small></span>{!(initialLabelTargetFoodId && mode === "label") ? <em>{intakeStep}/3</em> : null}</div>
         <ol>
           {intakeStepNames.map((label, index) => {
             const step = index + 1;
@@ -2134,7 +2150,7 @@ export default function AddFoodSheet({
               <>
                 <div className="capture-visual compact"><CalendarIcon width={25} height={25} /></div>
                 <h3>포장지 날짜를 읽어볼게요</h3>
-                <p>날짜가 보이는 면을 촬영하거나 사진을 선택하면 포장지의 날짜를 읽어드려요.</p>
+                <p>사진에서 포장지 날짜를 읽어드려요.<br />{" "}사진은 식품 기록에 저장하지 않아요.</p>
                 <div className="capture-hint capture-guidance-note capture-date-meaning-note" role="note">
                   <InfoCircledIcon width={15} height={15} />
                   <span>
@@ -2239,8 +2255,7 @@ export default function AddFoodSheet({
       ) : null}
 
       {mode === "manual" ? (
-        <div className="input-flow manual-flow">
-          <div className="capture-visual compact"><PlusIcon width={25} height={25} /></div>
+        <div className="input-flow manual-flow manual-entry-convenience">
           <h3>어떤 식품을 기록할까요?</h3>
           <p className="manual-flow-intro">이름과 보관 위치를 먼저 기록하고, 날짜는 포장지를 확인한 뒤 추가해요.</p>
           {productProvenance ? <div className="manual-product-provenance manual-source-confirmation" role="status"><ReaderIcon width={17} height={17} /><span><strong>상품 정보</strong><small>{productSourceLabel(productProvenance.source)} · {productFreshnessLabel(productProvenance.sourceFreshness)}{productProvenance.storageHint ? ` · 상품 정보에 나온 보관 방법: ${productProvenance.storageHint === "refrigerated" ? "냉장" : productProvenance.storageHint === "frozen" ? "냉동" : "실온"}` : ""}</small><small>{productProvenanceNote(productProvenance.note)}</small></span><em>참고</em></div> : null}
@@ -2249,13 +2264,15 @@ export default function AddFoodSheet({
               <button className="primary-sheet-button manual-submit" type="button" onPointerDown={(event) => { event.preventDefault(); submitManual(); }} onClick={(event) => { if (event.detail === 0) submitManual(); }} disabled={!foodName.trim() || manualQuantityInvalid} aria-describedby={manualQuantityInvalid ? "manual-quantity-submit-error" : "manual-submit-summary"}><PlusIcon width={17} height={17} /> 식품 추가하기</button>
               {manualQuantityInvalid
                 ? <small id="manual-quantity-submit-error" role="alert" style={{ display: "block", marginTop: 4, color: "var(--atelier-coral)", fontSize: 12, lineHeight: 1.4, textAlign: "center" }}>수량은 0보다 큰 숫자로 입력해 주세요.</small>
-              : <div id="manual-submit-summary" className="manual-submit-summary" role="note"><strong>추가할 식품</strong><span>{foodName.trim()}{manualBrandSummary}</span><span>{quantity.trim() || "1개"}{manualDateSummary} · {storage} 보관</span></div>}
+              : <div id="manual-submit-summary" className="manual-submit-summary" role="note"><strong>추가할 식품</strong><span>{foodName.trim()}{manualBrandSummary}</span><span>{quantity.trim()}{manualDateSummary} · {storage} 보관</span></div>}
             </div>
           ) : null}
           <label className="app-input-label" htmlFor="food-name-input">식품 이름</label>
-          <KeyboardInput id="food-name-input" className="app-input" value={foodName} placeholder="예: 대파, 김치, 남은 카레" onChange={(event) => { setFoodName(event.target.value); setPriorityInference(null); setPriorityInferenceError(""); if (productProvenance) clearProductCandidate(); }} onFocus={revealFocusedInput} onBlur={() => keyboard.hide()} />
+          <KeyboardInput id="food-name-input" className="app-input" value={foodName} placeholder="예: 대파, 김치, 남은 카레" onChange={(event) => changeManualFoodName(event.target.value)} onFocus={revealFocusedInput} onBlur={() => keyboard.hide()} />
+          {manualNameSuggestions.length ? <div className="manual-name-suggestions" role="group" aria-label="목록에 있는 이름"><span className="manual-name-suggestions-label">목록에 있는 이름</span><div className="manual-entry-choices">{manualNameSuggestions.map((name) => <button key={name} className="manual-entry-choice" type="button" onPointerDown={(event) => event.preventDefault()} onClick={() => changeManualFoodName(name)}>{name}</button>)}</div></div> : null}
           <label className="app-input-label" htmlFor="food-quantity-input">수량</label>
           <KeyboardInput id="food-quantity-input" className="app-input" value={quantity} placeholder="예: 1팩" aria-invalid={manualQuantityInvalid} aria-describedby={manualQuantityInvalid ? "manual-quantity-submit-error" : undefined} onChange={(event) => setQuantity(event.target.value)} onFocus={revealFocusedInput} onBlur={() => keyboard.hide()} />
+          <div className="manual-entry-choices" role="group" aria-label="수량 단위">{MANUAL_QUANTITY_UNITS.map((unit) => <button key={unit} className="manual-entry-choice" type="button" aria-label={`수량 단위 ${unit}`} aria-pressed={manualQuantity?.unit === unit} disabled={manualQuantityInvalid} onPointerDown={(event) => event.preventDefault()} onClick={() => setQuantity((current) => changeManualQuantityUnit(current, unit))}>{unit}</button>)}</div>
           <span className="app-input-label">보관 위치</span>
           <StoragePicker value={storage} locationId={storageLocationId} locations={storageLocations} onChange={(nextStorage, nextLocationId) => { setStorage(nextStorage); setStorageLocationId(nextLocationId); setPriorityInference(null); setPriorityInferenceError(""); }} />
           <div className="manual-note"><InfoCircledIcon width={17} height={17} /><span>날짜가 없으면 식품 종류와 보관 방법을 참고해 먼저 살펴볼 시점을 보여드려요. 소비기한이나 먹어도 되는지를 뜻하지 않아요.</span></div>

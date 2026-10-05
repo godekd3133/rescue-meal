@@ -1,0 +1,40 @@
+# Builds both service images from the repository root context and pushes them
+# to Artifact Registry. Local Docker is not required.
+timeout: 2700s
+options:
+  machineType: E2_HIGHCPU_8
+  logging: CLOUD_LOGGING_ONLY
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -f
+      - services/api/Dockerfile
+      - -t
+      - ${_AR_HOST}/${PROJECT_ID}/${_AR_REPO}/api:latest
+      - -t
+      - ${_AR_HOST}/${PROJECT_ID}/${_AR_REPO}/api:$BUILD_ID
+      - .
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -f
+      - services/ocr-worker/Dockerfile
+      - -t
+      - ${_AR_HOST}/${PROJECT_ID}/${_AR_REPO}/ocr-worker:latest
+      - -t
+      - ${_AR_HOST}/${PROJECT_ID}/${_AR_REPO}/ocr-worker:$BUILD_ID
+      - services/ocr-worker
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - --all-tags
+      - ${_AR_HOST}/${PROJECT_ID}/${_AR_REPO}/api
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - --all-tags
+      - ${_AR_HOST}/${PROJECT_ID}/${_AR_REPO}/ocr-worker
+images:
+  - ${_AR_HOST}/${PROJECT_ID}/${_AR_REPO}/api:latest
+  - ${_AR_HOST}/${PROJECT_ID}/${_AR_REPO}/ocr-worker:latest

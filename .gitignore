@@ -33,3 +33,6 @@ data/generated/
 
 # Reproducible source exists alongside this local benchmark executable.
 work/macos_vision_ocr
+
+# Capacitor iOS wrapper (node_modules/Pods/build output; recreated per release)
+work/ios-wrapper/

@@ -4159,6 +4159,60 @@ def test_shopping_list_respects_saved_plan_servings_when_recomputing_shortage() 
     assert quantities["국산콩 두부"] == 2
 
 
+@pytest.mark.parametrize("source_type", ["meal_plan", "multi_day"])
+def test_legacy_saved_plan_shopping_shortage_updates_after_partial_and_full_receive(monkeypatch, source_type: str) -> None:
+    recipe = main_module.load_recipe_specs()[0]
+    monkeypatch.setattr(main_module, "load_recipe_specs", lambda: (recipe,))
+    store.foods.pop("tofu-1")
+    source_id = f"legacy-time-limit-{source_type}"
+    plan_request = {"inventory_ids": ["spinach-1", "chicken-1"], "max_minutes": 15}
+    if source_type == "meal_plan":
+        saved = client.post("/api/meal-plans", json={**plan_request, "plan_id": source_id})
+        assert saved.status_code == 200
+        saved_plan = store.meal_plans[source_id]
+    else:
+        saved = client.post("/api/meal-plans/multi-day", json={**plan_request, "bundle_id": source_id})
+        assert saved.status_code == 200
+        assert len(saved.json()["days"]) == 1
+        bundle = store.multi_day_meal_plans[source_id]
+        bundle.max_minutes = 5
+        saved_plan = bundle.days[0].plan
+    # Older planner versions saved a 15-minute recipe even for a 5-minute
+    # request. Preserve that persisted snapshot while checking its live stock.
+    saved_plan.max_minutes = 5
+    assert saved_plan.minutes == 15
+
+    fresh_preview = client.post("/api/meal-plans/preview", json={**plan_request, "max_minutes": 5})
+    assert fresh_preview.status_code == 200
+    assert fresh_preview.json()["recipe_id"] == "no-match"
+
+    added = client.post("/api/shopping-list", json={"source_type": source_type, "source_id": source_id})
+    assert added.status_code == 200
+    item = added.json()["items"][0]
+    assert item["canonical_name"] == "국산콩 두부"
+    assert item["quantity"] == 1
+
+    partial = client.post(
+        f"/api/shopping-list/{item['id']}/receive",
+        headers={"Idempotency-Key": f"{source_id}-partial"},
+        json={"quantity": 0.5, "storage_type": "refrigerated"},
+    )
+    assert partial.status_code == 201
+    assert partial.json()["items"][0]["quantity"] == 0.5
+    assert client.get("/api/shopping-list").json()[0]["quantity"] == 0.5
+
+    remaining = client.post(
+        f"/api/shopping-list/{item['id']}/receive",
+        headers={"Idempotency-Key": f"{source_id}-remaining"},
+        json={"quantity": 0.5, "storage_type": "refrigerated"},
+    )
+    assert remaining.status_code == 201
+    assert remaining.json()["items"] == []
+    assert remaining.json()["removed_planned_source_count"] == 1
+    assert client.get("/api/shopping-list").json() == []
+    assert saved_plan.max_minutes == 5
+
+
 def test_manual_shopping_item_upserts_and_survives_recipe_reconciliation() -> None:
     invalid = client.post(
         "/api/shopping-list/manual",
@@ -4526,6 +4580,52 @@ def test_meal_plan_preview_honors_user_cooking_time_limit() -> None:
     assert payload["recipe_id"] == "mushroom-egg-stir-fry"
     assert payload["minutes"] == 10
     assert payload["max_minutes"] == 10
+
+
+def test_meal_plan_no_match_explains_a_time_limit_without_requesting_new_stock(monkeypatch) -> None:
+    recipe = main_module.load_recipe_specs()[0]
+    monkeypatch.setattr(main_module, "load_recipe_specs", lambda: (recipe,))
+    response = client.post(
+        "/api/meal-plans/preview",
+        json={"inventory_ids": ["spinach-1", "tofu-1", "chicken-1"], "max_minutes": 10},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["recipe_id"] == "no-match"
+    assert payload["title"] == "10분 안에 만들 메뉴를 찾지 못했어요"
+    assert "조리 시간을 늘려" in payload["reason"]
+    assert "식품을 먼저 추가" not in payload["reason"]
+    assert payload["preference_filtered"] is False
+
+
+def test_meal_plan_no_match_explains_empty_inventory() -> None:
+    store.foods.clear()
+    response = client.post("/api/meal-plans/preview", json={"inventory_ids": [], "max_minutes": 30})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["recipe_id"] == "no-match"
+    assert payload["title"] == "냉장고에 재료를 추가해 주세요"
+    assert "식품을 먼저 추가" in payload["reason"]
+    assert payload["preference_filtered"] is False
+
+
+def test_meal_plan_no_match_with_stock_explains_ingredient_or_quantity_mismatch(monkeypatch) -> None:
+    recipe = main_module.load_recipe_specs()[0]
+    monkeypatch.setattr(main_module, "load_recipe_specs", lambda: (recipe,))
+    response = client.post(
+        "/api/meal-plans/preview",
+        json={"inventory_ids": ["milk-1"], "max_minutes": 30, "servings": 2},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["recipe_id"] == "no-match"
+    assert payload["title"] == "현재 재료로 만들 메뉴를 찾지 못했어요"
+    assert "2인분" in payload["reason"]
+    assert "수량·단위" in payload["reason"]
+    assert "식품을 먼저 추가" not in payload["reason"]
 
 
 def test_meal_plan_marks_allocated_foods_that_need_date_review() -> None:

@@ -2,6 +2,136 @@ import { expect, test } from "@playwright/test";
 import { AxeBuilder } from "@axe-core/playwright";
 import { expectExternalSyncState, expectInventoryScopeState, expectMealShoppingLiveState, expectReadbackState } from "./readback-state-assertions";
 
+test("convenience exact partial food consumption persists after reload", async ({ page }) => {
+  test.setTimeout(60_000);
+  for (const entry of [
+    { name: "절반 기록 확인 쌀", initial: "500g", quantity: "250", remaining: "250g", half: "절반 · 250g" },
+    { name: "소수 기록 확인 채소", initial: ".5kg", quantity: "0.2", remaining: "0.3kg", half: null },
+  ]) {
+    await page.goto("/");
+    await expect(page.locator(".connection-pill")).toHaveText("연결됨");
+    await page.getByRole("button", { name: "식품 추가하기", exact: true }).click();
+    await page.getByRole("tab", { name: "직접 입력", exact: true }).click();
+    const manual = page.getByRole("dialog", { name: "직접 추가", exact: true });
+    await manual.getByRole("textbox", { name: "식품 이름", exact: true }).fill(entry.name);
+    await manual.getByRole("textbox", { name: "수량", exact: true }).fill(entry.initial);
+    const saved = page.waitForResponse((response) => response.url().endsWith("/api/foods") && response.request().method() === "POST");
+    await manual.getByRole("button", { name: "식품 추가하기", exact: true }).click();
+    expect((await saved).ok()).toBe(true);
+    await expect(manual).toHaveCount(0);
+    await page.getByRole("button", { name: "식품", exact: true }).click();
+    await page.locator(".inventory-row").filter({ hasText: entry.name }).click();
+    const detail = page.getByRole("dialog", { name: entry.name, exact: true });
+    const input = detail.getByRole("textbox", { name: "기록할 수량", exact: true });
+    await input.fill("0");
+    await expect(detail.locator(".detail-consume-action")).toBeDisabled();
+    if (entry.half) await detail.getByRole("button", { name: entry.half, exact: true }).click();
+    else { await input.fill(entry.quantity); await input.press("Enter"); }
+    await expect(input).toHaveValue(entry.quantity);
+    const action = detail.locator(".detail-consume-action");
+    const confirmationRequired = (await action.getAttribute("aria-describedby")) === "consume-safety-hint";
+    const consumed = page.waitForResponse((response) => response.url().endsWith("/storage-events") && response.request().method() === "POST");
+    await action.click();
+    if (confirmationRequired) {
+      await expect(detail.getByRole("group", { name: "이번 소비 기록" })).toBeVisible();
+      await detail.getByRole("button", { name: "먹었어요", exact: true }).click();
+    }
+    const response = await consumed;
+    expect(response.ok()).toBe(true);
+    expect(response.request().postDataJSON()).toMatchObject({ event_type: "consumed", quantity: Number(entry.quantity) });
+    await expect(detail).toHaveCount(0);
+    await expect(page.locator(".inventory-row").filter({ hasText: entry.name })).toContainText(entry.remaining);
+    await page.reload();
+    await expect(page.locator(".connection-pill")).toHaveText("연결됨");
+    await expect(page.locator(".inventory-row").filter({ hasText: entry.name })).toContainText(entry.remaining);
+  }
+});
+
+test("convenience excluded meal ingredient stays in inventory after completion", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator(".connection-pill")).toHaveText("연결됨");
+  await page.getByRole("button", { name: "오늘 식단 만들기", exact: true }).click();
+  const meal = page.getByRole("dialog", { name: "오늘의 식단" });
+  await expect(meal.getByRole("heading", { name: "시금치 두부 닭가슴살 덮밥" })).toBeVisible();
+  await meal.getByRole("button", { name: "식단 저장", exact: true }).click();
+  await meal.getByRole("button", { name: "시금치 이번엔 안 씀", exact: true }).click();
+  await expect(meal.getByRole("spinbutton", { name: "시금치 사용할 양", exact: true })).toHaveValue("0");
+  await meal.getByRole("button", { name: "포장지와 재료를 살펴봤어요", exact: true }).click();
+  const completed = page.waitForResponse((response) => /\/api\/meal-plans\/[^/]+\/complete$/.test(response.url()) && response.request().method() === "POST");
+  await meal.getByRole("button", { name: "조리 완료 기록", exact: true }).click();
+  const response = await completed;
+  expect(response.ok()).toBe(true);
+  expect(response.request().postDataJSON().consumptions).toEqual(expect.arrayContaining([{ food_id: "spinach-1", quantity: 0 }]));
+  const result = await response.json();
+  expect(result.consumed_allocations.some((allocation: { food_id: string }) => allocation.food_id === "spinach-1")).toBe(false);
+  await expect(meal).toHaveCount(0);
+  await page.reload();
+  await expect(page.locator(".connection-pill")).toHaveText("연결됨");
+  await expect(page.locator(".inventory-row").filter({ hasText: "시금치" })).toContainText("1팩");
+});
+
+test("usefulness shopping refresh updates pantry quantities without losing the draft", async ({ page }) => {
+  let inventoryQuantity: number | null = null;
+  let failDashboard = false;
+  let dashboardReads = 0;
+  await page.route("**/api/dashboard", async (route) => {
+    dashboardReads += 1;
+    if (failDashboard) { await route.abort("failed"); return; }
+    const response = await route.fetch();
+    const payload = await response.json();
+    if (inventoryQuantity !== null) {
+      payload.inventory = payload.inventory.map((food: { display_name: string; quantity: number }) =>
+        food.display_name === "시금치" ? { ...food, quantity: inventoryQuantity } : food);
+    }
+    await route.fulfill({ response, json: payload });
+  });
+  await page.goto("/");
+  await expect(page.locator(".connection-pill")).toHaveText("연결됨");
+  await page.getByRole("button", { name: /장보기 목록 열기/ }).click();
+  const shopping = page.getByRole("dialog", { name: "장보기 목록" });
+  await shopping.getByRole("textbox", { name: "직접 추가 상품명" }).fill("시금치");
+  await shopping.getByRole("spinbutton", { name: "직접 추가 수량" }).fill("2.5");
+  await expect(shopping.locator(".shopping-sheet-manual-stock")).toContainText("1팩");
+  inventoryQuantity = 0.25;
+  const beforeRefresh = dashboardReads;
+  await shopping.getByRole("button", { name: "보관 수량 새로고침" }).click();
+  await expect.poll(() => dashboardReads).toBeGreaterThan(beforeRefresh);
+  await expect(shopping.locator(".shopping-sheet-manual-stock")).toContainText("0.25팩");
+  await expect(shopping.getByRole("spinbutton", { name: "직접 추가 수량" })).toHaveValue("2.5");
+  failDashboard = true;
+  await shopping.getByRole("button", { name: "보관 수량 새로고침" }).click();
+  await expect(shopping.locator(".shopping-sheet-manual-stock")).toHaveCount(0);
+  await expect(shopping.getByRole("textbox", { name: "직접 추가 상품명" })).toHaveValue("시금치");
+  await expect(shopping.getByRole("spinbutton", { name: "직접 추가 수량" })).toHaveValue("2.5");
+});
+
+test("usefulness connected purchase records the chosen quantity and storage", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator(".connection-pill")).toHaveText("연결됨");
+  await page.getByRole("button", { name: /장보기 목록 열기/ }).click();
+  const shopping = page.getByRole("dialog", { name: "장보기 목록" });
+  await shopping.getByRole("textbox", { name: "직접 추가 상품명" }).fill("입고 확인 쌀");
+  await shopping.getByRole("spinbutton", { name: "직접 추가 수량" }).fill("1000.5");
+  await shopping.getByRole("textbox", { name: "직접 추가 단위" }).fill("g");
+  await shopping.locator(".shopping-sheet-manual-submit").click();
+  const row = shopping.locator(".shopping-sheet-row-group").filter({ hasText: "입고 확인 쌀" });
+  await row.locator(".shopping-sheet-item").click();
+  await row.getByRole("button", { name: "입고 확인 쌀 식품 목록에 추가" }).click();
+  const panel = row.getByRole("form");
+  await expect(panel.getByRole("spinbutton")).toHaveValue("1000.5");
+  await expect(panel.locator(".shopping-sheet-receive-submit")).toBeDisabled();
+  await panel.getByRole("button", { name: "실온", exact: true }).click();
+  const received = page.waitForResponse((response) => response.url().includes("/receive") && response.request().method() === "POST");
+  await panel.locator(".shopping-sheet-receive-submit").click();
+  const response = await received;
+  expect(response.ok()).toBe(true);
+  expect(response.request().postDataJSON()).toMatchObject({ quantity: 1000.5, storage_type: "ambient" });
+  await shopping.getByRole("button", { name: "식품 보기", exact: true }).click();
+  const detail = page.getByRole("dialog", { name: "입고 확인 쌀", exact: true });
+  await expect(detail.locator(".detail-hero-copy")).toContainText("1000.5g");
+  await expect(detail.getByRole("button", { name: "실온", exact: true })).toHaveAttribute("aria-pressed", "true");
+});
+
 function textPdf(lines: string[]): Buffer {
   const content = ["BT", "/F1 11 Tf", "72 720 Td", ...lines.flatMap((line, index) => {
     const escaped = line.replaceAll("\\", "\\\\").replaceAll("(", "\\(").replaceAll(")", "\\)");
@@ -56,14 +186,14 @@ test("connected empty workspace gives the user a clear first action", async ({ p
 
   await expect(page.getByRole("heading", { name: "먼저 살펴볼 식품 0개" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "내 식품 목록 0" })).toBeVisible();
-  await expect(page.locator(".priority-empty-state")).toContainText("아직 식품을 등록하지 않았어요");
+  await expect(page.locator(".priority-empty-state")).toContainText("이름 · 수량 · 보관 위치만 입력하세요");
   await expect(page.locator(".inventory-empty-state")).toContainText("아직 등록된 식품이 없어요");
   await expect(page.locator(".trust-card")).toHaveAttribute("data-trust-state", "neutral");
   await expect(page.locator(".trust-card")).toContainText("먼저 살펴볼 날짜는 소비기한이 아니에요");
   const addFoodAction = page.locator(".meal-plan-button");
-  await expect(addFoodAction).toContainText("식품 추가하기");
+  await expect(addFoodAction).toContainText("첫 식품 직접 추가");
   await addFoodAction.click();
-  await expect(page.getByRole("dialog", { name: "영수증으로 추가" })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "직접 추가" })).toBeVisible();
   await page.keyboard.press("Escape");
 
   await page.getByRole("button", { name: "식품", exact: true }).click();
@@ -167,16 +297,14 @@ test("connected empty workspace promotes the first saved food into the Home queu
   await page.route("**/api/receipts", async (route) => { receiptCalls += 1; await route.fulfill({ status: 200, contentType: "application/json", body: "[]" }); });
 
   await page.goto("/");
-  await expect(page.getByRole("button", { name: "첫 식품을 추가하고 시작하기" })).toBeVisible();
-  await page.getByRole("button", { name: "첫 식품을 추가하고 시작하기" }).click();
-  const receiptDialog = page.getByRole("dialog", { name: "영수증으로 추가" });
-  await receiptDialog.getByRole("tab", { name: "직접 입력" }).click();
+  await expect(page.getByRole("button", { name: "첫 식품 직접 추가" })).toBeVisible();
+  await page.getByRole("button", { name: "첫 식품 직접 추가" }).click();
   const manualDialog = page.getByRole("dialog", { name: "직접 추가" });
   await manualDialog.getByRole("textbox", { name: "식품 이름" }).fill("대파");
   await manualDialog.getByRole("button", { name: "식품 추가하기" }).click();
 
   await expect(page.getByRole("status")).toContainText("대파를 식품 목록에 추가했어요");
-  await expect(page.locator(".toast-action")).toHaveText("날짜·보관 상태 확인");
+  await expect(page.locator(".toast-action")).toHaveText("날짜와 보관 방법 살펴보기");
   await expect(page.getByRole("heading", { name: "내 식품 목록 1" })).toBeVisible();
   await expect(page.getByRole("button", { name: "오늘 식단 만들기" })).toBeVisible();
   const firstFoodRow = page.locator(".inventory-row").filter({ hasText: "대파" });
@@ -4090,7 +4218,7 @@ test("connected inventory shows the persisted first-opened timestamp", async ({ 
   await expect(dialog.locator(".opened-row")).toContainText("개봉 기록했어요.");
 });
 
-test("connected inventory explains the inference basis without exposing technical fields", async ({ page }) => {
+test("connected inventory explains the estimated priority without exposing technical fields", async ({ page }) => {
   const food = {
     id: "inference-trace-food",
     canonical_name: "국산콩 두부",
@@ -4145,12 +4273,17 @@ test("connected inventory explains the inference basis without exposing technica
   await expect(page.locator(".connection-pill")).toHaveText("연결됨");
   await page.locator(".inventory-row").filter({ hasText: "국산콩 두부" }).click();
   const dialog = page.getByRole("dialog", { name: "국산콩 두부" });
-  const trace = dialog.getByRole("group", { name: "이 식품이 먼저 나온 이유" });
-  await expect(trace).toContainText("참고한 정보 · 구매 기록과 식품 종류 · 냉장 보관 기준");
-  await expect(trace).toContainText("냉장 보관 · 미개봉 상태를 살펴봤어요.");
-  await expect(trace).toContainText("소비기한이나 먹어도 되는지를 판단하는 안내가 아니에요.");
-  await expect(trace).not.toContainText("input_sha256");
-  await expect(trace).not.toContainText("safe_to_eat");
+  const dateInformation = dialog.getByRole("group", { name: "날짜 정보: 먼저 살펴볼 시점" });
+  await expect(dateInformation).toContainText("구매 기록과 식품 종류 · 냉장 보관 기준");
+  const recordedStorage = dialog.getByRole("group", { name: "보관 및 개봉 상태" });
+  await expect(recordedStorage).toContainText("냉장 보관 중");
+  await expect(recordedStorage).toContainText("미개봉");
+  const priorityNote = dialog.locator(".detail-note").filter({ hasText: "먼저 살펴볼 순서는" });
+  await expect(priorityNote).toContainText("식품 종류와 보관 방법을 참고한 안내예요.");
+  await expect(priorityNote).toContainText("소비기한이나 먹어도 되는지를 뜻하지 않아요.");
+  await expect(dialog).not.toContainText("input_sha256");
+  await expect(dialog).not.toContainText("safe_to_eat");
+  await expect(dialog).not.toContainText("priority-rules-v1");
 });
 
 test("connected home routes a provenance-backed food to the source review action", async ({ page }) => {

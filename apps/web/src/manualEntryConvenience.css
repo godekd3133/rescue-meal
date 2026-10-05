@@ -1,0 +1,72 @@
+.bottom-sheet .manual-flow.manual-entry-convenience {
+  gap: 8px;
+  padding: 10px 0 6px;
+}
+
+.bottom-sheet .manual-entry-convenience > h3,
+.bottom-sheet .manual-entry-convenience > .manual-flow-intro {
+  justify-self: stretch;
+  text-align: left;
+}
+
+.bottom-sheet .manual-entry-convenience > h3 {
+  font-size: 18px;
+  line-height: 1.3;
+}
+
+.bottom-sheet .manual-entry-convenience > .manual-flow-intro {
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.bottom-sheet .manual-name-suggestions {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.bottom-sheet .manual-name-suggestions-label {
+  color: var(--atelier-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.bottom-sheet .manual-entry-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+
+.bottom-sheet .manual-entry-choice {
+  min-width: 44px;
+  max-width: 100%;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 1px solid var(--atelier-border-strong);
+  border-radius: 10px;
+  background: var(--atelier-surface-raised);
+  color: var(--atelier-ink);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  text-align: center;
+}
+
+.bottom-sheet .manual-entry-choice:hover:not(:disabled),
+.bottom-sheet .manual-entry-choice[aria-pressed="true"] {
+  border-color: color-mix(in srgb, var(--atelier-pistachio) 52%, var(--atelier-border-strong));
+  background: color-mix(in srgb, var(--atelier-pistachio) 10%, var(--atelier-surface-raised));
+  color: var(--atelier-pistachio);
+}
+
+.bottom-sheet .manual-entry-choice:focus-visible {
+  outline: 2px solid var(--atelier-pistachio);
+  outline-offset: 2px;
+}
+
+.bottom-sheet .manual-entry-choice:disabled {
+  color: var(--atelier-muted);
+  opacity: 0.5;
+}

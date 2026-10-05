@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hmac
 import os
 from math import isfinite
 from pathlib import Path
@@ -7,7 +8,7 @@ from tempfile import NamedTemporaryFile
 from threading import BoundedSemaphore, Lock
 from typing import Any, Literal
 
-from fastapi import FastAPI, File, HTTPException, UploadFile, status
+from fastapi import FastAPI, File, Header, HTTPException, UploadFile, status
 from fastapi.concurrency import run_in_threadpool
 from PIL import Image, ImageOps
 from pydantic import BaseModel, Field
@@ -59,6 +60,9 @@ QUEUE_TIMEOUT_SECONDS = _positive_float_env(
     DEFAULT_QUEUE_TIMEOUT_SECONDS,
     maximum=30.0,
 )
+# Optional shared bearer token. When set, POST /ocr requires
+# `Authorization: Bearer <token>`; health/readiness stay public for probes.
+OCR_BEARER_TOKEN = os.getenv("RESCUE_MEAL_OCR_TOKEN", "").strip()
 
 
 class OcrObservationResponse(BaseModel):
@@ -379,7 +383,11 @@ def readiness() -> WorkerStatusResponse:
 
 
 @app.post("/ocr", response_model=OcrResponse)
-async def ocr(file: UploadFile = File(...)) -> OcrResponse:
+async def ocr(file: UploadFile = File(...), authorization: str | None = Header(default=None)) -> OcrResponse:
+    if OCR_BEARER_TOKEN:
+        expected = f"Bearer {OCR_BEARER_TOKEN}"
+        if authorization is None or not hmac.compare_digest(authorization, expected):
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid bearer token")
     filename = file.filename or "upload.jpg"
     content_type = file.content_type or "application/octet-stream"
     if not content_type.startswith("image/"):

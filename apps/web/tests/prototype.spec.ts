@@ -31,7 +31,7 @@ test("Rescue Meal home opens detail and saves a storage change", async ({ page }
   await expect(dialog).toBeVisible();
   await expect(page.getByTestId("keyboard-dock")).toHaveAttribute("data-visible", "false");
   await expect(dialog.locator(".detail-hero-copy p")).toHaveText("국내산 시금치 · 남은 1팩");
-  await expect(dialog.locator(".date-review-callout")).toContainText("조리 전에 포장지 날짜를 살펴봐 주세요");
+  await expect(dialog.locator(".date-review-callout")).toContainText("조리 전 확인이 필요해요");
   await expect(dialog.locator(".date-review-callout")).toContainText("현재 보관·개봉 상태도 함께 확인해 주세요.");
   await expect(dialog.locator(".date-review-callout")).toHaveAttribute("aria-live", "polite");
   await expect(dialog.locator(".detail-note")).toHaveCount(0);
@@ -558,22 +558,24 @@ test("bottom sheets expose modal semantics and restore focus after closing", asy
   await expect(dialog).toBeVisible();
   await expect(dialog.getByRole("tab", { name: "영수증" })).toBeFocused();
   await expect(dialog.getByRole("tab", { name: "영수증" }).locator("span[aria-hidden='true']")).toHaveText("추천");
-  await expect(dialog.getByRole("tab", { name: "영수증" })).toHaveAccessibleName("영수증");
-  const intakeMethodHint = dialog.locator(".intake-method-hint");
-  const intakeMethodTitle = intakeMethodHint.locator("strong");
-  const intakeMethodDetail = intakeMethodHint.locator("span");
-  await expect(intakeMethodHint).toHaveAttribute("aria-live", "polite");
-  await expect(intakeMethodTitle).toHaveText("영수증");
-  await expect(intakeMethodDetail).toHaveText("여러 품목을 한 번에 가져와요.");
+  await expect(dialog.getByRole("tab", { name: "영수증" })).toHaveAccessibleName("영수증, 추천");
+  const intakeFlow = dialog.locator(".intake-flow-rail");
+  const intakeMethodTitle = intakeFlow.locator(".intake-flow-rail-heading strong");
+  const intakeMethodDetail = intakeFlow.locator(".intake-flow-rail-heading small");
+  await expect(intakeFlow).toHaveAttribute("aria-label", "식품 추가 1단계");
+  await expect(intakeFlow.locator(".intake-flow-rail-heading")).toHaveAttribute("aria-live", "polite");
+  await expect(intakeFlow.locator(".intake-flow-rail-heading")).toHaveAttribute("aria-atomic", "true");
+  await expect(intakeMethodTitle).toHaveText("영수증 사진을 선택해요");
+  await expect(intakeMethodDetail).toHaveText("사진은 저장하지 않아요. 목록에 담을 식품만 골라요.");
   await dialog.getByRole("tab", { name: "바코드" }).click();
-  await expect(intakeMethodTitle).toHaveText("바코드");
-  await expect(intakeMethodDetail).toHaveText("상품명을 몰라도 코드로 찾을 수 있어요.");
+  await expect(intakeMethodTitle).toHaveText("바코드를 입력하거나 스캔해요");
+  await expect(intakeMethodDetail).toHaveText("찾은 상품명과 보관 방법을 확인해 식품 목록에 담아요.");
   await dialog.getByRole("tab", { name: "라벨" }).click();
-  await expect(intakeMethodTitle).toHaveText("라벨");
-  await expect(intakeMethodDetail).toHaveText("포장지 날짜를 사진으로 읽어 기록해요.");
+  await expect(intakeMethodTitle).toHaveText("날짜가 보이는 면을 선택해요");
+  await expect(intakeMethodDetail).toHaveText("날짜 종류와 보관 방법을 포장지에서 확인해요.");
   await dialog.getByRole("tab", { name: "직접 입력" }).click();
-  await expect(intakeMethodTitle).toHaveText("직접 입력");
-  await expect(intakeMethodDetail).toHaveText("사진 없이 바로 기록할 수 있어요.");
+  await expect(intakeFlow).toHaveCount(0);
+  await expect(dialog.getByRole("heading", { name: "어떤 식품을 기록할까요?" })).toBeVisible();
   await dialog.getByRole("tab", { name: "영수증" }).click();
   await expect(dialog.getByRole("tab", { name: "바코드" }).locator("span[aria-hidden='true']")).toHaveCount(0);
   await expect(dialog).toHaveAttribute("aria-labelledby");
@@ -1308,7 +1310,7 @@ test("label date remains a candidate until the user confirms it", async ({ page 
   const savedDateProof = page.getByRole("group", { name: "날짜 정보: 포장 소비기한" });
   await expect(savedDateProof).toContainText("2026.09.02");
   await expect(savedDateProof.locator("small")).toHaveText("포장지 표시");
-  await expect(page.locator(".date-review-callout")).toContainText("조리 전에 포장지 날짜를 살펴봐 주세요");
+  await expect(page.locator(".date-review-callout")).toContainText("조리 전 확인이 필요해요");
 
   await page.getByRole("button", { name: "포장지에서 날짜 다시 확인" }).click();
   await page.getByRole("button", { name: "예시 라벨 결과 보기" }).click();
@@ -1348,7 +1350,7 @@ test("label review lets the user choose a new lot or an existing matching lot", 
   await page.getByRole("button", { name: /식품 추가하기/ }).click();
   await page.getByRole("tab", { name: "라벨" }).click();
   const dialog = page.getByRole("dialog", { name: "라벨로 추가" });
-  await expect(dialog.locator(".input-flow > p")).toHaveText("날짜가 보이는 면을 촬영하거나 사진을 선택하면 포장지의 날짜를 읽어드려요.");
+  await expect(dialog.locator(".input-flow > p")).toHaveText("사진에서 포장지 날짜를 읽어드려요. 사진은 식품 기록에 저장하지 않아요.");
   await dialog.getByRole("button", { name: "예시 라벨 결과 보기" }).click();
 
   const saveSummary = dialog.locator("#label-result-action-summary");
@@ -2237,8 +2239,16 @@ test("guest home can reopen the temporary shopping list and explains its lifetim
   const shoppingSummary = page.locator(".shopping-summary-card").filter({ hasText: "미리보기" });
   await expect(shoppingSummary).toBeVisible();
   await expect(shoppingSummary).toContainText("아직 담은 재료가 없어요");
-  const shoppingFollowsSafetyGuidance = await page.locator(".trust-card").evaluate((element) => element.nextElementSibling?.classList.contains("shopping-summary-card"));
-  expect(shoppingFollowsSafetyGuidance).toBe(true);
+  const homeActionOrder = await page.evaluate(() => {
+    const safetySummary = document.querySelector(".trust-card");
+    const mealAction = document.querySelector(".meal-plan-button");
+    const shoppingAction = [...document.querySelectorAll<HTMLElement>(".shopping-summary-card")]
+      .find((element) => element.querySelector(".shopping-summary-kicker")?.textContent?.trim() === "장보기");
+    return Boolean(safetySummary && mealAction && shoppingAction
+      && (safetySummary.compareDocumentPosition(mealAction) & Node.DOCUMENT_POSITION_FOLLOWING)
+      && (mealAction.compareDocumentPosition(shoppingAction) & Node.DOCUMENT_POSITION_FOLLOWING));
+  });
+  expect(homeActionOrder).toBe(true);
 
   await shoppingSummary.click();
   const shopping = page.getByRole("dialog", { name: "장보기 목록" });

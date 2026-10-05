@@ -130,8 +130,14 @@ test("primary home action text meets contrast in light and dark themes", async (
       };
     });
 
-    expect(ratios.label, `${theme} primary label contrast`).toBeGreaterThanOrEqual(4.5);
-    expect(ratios.supportingCopy, `${theme} primary supporting-copy contrast`).toBeGreaterThanOrEqual(4.5);
+   expect(ratios.label, `${theme} primary label contrast`).toBeGreaterThanOrEqual(4.5);
+   expect(ratios.supportingCopy, `${theme} primary supporting-copy contrast`).toBeGreaterThanOrEqual(4.5);
+    const primaryShadow = await page.locator(".meal-plan-button").evaluate((button) => ({
+      value: getComputedStyle(button).boxShadow,
+      token: getComputedStyle(button.closest(".meal-home")!).getPropertyValue("--atelier-primary-action-shadow"),
+    }));
+    expect(primaryShadow.value, `${theme} primary action keeps its depth`).not.toBe("none");
+    expect(primaryShadow.token, `${theme} primary shadow token`).toContain(theme === "light" ? "20%" : "22%");
   }
 });
 

@@ -1,3 +1,45 @@
+import type { ApiStorageType } from "./mealApi";
+
+export type ShoppingInventoryFood = {
+  id: string;
+  name: string;
+  quantity: string;
+  storage: string;
+  storageLocationName?: string;
+};
+
+function comparableFoodName(name: string) {
+  return name.normalize("NFKC").trim().replace(/\s+/g, " ").toLocaleLowerCase("ko-KR");
+}
+
+export function matchingShoppingInventoryFoods(name: string, foods: ShoppingInventoryFood[]) {
+  const normalizedName = comparableFoodName(name);
+  if (!normalizedName) return [];
+  return foods.filter((food) => comparableFoodName(food.name) === normalizedName);
+}
+
+export function shoppingQuantityInputValue(quantity: number) {
+  return String(quantity);
+}
+
+export function validateShoppingReceive({
+  rawQuantity,
+  storageType,
+  purchased,
+}: {
+  rawQuantity: string;
+  storageType: ApiStorageType | null;
+  purchased: boolean;
+}): { quantity: number; storageType: ApiStorageType; error: null } | { error: string } {
+  const quantity = Number(rawQuantity);
+  if (!rawQuantity.trim() || !Number.isFinite(quantity) || quantity <= 0) {
+    return { error: "구매 수량은 0보다 큰 숫자로 입력해 주세요." };
+  }
+  if (!purchased) return { error: "구매를 마치면 수량과 보관 위치를 입력해 주세요." };
+  if (!storageType) return { error: "포장지의 보관 방법을 보고 냉장·냉동·실온 중 하나를 선택해 주세요." };
+  return { quantity, storageType, error: null };
+}
+
 export type ShoppingListProgressTone = "neutral" | "active" | "complete";
 
 export type ShoppingListProgressCopy = {
@@ -49,7 +91,9 @@ export function getShoppingListProgressCopy({
     ? {
       tone: "active",
       title: "구매 현황",
-      description: `${remainingCount}개를 구매하면 식품 목록에 추가할 수 있어요.`,
+      description: completedCount
+        ? `살 재료 ${remainingCount}가지 · 구매한 ${completedCount}가지는 수량과 보관 위치를 확인해 추가해 주세요.`
+        : "산 재료를 체크하고, 구매한 수량과 보관 위치를 확인해 식품 목록에 추가해 주세요.",
       countLabel: `${completedCount}/${itemCount}`,
     }
     : {
