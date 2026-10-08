@@ -5418,11 +5418,8 @@ function PrototypeContent() {
                 <button className={inventoryStatusFilter === "priority" ? "inventory-status-filter-active inventory-status-filter-priority" : "inventory-status-filter-priority"} type="button" aria-pressed={inventoryStatusFilter === "priority"} aria-controls="inventory-list" onClick={() => { setInventoryStatusFilter("priority"); if (activeContentNavRef.current === "food") restoreContentNavigation("food"); }}>먼저 살펴보기 <span>{inventoryScopedPriorityCount}</span></button>
               </div>
               {showInventoryScope ? <div className="inventory-filter-summary" role="status" aria-live="polite">
-                <span><i aria-hidden="true" /><Metadata parts={[inventoryScopeLabel, `${inventoryCount}개`]} /></span>
+                <span><Metadata parts={[inventoryScopeLabel, `${inventoryCount}개`]} /></span>
                 <button type="button" onClick={clearInventoryFilters}>검색·필터 초기화</button>
-              </div> : !inventoryDataUnknown && !hasInventoryQuery && storageFilter === "전체" && inventoryNeedsReviewCount ? <div className="inventory-filter-summary inventory-health-summary">
-                <span><i aria-hidden="true" />날짜·보관을 살펴볼 식품 {inventoryNeedsReviewCount}개</span>
-                <span>포장지 날짜와 보관 방법을 살펴봐 주세요</span>
               </div> : null}
             </div>
 
@@ -5444,11 +5441,10 @@ function PrototypeContent() {
                     <span className="inventory-copy">
                       <strong>{food.name}</strong>
                       <small><MetadataText text={<>{foodSourceSummary(food)} · {food.quantity}{food.storageLocationName ? ` · ${food.storageLocationName}` : ""}</>} /></small>
-                      <small className="inventory-storage-meta"><span className={`storage-dot ${getStorageClass(food.storage)}`} aria-hidden="true" /><span><MetadataText text={<>{food.storage}{dateOriginLabel ? ` · ${dateOriginLabel}` : ""}</>} /></span></small>
+                      <small className="inventory-storage-meta"><span><MetadataText text={<>{food.storage}{dateOriginLabel ? ` · ${dateOriginLabel}` : ""}</>} /></span></small>
                     </span>
                     <span className={`inventory-status ${reviewReason ? "inventory-status-warning" : ""}`} data-inventory-status={reviewReason ? "needs-review" : food.priority <= 3 ? "priority" : "stored"}>
-                      <span className={`storage-dot ${reviewReason ? "status-dot-warning" : getStorageClass(food.storage)}`} aria-hidden="true" />
-                      <span className="inventory-status-content">
+                                            <span className="inventory-status-content">
                         <span className="inventory-status-label">{reviewReason ? reviewReason === "보관 방법 확인" ? "보관 확인" : "날짜 확인" : food.priority <= 3 ? <><b>먼저 살펴보기</b><span className="inventory-date-value">{food.dateLabel}</span></> : food.dateLabel}</span>
                         {reviewDetail ? <small className="inventory-review-detail"><MetadataText text={reviewDetail} /></small> : null}
                       </span>

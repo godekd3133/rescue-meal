@@ -18336,3 +18336,22 @@ html[data-rescue-theme="light"] .app-shell-preview .meal-home .priority-card .fo
 .bottom-sheet .label-result-action-summary .metadata-parts {
   justify-content: center;
 }
+
+/* A brief disclosure should fit its content instead of stretching across the phone. */
+.app-shell-web .bottom-sheet:has(.account-demo-explainer) {
+  top: auto !important;
+  height: auto !important;
+  max-height: calc(100dvh - 48px) !important;
+}
+
+.inventory-status[data-inventory-status="priority"] .inventory-status-label,
+.inventory-status[data-inventory-status="needs-review"] .inventory-status-label {
+  background: transparent;
+}
+
+.inventory-review-detail .metadata-parts {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
