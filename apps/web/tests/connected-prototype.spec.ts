@@ -5,7 +5,7 @@ import { expectExternalSyncState, expectInventoryScopeState, expectMealShoppingL
 test("convenience exact partial food consumption persists after reload", async ({ page }) => {
   test.setTimeout(60_000);
   for (const entry of [
-    { name: "절반 기록 확인 쌀", initial: "500g", quantity: "250", remaining: "250g", half: "절반 · 250g" },
+    { name: "절반 기록 확인 쌀", initial: "500g", quantity: "250", remaining: "250g", half: "절반 250g" },
     { name: "소수 기록 확인 채소", initial: ".5kg", quantity: "0.2", remaining: "0.3kg", half: null },
   ]) {
     await page.goto("/");

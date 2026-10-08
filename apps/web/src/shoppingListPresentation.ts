@@ -92,14 +92,14 @@ export function getShoppingListProgressCopy({
       tone: "active",
       title: "구매 현황",
       description: completedCount
-        ? `살 재료 ${remainingCount}가지 · 구매한 ${completedCount}가지는 수량과 보관 위치를 확인해 추가해 주세요.`
+        ? `살 재료 ${remainingCount}가지 · 구매한 재료는 새로 산 수량만 기록해 주세요.`
         : "산 재료를 체크하고, 구매한 수량과 보관 위치를 확인해 식품 목록에 추가해 주세요.",
       countLabel: `${completedCount}/${itemCount}`,
     }
     : {
       tone: "complete",
-      title: "구매 완료 · 식품 목록에 추가 전",
-      description: "구매한 식품을 목록에 추가한 뒤 포장지 날짜와 보관 방법을 살펴봐 주세요.",
+      title: "장보기를 마쳤어요",
+      description: "아직 기록하지 않은 구매가 있다면 수량과 보관 위치를 확인해 식품 목록에 추가해 주세요.",
       countLabel: `${completedCount}/${itemCount}`,
     };
 }

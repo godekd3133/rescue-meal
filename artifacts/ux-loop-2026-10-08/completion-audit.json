@@ -1,0 +1,117 @@
+{
+  "date": "2026-10-08",
+  "scope": "로컬 Rescue Meal 사용자 흐름 개선",
+  "iterations": [
+    {
+      "problem": "식단·계정 안내의 어두운 모드 대비, 고정된 체험 날짜, 연결 없는 로그인 입력, 등록 방법과 저장 범위의 불명확함",
+      "needs": "무엇을 할 수 있고 어디까지 저장되는지 이해하기",
+      "implementation": "테마 토큰 적용, 오늘 기준 체험 날짜 생성, 체험 전용 계정 안내, 등록 방법 보조 라벨, 간결한 직접 입력 안내",
+      "validation": "실제 브라우저 화면과 직접 등록 동작 확인"
+    },
+    {
+      "problem": "구매 체크 표시의 잘못된 CSS 선택자, 수량/상태까지 취소선, 모바일 버튼 밀집, 구매 기록 잔존과 안내 불일치",
+      "needs": "구매 완료와 실제 재고 기록을 구분하고 추가할 수량을 명확히 이해하기",
+      "implementation": "체크 선택자 수정, 상태/수량 취소선 제거, 480px 이하 행동 버튼 분리, 실제 구매 기록 동작에 맞는 안내",
+      "validation": "로컬 API 직접 등록과 구매 체크, 냉장 1개 재고 추가, 재로딩 후 유지, 360px 가로 넘침 없음 확인"
+    }
+  ],
+  "steps": [
+    {
+      "step": 1,
+      "name": "첫 진입",
+      "result": "체험 식품의 날짜를 현재 날짜에 맞추고 저장 범위를 안내",
+      "screenshot": "01-before-home.png",
+      "health": "로컬에서 확인"
+    },
+    {
+      "step": 2,
+      "name": "등록 방법 선택",
+      "result": "각 방법의 쓰임을 표시",
+      "screenshot": "11-after-manual-dark-mobile.png",
+      "health": "로컬에서 확인"
+    },
+    {
+      "step": 3,
+      "name": "영수증 검토",
+      "result": "항목 선택·수정과 다른 입력 방식 전환 후 검토 유지 확인",
+      "screenshot": "20-after-receipt-review-dark.png",
+      "health": "로컬에서 확인"
+    },
+    {
+      "step": 4,
+      "name": "바코드 상품 확인",
+      "result": "상품 정보를 확인한 뒤 적용하는 예시 흐름 확인",
+      "screenshot": "18-barcode-review-mobile.png",
+      "health": "로컬에서 확인"
+    },
+    {
+      "step": 5,
+      "name": "라벨 날짜 확인",
+      "result": "날짜 의미·새 식품/기존 식품 대상·저장 요약 확인",
+      "screenshot": "19-label-review-mobile.png",
+      "health": "로컬에서 확인"
+    },
+    {
+      "step": 6,
+      "name": "직접 등록",
+      "result": "이름·수량·보관 위치·체험 저장 범위 확인; 별도 API에서 새로고침 후 2팩 유지 확인",
+      "screenshot": "12-after-manual-save-summary.png",
+      "health": "로컬에서 확인"
+    },
+    {
+      "step": 7,
+      "name": "식품 검색과 상세",
+      "result": "두부 검색 1개 결과·검색 초기화·날짜 및 소비 기록 안내 확인",
+      "screenshot": "25-inventory-search-dark.png",
+      "health": "로컬에서 확인"
+    },
+    {
+      "step": 8,
+      "name": "식단",
+      "result": "어두운 모드 제목 대비 수정; 재료·날짜·알레르기 안내 확인",
+      "screenshot": "10-after-meal-dark-mobile.png",
+      "health": "로컬에서 확인"
+    },
+    {
+      "step": 9,
+      "name": "장보기와 재고 추가",
+      "result": "구매 체크·보관 위치 선택·재고 반영·새로고침 유지 확인. 직접 입력 구매 기록의 잔존 동작에 맞게 문구 수정",
+      "screenshot": "23-after-shopping-history-dark.png",
+      "health": "로컬에서 확인"
+    },
+    {
+      "step": 10,
+      "name": "알림",
+      "result": "식품별 날짜 출처 안내와 홈 복귀 확인",
+      "screenshot": "26-after-notifications-dark.png",
+      "health": "로컬에서 확인"
+    },
+    {
+      "step": 11,
+      "name": "계정과 체험",
+      "result": "연결 없는 체험 상태에서 비활성 로그인 폼을 제거하고 저장 범위 안내; 실제 게스트 로그인 폼 유지 확인",
+      "screenshot": "09-after-demo-account-mobile.png",
+      "health": "로컬에서 확인"
+    }
+  ],
+  "checks": {
+    "build": "pass",
+    "mobile_runtime": "28 protected files pass",
+    "domain_tests": "34/34 pass",
+    "static_delivery_tests": "4/4 pass",
+    "diff_whitespace": "pass",
+    "bundle_budget": "FAIL: 전체 CSS 334.8 KiB / 한도 260 KiB. 수정 전 prototype.css만 minify해도 314.3 KiB로 기존 초과. 한도를 늘리지 않음."
+  },
+  "limits": [
+    "실제 영수증/라벨 카메라 및 외부 인식 품질 미검증; 예시 검토 흐름 확인",
+    "운영 배포 및 실기기 미검증",
+    "실제 계정 가입·로그인·비밀번호 재설정·기기 알림 전송 미실행",
+    "자동 브라우저 테스트 전체 및 완전한 접근성 준수 미확인",
+    "API에 저장된 날짜는 바꾸지 않음. 오늘 기준 날짜는 연결 없는 체험 데이터에만 적용"
+  ],
+  "local_api_evidence": {
+    "manual_entry": "연결 확인 대파 2팩 냉장 → reload 유지",
+    "shopping_receive": "연결 확인 당근 1개 냉장 → reload 유지",
+    "storage": "별도의 임시 SQLite 저장소, 운영 자료 사용 없음"
+  }
+}

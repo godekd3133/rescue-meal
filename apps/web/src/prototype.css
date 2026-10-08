@@ -2394,8 +2394,8 @@
   align-items: flex-start;
   padding: 10px;
   border-radius: 10px;
-  background: #f4eee2;
-  color: #90755b;
+  background: var(--atelier-surface-raised);
+  color: var(--atelier-muted);
   font-size: 9px;
   line-height: 1.45;
 }
@@ -7134,8 +7134,7 @@ html[data-rescue-theme="dark"] .receipt-line-confirmed-badge {
   background: #e9f1e4;
 }
 
-.shopping-sheet-row-checked .shopping-sheet-copy strong,
-.shopping-sheet-row-checked .shopping-sheet-copy small {
+.shopping-sheet-row-checked .shopping-sheet-copy strong {
   color: var(--meal-muted);
   text-decoration: line-through;
 }
@@ -9632,7 +9631,7 @@ html[data-rescue-theme="dark"] .runtime-configuration-screen {
 .bottom-sheet .detail-hero {
   overflow: hidden;
   border-color: var(--sheet-border);
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 0.92));
+  background: var(--atelier-surface-raised);
 }
 
 .bottom-sheet .account-form,
@@ -12408,7 +12407,7 @@ html[data-rescue-theme="dark"] .bottom-sheet .recipe-consumption-input {
 
 .bottom-sheet .receipt-line-toggle[aria-checked="true"],
 .bottom-sheet .recipe-shopping-row-checked .recipe-shopping-check,
-.bottom-sheet .shopping-sheet-item-checked .shopping-sheet-check {
+.bottom-sheet .shopping-sheet-row-checked .shopping-sheet-check {
   border-color: var(--atelier-pistachio);
   background: var(--atelier-pistachio);
 }
@@ -15185,7 +15184,7 @@ html[data-rescue-theme="dark"] .bottom-sheet .barcode-date-candidate {
   background: color-mix(in srgb, var(--atelier-coral) 10%, var(--atelier-surface));
 }
 
-@media (max-width: 360px) {
+@media (max-width: 480px) {
   .bottom-sheet .shopping-sheet-row {
     grid-template-columns: minmax(0, 1fr);
     gap: 8px;
@@ -16318,6 +16317,9 @@ html[data-rescue-theme="light"] :is(.app-shell-web,.app-shell-preview,.app-shell
   min-width: 44px;
   min-height: 44px;
   padding-inline: 8px;
+  border-color: var(--atelier-border-strong);
+  background: var(--atelier-surface-raised);
+  color: var(--atelier-ink);
 }
 
 html[data-rescue-theme="light"] .bottom-sheet .barcode-candidate-apply-primary,
@@ -18206,4 +18208,131 @@ html[data-rescue-theme="light"] .app-shell-preview .meal-home .priority-card .fo
     --atelier-border: rgba(235, 246, 238, 0.38);
     --atelier-border-strong: rgba(235, 246, 238, 0.58);
   }
+}
+
+/* Show what each intake method does before asking for input. */
+.bottom-sheet .mode-tabs .mode-tab {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 4px;
+  min-height: 76px;
+  padding: 12px 2px 8px;
+}
+
+.bottom-sheet .mode-tab .mode-tab-purpose {
+  color: var(--atelier-muted);
+  font-size: 12px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.bottom-sheet .mode-tab[aria-selected="true"] .mode-tab-purpose {
+  color: var(--atelier-pistachio);
+}
+
+.bottom-sheet .account-demo-summary {
+  margin: 0;
+  color: var(--atelier-muted);
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.bottom-sheet .account-demo-explainer .primary-sheet-button {
+  margin-top: 8px;
+}
+
+.bottom-sheet .manual-record-help {
+  width: 100%;
+  color: var(--atelier-muted);
+  border-top: 1px solid var(--atelier-border);
+}
+
+.bottom-sheet .manual-record-help summary {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  cursor: pointer;
+  font-size: 12px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.bottom-sheet .manual-record-help summary:focus-visible {
+  outline: 2px solid var(--atelier-pistachio);
+  outline-offset: 2px;
+}
+
+.bottom-sheet .manual-submit-summary small {
+  display: block;
+  margin-top: 4px;
+}
+
+/* Purchased rows still need a readable quantity and next step. */
+.bottom-sheet .shopping-sheet-row-checked {
+  background: transparent;
+}
+
+.bottom-sheet .shopping-sheet-row-checked .shopping-sheet-copy small {
+  color: var(--atelier-muted);
+  text-decoration: none;
+}
+
+.bottom-sheet .shopping-sheet-row-checked .shopping-sheet-copy strong {
+  color: var(--atelier-ink);
+}
+
+.bottom-sheet .capture-intro p,
+.bottom-sheet .input-flow > p {
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+/* Metadata uses separate fields and spacing, without text separators. */
+.metadata-parts {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  max-width: 100%;
+  gap: 3px 12px;
+  vertical-align: baseline;
+}
+
+.metadata-parts,
+.metadata-part {
+  font: inherit !important;
+  color: inherit !important;
+  letter-spacing: inherit;
+}
+
+.metadata-part {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.inventory-status-label:has(.inventory-date-value) {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+}
+
+.inventory-status-label .inventory-date-value {
+  font-weight: 450;
+}
+
+.bottom-sheet .detail-quantity-presets button:has(.quantity-preset-value) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.bottom-sheet .quantity-preset-value {
+  font-size: 12px;
+  color: var(--atelier-muted);
+}
+
+.bottom-sheet .label-result-action-summary .metadata-parts {
+  justify-content: center;
 }

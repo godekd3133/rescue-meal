@@ -1,3 +1,4 @@
+import { MetadataText } from "./Metadata";
 import { useEffect, useRef, useState } from "react";
 import { CheckCircledIcon, ChevronRightIcon, InfoCircledIcon } from "@radix-ui/react-icons";
 import type { ApiNotification } from "./mealApi";
@@ -105,7 +106,7 @@ export default function NotificationSheet({
       <span className="notification-row-copy">
         <span className="notification-row-title"><strong>{displayTitle}</strong></span>
         <small>{displayMessage}</small>
-        <em>{rowDetail} · {formatNotificationTime(notification.created_at)}</em>
+        <em><MetadataText text={<>{rowDetail} · {formatNotificationTime(notification.created_at)}</>} /></em>
       </span>
       <span id={`notification-status-${notification.id}`} className="sr-only">{notification.read_at ? "읽음" : "읽지 않음"}</span>
       <ChevronRightIcon width={15} height={15} />

@@ -437,7 +437,7 @@ test("keeps cooking steps and safety instructions readable on mobile in both the
   }
 });
 
-test("offers a direct recipe-step shortcut after the safety review details", async ({ page }) => {
+test("offers one recipe-step action while keeping safety details reachable", async ({ page }) => {
   for (const viewport of [{ width: 320, height: 740 }, { width: 393, height: 852 }]) {
     await page.setViewportSize(viewport);
     await page.goto("/");
@@ -449,13 +449,14 @@ test("offers a direct recipe-step shortcut after the safety review details", asy
     const dialog = page.getByRole("dialog", { name: "오늘의 식단" });
     await expect(dialog).toBeVisible();
     await waitForSheetSettled(page);
-    await dialog.getByRole("button", { name: "날짜와 알레르기 안내 보기" }).click();
+    await dialog.getByRole("button", { name: /조리 전에 확인할 내용 .* 보기/ }).click();
 
     const safetySummary = dialog.locator(".recipe-safety-summary");
-    const shortcut = dialog.getByRole("button", { name: "조리 순서 바로 보기" });
+    const shortcut = dialog.getByRole("button", { name: "조리 방법 보기", exact: true });
     await expect(safetySummary).toBeVisible();
     await expect(shortcut).toHaveCount(1);
     await expect(dialog.locator(".recipe-safety-summary-heading")).toBeInViewport();
+    await shortcut.scrollIntoViewIfNeeded();
     await expect(shortcut).toBeInViewport();
     await expect(shortcut).toHaveCSS("min-height", "44px");
     const shortcutReachable = await shortcut.evaluate((element) => {
@@ -466,15 +467,7 @@ test("offers a direct recipe-step shortcut after the safety review details", asy
       return actionBox.top >= contentBox.top - 1 && actionBox.bottom <= contentBox.bottom + 1;
     });
     expect(shortcutReachable).toBe(true);
-    const readingOrder = await dialog.evaluate((element) => {
-      const summary = element.querySelector(".recipe-safety-summary");
-      const instructionShortcut = element.querySelector(".recipe-instructions-shortcut");
-      const ingredients = element.querySelector(".recipe-ingredients");
-      return Boolean(summary && instructionShortcut && ingredients
-        && (summary.compareDocumentPosition(instructionShortcut) & Node.DOCUMENT_POSITION_FOLLOWING)
-        && (instructionShortcut.compareDocumentPosition(ingredients) & Node.DOCUMENT_POSITION_FOLLOWING));
-    });
-    expect(readingOrder).toBe(true);
+    await expect(dialog.locator(".recipe-instructions-shortcut")).toHaveCount(0);
 
     await shortcut.click();
     await expect(dialog.locator(".recipe-details")).toBeVisible();
@@ -537,7 +530,7 @@ test("returns to the same meal-plan position and open instructions after checkin
   const instructionsToggle = dialog.getByRole("button", { name: "조리 방법 보기" });
   await instructionsToggle.scrollIntoViewIfNeeded();
   await instructionsToggle.click();
-  const returnAction = dialog.getByRole("button", { name: "식품 보기 · 시금치" });
+  const returnAction = dialog.getByRole("button", { name: "시금치 보기" });
   const before = await dialog.locator(".meal-sheet-content").evaluate((element) => {
     const scroller = element.closest<HTMLElement>(".sheet-content");
     const toggle = element.querySelector<HTMLElement>(".recipe-instructions-toggle");

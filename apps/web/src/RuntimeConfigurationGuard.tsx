@@ -6,7 +6,7 @@ export default function RuntimeConfigurationGuard({ message }: RuntimeConfigurat
   return (
     <main className="runtime-configuration-screen" aria-label="Rescue Meal 서비스 연결 안내">
       <div className="runtime-configuration-mark" aria-hidden="true">r</div>
-      <span className="runtime-configuration-kicker">RESCUE MEAL · 연결 안내</span>
+      <span className="runtime-configuration-kicker">RESCUE MEAL</span>
       <h1>서비스에 연결할 수<br /><em>없어요</em></h1>
       <p>저장한 식품 기록을 불러오지 못했어요. 서비스 연결을 살펴본 뒤 다시 시도해 주세요.</p>
       <div className="runtime-configuration-alert" role="alert">

@@ -30,12 +30,12 @@ test("one pack can be halved without bypassing the date review confirmation", as
   await page.goto("/");
   await page.locator(".priority-card").filter({ hasText: "시금치" }).click();
   const detail = page.getByRole("dialog", { name: "시금치", exact: true });
-  await detail.getByRole("button", { name: "절반 · 0.5팩", exact: true }).click();
+  await detail.getByRole("button", { name: "절반 0.5팩", exact: true }).click();
   await expect(detail.getByRole("textbox", { name: "기록할 수량", exact: true })).toHaveValue("0.5");
   await expect(detail.locator(".detail-quantity-note")).toContainText("0.5팩 남아요");
   await detail.getByRole("textbox", { name: "기록할 수량", exact: true }).fill("2");
   await expect(detail.locator(".detail-consume-action")).toBeDisabled();
-  await detail.getByRole("button", { name: "절반 · 0.5팩", exact: true }).click();
+  await detail.getByRole("button", { name: "절반 0.5팩", exact: true }).click();
   await detail.locator(".detail-consume-action").click();
   await expect(detail.getByRole("group", { name: "이번 소비 기록" })).toContainText("0.5팩");
   await expect(page.locator(".priority-card").filter({ hasText: "시금치" })).toContainText("1팩");

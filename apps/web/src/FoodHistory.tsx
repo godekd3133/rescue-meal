@@ -1,3 +1,4 @@
+import { MetadataText } from "./Metadata";
 import { useEffect, useRef, useState } from "react";
 import { ArchiveIcon, CheckCircledIcon, CrossCircledIcon, ReaderIcon, SewingPinIcon, TrashIcon } from "@radix-ui/react-icons";
 import { mealApi, type ApiGrocyOutboxStatus, type ApiGrocyOutboxStatusHistory, type ApiGrocySyncStatus, type ApiStorageEvent, type ApiStorageLocation, type ApiStorageType } from "./mealApi";
@@ -267,7 +268,7 @@ export default function FoodHistory({ foodId, unit, storageLocations = [], histo
                           {event.grocy_status_history.slice(-6).reverse().map((entry, entryIndex) => (
                             <div className="history-sync-item" role="listitem" data-history-sync-evidence-status={entry.status} key={event.id + ":history:" + entryIndex}>
                               <strong>{outboxHistoryStatusLabel(entry.status)}</strong>
-                              <small>{statusHistorySourceLabel(entry.source)} · {formatHistoryTime(entry.occurred_at)}</small>
+                              <small><MetadataText text={<>{statusHistorySourceLabel(entry.source)} · {formatHistoryTime(entry.occurred_at)}</>} /></small>
                               {entry.note ? <small>{outboxHistoryNote(entry.note)}</small> : null}
                               {entry.status === "succeeded" && transactionLabel ? <small>{transactionLabel}</small> : null}
                             </div>

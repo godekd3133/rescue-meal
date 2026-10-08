@@ -73,6 +73,8 @@ When any text-entry control loses focus, dismiss the simulated keyboard. If the 
 
 ## Current product visual direction
 
+- Do not join visible metadata with bullet or middle-dot separators. Lay out status, period, quantity, storage, and provenance as separate fields, lines, or controls with spacing. Avoid obvious or repeated explanatory copy; retain material date meaning, safety, storage mismatch, unsaved-state, and persistence information where the relevant action happens.
+
 - The selected direction is **Emerald Atelier**: deep forest/charcoal background, warm ivory type, the user-requested blue primary accent (light `#3182f6`, dark `#6f8dff`), coral review/safety state, amber pending state, and slate-blue supporting metadata. The accent still uses the legacy `--atelier-pistachio` token in theme CSS; do not revert it to green without a new user direction.
 - Durable product feedback: use natural, consumer-friendly copy and authentic food photography. Do not use AI-esque copy, synthetic-looking food imagery, or isolated synthetic food cutouts. Preserve food safety and date semantics while keeping the Emerald Atelier palette and blue accent.
 - Estimated use-first dates are ordering hints, not deadlines or expiry dates. Use `우선순위 참고` / `먼저 살펴볼 시점` language; do not frame estimates as `...까지 먼저 먹기`. Keep printed and user-confirmed dates clearly distinct.

@@ -1,3 +1,4 @@
+import { Metadata, MetadataText } from "./Metadata";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from "react";
 import { MotionConfig } from "motion/react";
 import {
@@ -40,6 +41,7 @@ import { runAuthoritativeMutation } from "./mutationReadback";
 import { runStorageMutationRecovery } from "./storageMutationRecovery";
 import { getDateBadge, getInventoryDateOriginLabel } from "./datePresentation";
 import { getHomeReviewTopicLabel } from "./homeReviewSummary";
+import { demoCalendarDate } from "./demoCalendarDate";
 import { isValidEventQuantity, parseDisplayQuantity } from "./quantitySelection";
 
 export type StorageType = "냉장" | "냉동" | "실온";
@@ -216,131 +218,134 @@ const LEGACY_FOOD_IMAGES: Record<string, string> = {
 };
 const LOCAL_FOOD_IMAGES = new Set<string>(Object.values(FOOD_IMAGES));
 
-const INITIAL_FOODS: FoodItem[] = [
-  {
-    id: "spinach-1",
-    name: "시금치",
-    brand: "국내산 시금치",
-    quantity: "1팩",
-    storage: "냉장",
-    dateLabel: formatApiDate("2026-09-02"),
-    dateDetail: "2026.09.02",
-    dateKind: "actual_printed",
-    dateSource: "포장지 표시",
-    image: FOOD_IMAGES.spinach,
-    category: "채소",
-    priority: 1,
-    confidence: 1,
-    note: "포장지에서 유효년월일을 확인했어요.",
-    opened: true,
-  },
-  {
-    id: "tofu-1",
-    name: "국산콩 두부",
-    brand: "풀무원",
-    quantity: "1모",
-    storage: "냉장",
-    dateLabel: formatApiDate("2026-09-04"),
-    dateDetail: "먼저 먹기 참고",
-    dateKind: "estimated_use_first",
-    dateSource: "상품 유형 + 보관 방식",
-    image: FOOD_IMAGES.tofu,
-    category: "두부·콩",
-    priority: 2,
-    confidence: 0.72,
-    note: "실제 소비기한이 아닌 먼저 먹을 순서예요.",
-    opened: false,
-  },
-  {
-    id: "chicken-1",
-    name: "닭가슴살",
-    brand: "무항생제 닭가슴살",
-    quantity: "2팩",
-    storage: "냉동",
-    dateLabel: formatApiDate("2026-09-06"),
-    dateDetail: "2026.09.06",
-    dateKind: "user_confirmed",
-    dateAssertionKind: "user_reminder",
-    dateSource: "사용자 입력",
-    image: FOOD_IMAGES.chicken,
-    category: "육류",
-    priority: 3,
-    confidence: 0.9,
-    note: "직접 확인한 날짜를 기준으로 보여드려요.",
-    opened: false,
-  },
-  {
-    id: "mushroom-1",
-    name: "맛타리버섯",
-    brand: "국내산 맛타리",
-    quantity: "2팩",
-    sourceReceiptId: "demo-receipt-20260901",
-    sourceReceiptLineId: "demo-receipt-20260901:receipt-mushroom",
-    purchasedAt: "2026-09-01T13:20:00+09:00",
-    storage: "냉장",
-    dateLabel: formatApiDate("2026-09-05"),
-    dateDetail: "먼저 먹기 참고",
-    dateKind: "estimated_use_first",
-    dateSource: "영수증 + 상품 유형",
-    image: FOOD_IMAGES.mushroom,
-    category: "채소",
-    priority: 4,
-    confidence: 0.64,
-    note: "신선식품은 날짜가 없을 수 있어 먼저 살펴볼 순서만 알려드려요.",
-    opened: false,
-  },
-  {
-    id: "egg-1",
-    name: "동물복지 달걀",
-    brand: "10구",
-    quantity: "1판",
-    storage: "냉장",
-    dateLabel: formatApiDate("2026-09-09"),
-    dateDetail: "2026.09.09",
-    dateKind: "actual_printed",
-    dateSource: "포장지 표시",
-    image: FOOD_IMAGES.eggs,
-    category: "달걀",
-    priority: 5,
-    confidence: 1,
-    note: "달걀 포장지에 있는 표시 날짜를 기록했어요.",
-    opened: false,
-  },
-  {
-    id: "milk-1",
-    name: "저지방 우유",
-    brand: "900ml",
-    quantity: "1개",
-    storage: "냉장",
-    dateLabel: formatApiDate("2026-09-06"),
-    dateDetail: "먼저 먹기 참고",
-    dateKind: "estimated_use_first",
-    dateSource: "영수증 + 상품 유형",
-    image: FOOD_IMAGES.milk,
-    category: "유제품",
-    priority: 6,
-    confidence: 0.68,
-    note: "개봉 후 사용자 확인이 필요해요.",
-    opened: true,
-  },
-  {
-    id: "tomato-1",
-    name: "대추방울토마토",
-    brand: "국내산",
-    quantity: "1팩",
-    storage: "실온",
-    dateLabel: formatApiDate("2026-09-06"),
-    dateDetail: "먼저 먹기 참고",
-    dateKind: "estimated_use_first",
-    dateSource: "상품 유형 + 보관 방식",
-    image: FOOD_IMAGES.tomato,
-    category: "채소",
-    priority: 7,
-    confidence: 0.58,
-    note: "토마토는 실온에 보관해요. 먹기 전에 상태를 살펴봐 주세요.",
-    opened: false,
-  },
-];
+function createDemoFoods(referenceDate = new Date()): FoodItem[] {
+  const demoDate = (offset: number) => demoCalendarDate(referenceDate, offset);
+  return [
+    {
+      id: "spinach-1",
+      name: "시금치",
+      brand: "국내산 시금치",
+      quantity: "1팩",
+      storage: "냉장",
+      dateLabel: formatApiDate(demoDate(-1)),
+      dateDetail: demoDate(-1).replaceAll("-", "."),
+      dateKind: "actual_printed",
+      dateSource: "포장지 표시",
+      image: FOOD_IMAGES.spinach,
+      category: "채소",
+      priority: 1,
+      confidence: 1,
+      note: "예시 포장지의 소비기한을 기록했어요.",
+      opened: true,
+    },
+    {
+      id: "tofu-1",
+      name: "국산콩 두부",
+      brand: "풀무원",
+      quantity: "1모",
+      storage: "냉장",
+      dateLabel: formatApiDate(demoDate(1)),
+      dateDetail: "먼저 먹기 참고",
+      dateKind: "estimated_use_first",
+      dateSource: "상품 유형 + 보관 방식",
+      image: FOOD_IMAGES.tofu,
+      category: "두부·콩",
+      priority: 2,
+      confidence: 0.72,
+      note: "실제 소비기한이 아닌 먼저 먹을 순서예요.",
+      opened: false,
+    },
+    {
+      id: "chicken-1",
+      name: "닭가슴살",
+      brand: "무항생제 닭가슴살",
+      quantity: "2팩",
+      storage: "냉동",
+      dateLabel: formatApiDate(demoDate(3)),
+      dateDetail: demoDate(3).replaceAll("-", "."),
+      dateKind: "user_confirmed",
+      dateAssertionKind: "user_reminder",
+      dateSource: "사용자 입력",
+      image: FOOD_IMAGES.chicken,
+      category: "육류",
+      priority: 3,
+      confidence: 0.9,
+      note: "직접 확인한 날짜를 기준으로 보여드려요.",
+      opened: false,
+    },
+    {
+      id: "mushroom-1",
+      name: "맛타리버섯",
+      brand: "국내산 맛타리",
+      quantity: "2팩",
+      sourceReceiptId: "demo-receipt-20260901",
+      sourceReceiptLineId: "demo-receipt-20260901:receipt-mushroom",
+      purchasedAt: `${demoDate(-2)}T13:20:00+09:00`,
+      storage: "냉장",
+      dateLabel: formatApiDate(demoDate(2)),
+      dateDetail: "먼저 먹기 참고",
+      dateKind: "estimated_use_first",
+      dateSource: "영수증 + 상품 유형",
+      image: FOOD_IMAGES.mushroom,
+      category: "채소",
+      priority: 4,
+      confidence: 0.64,
+      note: "신선식품은 날짜가 없을 수 있어 먼저 살펴볼 순서만 알려드려요.",
+      opened: false,
+    },
+    {
+      id: "egg-1",
+      name: "동물복지 달걀",
+      brand: "10구",
+      quantity: "1판",
+      storage: "냉장",
+      dateLabel: formatApiDate(demoDate(6)),
+      dateDetail: demoDate(6).replaceAll("-", "."),
+      dateKind: "actual_printed",
+      dateSource: "포장지 표시",
+      image: FOOD_IMAGES.eggs,
+      category: "달걀",
+      priority: 5,
+      confidence: 1,
+      note: "달걀 포장지에 있는 표시 날짜를 기록했어요.",
+      opened: false,
+    },
+    {
+      id: "milk-1",
+      name: "저지방 우유",
+      brand: "900ml",
+      quantity: "1개",
+      storage: "냉장",
+      dateLabel: formatApiDate(demoDate(3)),
+      dateDetail: "먼저 먹기 참고",
+      dateKind: "estimated_use_first",
+      dateSource: "영수증 + 상품 유형",
+      image: FOOD_IMAGES.milk,
+      category: "유제품",
+      priority: 6,
+      confidence: 0.68,
+      note: "개봉 후 사용자 확인이 필요해요.",
+      opened: true,
+    },
+    {
+      id: "tomato-1",
+      name: "대추방울토마토",
+      brand: "국내산",
+      quantity: "1팩",
+      storage: "실온",
+      dateLabel: formatApiDate(demoDate(3)),
+      dateDetail: "먼저 먹기 참고",
+      dateKind: "estimated_use_first",
+      dateSource: "상품 유형 + 보관 방식",
+      image: FOOD_IMAGES.tomato,
+      category: "채소",
+      priority: 7,
+      confidence: 0.58,
+      note: "토마토는 실온에 보관해요. 먹기 전에 상태를 살펴봐 주세요.",
+      opened: false,
+    },
+  ];
+}
 
 function withGrocySyncNotice(base: string, status?: ApiGrocySyncStatus | ApiGrocySyncStatus[]) {
   const statuses = Array.isArray(status) ? status : status ? [status] : [];
@@ -492,7 +497,7 @@ function ReceiptReviewQueue({ receipts, onSelect, onAddReceipt, notice }: { rece
       {receipts.length ? <div className="receipt-review-queue-list" role="list" aria-label="살펴볼 영수증 목록">
         {receipts.map((receipt) => <div role="listitem" key={receipt.id}><button className="receipt-review-queue-row" type="button" onClick={() => onSelect(receipt.id)}>
           <span className="receipt-review-queue-row-icon"><FileTextIcon width={16} height={16} /></span>
-          <span className="receipt-review-queue-row-copy"><strong>{receipt.merchant_name ?? "저장된 영수증"}</strong><small>{formatPurchasedAt(receipt.purchased_at) ?? "구매일 미등록"} · 상품 {receipt.line_count}개</small></span>
+          <span className="receipt-review-queue-row-copy"><strong>{receipt.merchant_name ?? "저장된 영수증"}</strong><small><MetadataText text={<>{formatPurchasedAt(receipt.purchased_at) ?? "구매일 미등록"} · 상품 {receipt.line_count}개</>} /></small></span>
           <span className="receipt-review-queue-row-action">이어서 살펴보기 <ChevronRightIcon width={14} height={14} /></span>
         </button></div>)}
       </div> : <div className="receipt-review-queue-empty" role="status"><strong>살펴볼 영수증이 없어요</strong><small>새 영수증을 추가해 식품을 기록해 보세요.</small><button className="secondary-sheet-button" type="button" onClick={onAddReceipt}><PlusIcon width={15} height={15} /> 영수증 추가</button></div>}
@@ -1015,7 +1020,7 @@ function PrototypeContent() {
   // dashboard cache may be shown in the offline branch below. Demo mode keeps
   // its fixture fallback so local connected E2E and product walkthroughs can
   // exercise the UI without pretending to be a user's workspace.
-  const [foods, setFoods] = useState<FoodItem[]>(() => mealApi.deploymentMode === "production" ? [] : INITIAL_FOODS);
+  const [foods, setFoods] = useState<FoodItem[]>(() => mealApi.deploymentMode === "production" ? [] : createDemoFoods());
   const [storageLocations, setStorageLocations] = useState<ApiStorageLocation[]>([]);
   const storageLocationsRef = useRef<ApiStorageLocation[]>([]);
   const updateStorageLocations = (nextStorageLocations: ApiStorageLocation[]) => {
@@ -2778,7 +2783,7 @@ function PrototypeContent() {
       : hasReferenceWindow
         ? `${food.name}: ${food.dateLabel}은 참고로 표시한 날짜예요. 소비기한과는 다르니 포장지 날짜를 확인해 주세요.`
         : isUserReminder
-          ? `${food.name}: 내가 기록한 날짜는 ${food.dateLabel}예요. 포장지의 소비기한과 다를 수 있으니 날짜와 보관 방법도 살펴봐 주세요.`
+          ? `${food.name}: 내가 기록한 날짜는 ${food.dateLabel}이에요. 포장지의 소비기한과 다를 수 있으니 날짜와 보관 방법도 살펴봐 주세요.`
           : food.dateKind === "unknown"
             ? `${food.name} 날짜를 아직 기록하지 않았어요. 포장지 날짜와 보관 방법을 살펴봐 주세요.`
             : "표시 날짜와 보관 상태를 확인해 주세요.";
@@ -5241,7 +5246,7 @@ function PrototypeContent() {
               <span className="receipt-review-entry-copy">
                 <span className="receipt-review-entry-kicker">영수증</span>
                 <strong>살펴볼 영수증 {pendingReceiptSummaries.length > 1 ? `${pendingReceiptSummaries.length}개` : "1개"}</strong>
-                <small>{latestPendingReceipt.merchant_name ? `${latestPendingReceipt.merchant_name} · ` : "저장된 영수증 · "}{formatPurchasedAt(latestPendingReceipt.purchased_at) ?? "구매일 미등록"} · 상품 {latestPendingReceipt.line_count}개</small>
+                <small><MetadataText text={<>{latestPendingReceipt.merchant_name ? `${latestPendingReceipt.merchant_name} · ` : "저장된 영수증 · "}{formatPurchasedAt(latestPendingReceipt.purchased_at) ?? "구매일 미등록"} · 상품 {latestPendingReceipt.line_count}개</>} /></small>
               </span>
               <span className="receipt-review-entry-action">{pendingReceiptSummaries.length > 1 ? "모두 보기" : "이어서 살펴보기"} <ChevronRightIcon width={15} height={15} /></span>
             </button>
@@ -5252,7 +5257,7 @@ function PrototypeContent() {
               <div>
                 <p className="eyebrow">{todayEyebrow}</p>
                 <h1 id="greeting-title">{!inventoryDataUnknown && !foods.length ? <>오늘 먹을 재료,<br /><em>하나부터 기록해요.</em></> : <>오늘은,<br /><em>있는 재료로 한 끼.</em></>}</h1>
-                <p className="hero-description">{inventoryDataUnknown ? inventoryDataStatusDescription : foods.length ? "뭘 먹을지 고르고, 부족한 재료만 장보세요." : "냉장고를 전부 정리할 필요 없어요. 손에 있는 식품부터 시작하세요."}</p>
+                {inventoryDataUnknown || !foods.length ? <p className="hero-description">{inventoryDataUnknown ? inventoryDataStatusDescription : "손에 있는 식품부터 하나씩 기록해 보세요."}</p> : null}
               </div>
             </section>
 
@@ -5319,7 +5324,7 @@ function PrototypeContent() {
                           <strong>{food.name}</strong>
                           {food.opened ? <span className="opened-dot" title="개봉됨" /> : null}
                         </span>
-                        <span className="food-subline">{foodSourceSummary(food)} · {food.quantity}</span>
+                        <span className="food-subline"><MetadataText text={<>{foodSourceSummary(food)} · {food.quantity}</>} /></span>
                         <span className="food-meta-line">
                           <span className={`storage-pill ${getStorageClass(food.storage)}`}>{food.storageLocationName ?? food.storage}</span>
                           <span className="date-source">{getDateBadge(food)}</span>
@@ -5339,7 +5344,7 @@ function PrototypeContent() {
               </div> : <div className={`priority-empty-state${inventoryDataUnknown ? " priority-unknown-state" : ""}`}>
                 <span className="priority-empty-icon"><ArchiveIcon width={19} height={19} /></span>
                 <span className="priority-empty-copy">
-                  <strong>{inventoryDataUnknown ? priorityDataStatusLabel : foods.length ? "오늘 먼저 살펴볼 식품이 없어요" : "이름 · 수량 · 보관 위치만 입력하세요"}</strong>
+                  <strong><MetadataText text={<>{inventoryDataUnknown ? priorityDataStatusLabel : foods.length ? "오늘 먼저 살펴볼 식품이 없어요" : "이름 · 수량 · 보관 위치만 입력하세요"}</>} /></strong>
                   <small>{inventoryDataUnknown ? priorityDataStatusDescription : foods.length ? "포장지 날짜와 보관 방법을 살펴봐 주세요." : "날짜는 나중에 포장지를 보고 추가해도 돼요. 기록한 재료로 만들 메뉴를 찾아드려요."}</small>
                 </span>
               </div>}
@@ -5352,7 +5357,7 @@ function PrototypeContent() {
                 <span className="shopping-summary-copy">
                   <span className="shopping-summary-kicker">재고 앱</span>
                   <strong>{externalSyncHomeTitle(homeSyncAttentionCount, homeSyncProcessingCount)}</strong>
-                  <small>{[homeSyncAttentionCount ? `살펴볼 항목 ${homeSyncAttentionCount}개` : "", homeSyncQueuedCount ? `추가 대기 ${homeSyncQueuedCount}개` : "", homeSyncProcessingCount ? `추가 중 ${homeSyncProcessingCount}개` : ""].filter(Boolean).join(" · ")} · 알림에서 보기</small>
+                  <small><MetadataText text={<>{[homeSyncAttentionCount ? `살펴볼 항목 ${homeSyncAttentionCount}개` : "", homeSyncQueuedCount ? `추가 대기 ${homeSyncQueuedCount}개` : "", homeSyncProcessingCount ? `추가 중 ${homeSyncProcessingCount}개` : ""].filter(Boolean).join(" · ")} · 알림에서 보기</>} /></small>
                 </span>
                 <ChevronRightIcon width={16} height={16} />
               </button>
@@ -5413,7 +5418,7 @@ function PrototypeContent() {
                 <button className={inventoryStatusFilter === "priority" ? "inventory-status-filter-active inventory-status-filter-priority" : "inventory-status-filter-priority"} type="button" aria-pressed={inventoryStatusFilter === "priority"} aria-controls="inventory-list" onClick={() => { setInventoryStatusFilter("priority"); if (activeContentNavRef.current === "food") restoreContentNavigation("food"); }}>먼저 살펴보기 <span>{inventoryScopedPriorityCount}</span></button>
               </div>
               {showInventoryScope ? <div className="inventory-filter-summary" role="status" aria-live="polite">
-                <span><i aria-hidden="true" />{inventoryScopeLabel} · {inventoryCount}개</span>
+                <span><i aria-hidden="true" /><Metadata parts={[inventoryScopeLabel, `${inventoryCount}개`]} /></span>
                 <button type="button" onClick={clearInventoryFilters}>검색·필터 초기화</button>
               </div> : !inventoryDataUnknown && !hasInventoryQuery && storageFilter === "전체" && inventoryNeedsReviewCount ? <div className="inventory-filter-summary inventory-health-summary">
                 <span><i aria-hidden="true" />날짜·보관을 살펴볼 식품 {inventoryNeedsReviewCount}개</span>
@@ -5438,14 +5443,14 @@ function PrototypeContent() {
                     <div className="inventory-image-wrap"><img src={food.image} alt="" className="inventory-image" draggable={false} /></div>
                     <span className="inventory-copy">
                       <strong>{food.name}</strong>
-                      <small>{foodSourceSummary(food)} · {food.quantity}{food.storageLocationName ? ` · ${food.storageLocationName}` : ""}</small>
-                      <small className="inventory-storage-meta"><span className={`storage-dot ${getStorageClass(food.storage)}`} aria-hidden="true" /><span>{food.storage}{dateOriginLabel ? ` · ${dateOriginLabel}` : ""}</span></small>
+                      <small><MetadataText text={<>{foodSourceSummary(food)} · {food.quantity}{food.storageLocationName ? ` · ${food.storageLocationName}` : ""}</>} /></small>
+                      <small className="inventory-storage-meta"><span className={`storage-dot ${getStorageClass(food.storage)}`} aria-hidden="true" /><span><MetadataText text={<>{food.storage}{dateOriginLabel ? ` · ${dateOriginLabel}` : ""}</>} /></span></small>
                     </span>
                     <span className={`inventory-status ${reviewReason ? "inventory-status-warning" : ""}`} data-inventory-status={reviewReason ? "needs-review" : food.priority <= 3 ? "priority" : "stored"}>
                       <span className={`storage-dot ${reviewReason ? "status-dot-warning" : getStorageClass(food.storage)}`} aria-hidden="true" />
                       <span className="inventory-status-content">
-                        <span className="inventory-status-label">{reviewReason ? reviewReason === "보관 방법 확인" ? "보관 확인" : "날짜 확인" : food.priority <= 3 ? <><b>먼저 살펴보기</b><span> · </span>{food.dateLabel}</> : food.dateLabel}</span>
-                        {reviewDetail ? <small className="inventory-review-detail">{reviewDetail}</small> : null}
+                        <span className="inventory-status-label">{reviewReason ? reviewReason === "보관 방법 확인" ? "보관 확인" : "날짜 확인" : food.priority <= 3 ? <><b>먼저 살펴보기</b><span className="inventory-date-value">{food.dateLabel}</span></> : food.dateLabel}</span>
+                        {reviewDetail ? <small className="inventory-review-detail"><MetadataText text={reviewDetail} /></small> : null}
                       </span>
                     </span>
                     <ChevronRightIcon className="row-chevron" width={15} height={15} />
@@ -5486,7 +5491,6 @@ function PrototypeContent() {
           <ServiceWorkerUpdatePrompt />
 
           {inventoryNavTailSpace > 0 ? <div className="inventory-nav-tail-space" aria-hidden="true" style={{ height: inventoryNavTailSpace }} /> : null}
-          <p className="footer-caption"><ReaderIcon width={14} height={14} /> Rescue Meal은 기록을 돕는 생활 도구예요.</p>
           {reviewMode ? <button className="recipe-review-entry" type="button" onClick={() => changeSheet("recipe-review")}>레시피 관리</button> : null}
           {receiptSourceReviewMode ? <button className="recipe-review-entry receipt-source-review-entry" type="button" onClick={() => openAdd("receipt")}>영수증 내용 다시 보기</button> : null}
         </main>
@@ -5644,11 +5648,11 @@ function PrototypeContent() {
       <DeferredBottomSheet
         open={sheet === "account"}
         onOpenChange={(open) => changeSheet(open ? "account" : null)}
-        title="내 계정"
-        description="식품 기록을 여러 기기에서 이어 보세요."
-        snap={0.9}
+        title={mealApi.isConfigured ? "내 계정" : "체험 안내"}
+        description={mealApi.isConfigured ? "식품 기록을 여러 기기에서 이어 보세요." : undefined}
+        snap={mealApi.isConfigured ? 0.9 : 0.55}
       >
-        <Suspense fallback={<ProcessingState label="계정 화면을 준비하고 있어요" detail="잠시만 기다려 주세요." />}><AccountSheet active={sheet === "account"} initialPasswordResetToken={passwordResetToken} workspaceSync={workspaceSync} workspaceTransport={workspaceTransport} remoteRefreshRequired={accountRemoteRefreshRequired} remoteRefreshing={accountRemoteRefreshing} refreshNonce={accountRefreshNonce} onRefreshRemote={() => void refreshAccountFromRemote()} onRefreshWorkspace={syncDashboard} focusGrocyOutboxId={accountGrocyOutboxFocusId} returnToNotification={notificationAccountReturnRef.current} onReturnToNotification={() => changeSheet(null)} onOpenFoodFromSync={openFoodFromSyncHistory} onAuthenticated={handleAuthenticated} onSignedOut={handleSignedOut} onAccountDeleted={handleAccountDeleted} /></Suspense>
+        <Suspense fallback={<ProcessingState label="계정 화면을 준비하고 있어요" detail="잠시만 기다려 주세요." />}><AccountSheet onReturnToApp={() => changeSheet(null)} active={sheet === "account"} initialPasswordResetToken={passwordResetToken} workspaceSync={workspaceSync} workspaceTransport={workspaceTransport} remoteRefreshRequired={accountRemoteRefreshRequired} remoteRefreshing={accountRemoteRefreshing} refreshNonce={accountRefreshNonce} onRefreshRemote={() => void refreshAccountFromRemote()} onRefreshWorkspace={syncDashboard} focusGrocyOutboxId={accountGrocyOutboxFocusId} returnToNotification={notificationAccountReturnRef.current} onReturnToNotification={() => changeSheet(null)} onOpenFoodFromSync={openFoodFromSyncHistory} onAuthenticated={handleAuthenticated} onSignedOut={handleSignedOut} onAccountDeleted={handleAccountDeleted} /></Suspense>
       </DeferredBottomSheet>
 
       <DeferredBottomSheet
@@ -5670,7 +5674,7 @@ function PrototypeContent() {
         <Suspense fallback={<ProcessingState label="레시피 목록을 준비하고 있어요" detail="잠시만 기다려 주세요." />}><RecipeReviewPanel workspaceTransport={workspaceTransport} /></Suspense>
       </DeferredBottomSheet>
 
-      {toast ? <div className="toast-layer" data-active-sheet={sheet ?? "none"} style={{ position: "absolute", zIndex: 1102, inset: 0, pointerEvents: "none" }}><div className={`toast${toastAction?.message === toast && toastAction.label === "다시 시도" ? " toast-retry" : ""}`} data-toast-action={toastAction?.message === toast ? toastAction.label : undefined} role="status" aria-live="polite" aria-atomic="true" style={{ pointerEvents: "auto" }}><CheckCircledIcon width={17} height={17} /><span className="toast-message">{toast}</span>{toastAction?.message === toast ? <button className="toast-action" type="button" disabled={toastAction.label === "다시 시도" && toastActionBusy} aria-busy={toastAction.label === "다시 시도" && toastActionBusy} onClick={() => { const action = toastAction; const isRetry = action.label === "다시 시도"; if (isRetry) { setToastActionBusy(true); action.onInvoke(); } else { setToast(null); setToastAction(null); action.onInvoke(); } window.setTimeout(focusToastRecoveryTarget, 0); }}>{toastAction.label === "다시 시도" && toastActionBusy ? "다시 시도 중" : toastAction.label}</button> : null}</div></div> : null}
+      {toast ? <div className="toast-layer" data-active-sheet={sheet ?? "none"} style={{ position: "absolute", zIndex: 1102, inset: 0, pointerEvents: "none" }}><div className={`toast${toastAction?.message === toast && toastAction.label === "다시 시도" ? " toast-retry" : ""}`} data-toast-action={toastAction?.message === toast ? toastAction.label : undefined} role="status" aria-live="polite" aria-atomic="true" style={{ pointerEvents: "auto" }}><CheckCircledIcon width={17} height={17} /><span className="toast-message"><MetadataText text={toast} /></span>{toastAction?.message === toast ? <button className="toast-action" type="button" disabled={toastAction.label === "다시 시도" && toastActionBusy} aria-busy={toastAction.label === "다시 시도" && toastActionBusy} onClick={() => { const action = toastAction; const isRetry = action.label === "다시 시도"; if (isRetry) { setToastActionBusy(true); action.onInvoke(); } else { setToast(null); setToastAction(null); action.onInvoke(); } window.setTimeout(focusToastRecoveryTarget, 0); }}>{toastAction.label === "다시 시도" && toastActionBusy ? "다시 시도 중" : toastAction.label}</button> : null}</div></div> : null}
     </>
     </MotionConfig>
   );

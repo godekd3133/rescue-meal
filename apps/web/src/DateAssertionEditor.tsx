@@ -1,3 +1,4 @@
+import { MetadataText } from "./Metadata";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { CalendarIcon, CheckIcon } from "@radix-ui/react-icons";
 import { KeyboardInput, useKeyboard } from "./mobile";
@@ -121,7 +122,7 @@ export default function DateAssertionEditor({
         onChange={(event) => setValue(event.target.value)}
         onBlur={() => keyboard.hide()}
       />
-      <small id="confirmed-date-readable" className="date-input-readable">{readableDate}</small>
+      <small id="confirmed-date-readable" className="date-input-readable"><MetadataText text={readableDate} /></small>
       <div className="date-editor-actions">
         <button className="secondary-sheet-button" type="button" onClick={onCancel}>취소</button>
         <button

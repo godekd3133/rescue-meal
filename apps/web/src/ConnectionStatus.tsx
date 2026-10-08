@@ -16,7 +16,7 @@ export default function ConnectionStatus({ state, hasCachedData = false, cachedA
     ? `오프라인 · ${cachedAtLabel ?? "최근 화면"}`
     : labels[state];
   const freshnessClass = state === "offline" && hasCachedData ? ` connection-offline-${cachedAtFreshness ?? "unknown"}` : "";
-  const actionLabel = state === "auth_required" ? "로그인 화면 열기" : "계정 열기";
+  const actionLabel = state === "fixture" ? "체험 안내 열기" : state === "auth_required" ? "로그인 화면 열기" : "계정 열기";
   const accessibleLabel = state === "fixture"
     ? `예시 식품으로 체험 중. 변경 내용은 새로고침하면 사라져요. ${actionLabel}`
     : state === "offline"

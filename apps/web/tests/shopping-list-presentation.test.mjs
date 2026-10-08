@@ -31,4 +31,7 @@ test("only a loaded, fully checked list is announced as complete", () => {
   assert.equal(active.countLabel, "1/3");
   assert.equal(complete.tone, "complete");
   assert.equal(complete.countLabel, "3/3");
+  // Checked manual rows may already have been received and remain as history.
+  assert.doesNotMatch(complete.title, /추가 전|미등록/);
+  assert.match(complete.description, /아직 기록하지 않은/);
 });

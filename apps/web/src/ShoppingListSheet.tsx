@@ -1,3 +1,4 @@
+import { MetadataText } from "./Metadata";
 import { useEffect, useRef, useState } from "react";
 import { ArchiveIcon, ArrowRightIcon, CheckCircledIcon, Cross2Icon, InfoCircledIcon, ReaderIcon } from "@radix-ui/react-icons";
 import { KeyboardInput, useKeyboard } from "./mobile/Keyboard";
@@ -63,7 +64,7 @@ function sourceLabel(item: ApiShoppingListItem) {
 }
 
 function itemLabel(item: ApiShoppingListItem) {
-  return `${item.canonical_name} ${formatQuantity(item.quantity)}${item.unit} · ${sourceLabel(item)}${item.checked ? " · 구매 완료 · 식품 목록에 추가 전" : ""}`;
+  return `${item.canonical_name} ${formatQuantity(item.quantity)}${item.unit} · ${sourceLabel(item)}${item.checked ? " · 구매 완료" : ""}`;
 }
 
 export default function ShoppingListSheet({
@@ -392,7 +393,7 @@ export default function ShoppingListSheet({
       ) : items.length ? (
         <section className="shopping-sheet-list-section" aria-label="장보기 항목">
           <div className="shopping-sheet-list-heading">
-            <span><strong>{remainingCount ? "이번에 살 재료" : "구매한 재료"}</strong><small>{completedCount ? `${completedCount}개 구매 완료 · ` : ""}{remainingCount}개 남음</small></span>
+            <span><strong>{remainingCount ? "이번에 살 재료" : "구매한 재료"}</strong><small><MetadataText text={<>{completedCount ? `${completedCount}개 구매 완료 · ` : ""}{remainingCount}개 남음</>} /></small></span>
             {loading ? <span className="shopping-sheet-syncing" role="status">목록 업데이트 중</span> : null}
           </div>
           <div className="shopping-sheet-list" role="list">
@@ -418,8 +419,8 @@ export default function ShoppingListSheet({
                     <span className="shopping-sheet-check" aria-hidden="true">{item.checked ? <CheckCircledIcon width={16} height={16} /> : null}</span>
                     <span className="shopping-sheet-copy">
                       <strong>{item.canonical_name}</strong>
-                      <small>{formatQuantity(item.quantity)}{item.unit} · {sourceLabel(item)}</small>
-                      {item.checked ? <small>구매 완료 · 식품 목록에 추가 전</small> : null}
+                      <small><MetadataText text={<>{formatQuantity(item.quantity)}{item.unit} · {sourceLabel(item)}</>} /></small>
+                      {item.checked ? <small>구매 완료</small> : null}
                     </span>
                   </button>
                   <div className="shopping-sheet-actions" role="group" aria-label={`${item.canonical_name} 장보기 항목 행동`}>
@@ -455,8 +456,8 @@ export default function ShoppingListSheet({
                 </div>
                 {matchingShoppingInventoryFoods(item.canonical_name, inventoryFoods).length ? (
                   <details className="shopping-sheet-existing-stock">
-                    <summary>같은 이름의 식품이 있어요 · 보관 수량 보기</summary>
-                    <ul>{matchingShoppingInventoryFoods(item.canonical_name, inventoryFoods).map((food) => <li key={food.id}>{food.name} {food.quantity} · {food.storageLocationName ?? food.storage}</li>)}</ul>
+                    <summary>같은 식품의 보관 수량 보기</summary>
+                    <ul>{matchingShoppingInventoryFoods(item.canonical_name, inventoryFoods).map((food) => <li key={food.id}><MetadataText text={<>{food.name} {food.quantity} · {food.storageLocationName ?? food.storage}</>} /></li>)}</ul>
                     <p>같은 상품인지, 더 살 양이 맞는지 확인해 주세요.</p>
                   </details>
                 ) : null}
@@ -475,7 +476,7 @@ export default function ShoppingListSheet({
                     </ol>
                     <div className="shopping-sheet-receive-heading">
                       <strong>{item.canonical_name} 구매 정보</strong>
-                      <small>실제로 산 수량을 입력하고, 포장지에 맞는 보관 위치를 골라 주세요.</small>
+                      <small>새로 산 수량을 입력하고, 포장지에 맞는 보관 위치를 골라 주세요.</small>{matchingShoppingInventoryFoods(item.canonical_name, inventoryFoods).length ? <small className="shopping-sheet-record-reminder">같은 이름의 식품이 있어요. 이미 기록한 구매인지 보관 수량을 먼저 확인해 주세요.</small> : null}
                     </div>
                     <div className="shopping-sheet-receive-fields">
                       <label className="shopping-sheet-receive-field shopping-sheet-receive-quantity">
@@ -524,7 +525,7 @@ export default function ShoppingListSheet({
                     <p className="shopping-sheet-receive-note"><InfoCircledIcon width={13} height={13} /> 소비기한은 자동으로 정하지 않아요. 식품 목록에 추가한 뒤 포장지 날짜와 보관 방법을 살펴봐 주세요.</p>
                     <p id={`shopping-sheet-save-summary-${item.id}`} className="shopping-sheet-save-summary" aria-live="polite">
                       {Number.isFinite(Number(receiveQuantity)) && Number(receiveQuantity) > 0
-                        ? <><strong>추가할 내용</strong><span>{item.canonical_name} {formatQuantity(Number(receiveQuantity))}{item.unit} · {receiveStorageLabel ?? "보관 위치를 선택해 주세요"}</span></>
+                        ? <><strong>추가할 내용</strong><span><MetadataText text={<>{item.canonical_name} {formatQuantity(Number(receiveQuantity))}{item.unit} · {receiveStorageLabel ?? "보관 위치를 선택해 주세요"}</>} /></span></>
                         : "실제로 구매한 수량을 입력해 주세요."}
                     </p>
                     {receiveError ? <p className="shopping-sheet-receive-error" role="alert">{receiveError}</p> : null}
@@ -548,7 +549,7 @@ export default function ShoppingListSheet({
               </div>
             ))}
           </div>
-          <p className="shopping-sheet-note"><ArrowRightIcon width={13} height={13} />{demoMode ? "미리보기에서는 식품 목록에 넣은 수량만큼 장보기 목록에서 빠져요." : "식품 목록에 추가하면 이미 가진 재료는 장보기에서 빠져요."}</p>
+          <p className="shopping-sheet-note"><ArrowRightIcon width={13} height={13} />{demoMode ? "미리보기에서는 식품 목록에 넣은 수량만큼 장보기 목록에서 빠져요." : "식단에서 담은 재료는 보관 수량에 맞춰 줄어들어요. 직접 추가한 항목은 구매 기록으로 남아요."}</p>
         </section>
       ) : error || recentlyReceivedFoodName ? null : (
         <div className="shopping-sheet-state shopping-sheet-empty" role="status" style={{ flexWrap: "wrap" }}>
@@ -564,7 +565,7 @@ export default function ShoppingListSheet({
 
       <section className="shopping-sheet-manual" aria-label="직접 장보기 추가">
         <div className="shopping-sheet-manual-heading">
-          <span><strong>직접 추가</strong><small>필요한 물건을 목록에 적어 둘 수 있어요.</small></span>
+          <span><strong>직접 추가</strong></span>
         </div>
         <form className="shopping-sheet-manual-form" onSubmit={(event) => { event.preventDefault(); void submitManualItem(); }}>
           <label className="shopping-sheet-manual-field shopping-sheet-manual-name">

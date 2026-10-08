@@ -575,7 +575,7 @@ test("bottom sheets expose modal semantics and restore focus after closing", asy
   await expect(intakeMethodDetail).toHaveText("날짜 종류와 보관 방법을 포장지에서 확인해요.");
   await dialog.getByRole("tab", { name: "직접 입력" }).click();
   await expect(intakeFlow).toHaveCount(0);
-  await expect(dialog.getByRole("heading", { name: "어떤 식품을 기록할까요?" })).toBeVisible();
+  await expect(dialog.getByRole("textbox", { name: "식품 이름", exact: true })).toBeVisible();
   await dialog.getByRole("tab", { name: "영수증" }).click();
   await expect(dialog.getByRole("tab", { name: "바코드" }).locator("span[aria-hidden='true']")).toHaveCount(0);
   await expect(dialog).toHaveAttribute("aria-labelledby");
@@ -667,7 +667,7 @@ test("manual food intake returns focus to the newly added priority food", async 
   await receiptDialog.getByRole("tab", { name: "직접 입력" }).click();
   const dialog = page.getByRole("dialog", { name: "직접 추가" });
   await expect(dialog.locator(".intake-flow-rail")).toHaveCount(0);
-  await expect(dialog.getByRole("heading", { name: "어떤 식품을 기록할까요?" })).toBeVisible();
+  await expect(dialog.getByRole("textbox", { name: "식품 이름", exact: true })).toBeVisible();
   await expect(dialog).toContainText("날짜는 포장지를 확인한 뒤 추가해요");
   await expect(dialog.getByRole("button", { name: "연결 후 확인 가능" })).toHaveCount(0);
   await expect(dialog.locator(".manual-priority-note")).toContainText("우선순위 참고는 연결 후 이용할 수 있어요.");
