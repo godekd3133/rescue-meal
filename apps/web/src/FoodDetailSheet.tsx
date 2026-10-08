@@ -504,7 +504,7 @@ export default function FoodDetailSheet({
           <span className="date-review-icon"><InfoCircledIcon width={16} height={16} /></span>
           <span>
             <strong>{dateReviewReason === "날짜 의미 확인" ? "포장지 날짜 종류를 골라 주세요" : dateReviewReason === "포장지 날짜 확인" ? "포장지 날짜를 확인해 주세요" : "조리 전 확인이 필요해요"}</strong>
-    <small>{dateReviewReason === "날짜 의미 확인" ? "포장일·제조일은 소비기한이 아니에요. 이 날짜를 소비기한으로 바꾸지 않고, 소비기한이 적힌 면과 보관 방법을 따로 살펴봐 주세요." : dateReviewReason === "포장지 날짜 확인" ? "포장지 날짜를 기록하지 않았어요. 포장지와 보관 방법을 살펴본 뒤 조리해 주세요." : "표시 날짜가 오늘이거나 지났어요. 보관·개봉 상태도 확인해 주세요."}</small>
+    <small>{dateReviewReason === "날짜 의미 확인" ? "포장일과 제조일은 소비기한이 아니에요. 이 날짜를 소비기한으로 바꾸지 않고, 소비기한이 적힌 면과 보관 방법을 따로 살펴봐 주세요." : dateReviewReason === "포장지 날짜 확인" ? "포장지 날짜를 기록하지 않았어요. 포장지와 보관 방법을 살펴본 뒤 조리해 주세요." : "표시 날짜가 오늘이거나 지났어요. 보관 방법과 개봉 상태도 확인해 주세요."}</small>
             {canRecheckPrintedLabel && dateReviewReason === "날짜 의미 확인" ? <button ref={dateReviewActionRef} className="date-edit-button" type="button" onClick={onOpenLabelReview}><CalendarIcon width={15} height={15} /><span><strong>포장지에서 소비기한 다시 확인</strong><small>날짜를 새 식품 기록에 저장하거나 기존 식품 기록을 수정할지 선택해요.</small></span><ArrowRightIcon width={15} height={15} /></button> : null}
           </span>
           {compactPrintedDateRecheck ? <button ref={dateReviewActionRef} className="date-edit-button date-edit-button-compact" type="button" aria-label="포장지에서 날짜 다시 확인" title="포장지에서 날짜 다시 확인" onClick={() => onOpenLabelReview?.()}><CalendarIcon width={17} height={17} /><span>날짜 다시 확인</span></button> : null}

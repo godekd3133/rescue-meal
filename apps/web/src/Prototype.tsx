@@ -5409,7 +5409,7 @@ function PrototypeContent() {
               </div>
               <label className="inventory-search">
                 <MagnifyingGlassIcon width={15} height={15} aria-hidden="true" />
-                <KeyboardInput className="inventory-search-input" type="search" value={inventoryQuery} placeholder="식품·브랜드·카테고리 검색" aria-label="식품·브랜드·카테고리 검색" onChange={(event) => setInventoryQuery(event.target.value)} onFocus={() => { inventorySearchFocusRef.current = true; window.requestAnimationFrame(keepInventorySearchVisible); }} onBlur={() => { inventorySearchFocusRef.current = false; keyboard.hide(); }} />
+                <KeyboardInput className="inventory-search-input" type="search" value={inventoryQuery} placeholder="식품 검색" aria-label="식품·브랜드·카테고리 검색" onChange={(event) => setInventoryQuery(event.target.value)} onFocus={() => { inventorySearchFocusRef.current = true; window.requestAnimationFrame(keepInventorySearchVisible); }} onBlur={() => { inventorySearchFocusRef.current = false; keyboard.hide(); }} />
                 {hasInventoryQuery ? <button type="button" aria-label="식품 검색어 지우기" onPointerDown={(event) => event.preventDefault()} onClick={clearInventorySearch}><Cross2Icon width={14} height={14} /></button> : null}
               </label>
               <div className="inventory-status-filters" role="group" aria-label={`식품 상태 필터${inventoryScopeIsStale ? " · 이전 결과" : ""}`} data-scope-state={inventoryScopeIsStale ? "stale" : inventorySearchPending ? "loading" : "current"} aria-busy={inventorySearchPending}>
@@ -5532,7 +5532,7 @@ function PrototypeContent() {
                 ? "영수증에서 읽은 상품과 수량을 살펴본 뒤 식품 목록에 추가해요."
                 : addMode === "barcode"
                   ? "바코드로 상품을 찾고, 맞는 상품인지 살펴봐요."
-                  : "식품 이름·수량·보관 위치를 직접 입력해요."}
+                  : undefined}
         snap={addReturnFoodContextRef.current ? 0.9 : 0.84}
       >
         <AddFoodSheet mode={addMode} onModeChange={setAddMode} onAddManual={addManualFood} onAddReceipt={addReceiptFoods} resumeReceiptId={resumeReceiptId} initialLabelTargetFoodId={addReturnFoodContextRef.current?.id ?? null} initialLabelTargetFoodName={addReturnFoodContextRef.current?.name ?? null} initialLabelTargetDateSummary={addReturnFoodContextRef.current?.dateSummary ?? null} sessionKey={addSheetSessionKey} receiptLines={RECEIPT_LINES} existingFoods={foods} storageLocations={storageLocations} createFood={createFood} formatApiDate={formatApiDate} storageFromApi={storageFromApi} imageForFoodName={imageForFoodName} formatReceiptLineDetail={formatReceiptLineDetail} receiptLineError={receiptLineError} reviewFixture={receiptSourceReviewMode ? receiptSourceUnmappedMode ? RECEIPT_SOURCE_UNMAPPED_FIXTURE : RECEIPT_SOURCE_REVIEW_FIXTURE : undefined} />
