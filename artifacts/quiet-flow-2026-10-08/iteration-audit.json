@@ -1,0 +1,41 @@
+{
+  "request": "정보 과노출을 줄이고 점 구분자로 나열하는 UI를 별도 필드와 줄로 구성",
+  "goal_status": "전체 개선 목표는 진행 중",
+  "changes": [
+    "중복 식단 설명과 두 번째 조리 버튼 제거",
+    "직접 입력의 중복 질문과 설명 제거",
+    "체험 안내를 필수 저장 범위 두 문장으로 축약하고 내용에 맞는 높이 적용",
+    "Metadata 필드 컴포넌트를 홈, 식품 상세, 식단, 등록 검토, 장보기, 알림 및 기록 화면에 적용",
+    "식품 상태와 날짜를 별도 줄로 배치하고 불필요한 배경과 중복 요약 제거",
+    "라벨 결과 입력 폼은 작은 화면에서도 전체 폭을 사용"
+  ],
+  "validation": {
+    "build": "pass",
+    "runtime": "28 protected files pass",
+    "domain_tests": "15 passed",
+    "diff_check": "pass",
+    "browser": [
+      "홈과 식품 목록: 표시 텍스트에서 bullet/middle-dot metadata separators 없음",
+      "식단: 하나의 조리 방법 버튼 열기/접기 정상",
+      "식품 상세: 절반 버튼 선택 시 0.5팩 확인",
+      "직접 입력: 이름, 수량, 보관 위치 및 저장 요약 유지",
+      "라벨 결과: 날짜 의미, 저장 대상, 수량, 보관 정보 유지",
+      "360px: 가로 넘침 없음, 입력 폼 전체 폭 유지",
+      "체험 안내: 필수 범위와 복귀 행동 유지"
+    ]
+  },
+  "screenshots": [
+    "03-meal-fields-after.png",
+    "04-home-fields-after.png",
+    "05-detail-fields-after.png",
+    "06-manual-fields-after.png",
+    "07-demo-summary-after.png",
+    "08-inventory-fields-after.png",
+    "09-label-fields-after.png"
+  ],
+  "limits": [
+    "전 화면 모든 연결 상태의 브라우저 회귀 검증은 아직 완료하지 않음",
+    "기존 CSS 용량 한도 초과는 남아 있음",
+    "운영 서버와 실제 카메라 인식, 실기기 검증 미수행"
+  ]
+}

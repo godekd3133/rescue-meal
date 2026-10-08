@@ -18355,3 +18355,9 @@ html[data-rescue-theme="light"] .app-shell-preview .meal-home .priority-card .fo
   align-items: flex-end;
   gap: 2px;
 }
+
+.bottom-sheet .label-result-card > .label-result-fields {
+  flex: 1 0 100%;
+  width: 100%;
+  min-width: 0;
+}

@@ -379,7 +379,7 @@ test("keeps meal time and serving choices readable on narrow phones", async ({ p
     const choices = dialog.locator(".recipe-time-picker button, .recipe-serving-picker button");
     await expect(choices).toHaveCount(8);
     for (const choice of await choices.all()) {
-      await expect(choice).toHaveCSS("font-size", "11px");
+      expect(await choice.evaluate((element) => Number.parseFloat(getComputedStyle(element).fontSize))).toBeGreaterThanOrEqual(12);
       const box = await choice.boundingBox();
       expect(box?.width).toBeGreaterThanOrEqual(43.5);
       expect(box?.height).toBeGreaterThanOrEqual(43.5);
@@ -731,13 +731,13 @@ test("shows the meal result inside the first native sheet viewport", async ({ pa
     const dialog = page.getByRole("dialog", { name: "오늘의 식단" });
     await expect(dialog).toBeVisible();
     await waitForSheetSettled(page);
-    await expect(dialog.locator(".recipe-art")).toBeVisible();
+    await expect(dialog.locator(".recipe-art")).toHaveCount(0);
     await expect(dialog.locator(".recipe-title-row")).toBeVisible();
     // Planner actions stay in document flow so they cannot cover the safety
     // summary on short mobile screens. Food detail actions remain sticky.
     await expect(dialog.locator(".recipe-actions")).toHaveCSS("position", "static");
-    const safetyEntry = dialog.getByRole("button", { name: "사용 전 확인 2건 보기" });
-    const dateReviewAction = dialog.getByRole("button", { name: "식품 확인 · 시금치" });
+    const safetyEntry = dialog.getByRole("button", { name: "조리 전에 확인할 내용 2개 보기" });
+    const dateReviewAction = dialog.getByRole("button", { name: "시금치 보기", exact: true });
     await expect(safetyEntry).toBeFocused();
     await safetyEntry.click();
     await expect(dateReviewAction).toBeFocused();
@@ -747,19 +747,16 @@ test("shows the meal result inside the first native sheet viewport", async ({ pa
       return {
         screen: rect("[data-testid=device-screen]"),
         sheet: rect("[data-testid=bottom-sheet]"),
-        art: rect(".recipe-art"),
         title: rect(".recipe-title-row"),
       };
     });
 
     expect(layout.screen).toBeTruthy();
     expect(layout.sheet).toBeTruthy();
-    expect(layout.art).toBeTruthy();
     expect(layout.title).toBeTruthy();
     expect(layout.sheet!.height / layout.screen!.height).toBeGreaterThanOrEqual(0.85);
-    expect(layout.art!.top).toBeGreaterThanOrEqual(layout.sheet!.top - 1);
+    expect(layout.title!.top).toBeGreaterThanOrEqual(layout.sheet!.top - 1);
     expect(layout.title!.bottom).toBeLessThanOrEqual(layout.screen!.bottom + 1);
-    expect(layout.title!.top).toBeLessThanOrEqual(layout.art!.top + 1);
     await page.keyboard.press("Escape");
     await expect(dialog).toHaveCount(0);
   }
