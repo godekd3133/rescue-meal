@@ -21,8 +21,12 @@ opened briefly for migrations then deleted.
 
 Frontend builds use `VITE_DEPLOYMENT_MODE=production` and
 `VITE_API_BASE_URL=https://rescue-meal-api-1066866003837.us-west1.run.app`.
-Capacitor iOS must use `iosScheme: https` because production CORS only
-allows HTTPS origins.
+Capacitor iOS serves the bundle from `capacitor://localhost`: WKWebView cannot
+own the `https` scheme, so Capacitor silently ignores `iosScheme: https`.
+`RESCUE_MEAL_CORS_ORIGINS` must therefore list `capacitor://localhost`; the
+production preflight accepts that one non-HTTPS origin and nothing else. Without
+it the native app launches but every API call fails CORS ("식품 목록을 불러오지
+못했어요").
 
 ## Secrets
 
@@ -134,8 +138,17 @@ gcloud run services update rescue-meal-api --region us-west1 \
 The Capacitor wrapper lives in `work/ios-wrapper/` (gitignored):
 
 - `capacitor.config.ts`: `appId com.godekd3133.rescuemeal`,
-  `webDir ../../apps/web/dist/client`, `server.iosScheme https`,
-  `ios.minVersion 15.0`.
+  `webDir ../../apps/web/dist/client`, `ios.minVersion 15.0` (no `server`
+  block; see the CORS note above).
+- iOS 27 kills apps that have not adopted the UIScene lifecycle at launch
+  (`EXC_BREAKPOINT` in `_UIApplicationEvaluateRuntimeIssueForNoSceneLifecycleAdoption`).
+  `Info.plist` replaces `UIMainStoryboardFile` with a `UIApplicationSceneManifest`
+  (one scene, `UISceneStoryboardFile Main`,
+  `UISceneDelegateClassName $(PRODUCT_MODULE_NAME).SceneDelegate`), and
+  `AppDelegate.swift` adds a `SceneDelegate` that forwards URL opens and user
+  activities to `ApplicationDelegateProxy`.
+- The web bundle for the wrapper must be built with `VITE_APP_SHELL=native`;
+  otherwise the PWA "홈 화면에 저장해요" banner shows inside the app.
 - Podfile pins `platform :ios, '15.0'` and forces every pod target to 15.0
   (Xcode 27 rejects <15.0; Capacitor 7 podspecs still say 14.0).
 - pbxproj: `DEVELOPMENT_TEAM A23ZPKGMW9`, `CURRENT_PROJECT_VERSION 7`,
