@@ -170,12 +170,15 @@ test("keeps the native home inside a 320px viewport", async ({ page }) => {
   expect(compactBrand.whiteSpace).toBe("nowrap");
   expect(compactBrand.height).toBeLessThanOrEqual(compactBrand.fontSize + 1);
   expect(compactBrand.scrollWidth).toBeLessThanOrEqual(compactBrand.clientWidth + 1);
-  const compactAddLabel = await page.locator(".home-action-row-with-add .add-food-button strong").evaluate((element) => {
-    const rect = element.getBoundingClientRect();
-    return { height: rect.height, fontSize: Number.parseFloat(getComputedStyle(element).fontSize) };
-  });
-  expect(compactAddLabel.height).toBeLessThanOrEqual(compactAddLabel.fontSize * 1.5);
-  await expect(page.getByRole("button", { name: "식품 추가하기" })).toBeVisible();
+  // Quick-add moved from beside the meal CTA into the centre of the floating navigation.
+  const navAdd = page.getByRole("button", { name: "식품 추가하기" });
+  await expect(navAdd).toBeVisible();
+  await expect(navAdd).toBeInViewport();
+  const navAddBox = await navAdd.boundingBox();
+  expect(navAddBox!.width).toBeGreaterThanOrEqual(44);
+  expect(navAddBox!.height).toBeGreaterThanOrEqual(44);
+  expect(navAddBox!.x).toBeGreaterThanOrEqual(0);
+  expect(navAddBox!.x + navAddBox!.width).toBeLessThanOrEqual(metrics.viewportWidth);
   await expect(page.getByRole("button", { name: "오늘 식단 만들기" })).toBeVisible();
 });
 
@@ -334,7 +337,10 @@ test("places the narrow home review summary before meal actions in both themes a
     expect((reviewShortcut?.y ?? Number.POSITIVE_INFINITY) + (reviewShortcut?.height ?? 0)).toBeLessThanOrEqual(mealAction?.y ?? 0);
     expect((mealAction?.y ?? Number.POSITIVE_INFINITY) + (mealAction?.height ?? 0)).toBeLessThanOrEqual(firstPriority?.y ?? 0);
     expect((reviewShortcut?.y ?? Number.POSITIVE_INFINITY) + (reviewShortcut?.height ?? 0)).toBeLessThanOrEqual((navigation?.y ?? 0) + 1);
-    expect((mealAction?.y ?? Number.POSITIVE_INFINITY) + (mealAction?.height ?? 0)).toBeLessThanOrEqual((navigation?.y ?? 0) + 1);
+    // The taller fridge panel moves the meal action below the 320px first fold; one scroll must clear it of the floating nav.
+    const mealClear = await scrollClearOfBottomNavigation(page, ".meal-plan-button");
+    expect(mealClear.targetBottom).toBeLessThanOrEqual(mealClear.navigationTop + 1);
+    await page.getByTestId("mobile-scroll").evaluate((element) => { element.scrollTop = 0; });
     expect(priorityRowHeights).toHaveLength(3);
     expect(Math.min(...priorityRowHeights)).toBeGreaterThanOrEqual(44);
 
@@ -375,6 +381,8 @@ test("shows a visible next step in the empty shopping state across narrow themes
       await expect(shoppingNav).toBeVisible();
       await expect(shoppingNav).toHaveAccessibleName("장보기");
 
+      // The meal action sits below the fridge panel; scroll it clear of the floating navigation first.
+      await scrollClearOfBottomNavigation(page, ".meal-plan-button");
       const layout = await page.evaluate(() => {
         const shoppingNav = document.querySelector<HTMLElement>("[data-testid=shopping-nav]");
         const navigation = document.querySelector<HTMLElement>(".app-bottom-nav");
@@ -409,7 +417,8 @@ test("shows a visible next step in the empty shopping state across narrow themes
   }
 });
 
-test("extends the home navigation surface through the safe-area tail in both themes", async ({ page }) => {
+test("floats the home navigation clear of the safe area in both themes", async ({ page }) => {
+  // The redesign replaced the full-width bar and its safe-area tail with a floating pill that sits above the home indicator.
   for (const viewport of [{ width: 320, height: 740 }, { width: 393, height: 852 }]) {
     await page.setViewportSize(viewport);
 
@@ -426,25 +435,39 @@ test("extends the home navigation surface through the safe-area tail in both the
         if (!screen) throw new Error("Native device screen is unavailable");
         const navBox = element.getBoundingClientRect();
         const screenBox = screen.getBoundingClientRect();
-        const fill = getComputedStyle(element, "::after");
+        const add = element.querySelector<HTMLElement>(".app-bottom-nav-add")!.getBoundingClientRect();
         return {
           navBottom: navBox.bottom,
+          navLeft: navBox.left,
+          navRight: navBox.right,
+          screenTop: screenBox.top,
           screenBottom: screenBox.bottom,
+          screenLeft: screenBox.left,
+          screenRight: screenBox.right,
           safeAreaHeight: Number.parseFloat(getComputedStyle(screen).getPropertyValue("--device-safe-area-bottom")),
-          fillHeight: Number.parseFloat(fill.height),
-          fillDisplay: fill.display,
-          fillColor: fill.backgroundColor,
+          tailDisplay: getComputedStyle(element, "::after").display,
           navColor: getComputedStyle(element).backgroundColor,
+          add: { top: add.top, bottom: add.bottom, width: add.width, height: add.height },
           itemHeights: Array.from(element.querySelectorAll<HTMLElement>(".app-bottom-nav-item"))
             .map((item) => item.getBoundingClientRect().height),
         };
       });
 
-      expect(layout.fillDisplay).not.toBe("none");
-      expect(layout.fillHeight).toBeCloseTo(layout.safeAreaHeight, 0);
-      expect(layout.navBottom + layout.fillHeight).toBeGreaterThanOrEqual(layout.screenBottom - 1);
-      expect(layout.fillColor).toBe(layout.navColor);
+      expect(layout.tailDisplay).toBe("none");
+      expect(layout.safeAreaHeight).toBeGreaterThan(0);
+      // The pill clears the home indicator by a small, fixed gap and keeps side insets inside the screen.
+      expect(layout.navBottom).toBeLessThanOrEqual(layout.screenBottom - layout.safeAreaHeight);
+      expect(layout.screenBottom - layout.safeAreaHeight - layout.navBottom).toBeLessThanOrEqual(8);
+      expect(layout.navLeft).toBeGreaterThanOrEqual(layout.screenLeft + 8);
+      expect(layout.navRight).toBeLessThanOrEqual(layout.screenRight - 8);
+      // An opaque surface, so labels never sit on the scrolled pantry.
+      expect(layout.navColor).toMatch(/^rgb\(/);
+      expect(layout.itemHeights).toHaveLength(4);
       expect(layout.itemHeights.every((height) => height >= 44)).toBe(true);
+      expect(layout.add.width).toBeGreaterThanOrEqual(44);
+      expect(layout.add.height).toBeGreaterThanOrEqual(44);
+      expect(layout.add.top).toBeGreaterThanOrEqual(layout.screenTop);
+      expect(layout.add.bottom).toBeLessThanOrEqual(layout.navBottom);
     }
   }
 });
@@ -671,25 +694,28 @@ test("keeps the primary home CTA and review notice above navigation on short nat
     await page.setViewportSize(viewport);
     await page.goto("/");
 
-    const layout = await page.evaluate(() => {
+    // The fridge panel now owns the first fold: its rescue cards and the 식단 tab are the first-fold meal entries.
+    const firstFold = await page.evaluate(() => {
       const rect = (selector: string) => document.querySelector<HTMLElement>(selector)?.getBoundingClientRect().toJSON() ?? null;
       return {
         screen: rect("[data-testid=device-screen]"),
         navigation: rect(".app-bottom-nav"),
-        // The fridge door (shelves of ringed food stickers) is now the home review notice.
-        reviewNotice: rect(".fridge-door"),
-        cta: rect(".meal-plan-button"),
+        firstCardActions: rect(".rescue-card .rescue-card-actions"),
       };
     });
+    expect(firstFold.firstCardActions!.top).toBeGreaterThanOrEqual(firstFold.screen!.top);
+    expect(firstFold.firstCardActions!.bottom).toBeLessThanOrEqual(firstFold.navigation!.top + 1);
+    expect(firstFold.navigation!.bottom).toBeLessThanOrEqual(firstFold.screen!.bottom + 1);
+    await expect(page.getByRole("navigation", { name: "주요 메뉴" }).getByRole("button", { name: "식단", exact: true })).toBeInViewport();
 
-    expect(layout.screen).toBeTruthy();
-    expect(layout.navigation).toBeTruthy();
-    expect(layout.reviewNotice).toBeTruthy();
-    expect(layout.cta).toBeTruthy();
-    expect(layout.cta!.bottom).toBeLessThanOrEqual(layout.navigation!.top + 1);
-    expect(layout.reviewNotice!.bottom).toBeLessThanOrEqual(layout.navigation!.top + 1);
-    expect(layout.navigation!.bottom).toBeLessThanOrEqual(layout.screen!.bottom + 1);
-    expect(layout.cta!.height).toBeGreaterThanOrEqual(49);
+    // The review notice and the full-width meal CTA are one scroll away and never left under the floating nav.
+    for (const selector of [".fridge-door", ".meal-plan-button"]) {
+      const clear = await scrollClearOfBottomNavigation(page, selector);
+      expect(clear.targetBottom, `${selector} clears the navigation at ${viewport.height}px`).toBeLessThanOrEqual(clear.navigationTop + 1);
+    }
+    const cta = await page.locator(".meal-plan-button").boundingBox();
+    expect(cta!.y).toBeGreaterThanOrEqual(0);
+    expect(cta!.height).toBeGreaterThanOrEqual(49);
   }
 });
 
@@ -720,20 +746,21 @@ test("keeps the primary meal CTA discoverable in the 390px first viewport", asyn
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
 
+  // The meal plan stays one tap away in the first viewport via the 식단 tab and each rescue card's 요리 action.
+  const mealTab = page.getByRole("navigation", { name: "주요 메뉴" }).getByRole("button", { name: "식단", exact: true });
+  await expect(mealTab).toBeInViewport();
+  expect((await mealTab.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  const cookAction = page.locator(".rescue-card").first().getByRole("button", { name: /요리하기$/ });
+  await expect(cookAction).toBeInViewport();
+
+  // The full-width CTA sits right below the fridge panel and scrolls clear of the floating nav.
+  const clear = await scrollClearOfBottomNavigation(page, ".meal-plan-button");
+  expect(clear.targetBottom).toBeLessThanOrEqual(clear.navigationTop - 1);
   const layout = await page.evaluate(() => {
     const rect = (selector: string) => document.querySelector<HTMLElement>(selector)?.getBoundingClientRect().toJSON() ?? null;
-    return {
-      screen: rect("[data-testid=device-screen]"),
-      cta: rect(".meal-plan-button"),
-      navigation: rect(".app-bottom-nav"),
-    };
+    return { screen: rect("[data-testid=device-screen]"), cta: rect(".meal-plan-button") };
   });
-
-  expect(layout.screen).toBeTruthy();
-  expect(layout.cta).toBeTruthy();
-  expect(layout.navigation).toBeTruthy();
   expect(layout.cta!.top).toBeGreaterThanOrEqual(layout.screen!.top - 1);
-  expect(layout.cta!.bottom).toBeLessThanOrEqual(layout.navigation!.top - 1);
   expect(layout.cta!.height).toBeGreaterThanOrEqual(49);
 });
 
@@ -770,9 +797,9 @@ test("uses tall-phone fold space for pantry entry while keeping food rows below 
     expect(layout.heading).toBeTruthy();
     expect(layout.search).toBeTruthy();
     expect(layout.firstFoodImage).toBeTruthy();
-    // The fridge door now spends the fold space: it and the meal action stay above the navigation.
+    // The fridge panel spends the fold space; the fridge door starts inside the fold and the meal action follows it.
+    expect(layout.overview!.top).toBeLessThan(layout.navigation!.top);
     expect(layout.overview!.bottom).toBeLessThanOrEqual(layout.action!.top);
-    expect(layout.action!.bottom).toBeLessThanOrEqual(layout.navigation!.top + 1);
     expect(layout.inventory!.top - layout.shoppingSummary!.bottom).toBeLessThan(190);
 
     if (viewport.width <= 360) {
@@ -1128,7 +1155,8 @@ test("restores the home first fold after moving between bottom navigation destin
   await expect(foodNav).not.toHaveAttribute("aria-current", "page");
   await expect.poll(() => scroll.evaluate((element) => element.scrollTop)).toBe(0);
   await expect(page.getByRole("heading", { level: 1, name: "오늘 구할 음식 6개" })).toBeVisible();
-  await expect.poll(() => page.getByRole("button", { name: "오늘 식단 만들기" }).evaluate((element) => {
+  // The first fold is the fridge panel: its first rescue card is fully visible above the floating nav again.
+  await expect.poll(() => page.locator(".rescue-card").first().evaluate((element) => {
     const action = element.getBoundingClientRect();
     const nav = document.querySelector<HTMLElement>(".app-bottom-nav")?.getBoundingClientRect();
     return nav ? action.bottom <= nav.top + 1 : false;
@@ -1798,8 +1826,8 @@ test("keeps the mobile date-recheck keyboard path visibly focused without an ext
     await expect(page.locator("html")).toHaveAttribute("data-rescue-theme", theme);
 
     const firstPriority = page.locator(".priority-card").first();
-    // The fridge shelves (labels and food stickers) now sit before the priority cards in tab order.
-    for (let index = 0; index < 32; index += 1) {
+    // The rescue deck cards and the fridge shelves (labels and food stickers) now sit before the priority cards in tab order.
+    for (let index = 0; index < 64; index += 1) {
       await page.keyboard.press("Tab");
       if (await firstPriority.evaluate((element) => element === document.activeElement)) break;
     }
@@ -1935,17 +1963,22 @@ test("shows visible keyboard focus across Home entry points and bottom navigatio
       await page.reload();
       await expect(page.locator("html")).toHaveAttribute("data-rescue-theme", theme);
 
+      // Header controls sit on the deep green fridge panel; rescue card actions sit on their card.
+      const panelTargets = new Set([".connection-pill", ".theme-toggle-button", ".notification-button"]);
       const homeTargets = [
         page.locator(".connection-pill"),
         page.locator(".theme-toggle-button"),
         page.locator(".notification-button"),
+        // The rescue deck opens the panel: each card's photo and actions are Home entry points.
+        page.locator(".rescue-card-photo").first(),
+        page.locator(".rescue-card-action").first(),
         // The fridge door replaced the freshness tiles as Home entry points (a shelf label and the
-        // food stickers); it sits between the header and the meal actions in tab order.
+        // food stickers); it sits between the rescue deck and the meal action in tab order.
         page.locator(".fridge-shelf-label").first(),
         page.locator(".fridge-sticker").first(),
         page.locator(".fridge-sticker").last(),
+        // Quick-add moved into the bottom navigation (checked with the nav below).
         page.locator(".meal-plan-button"),
-        page.locator(".add-food-button"),
         page.getByRole("button", { name: "식품 찾기" }),
         page.locator(".priority-card").nth(0),
         page.locator(".priority-card").nth(1),
@@ -1953,7 +1986,7 @@ test("shows visible keyboard focus across Home entry points and bottom navigatio
       ];
 
       for (const target of homeTargets) {
-        for (let index = 0; index < 32; index += 1) {
+        for (let index = 0; index < 64; index += 1) {
           await page.keyboard.press("Tab");
           if (await target.evaluate((element) => element === document.activeElement)) break;
         }
@@ -1989,18 +2022,46 @@ test("shows visible keyboard focus across Home entry points and bottom navigatio
           expect(ring.width).toBeGreaterThanOrEqual(2);
           expect(contrastRatio(ring.color, ring.surface)).toBeGreaterThanOrEqual(3);
           expect(ring.inside, "sticker focus ring is clipped by the shelf row").toBe(true);
+        } else if (await target.evaluate((element) => element.matches(".rescue-card-photo, .rescue-card-action"))) {
+          await expectHomeRing(target, ".rescue-card");
         } else {
-          await expectHomeRing(target, ".meal-home");
+          const className = await target.evaluate((element) => element.className);
+          const onPanel = [...panelTargets].some((selector) => className.includes(selector.slice(1)));
+          await expectHomeRing(target, onPanel ? ".kitchen-hero" : ".meal-home");
         }
       }
 
       const homeTab = page.getByRole("navigation", { name: "주요 메뉴" }).getByRole("button", { name: "홈", exact: true });
       await homeTab.evaluate((element) => element.focus({ preventScroll: true }));
-      for (const label of ["식품", "식단"]) {
+      for (const label of ["식품", "식품 추가하기", "식단"]) {
         const navTarget = page.getByRole("navigation", { name: "주요 메뉴" }).getByRole("button", { name: label, exact: true });
         await page.keyboard.press("Tab");
         await expect(navTarget).toBeFocused();
-        await expectHomeRing(navTarget, ".app-bottom-nav", "::before");
+        if (label === "식품 추가하기") {
+          // The centre add button straddles the pill and the page: its yolk ring must read on the pill
+          // and its ink band on the page behind it.
+          const ring = await navTarget.evaluate((element) => {
+            const style = getComputedStyle(element, "::after");
+            return {
+              focused: element.matches(":focus-visible"),
+              content: style.content,
+              style: style.borderTopStyle,
+              width: Number.parseFloat(style.borderTopWidth),
+              color: style.borderTopColor,
+              band: style.boxShadow.match(/rgba?\([^)]*\)/)?.[0] ?? "",
+              pill: getComputedStyle(element.closest(".app-bottom-nav")!).backgroundColor,
+              page: getComputedStyle(document.querySelector(".meal-home")!).backgroundColor,
+            };
+          });
+          expect(ring.focused).toBe(true);
+          expect(ring.content).not.toBe("none");
+          expect(ring.style).toBe("solid");
+          expect(ring.width).toBeGreaterThanOrEqual(2);
+          expect(contrastRatio(ring.color, ring.pill)).toBeGreaterThanOrEqual(3);
+          expect(contrastRatio(ring.band, ring.page)).toBeGreaterThanOrEqual(3);
+        } else {
+          await expectHomeRing(navTarget, ".app-bottom-nav", "::before");
+        }
       }
     }
   }
@@ -2901,18 +2962,25 @@ test("keeps primary actions in bounds after a larger text preference", async ({ 
   expect(metrics.bodyScrollWidth).toBeLessThanOrEqual(metrics.viewportWidth);
   expect(metrics.documentScrollWidth).toBeLessThanOrEqual(metrics.viewportWidth);
   expect(metrics.outOfBounds).toEqual([]);
+  // Larger text pushes the meal action further below the fridge panel; it must still scroll fully clear of the nav.
+  const mealClear = await scrollClearOfBottomNavigation(page, ".meal-plan-button");
+  expect(mealClear.targetBottom).toBeLessThanOrEqual(mealClear.navigationTop);
   const vertical = await page.evaluate(() => {
     const rect = (selector: string) => document.querySelector<HTMLElement>(selector)?.getBoundingClientRect().toJSON() ?? null;
-    return { meal: rect(".meal-plan-button"), add: rect(".add-food-button"), nav: rect(".app-bottom-nav") };
+    return { meal: rect(".meal-plan-button"), add: rect(".app-bottom-nav-add"), nav: rect(".app-bottom-nav"), screen: rect("[data-testid=device-screen]") };
   });
-  expect(vertical.meal?.bottom).toBeLessThanOrEqual(vertical.nav?.top ?? Number.POSITIVE_INFINITY);
-  expect(vertical.add?.bottom).toBeLessThanOrEqual(vertical.nav?.top ?? Number.POSITIVE_INFINITY);
+  expect(vertical.meal!.top).toBeGreaterThanOrEqual(vertical.screen!.top);
+  // Quick-add lives in the floating nav; larger text must not push it out of the bar or the screen.
+  expect(vertical.add!.top).toBeGreaterThanOrEqual(vertical.screen!.top);
+  expect(vertical.add!.bottom).toBeLessThanOrEqual(vertical.nav!.bottom);
+  expect(vertical.add!.left).toBeGreaterThanOrEqual(vertical.nav!.left);
+  expect(vertical.add!.right).toBeLessThanOrEqual(vertical.nav!.right);
 });
 
 test("keeps the compact safety guidance reachable after larger text scrolls", async ({ page }) => {
   await page.addStyleTag({ content: "html { font-size: 125%; }" });
-  const scroll = page.getByTestId("mobile-scroll");
-  await scroll.evaluate((element) => { element.scrollTop = 20; });
+  // The fridge door now sits below the taller fridge panel; scroll it clear of the floating nav.
+  await scrollClearOfBottomNavigation(page, ".fridge-door");
   const layout = await page.evaluate(() => {
     // The fridge door replaced the freshness overview as the compact review entry.
     const trust = document.querySelector<HTMLElement>(".fridge-door")!;
@@ -2952,7 +3020,8 @@ test("raises contrast tokens without changing native geometry", async ({ page })
     const readback = await page.evaluate(() => {
       const screen = document.querySelector<HTMLElement>("[data-testid=device-screen]")!;
       const home = document.querySelector<HTMLElement>(".meal-home")!;
-      const add = document.querySelector<HTMLElement>(".add-food-button")!;
+      // Quick-add moved into the floating navigation.
+      const add = document.querySelector<HTMLElement>(".app-bottom-nav-add")!;
       const mealAction = document.querySelector<HTMLElement>(".meal-plan-button")!;
       const mealActionLabel = mealAction.querySelector<HTMLElement>("strong")!;
       const luminance = (color: string) => {
@@ -2980,8 +3049,9 @@ test("raises contrast tokens without changing native geometry", async ({ page })
     });
 
     expect(readback.contrast).toBeTruthy();
-    expect(readback.mutedColor).toBe(theme === "light" ? "#4e5968" : "#b7c8bf");
-    expect(readback.borderColor).toBe(theme === "light" ? "rgba(2, 32, 71, 0.38)" : "rgba(235, 246, 238, 0.58)");
+    // Kitchen palette high-contrast tokens (no blue tint); the default muted ink is #5d6d64 / #9cb0a4.
+    expect(readback.mutedColor).toBe(theme === "light" ? "#3f4d45" : "#c4d3ca");
+    expect(readback.borderColor).toBe(theme === "light" ? "rgba(22, 34, 27, 0.42)" : "rgba(233, 240, 235, 0.58)");
     expect(readback.mealActionContrast).toBeGreaterThanOrEqual(4.5);
     expect(readback.screen.width).toBeCloseTo(320, 0);
     expect(readback.screen.height).toBeCloseTo(740, 0);
@@ -3248,7 +3318,7 @@ test("date recheck active tab uses the selected theme ink and a full touch targe
     const activeLabelTab = dateReview.getByRole("tab", { name: "라벨" });
 
     await expect(activeLabelTab).toHaveAttribute("aria-selected", "true");
-    await expect(activeLabelTab).toHaveCSS("color", theme === "light" ? "rgb(36, 49, 40)" : "rgb(241, 236, 223)");
+    await expect(activeLabelTab).toHaveCSS("color", theme === "light" ? "rgb(22, 34, 27)" : "rgb(233, 240, 235)"); // kitchen --fresh-ink
     expect((await activeLabelTab.boundingBox())?.height).toBeGreaterThanOrEqual(44);
     await expect(activeLabelTab).toHaveAccessibleName("라벨, 추천");
     await expect(activeLabelTab.locator("span[aria-hidden='true']")).toHaveText("추천");

@@ -92,20 +92,20 @@ test("home theme toggle switches between the selected light and dark surfaces", 
   await toggle.click();
   await expect(page.locator("html")).toHaveAttribute("data-rescue-theme", "dark");
   await expect(toggle).toHaveAttribute("aria-label", "현재 다크모드, 라이트모드로 전환");
-  await expect(page.locator(".meal-plan-button")).toHaveCSS("background-color", "rgb(95, 209, 151)");
-  await expect(page.locator(".meal-home")).toHaveCSS("background-color", "rgb(14, 24, 19)");
-  await expect(page.locator(".fridge-sticker.freshness-past .fridge-sticker-badge")).toHaveCSS("background-color", "rgb(255, 122, 107)");
-  await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute("content", "#141b16");
+  await expect(page.locator(".meal-plan-button")).toHaveCSS("background-color", "rgb(99, 207, 148)");
+  await expect(page.locator(".meal-home")).toHaveCSS("background-color", "rgb(12, 18, 16)");
+  await expect(page.locator(".fridge-sticker.freshness-past .fridge-sticker-badge")).toHaveCSS("background-color", "rgb(255, 122, 102)");
+  await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute("content", "#10291e");
 
   await page.reload();
   await expect(page.locator("html")).toHaveAttribute("data-rescue-theme", "dark");
-  await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute("content", "#141b16");
+  await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute("content", "#10291e");
   await page.getByTestId("theme-toggle").click();
   await expect(page.locator("html")).toHaveAttribute("data-rescue-theme", "light");
-  await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute("content", "#f4f0e7");
-  await expect(page.locator(".meal-plan-button")).toHaveCSS("background-color", "rgb(36, 128, 76)");
-  await expect(page.locator(".meal-home")).toHaveCSS("background-color", "rgb(238, 245, 236)");
-  await expect(page.locator(".fridge-sticker.freshness-past .fridge-sticker-badge")).toHaveCSS("background-color", "rgb(242, 92, 79)");
+  await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute("content", "#15392a");
+  await expect(page.locator(".meal-plan-button")).toHaveCSS("background-color", "rgb(27, 108, 66)");
+  await expect(page.locator(".meal-home")).toHaveCSS("background-color", "rgb(243, 245, 240)");
+  await expect(page.locator(".fridge-sticker.freshness-past .fridge-sticker-badge")).toHaveCSS("background-color", "rgb(236, 90, 67)");
 });
 
 test("home status summary opens the food list as the primary next step", async ({ page }) => {
@@ -188,27 +188,37 @@ test("review guidance closes back to the filtered food list", async ({ page }) =
   await expect(page.locator(".inventory-list .inventory-row")).toHaveCount(1);
 });
 
-test("keeps the mobile quick-add action beside the meal CTA above fixed navigation", async ({ page }) => {
-  const actionRow = page.locator(".home-action-row-with-add");
+test("keeps the mobile quick-add action in fixed navigation and the meal CTA above it", async ({ page }) => {
+  // The redesign moved quick-add from beside the meal CTA into the centre of the floating bottom bar.
+  const actionRow = page.locator(".home-action-row");
   await expect(actionRow).toBeVisible();
   await expect(actionRow.locator(".meal-plan-button")).toBeVisible();
-  await expect(actionRow.locator(".add-food-button")).toBeVisible();
-  await expect(actionRow.locator(".add-food-button")).toContainText("식품 추가");
-  await expect(actionRow.locator(".add-food-button small")).toHaveCount(0);
+  await expect(actionRow.locator(".add-food-button")).toHaveCount(0);
+  const add = page.getByRole("navigation", { name: "주요 메뉴" }).getByRole("button", { name: "식품 추가하기", exact: true });
+  await expect(add).toBeVisible();
+  await expect(add).toHaveAttribute("data-testid", "nav-add-food");
 
+  await page.locator(".meal-plan-button").scrollIntoViewIfNeeded();
   const layout = await page.evaluate(() => {
     const read = (selector: string) => document.querySelector<HTMLElement>(selector)?.getBoundingClientRect().toJSON() ?? null;
     return {
+      row: read(".home-action-row"),
       meal: read(".home-action-row .meal-plan-button"),
-      add: read(".home-action-row .add-food-button"),
+      add: read(".app-bottom-nav .app-bottom-nav-add"),
       nav: read(".app-bottom-nav"),
+      screen: read("[data-testid=device-screen]"),
     };
   });
 
-  expect(Math.abs((layout.meal?.top ?? 0) - (layout.add?.top ?? 0))).toBeLessThanOrEqual(4);
-  expect(layout.add?.left).toBeGreaterThan(layout.meal?.left ?? Number.POSITIVE_INFINITY);
-  expect(layout.meal?.bottom).toBeLessThanOrEqual(layout.nav?.top ?? Number.NEGATIVE_INFINITY);
-  expect(layout.add?.bottom).toBeLessThanOrEqual(layout.nav?.top ?? Number.NEGATIVE_INFINITY);
+  // The meal CTA owns the full action row and stays clear of the floating bar.
+  expect(layout.meal!.width).toBeGreaterThanOrEqual(layout.row!.width - 2);
+  expect(layout.meal!.bottom).toBeLessThanOrEqual(layout.nav!.top);
+  // The add button is a full touch target centred in the bar and kept on screen.
+  expect(layout.add!.width).toBeGreaterThanOrEqual(44);
+  expect(layout.add!.height).toBeGreaterThanOrEqual(44);
+  expect(Math.abs((layout.add!.left + layout.add!.right) / 2 - (layout.nav!.left + layout.nav!.right) / 2)).toBeLessThanOrEqual(2);
+  expect(layout.add!.top).toBeGreaterThanOrEqual(layout.screen!.top);
+  expect(layout.add!.bottom).toBeLessThanOrEqual(layout.screen!.bottom);
 });
 
 test("date guidance returns to the same food detail context", async ({ page }) => {
@@ -386,7 +396,7 @@ test("keeps visible primary controls named across the major mobile surfaces", as
     await expect(dialog).toHaveCount(0);
   };
 
-  await openAndAudit(".add-food-button", "receipt", "영수증으로 추가");
+  await openAndAudit("[data-testid=nav-add-food]", "receipt", "영수증으로 추가");
   await openAndAudit(".meal-plan-button", "meal", "오늘의 식단");
   await openAndAudit(".priority-card", "food detail", "시금치");
   await openAndAudit(".connection-pill", "account", "체험 안내");
@@ -413,7 +423,9 @@ test("Pixel preview anchors app navigation to the reserved Android viewport edge
   });
 
   expect(Math.abs(layout.viewportBottom - layout.navigationTop)).toBeLessThanOrEqual(1);
-  expect(Math.abs(layout.appNavigationBottom - layout.viewportBottom)).toBeLessThanOrEqual(1);
+  // The bar floats as a pill a few pixels above the reserved Android edge; it must not reserve the system bar twice.
+  expect(layout.appNavigationBottom).toBeLessThanOrEqual(layout.viewportBottom);
+  expect(layout.viewportBottom - layout.appNavigationBottom).toBeLessThanOrEqual(8);
   expect(layout.documentWidth).toBeLessThanOrEqual(1100);
   expect(layout.bodyWidth).toBeLessThanOrEqual(1100);
 
@@ -598,7 +610,7 @@ test("long sheet navigation keeps the latest return context and focus", async ({
 });
 
 test("bottom sheets expose modal semantics and restore focus after closing", async ({ page }) => {
-  const trigger = page.locator(".add-food-button");
+  const trigger = page.getByTestId("nav-add-food");
   await expect(trigger).toHaveAccessibleName(/식품 추가하기/);
 
   await trigger.focus();
@@ -647,7 +659,7 @@ test("bottom sheets expose modal semantics and restore focus after closing", asy
 });
 
 test("keeps keyboard focus inside an open bottom sheet", async ({ page }) => {
-  const trigger = page.locator(".add-food-button");
+  const trigger = page.getByTestId("nav-add-food");
   await trigger.click();
   const dialog = page.getByRole("dialog", { name: "영수증으로 추가" });
   await expect(dialog).toBeVisible();
@@ -945,7 +957,9 @@ test("receipt product lookup stays secondary and full-size in dark mode", async 
 
   expect(style.height).toBeGreaterThanOrEqual(44);
   expect(style.background).not.toBe("rgb(255, 255, 255)");
-  expect(style.color).toBe("rgb(180, 187, 174)");
+  // Neutral kitchen muted ink (not the leek-green accent) keeps the lookup secondary.
+  expect(style.color).toBe("rgb(156, 176, 164)");
+  expect(style.color).not.toBe("rgb(99, 207, 148)");
 });
 
 test("receipt validation explains and focuses invalid quantity and unit fields", async ({ page }) => {

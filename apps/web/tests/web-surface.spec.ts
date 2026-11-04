@@ -28,20 +28,38 @@ test("home pantry shortcuts stay on one line and the meal action fits at 320px",
     expect(size.width).toBeGreaterThanOrEqual(44);
     expect(size.height).toBeGreaterThanOrEqual(44);
   }
-  const mealAction = await page.locator(".meal-plan-button").boundingBox();
+  // The taller fridge panel moves the meal CTA below the 320px first fold. A meal-plan entry must still be
+  // fully visible above the nav in the first viewport: the first rescue card's 요리 action (or the CTA without a deck).
   const navigation = await page.locator(".app-bottom-nav").boundingBox();
-  expect(mealAction!.y + mealAction!.height).toBeLessThan(navigation!.y);
+  const hasDeck = await page.locator(".rescue-card").count() > 0;
+  const firstFoldMealEntry = hasDeck
+    ? page.locator(".rescue-card").first().getByRole("button", { name: /요리하기$/ })
+    : page.locator(".meal-plan-button");
+  const entryBox = await firstFoldMealEntry.boundingBox();
+  expect(entryBox!.y).toBeGreaterThanOrEqual(0);
+  expect(entryBox!.y + entryBox!.height).toBeLessThanOrEqual(navigation!.y);
+  expect(entryBox!.height).toBeGreaterThanOrEqual(44);
+  // The full-width CTA itself is reachable by scrolling and is not left under the floating nav.
+  await page.locator(".meal-plan-button").evaluate((element) => element.scrollIntoView({ block: "center" }));
+  const mealAction = await page.locator(".meal-plan-button").boundingBox();
+  const navigationAfterScroll = await page.locator(".app-bottom-nav").boundingBox();
+  expect(mealAction!.y).toBeGreaterThanOrEqual(0);
+  expect(mealAction!.y + mealAction!.height).toBeLessThan(navigationAfterScroll!.y);
   const navItems = await page.locator(".app-bottom-nav-item").evaluateAll((items) => items.map((item) => {
     const rect = item.getBoundingClientRect();
     return { x: rect.x, right: rect.right, width: rect.width, height: rect.height };
   }));
+  // Four destinations share the five-column bar with the centre add button.
   expect(navItems).toHaveLength(4);
-  for (const item of navItems) {
+  const addButton = await page.locator(".app-bottom-nav-add").boundingBox();
+  for (const item of [...navItems, { x: addButton!.x, right: addButton!.x + addButton!.width, width: addButton!.width, height: addButton!.height }]) {
     expect(item.width).toBeGreaterThanOrEqual(44);
     expect(item.height).toBeGreaterThanOrEqual(44);
     expect(item.x).toBeGreaterThanOrEqual(0);
     expect(item.right).toBeLessThanOrEqual(320);
   }
+  const sorted = [...navItems].sort((a, b) => a.x - b.x);
+  for (let index = 1; index < sorted.length; index += 1) expect(sorted[index]!.x).toBeGreaterThanOrEqual(sorted[index - 1]!.right - 0.5);
 });
 
 test("web surface renders the real app without phone simulator chrome", async ({ page }) => {
@@ -69,7 +87,13 @@ test("web surface renders the real app without phone simulator chrome", async ({
   const navigation = await page.locator(".app-bottom-nav").boundingBox();
   expect(navigation, "web navigation has no bounding box").toBeTruthy();
   expect(navigation!.y).toBeGreaterThan(surface!.y + surface!.height * 0.8);
-  expect(Math.abs(navigation!.y + navigation!.height - (surface!.y + surface!.height))).toBeLessThanOrEqual(1);
+  // The bar floats as a pill: it ends inside the bottom ~56px of the surface instead of touching the edge.
+  const navigationBottomGap = surface!.y + surface!.height - (navigation!.y + navigation!.height);
+  expect(navigationBottomGap).toBeGreaterThanOrEqual(0);
+  expect(navigationBottomGap).toBeLessThanOrEqual(56);
+  expect(navigation!.x).toBeGreaterThanOrEqual(surface!.x);
+  expect(navigation!.x + navigation!.width).toBeLessThanOrEqual(surface!.x + surface!.width);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(1440);
 
   // The priority section's food-list action is now labelled "식품 찾기".
   await page.getByRole("button", { name: "식품 찾기", exact: true }).click();
@@ -122,8 +146,8 @@ test("web surface carries the selected dark theme through the outer runtime shel
   await page.getByTestId("theme-toggle").click();
 
   await expect(page.locator("html")).toHaveAttribute("data-rescue-theme", "dark");
-  await expect(page.getByTestId("web-runtime-surface")).toHaveCSS("background-color", "rgb(20, 27, 22)");
-  await expect(page.locator(".app-shell-web")).toHaveCSS("background-color", "rgb(20, 27, 22)");
+  await expect(page.getByTestId("web-runtime-surface")).toHaveCSS("background-color", "rgb(12, 18, 16)");
+  await expect(page.locator(".app-shell-web")).toHaveCSS("background-color", "rgb(12, 18, 16)");
 });
 
 test("web home keeps the fridge door before meal actions on mobile and desktop", async ({ page }) => {

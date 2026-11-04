@@ -7,7 +7,9 @@ test("shopping navigation opens directly from inventory and returns to it", asyn
   await expect(page.getByRole("dialog", { name: "장보기 목록" })).toBeVisible();
   await page.getByRole("button", { name: "닫기", exact: true }).click();
   await expect(page.locator(".app-bottom-nav-item-active")).toHaveText("식품");
-  await expect(page.getByRole("navigation", { name: "주요 메뉴" }).getByRole("button")).toHaveCount(4);
+  // Four destinations plus the centre add button.
+  await expect(page.getByRole("navigation", { name: "주요 메뉴" }).getByRole("button")).toHaveCount(5);
+  await expect(page.getByTestId("nav-add-food")).toHaveAccessibleName("식품 추가하기");
 });
 
 test("manual name and unit shortcuts only change the draft and preserve decimals", async ({ page }) => {

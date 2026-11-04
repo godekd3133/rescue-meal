@@ -144,7 +144,8 @@ test("primary home action text meets contrast in light and dark themes", async (
       token: getComputedStyle(button.closest(".meal-home")!).getPropertyValue("--atelier-primary-action-shadow"),
     }));
     expect(primaryShadow.value, `${theme} primary action keeps its depth`).not.toBe("none");
-    expect(primaryShadow.token, `${theme} primary shadow token`).toContain(theme === "light" ? "20%" : "22%");
+    // The kitchen palette tints the action's depth with its own leek green instead of the old blue.
+    expect(primaryShadow.token, `${theme} primary shadow token`).toContain(theme === "light" ? "#1b6c42" : "#63cf94");
   }
 });
 
@@ -211,15 +212,30 @@ test("printed-date recheck keeps its current record clear with system high contr
 
       const highContrastTokens = await dateRecheck.evaluate((dialog) => {
         const style = getComputedStyle(dialog);
+        const luminance = (color: string) => {
+          const probe = document.createElement("canvas").getContext("2d")!;
+          probe.fillStyle = color;
+          probe.fillRect(0, 0, 1, 1);
+          const channels = Array.from(probe.getImageData(0, 0, 1, 1).data).slice(0, 3).map((channel) => {
+            const normalized = channel / 255;
+            return normalized <= 0.04045 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
+          });
+          return 0.2126 * channels[0]! + 0.7152 * channels[1]! + 0.0722 * channels[2]!;
+        };
+        const muted = style.getPropertyValue("--atelier-muted").trim();
+        const [lighter, darker] = [luminance(muted), luminance(style.backgroundColor)].sort((a, b) => b - a);
         return {
           contrast: window.matchMedia("(prefers-contrast: more)").matches,
-          muted: style.getPropertyValue("--atelier-muted").trim(),
+          muted,
           border: style.getPropertyValue("--atelier-border-strong").trim(),
+          mutedContrast: (lighter! + 0.05) / (darker! + 0.05),
         };
       });
       expect(highContrastTokens.contrast).toBe(true);
-      expect(highContrastTokens.muted).toBe(theme === "light" ? "#4e5968" : "#b7c8bf");
-      expect(highContrastTokens.border).toBe(theme === "light" ? "rgba(2, 32, 71, 0.38)" : "rgba(235, 246, 238, 0.58)");
+      // Kitchen palette high-contrast tokens (no blue tint); the default muted ink is #5d6d64 / #9cb0a4.
+      expect(highContrastTokens.muted).toBe(theme === "light" ? "#3f4d45" : "#c4d3ca");
+      expect(highContrastTokens.border).toBe(theme === "light" ? "rgba(22, 34, 27, 0.42)" : "rgba(233, 240, 235, 0.58)");
+      expect(highContrastTokens.mutedContrast, `${theme} high-contrast muted ink on the sheet`).toBeGreaterThanOrEqual(7);
       await expectNoViolations(page, `printed-date recheck high contrast ${viewport.width}px ${theme}`);
       await page.screenshot({
         path: `../../evidence/mobile-flow-review-2026-09-29/${String(screenshotIndex++).padStart(2, "0")}-date-recheck-${viewport.width}x${viewport.height}-high-contrast-${theme}.png`,
