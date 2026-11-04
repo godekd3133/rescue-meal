@@ -21,10 +21,10 @@ export function historyDayLabel(value: string, now = new Date()) {
   const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1).getTime();
   if (day === today) return "오늘";
   if (day === yesterday) return "어제";
-  return `${date.getMonth() + 1}월 ${date.getDate()}일`;
+  return `${date.getFullYear() !== now.getFullYear() ? `${date.getFullYear()}년 ` : ""}${date.getMonth() + 1}월 ${date.getDate()}일`;
 }
 
-export function groupHistoryByDay<T extends TimestampedHistory>(events: T[]) {
+export function groupHistoryByDay<T extends TimestampedHistory>(events: T[], now = new Date()) {
   const groups: Array<{ key: string; label: string; items: T[] }> = [];
   for (const event of events) {
     const date = new Date(event.occurred_at);
@@ -35,7 +35,7 @@ export function groupHistoryByDay<T extends TimestampedHistory>(events: T[]) {
     if (existing) {
       existing.items.push(event);
     } else {
-      groups.push({ key, label: historyDayLabel(event.occurred_at), items: [event] });
+      groups.push({ key, label: historyDayLabel(event.occurred_at, now), items: [event] });
     }
   }
   return groups;

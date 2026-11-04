@@ -1,4 +1,10 @@
-export const MIN_EVENT_QUANTITY = 0.001;
+import { subtractQuantity } from "./quantityArithmetic.ts";
+
+export const MIN_QUANTITY_STEP = 0.001;
+
+export function quantityDraftValue(value: number): string {
+  return value.toLocaleString("ko-KR", { useGrouping: false, maximumSignificantDigits: 21 });
+}
 
 export function parseDisplayQuantity(display: string): { amount: number; unit: string } | null {
   const match = display.trim().match(/^((?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?|\.\d+)\s*([^\d,.+-].*)?$/u);
@@ -10,11 +16,10 @@ export function parseDisplayQuantity(display: string): { amount: number; unit: s
 }
 
 export function isValidEventQuantity(quantity: number, availableQuantity: number): boolean {
-  return Number.isFinite(quantity)
-    && Number.isFinite(availableQuantity)
-    && quantity >= MIN_EVENT_QUANTITY
-    && quantity <= availableQuantity
-    && Number(quantity.toFixed(3)) === quantity;
+  if (!Number.isFinite(quantity) || !Number.isFinite(availableQuantity) || quantity <= 0 || quantity > availableQuantity) return false;
+  if (quantity === availableQuantity) return true;
+  const remaining = subtractQuantity(availableQuantity, quantity);
+  return remaining > 0 && remaining < availableQuantity;
 }
 
 export function validateQuantitySelection(draft: string, availableQuantity: number):
@@ -22,14 +27,20 @@ export function validateQuantitySelection(draft: string, availableQuantity: numb
   | { quantity: null; remaining: null; error: string } {
   const input = draft.trim();
   if (!input) return { quantity: null, remaining: null, error: "기록할 수량을 입력해 주세요." };
-  if (!/^(?:\d+(?:\.\d{0,3})?|\.\d{1,3})$/.test(input)) {
-    return { quantity: null, remaining: null, error: "수량은 소수점 아래 3자리까지 숫자로 입력해 주세요." };
+  if ((input === String(availableQuantity) || /^(?:\d+(?:\.\d*)?|\.\d+)$/.test(input)) && Number(input) === availableQuantity && isValidEventQuantity(availableQuantity, availableQuantity)) {
+    return { quantity: availableQuantity, remaining: 0, error: null };
+  }
+  if (!/^(?:\d+(?:\.\d*)?|\.\d+)$/.test(input)) {
+    return { quantity: null, remaining: null, error: "수량은 숫자로 입력해 주세요." };
   }
   const quantity = Number(input);
   if (!isValidEventQuantity(quantity, availableQuantity)) {
+    if (Number.isFinite(quantity) && Number.isFinite(availableQuantity) && quantity > 0 && quantity < availableQuantity) {
+      return { quantity: null, remaining: null, error: "수량이 너무 작아 계산할 수 없어요." };
+    }
     return { quantity: null, remaining: null, error: "0보다 크고 남은 수량 이하로 입력해 주세요." };
   }
-  return { quantity, remaining: Number((availableQuantity - quantity).toFixed(3)), error: null };
+  return { quantity, remaining: subtractQuantity(availableQuantity, quantity), error: null };
 }
 
 /** Never round a half into a different amount or change the recorded unit. */
@@ -45,18 +56,21 @@ export function quantityStep(availableQuantity: number, unit: string): number {
     : normalizedUnit === "kg" || normalizedUnit === "l" || availableQuantity <= 1
       ? 0.1
       : 1;
-  let step = preferred;
-  while (step > availableQuantity && step > MIN_EVENT_QUANTITY) step = Number((step / 10).toFixed(3));
-  return Math.max(MIN_EVENT_QUANTITY, step);
+  let exponent = preferred === 10 ? 1 : preferred === 1 ? 0 : -1;
+  while (Number(`1e${exponent}`) > availableQuantity && exponent > -323) exponent -= 1;
+  return Math.min(Number(`1e${exponent}`), availableQuantity);
 }
 
 export function stepEventQuantity(quantity: number, direction: -1 | 1, availableQuantity: number, unit: string): number {
-  return Number(Math.min(availableQuantity, Math.max(MIN_EVENT_QUANTITY, quantity + direction * quantityStep(availableQuantity, unit))).toFixed(3));
+  const step = quantityStep(availableQuantity, unit);
+  const next = subtractQuantity(quantity, -direction * step);
+  if (next >= availableQuantity) return availableQuantity;
+  return Math.min(availableQuantity, Math.max(Math.min(MIN_QUANTITY_STEP, step), next));
 }
 
 /** Follow a previously selected whole lot; preserve custom input so a refresh cannot silently enlarge it. */
 export function reconcileQuantityDraft(draft: string, previousAvailable: number, nextAvailable: number): string {
   return validateQuantitySelection(draft, previousAvailable).quantity === previousAvailable
-    ? String(nextAvailable)
+    ? quantityDraftValue(nextAvailable)
     : draft;
 }

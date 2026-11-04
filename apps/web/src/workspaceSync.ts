@@ -213,6 +213,7 @@ export class WorkspaceSyncCoordinator {
   private readonly workspaceKeyProvider: WorkspaceKeyProvider;
   private workspaceKey: string;
   private workspaceVersion = 0;
+  private workspaceGeneration = 0;
   private readonly channelVersions = new Map<WorkspaceSyncChannel, number>();
   private readonly activeControllers = new Map<WorkspaceSyncChannel, AbortController>();
 
@@ -223,6 +224,12 @@ export class WorkspaceSyncCoordinator {
 
   get currentWorkspaceKey() {
     return this.workspaceKey;
+  }
+
+  captureScope() {
+    const key = this.workspaceKey;
+    const generation = this.workspaceGeneration;
+    return () => this.workspaceKey === key && this.workspaceGeneration === generation;
   }
 
   setWorkspace(workspaceKey: string) {
@@ -289,6 +296,7 @@ export class WorkspaceSyncCoordinator {
     const nextWorkspaceKey = normalizeWorkspaceKey(workspaceKey);
     if (nextWorkspaceKey === this.workspaceKey) return false;
     this.workspaceKey = nextWorkspaceKey;
+    this.workspaceGeneration += 1;
     this.workspaceVersion += 1;
     this.abortAll(preserveController);
     return true;

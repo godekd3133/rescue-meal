@@ -8,6 +8,12 @@ export function parseManualQuantity(value: string) {
   return { amount, amountText: match[1], unit: match[2] ?? "" };
 }
 
+export function manualQuantityIssue(value: string): "amount" | "unit" | null {
+  const quantity = parseManualQuantity(value);
+  if (!quantity) return "amount";
+  return quantity.unit ? null : "unit";
+}
+
 export function changeManualQuantityUnit(value: string, unit: string) {
   const quantity = parseManualQuantity(value);
   if (!quantity || !MANUAL_QUANTITY_UNITS.some((option) => option === unit)) return value;

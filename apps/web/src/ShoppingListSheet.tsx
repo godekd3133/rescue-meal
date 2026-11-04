@@ -1,12 +1,14 @@
-import { MetadataText } from "./Metadata";
-import { useEffect, useRef, useState } from "react";
+import { ShoppingStockList } from "./ShoppingStockList";
+import { Metadata, MetadataText } from "./Metadata";
+import { useEffect, useRef, useState, type FocusEvent } from "react";
 import { ArchiveIcon, ArrowRightIcon, CheckCircledIcon, Cross2Icon, InfoCircledIcon, ReaderIcon } from "@radix-ui/react-icons";
 import { KeyboardInput, useKeyboard } from "./mobile/Keyboard";
 import { getMobileScrollBehavior } from "./mobile/scroll";
 import { revealAndFocusWithinNearestContainer as revealAndFocus, scrollTargetWithinNearestContainer } from "./appScroll";
 import type { ApiShoppingListItem, ApiStorageLocation, ApiStorageType } from "./mealApi";
-import { getShoppingListProgressCopy, matchingShoppingInventoryFoods, shoppingQuantityInputValue, validateShoppingReceive, type ShoppingInventoryFood } from "./shoppingListPresentation";
+import { shoppingAdjustmentNote, shoppingFoodAction, getShoppingListProgressCopy, matchingShoppingInventoryFoods, shoppingQuantityInputValue, validateShoppingReceive, type ShoppingInventoryFood } from "./shoppingListPresentation";
 import "./mealShoppingSheets.css";
+import { formatQuantityAmount } from "./quantityArithmetic";
 
 const shouldAutoFocusReceiveQuantity = ((import.meta.env.VITE_APP_SHELL as string | undefined)?.trim().toLowerCase() ?? "web") === "native";
 
@@ -22,7 +24,9 @@ type ShoppingListSheetProps = {
   onAddManual: (input: { canonicalName: string; quantity: number; unit: string }) => Promise<boolean>;
   onReceive: (item: ApiShoppingListItem, input: { quantity: number; storageType: ApiStorageType; storageLocationId?: string | null }) => Promise<boolean>;
   recentlyReceivedFoodName?: string;
+  recentlyReceivedFoodQuantity?: string;
   onOpenReceivedFood?: () => void;
+  onOpenInventoryFood?: (foodId: string) => void;
   onOpenMeal: () => void;
   initialFocus?: boolean;
   demoMode?: boolean;
@@ -50,9 +54,7 @@ const RECEIVE_STORAGE_OPTIONS: Array<{ value: ApiStorageType; label: string }> =
 ];
 
 function formatQuantity(quantity: number) {
-  return Number.isInteger(quantity)
-    ? String(quantity)
-    : quantity.toLocaleString("ko-KR", { maximumFractionDigits: 3 });
+  return formatQuantityAmount(quantity);
 }
 
 function sourceLabel(item: ApiShoppingListItem) {
@@ -64,7 +66,7 @@ function sourceLabel(item: ApiShoppingListItem) {
 }
 
 function itemLabel(item: ApiShoppingListItem) {
-  return `${item.canonical_name} ${formatQuantity(item.quantity)}${item.unit} · ${sourceLabel(item)}${item.checked ? " · 구매 완료" : ""}`;
+  return `${item.canonical_name} ${item.checked ? "계획 " : ""}${formatQuantity(item.quantity)}${item.unit}, ${sourceLabel(item).replace(/\s+·\s+/g, ", ")}${item.checked ? ", 구매 완료" : ""}`;
 }
 
 export default function ShoppingListSheet({
@@ -79,7 +81,9 @@ export default function ShoppingListSheet({
   onAddManual,
   onReceive,
   recentlyReceivedFoodName,
+  recentlyReceivedFoodQuantity,
   onOpenReceivedFood,
+  onOpenInventoryFood,
   onOpenMeal,
   initialFocus = false,
   demoMode = false,
@@ -91,6 +95,8 @@ export default function ShoppingListSheet({
   const receivePanelRef = useRef<HTMLFormElement | null>(null);
   const receiveQuantityRef = useRef<HTMLInputElement | null>(null);
   const manualNameRef = useRef<HTMLInputElement | null>(null);
+  const manualQuantityRef = useRef<HTMLInputElement | null>(null);
+  const manualUnitRef = useRef<HTMLInputElement | null>(null);
   const receivedFoodActionRef = useRef<HTMLButtonElement | null>(null);
   const shoppingItemRefs = useRef(new Map<string, HTMLButtonElement>());
   const receiveButtonRefs = useRef(new Map<string, HTMLButtonElement>());
@@ -104,6 +110,7 @@ export default function ShoppingListSheet({
   const [manualQuantity, setManualQuantity] = useState("1");
   const [manualUnit, setManualUnit] = useState("개");
   const [manualError, setManualError] = useState("");
+  const manualErrorField = manualError.startsWith("상품명") ? "name" : manualError.startsWith("수량") ? "quantity" : manualError.startsWith("단위") ? "unit" : null;
   const [receivingItemId, setReceivingItemId] = useState<string | null>(null);
   const [receiveQuantity, setReceiveQuantity] = useState("");
   const [receiveStorageType, setReceiveStorageType] = useState<ApiStorageType | null>(null);
@@ -116,6 +123,24 @@ export default function ShoppingListSheet({
     ? storageLocations.find((location) => location.id === receiveStorageLocationId)?.name
     : RECEIVE_STORAGE_OPTIONS.find((option) => option.value === receiveStorageType)?.label;
   const manualInventoryMatches = matchingShoppingInventoryFoods(manualName, inventoryFoods);
+  const findManualShoppingMatch = (name: string, unit: string) => items.find((item) => item.canonical_name.trim().toLocaleLowerCase("ko-KR") === name.trim().toLocaleLowerCase("ko-KR") && item.unit.trim() === unit.trim());
+  const manualShoppingMatch = findManualShoppingMatch(manualName, manualUnit);
+  const hasExistingManualQuantity = Boolean(manualShoppingMatch?.sources.some((source) => source.source_type === "manual"));
+  const manualQuantityHasChange = !hasExistingManualQuantity || Number(manualQuantity) !== manualShoppingMatch!.sources.filter((source) => source.source_type === "manual").reduce((sum, source) => sum + source.quantity, 0);
+  const manualQuantityAutofillRef = useRef<{ value: string; previousValue: string } | null>(null);
+  const fillExistingManualQuantity = (name: string, unit: string) => {
+    const match = findManualShoppingMatch(name, unit);
+    if (match && match.id === findManualShoppingMatch(manualName, manualUnit)?.id) return;
+    const autofill = manualQuantityAutofillRef.current;
+    if (match?.sources.some((source) => source.source_type === "manual")) {
+      const value = shoppingQuantityInputValue(match.sources.filter((source) => source.source_type === "manual").reduce((sum, source) => sum + source.quantity, 0));
+      manualQuantityAutofillRef.current = { value, previousValue: autofill?.previousValue ?? manualQuantity };
+      setManualQuantity(value);
+    } else {
+      if (autofill && manualQuantity === autofill.value) setManualQuantity(autofill.previousValue);
+      manualQuantityAutofillRef.current = null;
+    }
+  };
   const inventoryReminderVisible = manualInventoryMatches.length > 0
     || items.some((item) => matchingShoppingInventoryFoods(item.canonical_name, inventoryFoods).length > 0);
   const progressPercent = items.length ? Math.round((completedCount / items.length) * 100) : 0;
@@ -128,6 +153,12 @@ export default function ShoppingListSheet({
   });
 
   const focusManualEntry = () => revealAndFocus(manualNameRef.current, { block: "center" });
+  const revealShoppingField = (event: FocusEvent<HTMLInputElement>) => {
+    const field = event.currentTarget;
+    window.requestAnimationFrame(() => {
+      if (field.isConnected) scrollTargetWithinNearestContainer(field, "center", getMobileScrollBehavior());
+    });
+  };
 
   useEffect(() => {
     if (!initialFocus) {
@@ -197,6 +228,7 @@ export default function ShoppingListSheet({
     const pendingManual = pendingManualFocusRef.current;
     if ((!pending && !pendingManual) || mutating || recentlyReceivedFoodName || pending?.items === items || pendingManual?.items === items) return;
     const frame = window.requestAnimationFrame(() => {
+      if (pendingManual && pendingManualFocusRef.current !== pendingManual) return;
       const manualItem = pendingManual ? items.find((item) => item.canonical_name === pendingManual.canonicalName) : null;
       if (pendingManual && !manualItem) return;
       const nextIndex = pending
@@ -293,30 +325,60 @@ export default function ShoppingListSheet({
     return () => window.cancelAnimationFrame(frame);
   }, [receivingItemId]);
 
+  const showManualValidationError = (message: string, target: HTMLInputElement | null) => {
+    setManualError(message);
+    window.requestAnimationFrame(() => {
+      if (target?.isConnected) revealAndFocus(target, { block: "center" });
+    });
+  };
+
+  const manualSubmitBusyRef = useRef(false);
+  const manualDraftRevisionRef = useRef(0);
+  const markManualDraftChanged = () => {
+    manualDraftRevisionRef.current += 1;
+    pendingManualFocusRef.current = null;
+  };
+
   const submitManualItem = async () => {
+    if (manualSubmitBusyRef.current || mutating || !manualQuantityHasChange) return;
+    const draftRevision = manualDraftRevisionRef.current;
     const canonicalName = manualName.trim();
     const quantity = Number(manualQuantity);
     const unit = manualUnit.trim();
     if (!canonicalName) {
-      setManualError("상품명을 입력해 주세요.");
+      showManualValidationError("상품명을 입력해 주세요.", manualNameRef.current);
       return;
     }
     if (!Number.isFinite(quantity) || quantity <= 0) {
-      setManualError("수량은 0보다 큰 숫자로 입력해 주세요.");
+      showManualValidationError("수량은 0보다 큰 숫자로 입력해 주세요.", manualQuantityRef.current);
       return;
     }
     if (!unit) {
-      setManualError("단위를 입력해 주세요.");
+      showManualValidationError("단위를 입력해 주세요.", manualUnitRef.current);
       return;
     }
     setManualError("");
-    pendingManualFocusRef.current = { canonicalName, items };
-    const added = await onAddManual({ canonicalName, quantity, unit });
-    if (!added) return;
-    setManualName("");
-    setManualQuantity("1");
-    setManualUnit("개");
-    keyboard.hide();
+    manualSubmitBusyRef.current = true;
+    const focusIntent = { canonicalName, items };
+    pendingManualFocusRef.current = focusIntent;
+    try {
+      const added = await onAddManual({ canonicalName, quantity, unit });
+      if (!added) {
+        if (pendingManualFocusRef.current === focusIntent) pendingManualFocusRef.current = null;
+        return;
+      }
+      if (draftRevision !== manualDraftRevisionRef.current) return;
+      setManualName("");
+      manualQuantityAutofillRef.current = null;
+      setManualQuantity("1");
+      setManualUnit("개");
+      keyboard.hide();
+    } catch {
+      if (pendingManualFocusRef.current === focusIntent) pendingManualFocusRef.current = null;
+      if (draftRevision === manualDraftRevisionRef.current) setManualError("장보기 항목이 추가됐는지 확인하지 못했어요. 다시 추가하기 전에 목록을 확인해 주세요.");
+    } finally {
+      manualSubmitBusyRef.current = false;
+    }
   };
 
   const beginReceive = (item: ApiShoppingListItem) => {
@@ -356,10 +418,10 @@ export default function ShoppingListSheet({
 
   return (
     <div className="shopping-sheet-content" aria-label="장보기 목록" aria-busy={loading || mutating} data-received-food-name={recentlyReceivedFoodName || undefined}>
-      {items.length || loading || error ? (
+      {items.length ? (
         <section className={`shopping-sheet-progress${progressCopy.tone === "neutral" ? "" : ` shopping-sheet-progress-${progressCopy.tone}`}`} aria-label={progressCopy.tone === "neutral" ? "장보기 목록 상태" : "구매 현황"}>
           <div className="shopping-sheet-progress-heading">
-            <span><strong>{progressCopy.title}</strong><small>{progressCopy.description}</small></span>
+            <span><strong>{progressCopy.title}</strong>{progressCopy.description ? <small>{progressCopy.description}</small> : null}</span>
             {progressCopy.countLabel ? <em>{progressCopy.countLabel}</em> : null}
           </div>
           {items.length ? <div className="shopping-sheet-progress-track" role="progressbar" aria-label="장보기 완료율" aria-valuemin={0} aria-valuemax={items.length} aria-valuenow={completedCount}><span style={{ width: `${progressPercent}%` }} /></div> : null}
@@ -373,14 +435,14 @@ export default function ShoppingListSheet({
         <div className="shopping-sheet-error" role="alert">
           <InfoCircledIcon width={16} height={16} />
           <span>{error}</span>
-          <button type="button" onClick={() => { retryFocusRef.current = true; (retryAction?.onRetry ?? onRefresh)(); }} disabled={loading || mutating}>{retryAction?.label ?? "다시 시도"}</button>
+          <button type="button" onPointerDown={(event) => event.preventDefault()} onClick={() => { retryFocusRef.current = true; (retryAction?.onRetry ?? onRefresh)(); }} disabled={loading || mutating}>{retryAction?.label ?? "다시 시도"}</button>
         </div>
       ) : null}
 
       {recentlyReceivedFoodName && onOpenReceivedFood ? (
         <div className="receipt-review-contract shopping-sheet-received" data-readback-state="confirmed" role="status" aria-live="polite">
           <CheckCircledIcon width={15} height={15} />
-          <span><strong>식품 목록에 추가했어요</strong><small>{recentlyReceivedFoodName}의 포장지 날짜와 보관 방법을 살펴봐 주세요.</small></span>
+          <span><strong><Metadata parts={[recentlyReceivedFoodName, recentlyReceivedFoodQuantity, "식품 목록에 추가했어요"]} /></strong><small>포장지 날짜와 보관 방법을 살펴봐 주세요.</small></span>
           <button ref={receivedFoodActionRef} className="primary-sheet-button" type="button" onPointerDown={(event) => event.preventDefault()} onClick={onOpenReceivedFood}>식품 보기</button>
         </div>
       ) : null}
@@ -388,12 +450,12 @@ export default function ShoppingListSheet({
       {loading && !items.length ? (
         <div className="shopping-sheet-state shopping-sheet-loading" role="status">
           <span className="shopping-sheet-state-icon"><ReaderIcon width={17} height={17} /></span>
-          <span><strong>장보기 목록을 불러오고 있어요</strong><small>저장한 식단과 식품 목록을 살펴보고 있어요.</small></span>
+          <span><strong>장보기 목록을 불러오고 있어요</strong></span>
         </div>
       ) : items.length ? (
         <section className="shopping-sheet-list-section" aria-label="장보기 항목">
           <div className="shopping-sheet-list-heading">
-            <span><strong>{remainingCount ? "이번에 살 재료" : "구매한 재료"}</strong><small><MetadataText text={<>{completedCount ? `${completedCount}개 구매 완료 · ` : ""}{remainingCount}개 남음</>} /></small></span>
+            <span><strong>재료 목록</strong></span>
             {loading ? <span className="shopping-sheet-syncing" role="status">목록 업데이트 중</span> : null}
           </div>
           <div className="shopping-sheet-list" role="list">
@@ -419,26 +481,26 @@ export default function ShoppingListSheet({
                     <span className="shopping-sheet-check" aria-hidden="true">{item.checked ? <CheckCircledIcon width={16} height={16} /> : null}</span>
                     <span className="shopping-sheet-copy">
                       <strong>{item.canonical_name}</strong>
-                      <small><MetadataText text={<>{formatQuantity(item.quantity)}{item.unit} · {sourceLabel(item)}</>} /></small>
+                      <small><MetadataText text={<>{item.checked ? "계획 " : ""}{formatQuantity(item.quantity)}{item.unit} · {sourceLabel(item)}</>} /></small>
                       {item.checked ? <small>구매 완료</small> : null}
                     </span>
                   </button>
                   <div className="shopping-sheet-actions" role="group" aria-label={`${item.canonical_name} 장보기 항목 행동`}>
-                    <button
+                    {shoppingFoodAction(item, inventoryFoods, Boolean(onOpenInventoryFood)) === "recorded" ? <span className="shopping-sheet-recorded-state">식품 추가 완료</span> : <button
                       ref={(element) => {
                         if (element) receiveButtonRefs.current.set(item.id, element);
                         else receiveButtonRefs.current.delete(item.id);
                       }}
                       className={`shopping-sheet-receive${receivingItemId === item.id ? " shopping-sheet-receive-active" : ""}`}
                       type="button"
-                      aria-label={`${item.canonical_name} 식품 목록에 추가`}
-                      aria-expanded={receivingItemId === item.id}
-                      disabled={mutating}
+                      aria-label={`${item.canonical_name} ${item.received_food_id ? "추가한 식품 보기" : "식품 목록에 추가"}`}
+                      aria-expanded={item.received_food_id ? undefined : receivingItemId === item.id}
+                      disabled={mutating || Boolean(item.received_food_id && (!onOpenInventoryFood || !inventoryFoods.some((food) => food.id === item.received_food_id)))}
                       aria-busy={mutating}
-                      onClick={() => receivingItemId === item.id ? cancelReceive() : beginReceive(item)}
+                      onClick={() => item.received_food_id ? onOpenInventoryFood?.(item.received_food_id) : receivingItemId === item.id ? cancelReceive() : beginReceive(item)}
                     >
-                      <ArchiveIcon width={13} height={13} /> 식품 목록에 추가
-                    </button>
+                      <ArchiveIcon width={13} height={13} /> {item.received_food_id ? "추가한 식품 보기" : "식품 목록에 추가"}
+                    </button>}
                     <button
                       className="shopping-sheet-delete"
                       type="button"
@@ -456,9 +518,8 @@ export default function ShoppingListSheet({
                 </div>
                 {matchingShoppingInventoryFoods(item.canonical_name, inventoryFoods).length ? (
                   <details className="shopping-sheet-existing-stock">
-                    <summary>같은 식품의 보관 수량 보기</summary>
-                    <ul>{matchingShoppingInventoryFoods(item.canonical_name, inventoryFoods).map((food) => <li key={food.id}><MetadataText text={<>{food.name} {food.quantity} · {food.storageLocationName ?? food.storage}</>} /></li>)}</ul>
-                    <p>같은 상품인지, 더 살 양이 맞는지 확인해 주세요.</p>
+                    <summary onPointerDown={(event) => event.preventDefault()}>같은 식품의 보관 수량 보기</summary>
+                    <ShoppingStockList foods={matchingShoppingInventoryFoods(item.canonical_name, inventoryFoods)} />
                   </details>
                 ) : null}
                 {receivingItemId === item.id ? (
@@ -469,14 +530,9 @@ export default function ShoppingListSheet({
                     aria-busy={mutating}
                     onSubmit={(event) => { event.preventDefault(); void submitReceive(item); }}
                   >
-                    <ol className="shopping-sheet-receive-steps" aria-label="구매한 식품을 목록에 추가하는 순서">
-                      <li className={item.checked ? "shopping-sheet-receive-step-complete" : "shopping-sheet-receive-step-active"}><span>1</span><small>{item.checked ? "구매 완료" : "구매 확인"}</small></li>
-                      <li className={item.checked ? "shopping-sheet-receive-step-active" : ""}><span>2</span><small>목록에 추가</small></li>
-                      <li><span>3</span><small>포장지 날짜</small></li>
-                    </ol>
                     <div className="shopping-sheet-receive-heading">
                       <strong>{item.canonical_name} 구매 정보</strong>
-                      <small>새로 산 수량을 입력하고, 포장지에 맞는 보관 위치를 골라 주세요.</small>{matchingShoppingInventoryFoods(item.canonical_name, inventoryFoods).length ? <small className="shopping-sheet-record-reminder">같은 이름의 식품이 있어요. 이미 기록한 구매인지 보관 수량을 먼저 확인해 주세요.</small> : null}
+                      {matchingShoppingInventoryFoods(item.canonical_name, inventoryFoods).length ? <small className="shopping-sheet-record-reminder">같은 이름의 식품이 있어요. 이미 기록한 구매인지 보관 수량을 먼저 확인해 주세요.</small> : null}
                     </div>
                     <div className="shopping-sheet-receive-fields">
                       <label className="shopping-sheet-receive-field shopping-sheet-receive-quantity">
@@ -485,13 +541,15 @@ export default function ShoppingListSheet({
                           ref={receiveQuantityRef}
                           className="app-input"
                           type="number"
-                          min="0.001"
-                          step="0.001"
+                          min="0"
+                          max="100000"
+                          step="any"
                           inputMode="decimal"
                           value={receiveQuantity}
                           disabled={mutating}
                           aria-label={`${item.canonical_name} 구매 수량`}
                           aria-describedby={`shopping-sheet-receive-unit-${item.id}`}
+                          onFocus={revealShoppingField}
                           onChange={(event) => { setReceiveQuantity(event.target.value); setReceiveError(""); }}
                           onBlur={() => keyboard.hide()}
                         /><span id={`shopping-sheet-receive-unit-${item.id}`}>{item.unit}</span></div>
@@ -519,18 +577,18 @@ export default function ShoppingListSheet({
                     {!item.checked ? (
                       <div className="shopping-sheet-purchase-check" role="group" aria-label={`${item.canonical_name} 구매 완료 확인`}>
                         <span><strong>구매가 끝났나요?</strong><small id={`shopping-sheet-purchase-hint-${item.id}`}>구매 완료로 표시한 뒤 식품 목록에 추가할 수 있어요.</small></span>
-                        <button type="button" disabled={mutating} aria-busy={mutating} onClick={() => onToggle(item)}>구매 완료로 표시</button>
+                        <button type="button" disabled={mutating} aria-busy={mutating} onPointerDown={(event) => event.preventDefault()} onClick={() => onToggle(item)}>구매 완료로 표시</button>
                       </div>
                     ) : null}
                     <p className="shopping-sheet-receive-note"><InfoCircledIcon width={13} height={13} /> 소비기한은 자동으로 정하지 않아요. 식품 목록에 추가한 뒤 포장지 날짜와 보관 방법을 살펴봐 주세요.</p>
                     <p id={`shopping-sheet-save-summary-${item.id}`} className="shopping-sheet-save-summary" aria-live="polite">
                       {Number.isFinite(Number(receiveQuantity)) && Number(receiveQuantity) > 0
-                        ? <><strong>추가할 내용</strong><span><MetadataText text={<>{item.canonical_name} {formatQuantity(Number(receiveQuantity))}{item.unit} · {receiveStorageLabel ?? "보관 위치를 선택해 주세요"}</>} /></span></>
+                        ? <><strong>추가할 내용</strong><span><Metadata parts={[item.canonical_name, `${formatQuantity(Number(receiveQuantity))}${item.unit}`, receiveStorageLabel ?? "보관 위치를 선택해 주세요"]} /></span></>
                         : "실제로 구매한 수량을 입력해 주세요."}
                     </p>
                     {receiveError ? <p className="shopping-sheet-receive-error" role="alert">{receiveError}</p> : null}
                     <div className="shopping-sheet-receive-actions">
-                      <button className="shopping-sheet-receive-cancel" type="button" disabled={mutating} aria-busy={mutating} onClick={cancelReceive}>취소</button>
+                      <button className="shopping-sheet-receive-cancel" type="button" disabled={mutating} aria-busy={mutating} onPointerDown={(event) => event.preventDefault()} onClick={cancelReceive}>취소</button>
                       <button
                         className="shopping-sheet-receive-submit"
                         type="submit"
@@ -539,8 +597,6 @@ export default function ShoppingListSheet({
                         aria-busy={mutating}
                         onPointerDown={(event) => {
                           event.preventDefault();
-                          void submitReceive(item);
-                          keyboard.hide();
                         }}
                       >{mutating ? "추가 중" : !receiveStorageType ? "보관 위치를 골라 주세요" : "식품 목록에 추가"}</button>
                     </div>
@@ -549,15 +605,15 @@ export default function ShoppingListSheet({
               </div>
             ))}
           </div>
-          <p className="shopping-sheet-note"><ArrowRightIcon width={13} height={13} />{demoMode ? "미리보기에서는 식품 목록에 넣은 수량만큼 장보기 목록에서 빠져요." : "식단에서 담은 재료는 보관 수량에 맞춰 줄어들어요. 직접 추가한 항목은 구매 기록으로 남아요."}</p>
+          {(demoMode || shoppingAdjustmentNote(items)) ? <p className="shopping-sheet-note"><ArrowRightIcon width={13} height={13} />{demoMode ? "미리보기에서는 식품 목록에 넣은 수량만큼 장보기 목록에서 빠져요." : shoppingAdjustmentNote(items)}</p> : null}
         </section>
       ) : error || recentlyReceivedFoodName ? null : (
         <div className="shopping-sheet-state shopping-sheet-empty" role="status" style={{ flexWrap: "wrap" }}>
           <span><strong>목록에 무엇을 담을까요?</strong></span>
           <div className="shopping-sheet-receive-actions" style={{ width: "100%", flexBasis: "100%" }}>
-            <button className="primary-sheet-button" style={{ width: "auto", minHeight: 44, flex: "1 1 auto", padding: "0 10px", fontSize: 12 }} type="button" onClick={onOpenMeal}><ReaderIcon width={15} height={15} /> 식단에서 재료 고르기 <ArrowRightIcon width={14} height={14} /></button>
+            <button className="primary-sheet-button" style={{ width: "auto", minHeight: 44, flex: "1 1 auto", padding: "0 10px", fontSize: 12 }} type="button" onClick={inventoryFoods.length ? onOpenMeal : focusManualEntry}><ReaderIcon width={15} height={15} /> {inventoryFoods.length ? "식단에서 재료 고르기" : "살 식품 직접 추가"} <ArrowRightIcon width={14} height={14} /></button>
             {demoMode
-              ? <button className="secondary-sheet-button" style={{ width: "auto", minHeight: 44, flex: "0 0 auto", padding: "0 10px" }} type="button" onClick={focusManualEntry}>직접 추가</button>
+              ? inventoryFoods.length ? <button className="secondary-sheet-button" style={{ width: "auto", minHeight: 44, flex: "0 0 auto", padding: "0 10px" }} type="button" onClick={focusManualEntry}>직접 추가</button> : null
               : <button className="secondary-sheet-button" style={{ width: "auto", minHeight: 44, flex: "0 0 auto", padding: "0 10px" }} type="button" onClick={onRefresh} disabled={loading}>새로 고침</button>}
           </div>
         </div>
@@ -570,32 +626,30 @@ export default function ShoppingListSheet({
         <form className="shopping-sheet-manual-form" onSubmit={(event) => { event.preventDefault(); void submitManualItem(); }}>
           <label className="shopping-sheet-manual-field shopping-sheet-manual-name">
             <span>상품명</span>
-            <KeyboardInput ref={manualNameRef} className="app-input" value={manualName} maxLength={160} autoComplete="off" placeholder="예: 우유" aria-label="직접 추가 상품명" onChange={(event) => { setManualName(event.target.value); setManualError(""); }} onBlur={() => keyboard.hide()} />
+            <KeyboardInput ref={manualNameRef} className="app-input" value={manualName} maxLength={160} autoComplete="off" placeholder="예: 우유" aria-label="직접 추가 상품명" aria-invalid={manualErrorField === "name"} aria-describedby={manualErrorField === "name" ? "shopping-manual-error" : undefined} onFocus={revealShoppingField} onChange={(event) => { markManualDraftChanged(); setManualName(event.target.value); fillExistingManualQuantity(event.target.value, manualUnit); if (manualErrorField === "name" || manualErrorField === null) setManualError(""); }} onBlur={() => keyboard.hide()} />
           </label>
           <label className="shopping-sheet-manual-field shopping-sheet-manual-quantity">
             <span>수량</span>
-            <KeyboardInput className="app-input" type="number" min="0.001" step="0.001" inputMode="decimal" value={manualQuantity} aria-label="직접 추가 수량" onChange={(event) => { setManualQuantity(event.target.value); setManualError(""); }} onBlur={() => keyboard.hide()} />
+            <KeyboardInput ref={manualQuantityRef} className="app-input" type="number" min="0" max="100000" step="any" inputMode="decimal" value={manualQuantity} aria-label="직접 추가 수량" aria-invalid={manualErrorField === "quantity"} aria-describedby={manualErrorField === "quantity" ? "shopping-manual-error" : undefined} onFocus={revealShoppingField} onChange={(event) => { markManualDraftChanged(); manualQuantityAutofillRef.current = null; setManualQuantity(event.target.value); if (manualErrorField === "quantity" || manualErrorField === null) setManualError(""); }} onBlur={() => keyboard.hide()} />
           </label>
           <label className="shopping-sheet-manual-field shopping-sheet-manual-unit">
             <span>단위</span>
-            <KeyboardInput className="app-input" value={manualUnit} maxLength={30} autoComplete="off" placeholder="개" aria-label="직접 추가 단위" onChange={(event) => { setManualUnit(event.target.value); setManualError(""); }} onBlur={() => keyboard.hide()} />
+            <KeyboardInput ref={manualUnitRef} className="app-input" value={manualUnit} maxLength={30} autoComplete="off" placeholder="개" aria-label="직접 추가 단위" aria-invalid={manualErrorField === "unit"} aria-describedby={manualErrorField === "unit" ? "shopping-manual-error" : undefined} onFocus={revealShoppingField} onChange={(event) => { markManualDraftChanged(); setManualUnit(event.target.value); fillExistingManualQuantity(manualName, event.target.value); if (manualErrorField === "unit" || manualErrorField === null) setManualError(""); }} onBlur={() => keyboard.hide()} />
           </label>
           <button
             className="shopping-sheet-manual-submit"
             type="submit"
-            disabled={mutating}
+            disabled={mutating || !manualQuantityHasChange}
             aria-busy={mutating}
             onPointerDown={(event) => {
               event.preventDefault();
-              void submitManualItem();
-              keyboard.hide();
             }}
-          >추가</button>
+          >{hasExistingManualQuantity ? "수량 변경" : "추가"}</button>
         </form>
-        {manualError ? <p className="shopping-sheet-manual-error" role="alert">{manualError}</p> : null}
-        {manualInventoryMatches.length ? <p className="shopping-sheet-manual-stock" role="status">식품 목록에 {manualInventoryMatches.map((food) => `${food.quantity} (${food.storageLocationName ?? food.storage})`).join(" · ")} 있어요. 더 살 양만 적어 주세요.</p> : null}
+        {manualError ? <p id="shopping-manual-error" className="shopping-sheet-manual-error" role="alert">{manualError}</p> : null}
+        {manualInventoryMatches.length ? <div className="shopping-sheet-manual-stock" role="status"><span>보관 중인 수량</span><ShoppingStockList foods={manualInventoryMatches} /></div> : null}
         {inventoryReminderVisible ? <button className="shopping-sheet-stock-refresh" type="button" disabled={loading || mutating} aria-busy={loading} onPointerDown={(event) => event.preventDefault()} onClick={() => { onRefresh(); keyboard.hide(); }}>보관 수량 새로고침</button> : null}
-        <p className="shopping-sheet-manual-note">장보기 목록에 같은 상품과 단위가 있으면 수량을 더해요.</p>
+        {manualShoppingMatch?.sources.some((source) => source.source_type !== "manual") ? <p className="shopping-sheet-manual-note">{hasExistingManualQuantity ? "직접 추가한 수량을 입력한 값으로 바꿔요. 식단에서 담은 수량은 유지돼요." : "식단에서 담은 수량에 더해요."}</p> : null}
       </section>
     </div>
   );

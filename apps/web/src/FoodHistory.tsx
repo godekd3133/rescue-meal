@@ -1,3 +1,8 @@
+import { storageEventQuantityDetail } from "./storageEventPresentation";
+import HistoryWindowToggle from "./HistoryWindowToggle";
+import { useHistoryWindow } from "./historyWindow";
+import HistoryReadError from "./HistoryReadError";
+import "./detailHistory.css";
 import { MetadataText } from "./Metadata";
 import { useEffect, useRef, useState } from "react";
 import { ArchiveIcon, CheckCircledIcon, CrossCircledIcon, ReaderIcon, SewingPinIcon, TrashIcon } from "@radix-ui/react-icons";
@@ -26,8 +31,8 @@ function eventDetail(event: ApiStorageEvent, unit: string, locations: ApiStorage
     return `${storageLabel(event.from_storage_type, event.from_storage_location_id, locations)} → ${storageLabel(event.to_storage_type, event.to_storage_location_id, locations)}`;
   }
   if (event.event_type === "opened") return "개봉 상태로 기록했어요";
-  if (event.event_type === "consumed") return `${event.quantity ?? 0}${unit} 먹었어요`;
-  if (event.event_type === "discarded") return `${event.quantity ?? 0}${unit} 폐기했어요`;
+  if (event.event_type === "consumed") return storageEventQuantityDetail(event.quantity, unit);
+  if (event.event_type === "discarded") return storageEventQuantityDetail(event.quantity, unit, true);
   return "보관 상태를 기록했어요";
 }
 
@@ -92,6 +97,11 @@ function eventTone(eventType: ApiStorageEvent["event_type"]) {
 export default function FoodHistory({ foodId, unit, storageLocations = [], historyRefreshKey = 0, highlightSyncOutboxId, onOpenSyncRecord, onOpenSyncNotification }: { foodId: string; unit: string; storageLocations?: ApiStorageLocation[]; historyRefreshKey?: number; highlightSyncOutboxId?: string | null; onOpenSyncRecord?: (outboxId: string, foodId: string) => void; onOpenSyncNotification?: (outboxId: string) => void }) {
   const [history, setHistory] = useState<ApiStorageEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [readError, setReadError] = useState(false);
+  const [retryNonce, setRetryNonce] = useState(0);
+  const historyOwnerRef = useRef(foodId);
+  const retryFocusRef = useRef(false);
+  const retryReturnRef = useRef<HTMLElement | null>(null);
   const [openSyncEvidenceId, setOpenSyncEvidenceId] = useState<string | null>(null);
   const [syncStatusNotice, setSyncStatusNotice] = useState("");
   const historyRootRef = useRef<HTMLDivElement | null>(null);
@@ -106,10 +116,13 @@ export default function FoodHistory({ foodId, unit, storageLocations = [], histo
     const scrollContainer = historyRootRef.current?.closest<HTMLElement>(".sheet-content");
     const previousScrollTop = scrollContainer?.scrollTop ?? null;
     const shouldRestoreScroll = historyRefreshKey > 0 && previousScrollTop !== null && !highlightSyncOutboxId;
+    if (historyOwnerRef.current !== foodId) { setHistory([]); setReadError(false); historyOwnerRef.current = foodId; retryFocusRef.current = false; }
     setLoading(true);
     void mealApi.getStorageEvents(foodId).then((events) => {
+      if (!events) throw new Error("history-read-missing");
       if (active) {
-        setHistory(events ?? []);
+        setHistory(events);
+        setReadError(false);
         setLoading(false);
         if (shouldRestoreScroll && scrollContainer) {
           historyScrollRestoreFrameRef.current = window.requestAnimationFrame(() => {
@@ -120,7 +133,7 @@ export default function FoodHistory({ foodId, unit, storageLocations = [], histo
       }
     }).catch(() => {
       if (active) {
-        setHistory([]);
+        setReadError(true);
         setLoading(false);
       }
     });
@@ -131,7 +144,21 @@ export default function FoodHistory({ foodId, unit, storageLocations = [], histo
         historyScrollRestoreFrameRef.current = null;
       }
     };
-  }, [foodId, highlightSyncOutboxId, historyRefreshKey]);
+  }, [foodId, highlightSyncOutboxId, historyRefreshKey, retryNonce]);
+
+  useEffect(() => {
+    if (loading || !retryFocusRef.current) return;
+    retryFocusRef.current = false;
+    const target = historyRootRef.current ?? retryReturnRef.current;
+    if (target?.isConnected) target.focus({ preventScroll: true });
+  }, [loading, readError]);
+
+  const retryHistoryRead = () => {
+    retryFocusRef.current = true;
+    retryReturnRef.current = historyRootRef.current?.closest("details")?.querySelector<HTMLElement>("summary") ?? null;
+    setRetryNonce((value) => value + 1);
+  };
+
 
   useEffect(() => {
     if (!highlightSyncOutboxId || loading) return;
@@ -232,14 +259,16 @@ export default function FoodHistory({ foodId, unit, storageLocations = [], histo
     return () => window.cancelAnimationFrame(frame);
   }, [highlightSyncOutboxId, history, loading]);
 
-  const groups = groupHistoryByDay(sortHistoryNewest(history).slice(0, 4));
+  const historyWindow = useHistoryWindow(sortHistoryNewest(history), foodId);
+  const groups = groupHistoryByDay(historyWindow.events);
   return (
-    <div ref={historyRootRef} className="detail-history">
+    <div ref={historyRootRef} className="detail-history" tabIndex={-1} aria-busy={loading}>
       <span className="sr-only" role="status" aria-live="polite">{syncStatusNotice}</span>
       <div className="detail-section-heading">
-        <span><ReaderIcon width={16} height={16} /> 최근 기록</span>
-        <small>{loading ? "불러오는 중" : history.length ? "최근 기록 " + history.length + "개" : "기록 없음"}</small>
+        <span><ReaderIcon width={16} height={16} /> 보관·사용 기록</span>
+        {loading || history.length || readError ? <small>{loading ? "불러오는 중" : history.length ? `${historyWindow.events.length}개` : "확인 필요"}</small> : null}
       </div>
+      {readError ? <HistoryReadError message="보관·사용 기록을 불러오지 못했어요." busy={loading} onRetry={retryHistoryRead} /> : null}
       {groups.length ? (
         <div className="history-list" role="list">
           {groups.map((group) => (
@@ -286,7 +315,8 @@ export default function FoodHistory({ foodId, unit, storageLocations = [], histo
             </div>
           ))}
         </div>
-      ) : <p className="history-empty">아직 이 식품에 기록된 변경이 없어요.</p>}
+      ) : readError || loading ? null : <p className="history-empty">아직 보관·사용 기록이 없어요.</p>}
+      <HistoryWindowToggle remaining={historyWindow.remaining} expanded={historyWindow.expanded} onToggle={historyWindow.toggle} />
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import type { ApiStorageType } from "./mealApi";
+import type { ApiShoppingListItem, ApiStorageType } from "./mealApi";
 
 export type ShoppingInventoryFood = {
   id: string;
@@ -91,15 +91,27 @@ export function getShoppingListProgressCopy({
     ? {
       tone: "active",
       title: "구매 현황",
-      description: completedCount
-        ? `살 재료 ${remainingCount}가지 · 구매한 재료는 새로 산 수량만 기록해 주세요.`
-        : "산 재료를 체크하고, 구매한 수량과 보관 위치를 확인해 식품 목록에 추가해 주세요.",
+      description: "",
       countLabel: `${completedCount}/${itemCount}`,
     }
     : {
       tone: "complete",
       title: "장보기를 마쳤어요",
-      description: "아직 기록하지 않은 구매가 있다면 수량과 보관 위치를 확인해 식품 목록에 추가해 주세요.",
+      description: "",
       countLabel: `${completedCount}/${itemCount}`,
     };
+}
+
+export function shoppingAdjustmentNote(items: readonly Pick<ApiShoppingListItem, "sources">[]): string | null {
+  const sources = items.flatMap((item) => item.sources);
+  const manual = sources.some((source) => source.source_type === "manual");
+  const planned = sources.some((source) => source.source_type === "meal_plan" || source.source_type === "multi_day");
+  if (manual && planned) return "식단에서 담은 수량만 보관 수량에 맞춰 줄어들어요.";
+  if (planned) return "보관 수량이 늘면 식단에서 담은 부족량이 줄어요.";
+  return null;
+}
+
+export function shoppingFoodAction(item: Pick<ApiShoppingListItem, "received_food_id">, foods: readonly Pick<ShoppingInventoryFood, "id">[], canOpen: boolean): "receive" | "view" | "recorded" {
+  if (!item.received_food_id) return "receive";
+  return canOpen && foods.some((food) => food.id === item.received_food_id) ? "view" : "recorded";
 }

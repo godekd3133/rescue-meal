@@ -2,7 +2,7 @@ import { getMobileScrollBehavior } from "./mobile/scroll";
 
 export type AppScrollBlock = "start" | "center" | "end" | "nearest";
 
-export function targetScrollTop(container: HTMLElement, target: HTMLElement, block: AppScrollBlock) {
+export function targetScrollTop(container: HTMLElement, target: HTMLElement, block: AppScrollBlock, topInset = 0) {
   const containerRect = container.getBoundingClientRect();
   const targetRect = target.getBoundingClientRect();
   const scaleY = container.clientHeight > 0 && containerRect.height > 0
@@ -12,7 +12,7 @@ export function targetScrollTop(container: HTMLElement, target: HTMLElement, blo
   const targetHeight = targetRect.height / scaleY;
   const targetBottom = targetTop + targetHeight;
 
-  if (block === "start") return targetTop;
+  if (block === "start") return targetTop - topInset;
   if (block === "center") return targetTop - (container.clientHeight - targetHeight) / 2;
   if (block === "end") return targetBottom - container.clientHeight;
   if (targetRect.top < containerRect.top) return targetTop;
@@ -25,9 +25,10 @@ export function scrollTargetWithinContainer(
   target: HTMLElement,
   block: AppScrollBlock,
   behavior: ScrollBehavior,
+  topInset = 0,
 ) {
   const maxScrollTop = Math.max(0, container.scrollHeight - container.clientHeight);
-  const nextScrollTop = Math.max(0, Math.min(maxScrollTop, targetScrollTop(container, target, block)));
+  const nextScrollTop = Math.max(0, Math.min(maxScrollTop, targetScrollTop(container, target, block, topInset)));
   container.scrollTo({ top: nextScrollTop, behavior });
 }
 

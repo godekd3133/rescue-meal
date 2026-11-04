@@ -136,7 +136,10 @@ export type ApiProductProvenanceAuditEvent = {
   after: ApiProductProvenance | null;
   reason: string;
 };
+export type ApiQuantityReference = { amount: number; unit: "g" | "ml" | "개" };
+
 export type ApiFoodProductInfoSnapshot = {
+  quantity_reference?: ApiQuantityReference | null;
   canonical_name: string;
   display_name: string;
   brand: string;
@@ -156,6 +159,7 @@ export type ApiFoodProductInfoAuditEvent = {
 };
 
 export type ApiFood = {
+  quantity_reference?: ApiQuantityReference | null;
   id: string;
   parent_lot_id?: string | null;
   source_receipt_id?: string | null;
@@ -273,6 +277,10 @@ export type ApiNotificationPreferences = {
   timezone: string;
   quiet_hours_start: string | null;
   quiet_hours_end: string | null;
+  /** Push style: one daily summary (default) or one push per food. Absent on older API responses. */
+  push_mode?: "daily_summary" | "each_item";
+  /** "HH:MM" in `timezone` when the daily summary is sent. */
+  daily_summary_time?: string;
 };
 
 export type ApiNotificationWorkerHeartbeat = {
@@ -394,6 +402,7 @@ export type ApiStorageEventSequence = {
 };
 
 export type ApiMealPlan = {
+  recovery?: { kind: "time" | "quantity" | "ingredients" | "allergens" | "empty"; minimum_minutes?: number | null; food_ids?: string[] } | null;
   id: string;
   snapshot_hash: string;
   recipe_source_name?: string;
@@ -441,6 +450,15 @@ export type ApiMealPlan = {
   reason: string;
   steps: string[];
   safety_note: string;
+  /** Structured steps (thaw → prep → cook → finish). Empty for legacy plans; render `steps` then. */
+  step_details?: Array<{ stage: string; text: string; heat: string | null; minutes: number | null }>;
+  /** Pantry staples (rice, soy sauce, oil …) — never matched against inventory or added to shopping. */
+  pantry_items?: Array<{ name: string; amount: number | null; unit: string; optional?: boolean }>;
+  /** Total time including quick thawing; null on legacy plans. */
+  total_minutes?: number | null;
+  thaw_required?: boolean;
+  thaw_minutes?: number | null;
+  thaw_food_ids?: string[];
 };
 
 export type ApiMealPlanOptions = {
@@ -765,6 +783,7 @@ export type ApiShoppingListSource = {
 };
 
 export type ApiShoppingListItem = {
+  received_food_id?: string | null;
   id: string;
   canonical_name: string;
   quantity: number;
@@ -818,6 +837,10 @@ export type ApiWorkspaceConflict = {
   expected_revision?: number;
   current_revision?: number;
 };
+
+export class MealApiSessionChangedError extends Error {
+  constructor() { super("workspace-session-changed"); this.name = "MealApiSessionChangedError"; }
+}
 
 export class MealApiError extends Error {
   readonly status: number;
@@ -923,6 +946,10 @@ export function isMealApiShoppingListPersistenceError(error: unknown): error is 
   );
 }
 
+export function isMealApiShoppingPurchaseRecordedError(error: unknown): error is MealApiError {
+  return error instanceof MealApiError && error.code === "shopping_purchase_already_received";
+}
+
 export function isMealApiShoppingReceivePersistenceError(error: unknown): error is MealApiError {
   return error instanceof MealApiError && error.code === "shopping_receive_persistence_unavailable";
 }
@@ -1007,7 +1034,7 @@ export function isMealApiRecipePublishError(error: unknown): error is MealApiErr
   return error instanceof MealApiError && error.code === "recipe_review_publish_forbidden";
 }
 
-export const MEAL_API_WORKSPACE_CONFLICT_MESSAGE = "다른 기기에서 내용이 바뀌었어요. 다시 불러온 뒤 시도해 주세요.";
+export const MEAL_API_WORKSPACE_CONFLICT_MESSAGE = "최신 기록을 다시 불러온 뒤 시도해 주세요.";
 
 export type ApiOcrReceiptIntake = {
   status: "review_required" | "needs_ocr_engine" | "failed";
@@ -1160,6 +1187,7 @@ function runtimeConfigurationError() {
 
 const configurationError = runtimeConfigurationError();
 const API_TIMEOUT_MS = 8_000;
+const OCR_UPLOAD_TIMEOUT_MS = 60_000;
 const GUEST_TOKEN_STORAGE_KEY = "rescue-meal.guest-token";
 const AUTH_MODE_STORAGE_KEY = "rescue-meal.auth-mode";
 const DASHBOARD_CACHE_KEY_PREFIX = "rescue-meal.dashboard-cache.v1";
@@ -1209,10 +1237,16 @@ function readAuthMode(): "guest" | "account" {
   }
 }
 
+let accessTokenVersion = 0;
+let authenticationIntent = 0;
+let pendingAuthenticationRequests = 0;
+
 function persistAccessToken(token: string, mode: "guest" | "account") {
+  accessTokenVersion += 1;
   guestToken = token;
   accessTokenMode = mode;
   workspaceRevision = null;
+  workspaceMutationRevision = null;
   recipeCatalogRevision = null;
   try {
     window.localStorage.setItem(GUEST_TOKEN_STORAGE_KEY, token);
@@ -1225,7 +1259,10 @@ function persistAccessToken(token: string, mode: "guest" | "account") {
 let guestToken = readGuestToken();
 let accessTokenMode: "guest" | "account" | null = guestToken ? readAuthMode() : null;
 let guestSessionPromise: Promise<string | null> | null = null;
+let guestSessionVersion = -1;
+let guestSessionIntent = -1;
 let workspaceRevision: number | null = null;
+let workspaceMutationRevision: number | null = null;
 let recipeCatalogRevision: number | null = null;
 
 function dashboardWorkspaceNamespace(token: string | null) {
@@ -1355,6 +1392,13 @@ export const mealApi = {
     return accessTokenMode === "guest" && guestToken;
   },
 
+  get hasSession() { return Boolean(guestToken); },
+
+  captureSession() {
+    const version = accessTokenVersion;
+    return () => accessTokenVersion === version;
+  },
+
   get workspaceKey() {
     return dashboardWorkspaceNamespace(guestToken);
   },
@@ -1365,6 +1409,10 @@ export const mealApi = {
 
   get workspaceRevision() {
     return workspaceRevision;
+  },
+
+  get workspaceMutationRevision() {
+    return workspaceMutationRevision;
   },
 
   async prepareWorkspace() {
@@ -1398,10 +1446,12 @@ export const mealApi = {
   },
 
   async changePassword(input: { current_password: string; new_password: string }) {
+    const intent = ++authenticationIntent;
     const session = await request<ApiAuthSession>("/api/auth/password/change", {
       method: "POST",
       body: JSON.stringify(input),
     });
+    if (intent !== authenticationIntent) throw new MealApiSessionChangedError();
     if (session) persistAccessToken(session.access_token, "account");
     return session;
   },
@@ -1421,10 +1471,12 @@ export const mealApi = {
   },
 
   async completePasswordReset(token: string, newPassword: string) {
+    const intent = ++authenticationIntent;
     const session = await publicRequest<ApiAuthSession>("/api/auth/password-reset/complete", {
       method: "POST",
       body: JSON.stringify({ token, new_password: newPassword }),
     });
+    if (intent !== authenticationIntent) throw new MealApiSessionChangedError();
     if (session) persistAccessToken(session.access_token, "account");
     return session;
   },
@@ -1647,8 +1699,8 @@ export const mealApi = {
     });
   },
 
-  async getReceiptDraft(receiptId: string) {
-    return request<ApiReceiptDraft>(`/api/receipts/${encodeURIComponent(receiptId)}`);
+  async getReceiptDraft(receiptId: string, signal?: AbortSignal) {
+    return request<ApiReceiptDraft>(`/api/receipts/${encodeURIComponent(receiptId)}`, { signal });
   },
 
   async enqueueProductEnrichment(receiptId: string) {
@@ -1839,6 +1891,10 @@ export const mealApi = {
     return request<ApiFoodProductInfoAuditEvent[]>(`/api/foods/${encodeURIComponent(foodId)}/product-info/events?limit=${Math.min(100, Math.max(1, limit))}`);
   },
 
+  async updateQuantityReference(foodId: string, reference: ApiQuantityReference | null) {
+    return request<ApiFood>(`/api/foods/${encodeURIComponent(foodId)}/quantity-reference`, reference ? { method: "PUT", body: JSON.stringify(reference) } : { method: "DELETE" });
+  },
+
   async updateProductInfo(foodId: string, input: { canonical_name: string; brand: string; category: string }) {
     return request<ApiFood>(`/api/foods/${encodeURIComponent(foodId)}/product-info`, {
       method: "PATCH",
@@ -1857,6 +1913,7 @@ export const mealApi = {
     canonical_name: string;
     lot_action?: "create" | "correct";
     target_food_id?: string;
+    date_review_correction?: boolean;
     quantity: number;
     unit: string;
     storage_type: ApiStorageType;
@@ -1885,11 +1942,11 @@ export const mealApi = {
     });
   },
 
-  async previewMealPlan<T = ApiMealPlan>(inventoryIds: string[], maxMinutes = 30, path = "/api/meal-plans/preview", servings = 1, signal?: AbortSignal) {
+  async previewMealPlan<T = ApiMealPlan>(inventoryIds: string[], maxMinutes = 30, path = "/api/meal-plans/preview", servings = 1, signal?: AbortSignal, recipeId?: string) {
     return request<T>(path, {
       method: "POST",
       signal,
-      body: JSON.stringify({ inventory_ids: inventoryIds, max_minutes: maxMinutes, servings }),
+      body: JSON.stringify({ inventory_ids: inventoryIds, max_minutes: maxMinutes, servings, ...(recipeId ? { recipe_id: recipeId } : {}) }),
     });
   },
 
@@ -2095,9 +2152,11 @@ async function throwMealApiError(response: Response): Promise<never> {
   });
 }
 
-async function request<T>(path: string, init: RequestInit = {}, canRefresh = true, networkRetries = 0) {
+async function request<T>(path: string, init: RequestInit = {}, canRefresh = true, networkRetries = 0, boundSession?: { token: string | null; version: number }) {
   if (!baseUrl) return null;
-  const token = await ensureGuestToken();
+  const session = boundSession ?? await prepareBoundSession();
+  assertBoundSession(session);
+  const { token } = session;
   const headers = new Headers(init.headers);
   const method = (init.method ?? "GET").toString().toUpperCase();
   headers.set("Content-Type", "application/json");
@@ -2116,27 +2175,33 @@ async function request<T>(path: string, init: RequestInit = {}, canRefresh = tru
     }, init.signal);
   } catch (error) {
     if (networkRetries < 1 && headers.has("Idempotency-Key") && !init.signal?.aborted) {
-      return request<T>(path, init, canRefresh, networkRetries + 1);
+      assertBoundSession(session);
+      return request<T>(path, init, canRefresh, networkRetries + 1, session);
     }
     throw error;
   }
+  assertBoundSession(session);
   rememberWorkspaceRevision(response);
   rememberRecipeCatalogRevision(response);
-  if (response.status === 401 && token && canRefresh && accessTokenMode === "guest") {
-    clearAccessToken();
-    return request<T>(path, init, false, networkRetries);
-  }
   if (!response.ok) {
     return throwMealApiError(response);
   }
   if (shouldBroadcastWorkspaceMutation(path, method)) {
     broadcastWorkspaceMutation(mutationWorkspaceKey(path), workspaceMutationChannels(path));
   }
-  return response.json() as Promise<T>;
+  const value = await response.json() as T;
+  assertBoundSession(session);
+  if (shouldBroadcastWorkspaceMutation(path, method)) {
+    const revision = parseWorkspaceRevision(response.headers.get(WORKSPACE_REVISION_RESPONSE_HEADER));
+    if (revision !== null) workspaceMutationRevision = Math.max(workspaceMutationRevision ?? 0, revision);
+  }
+  return value;
 }
 
 async function requestWithAccessToken<T>(path: string, accessToken: string, body: Record<string, unknown>, signal?: AbortSignal) {
   if (!baseUrl) return null;
+  const session = { token: accessToken, version: accessTokenVersion };
+  assertBoundSession(session);
   const method = "POST";
   const headers = new Headers({
     "Content-Type": "application/json",
@@ -2153,13 +2218,16 @@ async function requestWithAccessToken<T>(path: string, accessToken: string, body
     headers,
     body: JSON.stringify(body),
   }, signal);
+  assertBoundSession(session);
   rememberWorkspaceRevision(response);
   rememberRecipeCatalogRevision(response);
   if (!response.ok) return throwMealApiError(response);
   if (shouldBroadcastWorkspaceMutation(path, method)) {
     broadcastWorkspaceMutation(mutationWorkspaceKey(path), workspaceMutationChannels(path));
   }
-  return response.json() as Promise<T>;
+  const value = await response.json() as T;
+  assertBoundSession(session);
+  return value;
 }
 
 async function publicRequest<T>(path: string, init: RequestInit = {}) {
@@ -2173,7 +2241,8 @@ async function publicRequest<T>(path: string, init: RequestInit = {}) {
 
 async function upload<T>(path: string, file: File, canRefresh = true, signal?: AbortSignal) {
   if (!baseUrl) return null;
-  const token = await ensureGuestToken();
+  const session = await prepareBoundSession();
+  const { token } = session;
   const formData = new FormData();
   formData.append("file", file);
   const headers = new Headers();
@@ -2181,57 +2250,86 @@ async function upload<T>(path: string, file: File, canRefresh = true, signal?: A
   if (shouldSendWorkspaceRevision(path, "POST") && workspaceRevision !== null) {
     headers.set(WORKSPACE_REVISION_REQUEST_HEADER, String(workspaceRevision));
   }
-  const response = await fetchWithTimeout(`${baseUrl}${path}`, { method: "POST", body: formData, headers }, signal);
+  const response = await fetchWithTimeout(`${baseUrl}${path}`, { method: "POST", body: formData, headers }, signal, OCR_UPLOAD_TIMEOUT_MS);
+  assertBoundSession(session);
   rememberWorkspaceRevision(response);
-  if (response.status === 401 && token && canRefresh && accessTokenMode === "guest") {
-    clearAccessToken();
-    return upload<T>(path, file, false, signal);
-  }
   if (!response.ok) {
     return throwMealApiError(response);
   }
   if (shouldBroadcastWorkspaceMutation(path, "POST")) {
     broadcastWorkspaceMutation(mutationWorkspaceKey(path), workspaceMutationChannels(path));
   }
-  return response.json() as Promise<T>;
+  const value = await response.json() as T;
+  assertBoundSession(session);
+  return value;
 }
 
 async function ensureGuestToken() {
   if (!baseUrl || guestToken) return guestToken;
-  if (guestSessionPromise) return guestSessionPromise;
+  if (pendingAuthenticationRequests > 0) throw new MealApiSessionChangedError();
+  const version = accessTokenVersion;
+  const intent = authenticationIntent;
+  if (guestSessionPromise && guestSessionVersion === version && guestSessionIntent === intent) return guestSessionPromise;
+  guestSessionVersion = version;
+  guestSessionIntent = intent;
   guestSessionPromise = (async () => {
     try {
       const response = await fetchWithTimeout(`${baseUrl}/api/auth/guest`, { method: "POST" });
       if (!response.ok) return null;
       const payload = await response.json() as { access_token?: string };
       if (!payload.access_token) return null;
+      if (accessTokenVersion !== version || authenticationIntent !== intent) throw new MealApiSessionChangedError();
       persistAccessToken(payload.access_token, "guest");
       return guestToken;
-    } catch {
+    } catch (error) {
+      if (error instanceof MealApiSessionChangedError) throw error;
       return null;
     } finally {
-      guestSessionPromise = null;
+      if (guestSessionVersion === version && guestSessionIntent === intent) guestSessionPromise = null;
     }
   })();
   return guestSessionPromise;
 }
 
-async function accountRequest(path: string, input: { email: string; password: string }) {
-  if (!baseUrl) return null;
-  const response = await fetchWithTimeout(`${baseUrl}${path}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(input),
-  });
-  if (!response.ok) {
-    return throwMealApiError(response);
-  }
-  const payload = await response.json() as ApiAuthSession;
-  persistAccessToken(payload.access_token, payload.mode);
-  return payload;
+function assertBoundSession(session: { token: string | null; version: number }) {
+  if (session.version !== accessTokenVersion || session.token !== guestToken) throw new MealApiSessionChangedError();
 }
 
+async function prepareBoundSession() {
+  const version = accessTokenVersion;
+  const hadToken = Boolean(guestToken);
+  const token = await ensureGuestToken();
+  const session = { token, version: version + (!hadToken && token ? 1 : 0) };
+  assertBoundSession(session);
+  return session;
+}
+
+async function accountRequest(path: string, input: { email: string; password: string }) {
+  if (!baseUrl) return null;
+  pendingAuthenticationRequests += 1;
+  try {
+    const intent = ++authenticationIntent;
+    const version = accessTokenVersion;
+    const response = await fetchWithTimeout(`${baseUrl}${path}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    });
+    if (intent !== authenticationIntent || version !== accessTokenVersion) throw new MealApiSessionChangedError();
+    if (!response.ok) {
+      return throwMealApiError(response);
+    }
+    const payload = await response.json() as ApiAuthSession;
+    if (intent !== authenticationIntent || version !== accessTokenVersion) throw new MealApiSessionChangedError();
+    persistAccessToken(payload.access_token, payload.mode);
+    return payload;
+  } finally {
+    pendingAuthenticationRequests -= 1;
+  }
+}
 function clearAccessToken(options: { clearDashboardCache?: boolean } = {}) {
+  accessTokenVersion += 1;
+  authenticationIntent += 1;
   if (options.clearDashboardCache && typeof window !== "undefined") {
     try {
       window.localStorage.removeItem(dashboardCacheKey());
@@ -2242,6 +2340,7 @@ function clearAccessToken(options: { clearDashboardCache?: boolean } = {}) {
   guestToken = null;
   accessTokenMode = null;
   workspaceRevision = null;
+  workspaceMutationRevision = null;
   recipeCatalogRevision = null;
   try {
     window.localStorage.removeItem(GUEST_TOKEN_STORAGE_KEY);

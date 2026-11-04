@@ -1,9 +1,19 @@
+import { storageLocationsChanged } from "./storageLocationPresentation";
+import "./storageLocationLayout.css";
+import "./notificationSettingsLayout.css";
+import { readNotificationSettings } from "./notificationSettingsRead";
+import { pushConnectAvailability, showPushConnectionControls } from "./pushConnectPresentation";
+import { notificationDeliveryBadge, showNotificationDeliveryHistory } from "./notificationDeliveryPresentation";
+import { notificationQuietHoursVisible, stepNotificationLeadDays, notificationSettingsDraftChanged, notificationSettingsRemoteFields, mergeNotificationSettingsDraft, type NotificationSettingsDraft, type NotificationSettingsField } from "./notificationSettingsDraft";
+import { accountAuthErrorAffectedByEdit, accountAuthErrorPresentation, type AccountAuthErrorField } from "./accountAuthPresentation";
+import { validatePasswordChange, type PasswordChangeIssue } from "./passwordChangeValidation";
 import { MetadataText } from "./Metadata";
-import { useEffect, useRef, useState, type KeyboardEvent } from "react";
-import { ArrowRightIcon, BellIcon, CheckCircledIcon, InfoCircledIcon, ReaderIcon, SewingPinIcon } from "@radix-ui/react-icons";
-import { KeyboardInput, useKeyboard } from "./mobile";
+import { withKoreanObjectParticle } from "./koreanParticles";
+import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { ArrowRightIcon, BellIcon, CheckCircledIcon, ChevronDownIcon, InfoCircledIcon, PersonIcon, ReaderIcon, SewingPinIcon } from "@radix-ui/react-icons";
+import { KeyboardInput, useKeyboard, useKeyboardInsets } from "./mobile";
 import { getMobileScrollBehavior } from "./mobile/scroll";
-import { scrollTargetWithinNearestContainer } from "./appScroll";
+import { revealAndFocusWithinNearestContainer, scrollTargetWithinNearestContainer } from "./appScroll";
 import {
   MEAL_API_WORKSPACE_CONFLICT_MESSAGE,
   isMealApiConflictError,
@@ -68,9 +78,9 @@ const STORAGE_OPTIONS: Array<{ value: ApiStorageType; label: string }> = [
 ];
 
 const NOTIFICATION_TIMEZONE_OPTIONS: Array<{ value: string; label: string }> = [
-  { value: "Asia/Seoul", label: "한국 표준시 · 서울" },
-  { value: "Asia/Tokyo", label: "일본 표준시 · 도쿄" },
-  { value: "UTC", label: "협정 세계시 · UTC" },
+  { value: "Asia/Seoul", label: "한국 표준시 (서울)" },
+  { value: "Asia/Tokyo", label: "일본 표준시 (도쿄)" },
+  { value: "UTC", label: "협정 세계시 (UTC)" },
   { value: "America/Los_Angeles", label: "미국 태평양 시간" },
   { value: "America/New_York", label: "미국 동부 시간" },
   { value: "Europe/London", label: "영국 시간" },
@@ -85,10 +95,10 @@ function browserTimezone() {
 function notificationTimezoneOptions(current: string, detectedTimezone: string | null) {
   const options = [...NOTIFICATION_TIMEZONE_OPTIONS];
   if (detectedTimezone && !options.some((option) => option.value === detectedTimezone)) {
-    options.unshift({ value: detectedTimezone, label: `현재 기기 시간 · ${detectedTimezone}` });
+    options.unshift({ value: detectedTimezone, label: `현재 기기 시간 (${detectedTimezone})` });
   }
   if (!options.some((option) => option.value === current)) {
-    options.unshift({ value: current, label: `현재 설정 · ${current}` });
+    options.unshift({ value: current, label: `현재 설정 (${current})` });
   }
   return options;
 }
@@ -127,7 +137,8 @@ function externalInventoryDetail(detail: string | null | undefined, fallback: st
   if (/reconciliation/i.test(normalized)) return "재고 앱에 추가됐는지 살펴봐 주세요.";
   if (/stock sync|\boutbox\b/i.test(normalized)) return "재고 앱에 추가하지 못했어요. 연결을 살펴봐 주세요.";
   if (/\b(?:workspace|payload|snapshot|status|provider|exception|traceback|request|response)\b/i.test(normalized)) return fallback;
-  return normalized.replace(/Grocy/gi, "연결된 재고 앱");
+  // Rename the provider word only; never rewrite identifiers such as transaction ids ("grocy-...-tx").
+  return normalized.replace(/(?<![\w-])Grocy(?![\w-])/gi, "연결된 재고 앱");
 }
 
 function grocyStatusDetail(detail: string | undefined, configured: boolean | undefined) {
@@ -270,11 +281,15 @@ async function pushEndpointFingerprint(endpoint: string) {
   return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("").slice(0, 16);
 }
 
-async function unsubscribeMatchingPush(expectedFingerprint: string) {
+async function unsubscribeMatchingPush(expectedFingerprint: string, isCurrent = () => true) {
+  if (!isCurrent()) return false;
   if (!("serviceWorker" in navigator) || !("PushManager" in window)) return false;
-  const registration = await navigator.serviceWorker.ready;
+  const registration = await navigator.serviceWorker.getRegistration();
+  if (!isCurrent() || !registration) return false;
   const current = await registration.pushManager.getSubscription();
-  if (!current || await pushEndpointFingerprint(current.endpoint) !== expectedFingerprint) return false;
+  if (!isCurrent() || !current) return false;
+  const fingerprint = await pushEndpointFingerprint(current.endpoint);
+  if (!isCurrent() || fingerprint !== expectedFingerprint) return false;
   return !(await current.unsubscribe());
 }
 
@@ -374,58 +389,112 @@ function guestTransferResultMessage(result: ApiGuestTransfer) {
   return `게스트 기록을 계정으로 옮겼어요 · ${visibleScopes}${remaining > 0 ? ` 외 ${remaining}개 기록` : ""}`;
 }
 
-function NotificationPreferencesPanel({ workspaceSync, refreshNonce }: { workspaceSync: WorkspaceSyncCoordinator; refreshNonce: number }) {
+function NotificationPreferencesPanel({ workspaceSync, refreshNonce, standalone = false, initialDraft, onDraftChange }: { workspaceSync: WorkspaceSyncCoordinator; refreshNonce: number; standalone?: boolean; initialDraft?: NotificationSettingsDraft | null; onDraftChange?: (draft: NotificationSettingsDraft | null) => void }) {
   const keyboard = useKeyboard();
   const [preferences, setPreferences] = useState<ApiNotificationPreferences | null>(null);
-  const [draft, setDraft] = useState<ApiNotificationPreferences>({ in_app_enabled: true, push_enabled: false, lead_days: 2, timezone: "Asia/Seoul", quiet_hours_start: null, quiet_hours_end: null });
-  const [leadDaysText, setLeadDaysText] = useState("2");
+  const [draft, setDraft] = useState<ApiNotificationPreferences>(initialDraft?.preferences ?? { in_app_enabled: true, push_enabled: false, lead_days: 2, timezone: "Asia/Seoul", quiet_hours_start: null, quiet_hours_end: null, push_mode: "daily_summary", daily_summary_time: "18:00" });
+  const [leadDaysText, setLeadDaysText] = useState(initialDraft?.leadDaysText ?? "2");
   const [subscriptions, setSubscriptions] = useState<ApiPushSubscriptionSummary[]>([]);
   const [workerHeartbeats, setWorkerHeartbeats] = useState<ApiNotificationWorkerHeartbeat[]>([]);
+  const [deviceReadError, setDeviceReadError] = useState(false);
+  const [deliveryReadError, setDeliveryReadError] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [subscribing, setSubscribing] = useState(false);
   const [removingFingerprint, setRemovingFingerprint] = useState("");
+  const notificationMutationBusyRef = useRef(false);
+  const notificationMutationVersionRef = useRef(0);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [retryAction, setRetryAction] = useState<NotificationSettingsRetryAction | null>(null);
+  const refreshFocusRef = useRef<HTMLElement | null>(null);
+  const [remoteChangedFields, setRemoteChangedFields] = useState<NotificationSettingsField[]>(initialDraft?.remoteFields ?? []);
   const detectedTimezone = browserTimezone();
+  const draftChanged = notificationSettingsDraftChanged(preferences, draft, leadDaysText);
+  useEffect(() => { if (draftChanged) setNotice(""); }, [draftChanged]);
+  // Returning to the saved values makes an earlier failed save unnecessary.
+  useEffect(() => {
+    if (!draftChanged && retryAction?.kind === "save") {
+      setError("");
+      setRetryAction(null);
+    }
+  }, [draftChanged, retryAction]);
+  useEffect(() => {
+    if (!preferences) return;
+    onDraftChange?.(draftChanged ? { preferences: draft, leadDaysText, savedPreferences: preferences, remoteFields: remoteChangedFields } : null);
+  }, [preferences, draft, leadDaysText, draftChanged, remoteChangedFields, onDraftChange]);
 
   const refresh = async () => {
+    const mutationVersion = notificationMutationVersionRef.current;
+    const overlapsMutation = notificationMutationBusyRef.current;
+    const previousSaved = preferences ?? initialDraft?.savedPreferences ?? null;
+    const activeElement = typeof document === "undefined" ? null : document.activeElement;
+    refreshFocusRef.current = activeElement instanceof HTMLElement
+      && activeElement.matches("input,textarea,select")
+      && activeElement.closest(".notification-preferences-panel") ? activeElement : null;
     setLoading(true);
     setError("");
     setRetryAction(null);
-    const result = await workspaceSync.run("account-notification-preferences", async (signal) => {
-      const [nextPreferences, nextSubscriptions, nextWorkerHeartbeats] = await Promise.all([
-        mealApi.getNotificationPreferences(signal),
-        mealApi.getPushSubscriptions(signal),
-        mealApi.getNotificationWorkerStatus(signal),
-      ]);
-      if (!nextPreferences || !nextSubscriptions || !nextWorkerHeartbeats) throw new Error("notification-preferences-empty");
-      return { preferences: nextPreferences, subscriptions: nextSubscriptions, workerHeartbeats: nextWorkerHeartbeats };
-    });
+    const result = await workspaceSync.run("account-notification-preferences", (signal) => readNotificationSettings(
+      mealApi.getNotificationPreferences(signal),
+      mealApi.getPushSubscriptions(signal),
+      mealApi.getNotificationWorkerStatus(signal),
+    ));
     if (!result.current) return;
+    if (overlapsMutation || mutationVersion !== notificationMutationVersionRef.current) {
+      setLoading(false);
+      return;
+    }
     if (result.error || !result.value) {
       setError("알림 설정을 불러오지 못했어요.");
       setRetryAction({ kind: "refresh" });
       setLoading(false);
       return;
     }
-    setPreferences(result.value.preferences);
-    setDraft(result.value.preferences);
-    setLeadDaysText(String(result.value.preferences.lead_days));
-    setSubscriptions(result.value.subscriptions);
-    setWorkerHeartbeats(result.value.workerHeartbeats);
+    const incoming = result.value.preferences;
+    if (previousSaved && notificationSettingsRemoteFields(previousSaved, incoming).length) setNotice("");
+    setPreferences(incoming);
+    if (!previousSaved) {
+      setDraft(incoming);
+      setLeadDaysText(String(incoming.lead_days));
+      setRemoteChangedFields([]);
+    } else {
+      setDraft((current) => mergeNotificationSettingsDraft(previousSaved, current, leadDaysText, incoming).preferences);
+      setLeadDaysText((current) => mergeNotificationSettingsDraft(previousSaved, draft, current, incoming).leadDaysText);
+      const changedFields = notificationSettingsRemoteFields(previousSaved, incoming);
+      if (changedFields.length) setRemoteChangedFields((current) => [...new Set([...current, ...changedFields])]);
+    }
+    if (result.value.subscriptions) setSubscriptions(result.value.subscriptions);
+    if (result.value.workerHeartbeats) setWorkerHeartbeats(result.value.workerHeartbeats);
+    setDeviceReadError(result.value.subscriptions === null);
+    setDeliveryReadError(result.value.workerHeartbeats === null);
     setRetryAction(null);
     setLoading(false);
   };
+
+  useEffect(() => {
+    if (loading || !refreshFocusRef.current) return;
+    const frame = window.requestAnimationFrame(() => {
+      const target = refreshFocusRef.current;
+      refreshFocusRef.current = null;
+      const active = document.activeElement;
+      if (!target?.isConnected || target.matches(":disabled")) return;
+      if (active !== document.body && active !== document.documentElement
+        && !(active instanceof HTMLElement && active.classList.contains("bottom-sheet"))) return;
+      scrollTargetWithinNearestContainer(target, "center", getMobileScrollBehavior());
+      target.focus({ preventScroll: true });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [loading]);
 
   useEffect(() => {
     void refresh();
   }, [refreshNonce]);
 
   const save = async () => {
+    if (notificationMutationBusyRef.current || !preferences || loading || saving || !draftChanged) return;
     const leadDays = Number(leadDaysText);
-    if (!Number.isInteger(leadDays) || leadDays < 0 || leadDays > 14) {
+    if (!leadDaysText.trim() || !Number.isInteger(leadDays) || leadDays < 0 || leadDays > 14) {
       setError("알림 기간은 0일부터 14일 사이의 정수로 입력해 주세요.");
       return;
     }
@@ -433,17 +502,25 @@ function NotificationPreferencesPanel({ workspaceSync, refreshNonce }: { workspa
       setError("조용한 시간은 시작·종료 시간을 함께 입력해 주세요.");
       return;
     }
+    notificationMutationBusyRef.current = true;
+    notificationMutationVersionRef.current += 1;
+    const sessionCurrent = mealApi.captureSession();
+    const workspaceCurrent = workspaceSync.captureScope();
+    const isCurrent = () => sessionCurrent() && workspaceCurrent();
     setSaving(true);
     setError("");
     setRetryAction(null);
     try {
       const updated = await mealApi.updateNotificationPreferences({ ...draft, lead_days: leadDays });
+      if (!isCurrent()) return;
       if (!updated) throw new Error("notification-preferences-update-empty");
       setPreferences(updated);
       setDraft(updated);
       setLeadDaysText(String(updated.lead_days));
+      setRemoteChangedFields([]);
       setNotice("알림 설정을 저장했어요");
     } catch (reason) {
+      if (!isCurrent()) return;
       if (isMealApiWorkspaceConflictError(reason)) {
         setError(MEAL_API_WORKSPACE_CONFLICT_MESSAGE);
         setRetryAction({ kind: "refresh" });
@@ -454,11 +531,13 @@ function NotificationPreferencesPanel({ workspaceSync, refreshNonce }: { workspa
         setRetryAction({ kind: "save" });
       }
     } finally {
+      notificationMutationBusyRef.current = false;
       setSaving(false);
     }
   };
 
   const subscribePush = async () => {
+    if (notificationMutationBusyRef.current) return;
     if (!configuredVapidPublicKey) {
       setError("기기 알림을 사용할 수 없어요. 잠시 후 다시 시도해 주세요.");
       return;
@@ -467,70 +546,99 @@ function NotificationPreferencesPanel({ workspaceSync, refreshNonce }: { workspa
       setError("이 브라우저에서는 기기 알림을 사용할 수 없어요.");
       return;
     }
+    notificationMutationBusyRef.current = true;
+    notificationMutationVersionRef.current += 1;
+    const sessionCurrent = mealApi.captureSession();
+    const workspaceCurrent = workspaceSync.captureScope();
+    const isCurrent = () => sessionCurrent() && workspaceCurrent();
     setSubscribing(true);
     setError("");
     setRetryAction(null);
     try {
       if (!("Notification" in window)) throw new Error("notification-api-unavailable");
+      const registration = await navigator.serviceWorker.getRegistration();
+      if (!isCurrent()) return;
+      if (!registration?.active || registration.active.state !== "activated") throw new Error("push-worker-not-ready");
       const permission = Notification.permission === "granted" ? "granted" : await Notification.requestPermission();
+      if (!isCurrent()) return;
       if (permission !== "granted") throw new Error("notification-permission-denied");
-      const registration = await navigator.serviceWorker.ready;
       const existing = await registration.pushManager.getSubscription();
+      if (!isCurrent()) return;
       const subscription = existing ?? await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(configuredVapidPublicKey) });
+      if (!isCurrent()) return;
       const json = subscription.toJSON();
       const endpoint = json.endpoint;
       const p256dh = json.keys?.p256dh;
       const auth = json.keys?.auth;
       if (!endpoint || !p256dh || !auth) throw new Error("push-subscription-incomplete");
       const registered = await mealApi.registerPushSubscription({ endpoint, p256dh, auth });
+      if (!isCurrent()) return;
       if (!registered) throw new Error("push-subscription-empty");
       setSubscriptions((current) => [registered, ...current.filter((item) => item.endpoint_fingerprint !== registered.endpoint_fingerprint)]);
       setDraft((current) => ({ ...current, push_enabled: true }));
-      setNotice("이 기기에서 알림을 받도록 설정했어요");
+      setNotice(preferences?.push_enabled ? "이 기기를 알림에 연결했어요." : "기기를 연결했어요. 알림 설정을 저장해 주세요.");
     } catch (error) {
-      if (isMealApiPushSubscriptionPersistenceError(error)) {
+      if (!isCurrent()) return;
+      if (error instanceof Error && error.message === "push-worker-not-ready") {
+        setError("기기 알림 연결이 아직 준비되지 않았어요. 잠시 후 다시 시도해 주세요.");
+        setRetryAction({ kind: "subscribe" });
+      } else if (isMealApiPushSubscriptionPersistenceError(error)) {
         setError("이 기기의 알림 설정을 저장하지 못했어요. 기존 설정은 그대로예요.");
         setRetryAction({ kind: "subscribe" });
       } else {
         setError(error instanceof Error && error.message === "notification-permission-denied" ? "알림 권한이 허용되지 않아 연결하지 못했어요. 브라우저 설정에서 허용해 주세요." : "이 기기에서 알림을 받도록 설정하지 못했어요.");
       }
     } finally {
+      notificationMutationBusyRef.current = false;
       setSubscribing(false);
     }
   };
 
   const removePushSubscription = async (subscription: ApiPushSubscriptionSummary) => {
+    if (notificationMutationBusyRef.current) return;
+    notificationMutationBusyRef.current = true;
+    notificationMutationVersionRef.current += 1;
+    const sessionCurrent = mealApi.captureSession();
+    const workspaceCurrent = workspaceSync.captureScope();
+    const isCurrent = () => sessionCurrent() && workspaceCurrent();
     setRemovingFingerprint(subscription.endpoint_fingerprint);
     setError("");
     setRetryAction(null);
     try {
       const result = await mealApi.removePushSubscription(subscription.endpoint_fingerprint);
+      if (!isCurrent()) return;
       if (!result) throw new Error("push-subscription-remove-empty");
       setSubscriptions((current) => current.filter((item) => item.endpoint_fingerprint !== subscription.endpoint_fingerprint));
       let browserUnsubscribeNeedsReview = false;
       try {
-        browserUnsubscribeNeedsReview = await unsubscribeMatchingPush(subscription.endpoint_fingerprint);
+        browserUnsubscribeNeedsReview = await unsubscribeMatchingPush(subscription.endpoint_fingerprint, isCurrent);
       } catch {
         browserUnsubscribeNeedsReview = true;
       }
-      setNotice(browserUnsubscribeNeedsReview ? "서비스 연결은 해지했지만 브라우저 알림은 아직 켜져 있어요." : result.removed ? "이 기기에서 알림을 받지 않도록 바꿨어요." : "이 기기에서는 알림을 받지 않아요.");
+      if (!isCurrent()) return;
+      setNotice(browserUnsubscribeNeedsReview ? "알림 연결은 해지했어요. 브라우저의 알림 설정도 확인해 주세요." : result.removed ? "선택한 알림 연결을 해지했어요." : "이미 해지된 알림 연결이에요.");
       setRetryAction(null);
     } catch (reason) {
+      if (!isCurrent()) return;
       if (isMealApiWorkspaceConflictError(reason)) {
         setError(MEAL_API_WORKSPACE_CONFLICT_MESSAGE);
         setRetryAction({ kind: "refresh" });
       } else {
         setError(isMealApiPushSubscriptionPersistenceError(reason)
-          ? "이 기기의 알림 설정을 바꾸지 못했어요. 기존 설정은 그대로예요."
-          : "이 기기의 알림 설정을 바꾸지 못했어요.");
+          ? "선택한 알림 연결을 해지하지 못했어요. 기존 연결은 그대로예요."
+          : "선택한 알림 연결을 해지하지 못했어요.");
         setRetryAction({ kind: "remove", subscription });
       }
     } finally {
+      notificationMutationBusyRef.current = false;
       setRemovingFingerprint("");
     }
   };
 
   const pushSupported = typeof window !== "undefined" && "serviceWorker" in navigator && "PushManager" in window;
+  const pushConnect = pushConnectAvailability(pushSupported, configuredVapidPublicKey);
+  const showPushControls = showPushConnectionControls(pushConnect.available, subscriptions.length, Boolean(preferences?.push_enabled));
+  const showQuietHours = notificationQuietHoursVisible(showPushControls, preferences, draft);
   const workerHeartbeat = workerHeartbeats[0] ?? null;
 
   const retry = () => {
@@ -543,33 +651,43 @@ function NotificationPreferencesPanel({ workspaceSync, refreshNonce }: { workspa
   };
 
   return (
-    <section className="notification-preferences-panel" aria-labelledby="notification-preferences-title">
-      <div className="notification-preferences-heading">
-        <span className="notification-preferences-icon"><BellIcon width={17} height={17} /></span>
-        <div><h3 id="notification-preferences-title">알림 설정</h3><p>확인할 시점과 이 기기 알림을 정해요.</p></div>
-        <button className="grocy-refresh-button" type="button" disabled={loading} onClick={() => void refresh()}>{loading ? "불러오는 중" : "새로고침"}</button>
+    <section className="notification-preferences-panel" aria-busy={loading || saving} aria-label={standalone ? "알림 설정" : undefined} aria-labelledby={standalone ? undefined : "notification-preferences-title"}>
+      <div className="notification-preferences-heading" style={standalone ? { justifyContent: "flex-end" } : undefined}>
+        {!standalone ? <><span className="notification-preferences-icon"><BellIcon width={17} height={17} /></span>
+        <div><h3 id="notification-preferences-title">알림 설정</h3><p>확인할 시점과 이 기기 알림을 정해요.</p></div></> : null}
+        <button className="grocy-refresh-button" type="button" disabled={loading || saving} onClick={() => void refresh()}>{loading ? "불러오는 중" : "새로고침"}</button>
       </div>
-      {loading && !preferences ? <div className="account-loading" role="status">알림 설정을 불러오고 있어요</div> : (
-        <>
+      {!preferences ? (loading ? <div className="account-loading" role="status">알림 설정을 불러오고 있어요</div> : null) : (
+        <fieldset className="notification-preferences-fields" disabled={loading || saving} aria-label="알림 설정 편집">
           <div className="notification-preferences-card">
-            <div className="notification-preference-toggle-row"><span><strong>앱 내 알림</strong><small>날짜와 재고 앱에 추가한 식품을 알려드려요.</small></span><button className={`toggle ${draft.in_app_enabled ? "toggle-on" : ""}`} type="button" role="switch" aria-label="앱 내 알림" aria-checked={draft.in_app_enabled} onClick={() => setDraft((current) => ({ ...current, in_app_enabled: !current.in_app_enabled }))}><span /></button></div>
-            <div className="notification-preference-row"><span><strong>알림을 미리 받을 기간</strong><small>날짜 안내와 먼저 살펴볼 식품 알림을 며칠 전부터 받을까요?</small></span><span className="notification-days-input"><KeyboardInput className="grocy-number-input" type="number" inputMode="numeric" min={0} max={14} value={leadDaysText} aria-label="알림 미리 받을 기간" onChange={(event) => setLeadDaysText(event.target.value)} onBlur={() => keyboard.hide()} /><small>일 전</small></span></div>
-            <div className="notification-preference-row"><span><strong>알림 시간대</strong><small>날짜와 조용한 시간을 이 시간대 기준으로 계산해요.</small></span><span className="notification-timezone-control"><select className="notification-timezone-select" aria-label="알림 시간대" value={draft.timezone} onChange={(event) => setDraft((current) => ({ ...current, timezone: event.target.value }))}>{notificationTimezoneOptions(draft.timezone, detectedTimezone).map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select>{detectedTimezone && detectedTimezone !== draft.timezone ? <button className="notification-timezone-device-button" type="button" onClick={() => setDraft((current) => ({ ...current, timezone: detectedTimezone }))}>현재 기기 시간 사용</button> : null}</span></div>
-            <div className="notification-preference-row"><span><strong>조용한 시간</strong><small>푸시 알림을 켠 경우 이 시간에는 보내지 않아요.</small></span><span className="notification-time-inputs"><KeyboardInput className="grocy-number-input" type="time" value={draft.quiet_hours_start ?? ""} aria-label="조용한 시간 시작" onChange={(event) => setDraft((current) => ({ ...current, quiet_hours_start: event.target.value || null }))} onBlur={() => keyboard.hide()} /><span>~</span><KeyboardInput className="grocy-number-input" type="time" value={draft.quiet_hours_end ?? ""} aria-label="조용한 시간 종료" onChange={(event) => setDraft((current) => ({ ...current, quiet_hours_end: event.target.value || null }))} onBlur={() => keyboard.hide()} /></span></div>
-            <button className="primary-sheet-button notification-preferences-save" type="button" disabled={saving || !preferences} aria-busy={saving} onPointerDown={(event) => event.preventDefault()} onClick={() => { keyboard.hide(); void save(); }}>{saving ? "저장 중" : "알림 설정 저장"}<ArrowRightIcon width={15} height={15} /></button>
+            <div className="notification-preference-toggle-row"><span><strong>앱 내 알림</strong><small>날짜와 재고 앱에 추가한 식품을 알려드려요.</small></span><button className={`toggle ${draft.in_app_enabled ? "toggle-on" : ""}`} type="button" role="switch" aria-label="앱 내 알림" aria-checked={draft.in_app_enabled} onPointerDown={(event) => event.preventDefault()} onClick={() => { keyboard.hide(); setDraft((current) => ({ ...current, in_app_enabled: !current.in_app_enabled })); }}><span /></button></div>
+            <div className="notification-preference-row"><span><strong>알림을 미리 받을 기간</strong><small>날짜 안내와 먼저 살펴볼 식품 알림을 며칠 전부터 받을까요?</small>{remoteChangedFields.includes("lead_days") && preferences.lead_days !== Number(leadDaysText) ? <small>현재 저장된 기간: {preferences.lead_days}일 전</small> : null}</span><span className="notification-days-input"><button className="notification-day-step" type="button" aria-label="알림 기간 줄이기" disabled={stepNotificationLeadDays(leadDaysText, -1) === null} onPointerDown={(event) => event.preventDefault()} onClick={() => { const next = stepNotificationLeadDays(leadDaysText, -1); if (next !== null) { keyboard.hide(); setLeadDaysText(next); } }}>−</button><KeyboardInput className="grocy-number-input" type="number" inputMode="numeric" min={0} max={14} value={leadDaysText} aria-label="알림 미리 받을 기간" onFocus={(event) => { const target = event.currentTarget; window.requestAnimationFrame(() => scrollTargetWithinNearestContainer(target, "center", getMobileScrollBehavior())); }} onChange={(event) => setLeadDaysText(event.target.value)} onBlur={() => keyboard.hide()} /><small>일 전</small><button className="notification-day-step" type="button" aria-label="알림 기간 늘리기" disabled={stepNotificationLeadDays(leadDaysText, 1) === null} onPointerDown={(event) => event.preventDefault()} onClick={() => { const next = stepNotificationLeadDays(leadDaysText, 1); if (next !== null) { keyboard.hide(); setLeadDaysText(next); } }}>+</button></span></div>
+            <div className="notification-preference-row"><span><strong>알림 시간대</strong><small>{showQuietHours ? "날짜와 조용한 시간을 이 시간대 기준으로 계산해요." : "날짜 안내를 이 시간대 기준으로 계산해요."}</small>{remoteChangedFields.includes("timezone") && preferences.timezone !== draft.timezone ? <small>현재 저장된 시간대: {notificationTimezoneOptions(preferences.timezone, detectedTimezone).find((option) => option.value === preferences.timezone)?.label ?? preferences.timezone}</small> : null}</span><span className="notification-timezone-control"><select className="notification-timezone-select" aria-label="알림 시간대" value={draft.timezone} onChange={(event) => setDraft((current) => ({ ...current, timezone: event.target.value }))}>{notificationTimezoneOptions(draft.timezone, detectedTimezone).map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select>{detectedTimezone && detectedTimezone !== draft.timezone ? <button className="notification-timezone-device-button" type="button" onClick={() => setDraft((current) => ({ ...current, timezone: detectedTimezone }))}>현재 기기 시간 사용</button> : null}</span></div>
+            {showQuietHours ? <div className="notification-preference-row"><span><strong>조용한 시간</strong><small>푸시 알림을 켠 경우 이 시간에는 보내지 않아요.</small>{remoteChangedFields.some((field) => field === "quiet_hours_start" || field === "quiet_hours_end") && (preferences.quiet_hours_start !== draft.quiet_hours_start || preferences.quiet_hours_end !== draft.quiet_hours_end) ? <small>현재 저장된 시간: {preferences.quiet_hours_start && preferences.quiet_hours_end ? `${preferences.quiet_hours_start} ~ ${preferences.quiet_hours_end}` : "설정 안 함"}</small> : null}</span><span className="notification-time-inputs"><KeyboardInput className="grocy-number-input" type="time" value={draft.quiet_hours_start ?? ""} aria-label="조용한 시간 시작" onFocus={(event) => { const target = event.currentTarget; window.requestAnimationFrame(() => scrollTargetWithinNearestContainer(target, "center", getMobileScrollBehavior())); }} onChange={(event) => setDraft((current) => ({ ...current, quiet_hours_start: event.target.value || null }))} onBlur={() => keyboard.hide()} /><span>~</span><KeyboardInput className="grocy-number-input" type="time" value={draft.quiet_hours_end ?? ""} aria-label="조용한 시간 종료" onFocus={(event) => { const target = event.currentTarget; window.requestAnimationFrame(() => scrollTargetWithinNearestContainer(target, "center", getMobileScrollBehavior())); }} onChange={(event) => setDraft((current) => ({ ...current, quiet_hours_end: event.target.value || null }))} onBlur={() => keyboard.hide()} /></span></div> : null}
+
           </div>
           <div className="push-subscription-card">
-            <div className="push-subscription-heading"><span><strong>기기 알림</strong><small>브라우저를 닫아도 확인할 알림을 받을 수 있어요.</small></span><span className={`receipt-privacy-badge ${subscriptions.length ? "receipt-privacy-badge-redacted" : ""}`}>{subscriptions.length ? `연결된 기기 ${subscriptions.length}개` : "연결된 기기 없음"}</span></div>
-            <div className="notification-delivery-status"><span><strong>최근 전송</strong><small><MetadataText text={<>{workerHeartbeat ? workerHeartbeat.push_configured ? workerHeartbeat.last_error ? "최근 알림을 보내지 못했어요. 설정을 살펴봐 주세요." : `최근 ${workerHeartbeat.succeeded}건 전송 · ${formatWorkerTime(workerHeartbeat.last_tick_at)}${workerHeartbeat.cancelled ? ` · 받지 못한 알림 ${workerHeartbeat.cancelled}건` : ""}` : "알림을 보낼 준비 중이에요." : "기기 알림 전송 정보를 불러오지 못했어요."}</>} /></small></span><span className={`notification-delivery-badge ${workerHeartbeat?.push_configured && !workerHeartbeat.last_error ? "notification-delivery-badge-ready" : ""}`}>{workerHeartbeat ? workerHeartbeat.push_configured ? workerHeartbeat.last_error ? "문제가 있어요" : "켜짐" : "설정이 필요해요" : "확인 중"}</span></div>
-            <div className="notification-preference-toggle-row"><span><strong>알림 받기</strong><small>{subscriptions.length ? "이 기기에서 날짜와 재고 앱 소식을 받아요." : "기기를 연결하면 알림을 받을 수 있어요."}</small></span><button className={`toggle ${draft.push_enabled ? "toggle-on" : ""}`} type="button" role="switch" aria-label="기기 알림" aria-checked={draft.push_enabled} disabled={!subscriptions.length && !draft.push_enabled} onClick={() => setDraft((current) => ({ ...current, push_enabled: !current.push_enabled }))}><span /></button></div>
-            <button className="secondary-sheet-button push-subscribe-button" type="button" disabled={subscribing || !pushSupported || !configuredVapidPublicKey} onPointerDown={(event) => event.preventDefault()} onClick={() => { keyboard.hide(); void subscribePush(); }}>{subscribing ? "연결 중" : configuredVapidPublicKey ? "이 기기에서 알림 받기" : "알림을 사용할 수 없어요"}</button>
-            {subscriptions.length ? <div className="push-subscription-list" role="list">{subscriptions.map((subscription) => <div className="push-subscription-row" role="listitem" key={subscription.endpoint_fingerprint}><span><strong>이 기기</strong><small><MetadataText text={<>등록 {formatPushSubscriptionTime(subscription.created_at)} · 이 기기에서 연결됨</>} /></small></span><button type="button" disabled={removingFingerprint === subscription.endpoint_fingerprint} onClick={() => void removePushSubscription(subscription)}>{removingFingerprint === subscription.endpoint_fingerprint ? "해지 중" : "연결 해지"}</button></div>)}</div> : null}
-            <p className="push-subscription-footnote"><InfoCircledIcon width={14} height={14} /> 알림은 직접 켠 경우에만 이 기기로 보내요.</p>
+            <div className="push-subscription-heading"><span><strong>기기 알림</strong>{showPushControls || workerHeartbeat ? <small>브라우저를 닫아도 확인할 알림을 받을 수 있어요.</small> : null}</span><span className={`receipt-privacy-badge ${subscriptions.length ? "receipt-privacy-badge-redacted" : ""}`}>{deviceReadError ? "연결 정보 미확인" : subscriptions.length ? `연결된 기기 ${subscriptions.length}개` : "연결된 기기 없음"}</span></div>
+            {deviceReadError || deliveryReadError ? <div className="account-error notification-device-read-error" role="alert"><InfoCircledIcon width={15} height={15} /><span>기기 알림 상태를 불러오지 못했어요.</span><button className="account-error-action" type="button" disabled={loading || saving} onClick={() => void refresh()}>다시 불러오기</button></div> : null}
+            {!deliveryReadError && showNotificationDeliveryHistory(Boolean(workerHeartbeat), subscriptions.length) ? <div className="notification-delivery-status"><span><strong>최근 전송</strong><small><MetadataText text={<>{workerHeartbeat ? workerHeartbeat.push_configured ? workerHeartbeat.last_error ? "최근 알림을 보내지 못했어요. 설정을 살펴봐 주세요." : `최근 ${workerHeartbeat.succeeded}건 전송 · ${formatWorkerTime(workerHeartbeat.last_tick_at)}${workerHeartbeat.cancelled ? ` · 받지 못한 알림 ${workerHeartbeat.cancelled}건` : ""}` : "기기 알림 전송 설정을 확인해 주세요." : "아직 기기 알림 전송 기록이 없어요."}</>} /></small></span><span className={`notification-delivery-badge ${workerHeartbeat?.push_configured && !workerHeartbeat.last_error ? "notification-delivery-badge-ready" : ""}`}>{notificationDeliveryBadge(workerHeartbeat)}</span></div> : null}
+            {!deviceReadError ? <>
+            {showPushControls ? <div className="notification-preference-toggle-row"><span><strong>알림 받기</strong><small>{subscriptions.length ? "이 기기에서 날짜와 재고 앱 소식을 받아요." : "기기를 연결하면 알림을 받을 수 있어요."}</small></span><button className={`toggle ${draft.push_enabled ? "toggle-on" : ""}`} type="button" role="switch" aria-label="기기 알림" aria-checked={draft.push_enabled} disabled={!subscriptions.length && !draft.push_enabled} onPointerDown={(event) => event.preventDefault()} onClick={() => { keyboard.hide(); setDraft((current) => ({ ...current, push_enabled: !current.push_enabled })); }}><span /></button></div> : null}
+            {showPushControls && draft.push_enabled && draft.push_mode !== undefined ? <div className="notification-preference-row notification-push-mode-row"><span><strong>알림 방식</strong><small>{draft.push_mode === "each_item" ? "확인할 식품이 생길 때마다 하나씩 보내요." : "먼저 살펴볼 식품을 하루 한 번 모아서 보내요."}</small></span><span className="notification-push-mode-options" role="radiogroup" aria-label="알림 방식">{([["daily_summary", "하루 한 번 요약"], ["each_item", "식품마다"]] as const).map(([value, label]) => <button key={value} type="button" role="radio" aria-checked={draft.push_mode === value} className={draft.push_mode === value ? "notification-push-mode-active" : ""} onPointerDown={(event) => event.preventDefault()} onClick={() => { keyboard.hide(); setDraft((current) => ({ ...current, push_mode: value })); }}>{label}</button>)}</span></div> : null}
+            {showPushControls && draft.push_enabled && draft.push_mode === "daily_summary" ? <div className="notification-preference-row"><span><strong>요약 받을 시각</strong><small>알림 시간대 기준이에요. 조용한 시간과 겹치면 조용한 시간이 끝난 뒤 보내요.</small></span><span className="notification-time-inputs"><KeyboardInput className="grocy-number-input" type="time" value={draft.daily_summary_time ?? "18:00"} aria-label="요약 받을 시각" onFocus={(event) => { const target = event.currentTarget; window.requestAnimationFrame(() => scrollTargetWithinNearestContainer(target, "center", getMobileScrollBehavior())); }} onChange={(event) => { const value = event.target.value; if (value) setDraft((current) => ({ ...current, daily_summary_time: value })); }} onBlur={() => keyboard.hide()} /></span></div> : null}
+            {pushConnect.available ? <button className="secondary-sheet-button push-subscribe-button" type="button" disabled={subscribing || Boolean(removingFingerprint)} onPointerDown={(event) => event.preventDefault()} onClick={() => { keyboard.hide(); void subscribePush(); }}>{subscribing ? "연결 중" : "이 기기에서 알림 받기"}</button> : <p className="push-connect-unavailable" role="note"><InfoCircledIcon width={15} height={15} /><span>{pushConnect.message}</span></p>}
+            {subscriptions.length ? <div className="push-subscription-list" role="list">{subscriptions.map((subscription, index) => <div className="push-subscription-row" role="listitem" key={subscription.endpoint_fingerprint}><span><strong>알림 연결 {index + 1}</strong><small>등록 {formatPushSubscriptionTime(subscription.created_at)}</small></span><button type="button" disabled={subscribing || Boolean(removingFingerprint)} onClick={() => void removePushSubscription(subscription)}>{removingFingerprint === subscription.endpoint_fingerprint ? "해지 중" : "연결 해지"}</button></div>)}</div> : null}
+            {showPushControls ? <p className="push-subscription-footnote"><InfoCircledIcon width={14} height={14} /> 알림은 직접 켠 경우에만 이 기기로 보내요.</p> : null}
+            </> : null}
           </div>
-        </>
+          {remoteChangedFields.length && draftChanged ? <div className="notification-refresh-notice" role="status"><InfoCircledIcon width={15} height={15} /><span>새 설정을 불러왔어요. 입력한 변경은 유지했어요.</span></div> : null}
+          {draftChanged || saving ? <div className="notification-preferences-actions">
+            {draftChanged ? <div className="notification-draft-status" role="status" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, fontSize: 12, color: "var(--atelier-muted)" }}><span>저장하지 않은 변경</span><button className="grocy-refresh-button" type="button" disabled={saving || loading} onPointerDown={(event) => event.preventDefault()} onClick={() => { if (!preferences) return; refreshFocusRef.current = null; keyboard.hide(); setDraft(preferences); setLeadDaysText(String(preferences.lead_days)); setRemoteChangedFields([]); setNotice(""); setError(""); setRetryAction(null); }}>변경 취소</button></div> : null}
+            <button className="primary-sheet-button notification-preferences-save" type="button" disabled={saving || loading || subscribing || Boolean(removingFingerprint) || !preferences} aria-busy={saving} onPointerDown={(event) => event.preventDefault()} onClick={() => { refreshFocusRef.current = null; keyboard.hide(); void save(); }}>{saving ? "저장 중" : "알림 설정 저장"}<ArrowRightIcon width={15} height={15} /></button>
+          </div> : null}
+        </fieldset>
       )}
       {notice ? <div className="grocy-success notification-settings-notice" role="status"><CheckCircledIcon width={15} height={15} /><span>{notice}</span></div> : null}
-      {error ? <div className="account-error notification-settings-error" role="alert" aria-busy={loading || saving}><InfoCircledIcon width={15} height={15} /><span>{loading || saving ? "알림 설정을 다시 저장하는 중이에요." : error}</span>{retryAction ? <button className="account-error-action" type="button" disabled={loading || saving} aria-busy={loading || saving} onClick={retry}>{loading || saving ? "확인 중" : retryAction.kind === "refresh" ? "다시 불러오기" : "다시 시도"}</button> : null}</div> : null}
+      {error ? <div className="account-error notification-settings-error" role="alert" aria-busy={loading || saving}><InfoCircledIcon width={15} height={15} /><span>{loading ? "알림 설정을 다시 불러오고 있어요." : saving ? "알림 설정을 다시 저장하는 중이에요." : error}</span>{retryAction ? <button className="account-error-action" type="button" disabled={loading || saving} aria-busy={loading || saving} onClick={retry}>{loading || saving ? "확인 중" : retryAction.kind === "refresh" ? "다시 불러오기" : "다시 시도"}</button> : null}</div> : null}
     </section>
   );
 }
@@ -581,26 +699,49 @@ function PasswordChangePanel() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
+  const [failure, setFailure] = useState<PasswordChangeIssue | null>(null);
+  const error = failure?.message ?? "";
   const [notice, setNotice] = useState("");
-  const submit = async () => {
+  const currentInputRef = useRef<HTMLInputElement | null>(null);
+  const newInputRef = useRef<HTMLInputElement | null>(null);
+  const confirmInputRef = useRef<HTMLInputElement | null>(null);
+  const failureRef = useRef<HTMLDivElement | null>(null);
+  const openerRef = useRef<HTMLButtonElement | null>(null);
+  const previousOpenRef = useRef(false);
+
+  useEffect(() => {
+    const wasOpen = previousOpenRef.current;
+    previousOpenRef.current = open;
+    if (!open && !wasOpen) return;
+    const frame = window.requestAnimationFrame(() => revealAndFocusWithinNearestContainer(open ? currentInputRef.current : openerRef.current));
+    return () => window.cancelAnimationFrame(frame);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open || !failure) return;
+    const target = failure.field === "current" ? currentInputRef : failure.field === "new" ? newInputRef : failure.field === "confirm" ? confirmInputRef : failureRef;
+    const frame = window.requestAnimationFrame(() => revealAndFocusWithinNearestContainer(target.current));
+    return () => window.cancelAnimationFrame(frame);
+  }, [failure, open]);
+
+  const close = () => {
+    if (busy) return;
     keyboard.hide();
-    setError("");
+    setOpen(false);
+    setFailure(null);
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+  };
+
+  const submit = async () => {
+    if (busy) return;
+    keyboard.hide();
+    setFailure(null);
     setNotice("");
-    if (currentPassword.length < 8) {
-      setError("현재 비밀번호를 확인해 주세요.");
-      return;
-    }
-    if (newPassword.length < 8) {
-      setError("새 비밀번호는 8자 이상 입력해 주세요.");
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      setError("새 비밀번호와 확인 비밀번호가 같지 않아요.");
-      return;
-    }
-    if (currentPassword === newPassword) {
-      setError("새 비밀번호는 현재 비밀번호와 달라야 합니다.");
+    const validation = validatePasswordChange(currentPassword, newPassword, confirmPassword);
+    if (validation) {
+      setFailure(validation);
       return;
     }
     setBusy(true);
@@ -613,11 +754,11 @@ function PasswordChangePanel() {
       setConfirmPassword("");
       setNotice("비밀번호를 변경했어요. 다른 기기의 기존 로그인은 다시 인증이 필요해요.");
     } catch (reason) {
-      setError(reason instanceof MealApiError && reason.status === 429
+      setFailure({ field: reason instanceof MealApiError && reason.status === 401 ? "current" : null, message: reason instanceof MealApiError && reason.status === 429
         ? "시도 횟수가 많아요. 잠시 후 다시 비밀번호를 변경해 주세요."
         : reason instanceof MealApiError && reason.status === 401
           ? "현재 비밀번호를 확인해 주세요."
-          : "비밀번호를 변경하지 못했어요. 잠시 후 다시 시도해 주세요.");
+          : "비밀번호를 변경하지 못했어요. 잠시 후 다시 시도해 주세요." });
     } finally {
       setBusy(false);
     }
@@ -625,19 +766,19 @@ function PasswordChangePanel() {
 
   return (
     <section className="password-change-panel" aria-label="비밀번호 변경">
-      {!open ? <button className="account-security-button" type="button" onPointerDown={(event) => event.preventDefault()} onClick={() => { keyboard.hide(); setError(""); setNotice(""); setOpen(true); }}><span><strong>비밀번호 변경</strong><small>변경하면 다른 기기의 로그인도 다시 확인해야 해요.</small></span><ArrowRightIcon width={15} height={15} /></button> : (
+      {!open ? <button ref={openerRef} className="account-security-button" type="button" onPointerDown={(event) => event.preventDefault()} onClick={() => { keyboard.hide(); setFailure(null); setNotice(""); setOpen(true); }}><span><strong>비밀번호 변경</strong><small>변경하면 다른 기기의 로그인도 다시 확인해야 해요.</small></span><ArrowRightIcon width={15} height={15} /></button> : (
         <>
-          <div className="password-change-heading"><div><h3 id="password-change-title">비밀번호 변경</h3><p>새 비밀번호를 저장하면 다른 기기의 로그인도 다시 확인해야 해요.</p></div><button className="grocy-refresh-button" type="button" onClick={() => { keyboard.hide(); setOpen(false); setError(""); }}>닫기</button></div>
-          <div className="password-change-form">
+          <div className="password-change-heading"><div><h3 id="password-change-title">비밀번호 변경</h3><p>새 비밀번호를 저장하면 다른 기기의 로그인도 다시 확인해야 해요.</p></div><button className="grocy-refresh-button" type="button" disabled={busy} onClick={close}>닫기</button></div>
+          <form className="password-change-form" aria-labelledby="password-change-title" aria-busy={busy} onSubmit={(event) => { event.preventDefault(); void submit(); }}>
             <label className="app-input-label" htmlFor="current-password-input">현재 비밀번호</label>
-            <KeyboardInput id="current-password-input" className="app-input" type="password" autoComplete="current-password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} onBlur={() => keyboard.hide()} />
+            <KeyboardInput ref={currentInputRef} id="current-password-input" className="app-input" type="password" autoComplete="current-password" value={currentPassword} disabled={busy} aria-invalid={failure?.field === "current"} aria-describedby={failure?.field === "current" ? "password-change-error" : undefined} onChange={(event) => { setCurrentPassword(event.target.value); setFailure(null); }} onBlur={() => keyboard.hide()} />
             <label className="app-input-label" htmlFor="new-password-input">새 비밀번호</label>
-            <KeyboardInput id="new-password-input" className="app-input" type="password" autoComplete="new-password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} onBlur={() => keyboard.hide()} />
+            <KeyboardInput ref={newInputRef} id="new-password-input" className="app-input" type="password" autoComplete="new-password" value={newPassword} disabled={busy} aria-invalid={failure?.field === "new"} aria-describedby={failure?.field === "new" ? "password-change-error" : undefined} onChange={(event) => { setNewPassword(event.target.value); setFailure(null); }} onBlur={() => keyboard.hide()} />
             <label className="app-input-label" htmlFor="confirm-password-input">새 비밀번호 확인</label>
-            <KeyboardInput id="confirm-password-input" className="app-input" type="password" autoComplete="new-password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} onBlur={() => keyboard.hide()} />
-            {error ? <div className="account-error" role="alert"><InfoCircledIcon width={15} height={15} /><span>{error}</span></div> : null}
-            <button className="primary-sheet-button" type="button" disabled={busy} aria-busy={busy} onPointerDown={(event) => event.preventDefault()} onClick={() => void submit()}>{busy ? "변경 중" : "비밀번호 변경 저장"}<ArrowRightIcon width={15} height={15} /></button>
-          </div>
+            <KeyboardInput ref={confirmInputRef} id="confirm-password-input" className="app-input" type="password" autoComplete="new-password" value={confirmPassword} disabled={busy} aria-invalid={failure?.field === "confirm"} aria-describedby={failure?.field === "confirm" ? "password-change-error" : undefined} onChange={(event) => { setConfirmPassword(event.target.value); setFailure(null); }} onBlur={() => keyboard.hide()} />
+            {error ? <div ref={failureRef} id="password-change-error" className="account-error" role="alert" tabIndex={-1}><InfoCircledIcon width={15} height={15} /><span>{error}</span></div> : null}
+            <button className="primary-sheet-button" type="submit" disabled={busy} aria-busy={busy} onPointerDown={(event) => event.preventDefault()}>{busy ? "변경 중" : "비밀번호 변경 저장"}<ArrowRightIcon width={15} height={15} /></button>
+          </form>
         </>
       )}
       {error && !open ? <div className="account-error" role="alert"><InfoCircledIcon width={15} height={15} /><span>{error}</span></div> : null}
@@ -922,7 +1063,7 @@ function GuestTransferPanel({
           {transferSummaryItems.map((item) => <span key={item} style={{ display: "inline-flex", padding: "4px 6px", borderRadius: 7, background: "color-mix(in srgb, var(--meal-sage-dark) 9%, transparent)" }}>{item}</span>)}
         </div>
       </div>
-      <p className="guest-transfer-note"><InfoCircledIcon width={14} height={14} /> 게스트 기록은 삭제하지 않아요. 계정에 이미 기록이 있으면 자동으로 섞지 않고 확인을 요청해요.</p>
+      <p className="guest-transfer-note"><InfoCircledIcon width={14} height={14} /> 가져온 뒤에도 게스트 기록은 그대로 남아요.</p>
       {error ? <div className="account-error" role="alert"><InfoCircledIcon width={15} height={15} /><span>{error}</span></div> : null}
       <div className="guest-transfer-actions">
         <button ref={importButtonRef} className="primary-sheet-button" type="button" disabled={busy} aria-busy={busy} onPointerDown={(event) => event.preventDefault()} onClick={() => void submit(onImport)}>{busy ? "처리 중이에요" : "게스트 기록 가져오기"}<ArrowRightIcon width={15} height={15} /></button>
@@ -933,10 +1074,12 @@ function GuestTransferPanel({
 }
 
 function GuestTransferRetryPanel({
+  conflict = false,
   message,
   onRetry,
   onSkip,
 }: {
+  conflict?: boolean;
   message: string;
   onRetry: () => Promise<void>;
   onSkip: () => Promise<void>;
@@ -990,9 +1133,9 @@ function GuestTransferRetryPanel({
     <section className="guest-transfer-panel guest-transfer-panel-warning" aria-labelledby="guest-transfer-retry-title">
       <div className="guest-transfer-heading">
         <span className="guest-transfer-icon"><InfoCircledIcon width={17} height={17} /></span>
-        <div><h3 id="guest-transfer-retry-title">게스트 기록을 아직 확인하지 못했어요</h3><p>{guestTransferMessage(message)}</p></div>
+        <div><h3 id="guest-transfer-retry-title">{conflict ? "계정에 다른 기록이 있어요" : "게스트 기록을 아직 확인하지 못했어요"}</h3><p>{conflict ? "두 기록은 자동으로 합치지 않아요." : guestTransferMessage(message)}</p></div>
       </div>
-      <p className="guest-transfer-note"><InfoCircledIcon width={14} height={14} /> 게스트 기록은 삭제되지 않아요. 지금 건너뛰어도 같은 계정으로 다시 들어오면 이어서 가져올 수 있어요.</p>
+      <p className="guest-transfer-note"><InfoCircledIcon width={14} height={14} /> 게스트 기록은 유지돼요. 나중에 같은 계정에서 다시 확인할 수 있어요.</p>
       {error ? <div className="account-error" role="alert"><InfoCircledIcon width={15} height={15} /><span>{error}</span></div> : null}
       <div className="guest-transfer-actions">
         <button ref={retryButtonRef} className="primary-sheet-button" type="button" disabled={busy} aria-busy={busy} onPointerDown={(event) => event.preventDefault()} onClick={() => void submit(onRetry)}>{busy ? "확인 중이에요" : "다시 확인"}<ArrowRightIcon width={15} height={15} /></button>
@@ -1053,38 +1196,70 @@ function WorkspaceDataExportPanel({ workspaceSync }: { workspaceSync: WorkspaceS
 
 function StorageLocationPanel({ workspaceSync, refreshNonce }: { workspaceSync: WorkspaceSyncCoordinator; refreshNonce: number }) {
   const keyboard = useKeyboard();
+  const { keyboardHeight, isKeyboardVisible } = useKeyboardInsets();
   const [locations, setLocations] = useState<ApiStorageLocation[]>([]);
   const [name, setName] = useState("");
   const [storageType, setStorageType] = useState<ApiStorageType>("refrigerated");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
+  const [editingBaselineName, setEditingBaselineName] = useState("");
+  const editingIdRef = useRef(editingId);
+  editingIdRef.current = editingId;
+  const editingNameRef = useRef(editingName);
+  editingNameRef.current = editingName;
+  const locationsRef = useRef(locations);
+  locationsRef.current = locations;
+  const mutationGenerationRef = useRef(0);
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [retryAction, setRetryAction] = useState<(() => void) | null>(null);
-  const revisionRef = useRef<number | null>(null);
   const loadingRef = useRef(true);
   const busyRef = useRef(false);
   const pollingInFlightRef = useRef(false);
   const customLocations = locations.filter((location) => !["ambient", "refrigerated", "frozen"].includes(location.id));
 
-  const readRevision = async () => {
-    const result = await workspaceSync.run("storage-locations", (signal) => mealApi.getStorageLocationRevision(signal));
-    if (!result.current || result.error || !result.value) return null;
-    const revision = result.value.revision;
-    return Number.isSafeInteger(revision) && revision >= 0 ? revision : null;
+  useEffect(() => {
+    const target = keyboard.focusedElement;
+    if (!isKeyboardVisible || !target?.closest(".storage-location-panel")) return;
+    const frame = window.requestAnimationFrame(() => {
+      if (target.isConnected) scrollTargetWithinNearestContainer(target, "center", "auto");
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [keyboardHeight, isKeyboardVisible, keyboard.focusedElement]);
+
+  const acceptLocations = (incoming: ApiStorageLocation[], nextNotice?: string) => {
+    const changed = storageLocationsChanged(locationsRef.current, incoming);
+    const hadLocations = locationsRef.current.length > 0;
+    locationsRef.current = incoming;
+    setLocations(incoming);
+    if (changed) setConfirmingDeleteId(null);
+    if (editingIdRef.current && !incoming.some((location) => location.id === editingIdRef.current)) {
+      editingIdRef.current = null;
+      editingNameRef.current = "";
+      setEditingId(null);
+      setEditingName("");
+      setEditingBaselineName("");
+      keyboard.hide();
+      setNotice("수정하던 위치를 찾지 못했어요. 목록을 확인해 주세요.");
+    } else if (nextNotice) {
+      setNotice(nextNotice);
+    } else if (changed && hadLocations) {
+      setNotice("보관 위치 목록을 새로 불러왔어요.");
+    }
   };
 
   const refresh = async (nextNotice?: string) => {
+    const generation = mutationGenerationRef.current;
     loadingRef.current = true;
     setLoading(true);
     setError("");
     setNotice("");
     setRetryAction(null);
     const result = await workspaceSync.run("storage-locations", (signal) => mealApi.getStorageLocations(signal));
-    if (!result.current) {
+    if (!result.current || generation !== mutationGenerationRef.current) {
       loadingRef.current = false;
       setLoading(false);
       return false;
@@ -1092,10 +1267,7 @@ function StorageLocationPanel({ workspaceSync, refreshNonce }: { workspaceSync: 
     try {
       if (result.error) throw result.error;
       if (!result.value) throw new Error("storage-locations-empty");
-      setLocations(result.value);
-      const revision = await readRevision();
-      if (revision !== null) revisionRef.current = revision;
-      if (nextNotice) setNotice(nextNotice);
+      acceptLocations(result.value, nextNotice);
       return true;
     } catch (reason) {
       setError(isMealApiAuthError(reason)
@@ -1115,23 +1287,15 @@ function StorageLocationPanel({ workspaceSync, refreshNonce }: { workspaceSync: 
     void refresh();
   }, [refreshNonce]);
 
-  const probeRevision = async () => {
+  const probeLocations = async () => {
     if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
     if (loadingRef.current || busyRef.current || pollingInFlightRef.current) return;
     pollingInFlightRef.current = true;
+    const generation = mutationGenerationRef.current;
     try {
-      const previousRevision = revisionRef.current;
-      const revision = await readRevision();
-      if (revision === null) return;
-      if (previousRevision !== null && revision !== previousRevision) {
-        setEditingId(null);
-        setEditingName("");
-        setConfirmingDeleteId(null);
-        keyboard.hide();
-        await refresh("다른 기기에서 보관 위치를 바꿨어요. 목록을 새로 불러왔어요.");
-        return;
-      }
-      revisionRef.current = revision;
+      const result = await workspaceSync.run("storage-locations", (signal) => mealApi.getStorageLocations(signal));
+      if (!result.current || result.error || !result.value || generation !== mutationGenerationRef.current) return;
+      acceptLocations(result.value);
     } finally {
       pollingInFlightRef.current = false;
     }
@@ -1139,9 +1303,9 @@ function StorageLocationPanel({ workspaceSync, refreshNonce }: { workspaceSync: 
 
   useEffect(() => {
     if (!mealApi.isConfigured || typeof window === "undefined" || typeof document === "undefined") return;
-    const interval = window.setInterval(() => { void probeRevision(); }, 30_000);
+    const interval = window.setInterval(() => { void probeLocations(); }, 30_000);
     const onVisibilityChange = () => {
-      if (document.visibilityState === "visible") void probeRevision();
+      if (document.visibilityState === "visible") void probeLocations();
     };
     document.addEventListener("visibilitychange", onVisibilityChange);
     return () => {
@@ -1176,6 +1340,7 @@ function StorageLocationPanel({ workspaceSync, refreshNonce }: { workspaceSync: 
       setError("보관 위치 이름을 입력해 주세요.");
       return;
     }
+    mutationGenerationRef.current += 1;
     busyRef.current = true;
     setBusy(true);
     setError("");
@@ -1184,8 +1349,10 @@ function StorageLocationPanel({ workspaceSync, refreshNonce }: { workspaceSync: 
     try {
       const created = await mealApi.createStorageLocation(normalizedName, storageType);
       if (!created) throw new Error("storage-location-create-empty");
-      setLocations((current) => [...current.filter((location) => location.id !== created.id), created]);
-      setName("");
+      const nextLocations = [...locationsRef.current.filter((location) => location.id !== created.id), created];
+      locationsRef.current = nextLocations;
+      setLocations(nextLocations);
+      setName((current) => current.trim() === normalizedName ? "" : current);
       setNotice(`보관 위치를 추가했어요: ${created.name}`);
       keyboard.hide();
     } catch (reason) {
@@ -1201,11 +1368,17 @@ function StorageLocationPanel({ workspaceSync, refreshNonce }: { workspaceSync: 
     setError("");
     setNotice("");
     setConfirmingDeleteId(null);
+    editingIdRef.current = location.id;
+    editingNameRef.current = location.name;
     setEditingId(location.id);
     setEditingName(location.name);
+    setEditingBaselineName(location.name);
   };
 
   const cancelEdit = () => {
+    editingIdRef.current = null;
+    editingNameRef.current = "";
+    setEditingBaselineName("");
     keyboard.hide();
     setEditingId(null);
     setEditingName("");
@@ -1217,6 +1390,7 @@ function StorageLocationPanel({ workspaceSync, refreshNonce }: { workspaceSync: 
       setError("보관 위치 이름을 입력해 주세요.");
       return;
     }
+    mutationGenerationRef.current += 1;
     busyRef.current = true;
     setBusy(true);
     setError("");
@@ -1225,11 +1399,18 @@ function StorageLocationPanel({ workspaceSync, refreshNonce }: { workspaceSync: 
     try {
       const updated = await mealApi.updateStorageLocation(location.id, normalizedName);
       if (!updated) throw new Error("storage-location-update-empty");
-      setLocations((current) => current.map((candidate) => candidate.id === updated.id ? updated : candidate));
-      setEditingId(null);
-      setEditingName("");
+      const nextLocations = locationsRef.current.map((candidate) => candidate.id === updated.id ? updated : candidate);
+      locationsRef.current = nextLocations;
+      setLocations(nextLocations);
+      setEditingBaselineName(updated.name);
+      if (editingNameRef.current.trim() === normalizedName) {
+        editingIdRef.current = null;
+        editingNameRef.current = "";
+        setEditingId(null);
+        setEditingName("");
+        keyboard.hide();
+      }
       setNotice(`${updated.name}으로 보관 위치 이름을 바꿨어요`);
-      keyboard.hide();
     } catch (reason) {
       handleMutationError(reason, () => void saveLocation(location));
     } finally {
@@ -1243,6 +1424,7 @@ function StorageLocationPanel({ workspaceSync, refreshNonce }: { workspaceSync: 
       setConfirmingDeleteId(location.id);
       return;
     }
+    mutationGenerationRef.current += 1;
     busyRef.current = true;
     setBusy(true);
     setError("");
@@ -1251,7 +1433,9 @@ function StorageLocationPanel({ workspaceSync, refreshNonce }: { workspaceSync: 
     try {
       const deleted = await mealApi.deleteStorageLocation(location.id);
       if (!deleted?.deleted) throw new Error("storage-location-delete-empty");
-      setLocations((current) => current.filter((candidate) => candidate.id !== location.id));
+      const nextLocations = locationsRef.current.filter((candidate) => candidate.id !== location.id);
+      locationsRef.current = nextLocations;
+      setLocations(nextLocations);
       setConfirmingDeleteId(null);
       setNotice(`보관 위치를 삭제했어요: ${location.name}`);
     } catch (reason) {
@@ -1266,19 +1450,18 @@ function StorageLocationPanel({ workspaceSync, refreshNonce }: { workspaceSync: 
     <section className="storage-location-panel" aria-labelledby="storage-location-title">
       <div className="storage-location-heading">
         <span className="storage-location-icon"><SewingPinIcon width={17} height={17} /></span>
-        <div><h3 id="storage-location-title">내 보관 위치</h3><p>냉장고 칸이나 김치냉장고처럼 실제 위치를 더 정확히 기록해요.</p></div>
-        <button className="grocy-refresh-button" type="button" disabled={loading || busy} onPointerDown={(event) => { event.preventDefault(); keyboard.hide(); void refresh(); }} onClick={(event) => { if (event.detail === 0) void refresh(); }}>{loading ? "불러오는 중" : "새로고침"}</button>
+        <div><h3 id="storage-location-title">내 보관 위치</h3></div>
+        <button className="grocy-refresh-button" type="button" disabled={loading || busy} onPointerDown={(event) => event.preventDefault()} onClick={() => { keyboard.hide(); void refresh(); }}>{loading ? "불러오는 중" : "새로고침"}</button>
       </div>
-      <div className="storage-location-note"><InfoCircledIcon width={15} height={15} /><span>실온·냉장·냉동 분류는 유지하고, 아래 이름은 사용자의 저장 위치로만 추가돼요.</span></div>
       {error ? <div className="account-error storage-location-error" role="alert" aria-busy={busy}><InfoCircledIcon width={15} height={15} /><span>{busy ? "보관 위치를 다시 확인하는 중이에요." : error}</span>{retryAction ? <button className="account-error-action" type="button" disabled={busy} aria-busy={busy} onClick={retryAction}>{busy ? "불러오는 중" : "다시 시도"}</button> : null}</div> : null}
       {notice ? <div className="grocy-success" role="status"><CheckCircledIcon width={15} height={15} /><span>{notice}</span></div> : null}
       <form className="storage-location-create-form" onSubmit={(event) => { event.preventDefault(); void createLocation(); }}>
-        <label className="storage-location-name-field"><span>새 위치 이름</span><KeyboardInput className="app-input" value={name} maxLength={80} autoComplete="off" placeholder="예: 김치냉장고" aria-label="새 보관 위치 이름" onChange={(event) => { setName(event.target.value); setError(""); }} onBlur={() => keyboard.hide()} /></label>
-        <div className="storage-location-type-field"><span>기본 분류</span><div className="storage-location-type-options" role="group" aria-label="새 보관 위치 기본 분류">{STORAGE_OPTIONS.map((option) => <button key={option.value} className={storageType === option.value ? "storage-location-type-option storage-location-type-option-active" : "storage-location-type-option"} type="button" aria-pressed={storageType === option.value} onPointerDown={(event) => event.preventDefault()} onClick={() => setStorageType(option.value)}>{option.label}</button>)}</div></div>
+        <label className="storage-location-name-field"><span>새 위치 이름</span><KeyboardInput className="app-input" value={name} maxLength={80} autoComplete="off" placeholder="예: 김치냉장고" aria-label="새 보관 위치 이름" onFocus={(event) => { const target = event.currentTarget; window.requestAnimationFrame(() => scrollTargetWithinNearestContainer(target, "center", getMobileScrollBehavior())); }} onChange={(event) => { setName(event.target.value); setError(""); }} onBlur={() => keyboard.hide()} /></label>
+        <div className="storage-location-type-field"><span>보관 방법</span><div className="storage-location-type-options" role="group" aria-label="새 보관 위치 보관 방법">{STORAGE_OPTIONS.map((option) => <button key={option.value} className={storageType === option.value ? "storage-location-type-option storage-location-type-option-active" : "storage-location-type-option"} type="button" aria-pressed={storageType === option.value} onPointerDown={(event) => event.preventDefault()} onClick={() => setStorageType(option.value)}>{option.label}</button>)}</div></div>
         <button className="primary-sheet-button storage-location-create-button" type="submit" disabled={busy || loading || !name.trim()} onPointerDown={(event) => event.preventDefault()}>{busy ? "저장 중" : "보관 위치 추가"}<ArrowRightIcon width={15} height={15} /></button>
       </form>
-      {loading && !locations.length ? <div className="account-loading" role="status">보관 위치를 불러오고 있어요</div> : customLocations.length ? <div className="storage-location-list" role="list" aria-label="사용자 정의 보관 위치 목록">{customLocations.map((location) => <div className="storage-location-row" role="listitem" key={location.id}>{editingId === location.id ? <div className="storage-location-edit"><KeyboardInput className="app-input" value={editingName} maxLength={80} autoComplete="off" aria-label={`${location.name} 보관 위치 이름 수정`} onChange={(event) => { setEditingName(event.target.value); setError(""); }} onBlur={() => keyboard.hide()} /><div><button className="grocy-refresh-button" type="button" disabled={busy || !editingName.trim()} onPointerDown={(event) => event.preventDefault()} onClick={() => void saveLocation(location)}>저장</button><button className="grocy-refresh-button" type="button" disabled={busy} onPointerDown={(event) => event.preventDefault()} onClick={cancelEdit}>취소</button></div></div> : <><span className="storage-location-row-copy"><strong>{location.name}</strong><small><MetadataText text={<>{location.storage_type === "refrigerated" ? "냉장" : location.storage_type === "frozen" ? "냉동" : "실온"} · 식품을 추가할 때 선택할 수 있어요.</>} /></small></span><span className="storage-location-row-actions"><button className="grocy-refresh-button" type="button" disabled={busy} onPointerDown={(event) => event.preventDefault()} onClick={() => beginEdit(location)}>이름 수정</button><button className="grocy-refresh-button storage-location-delete-button" type="button" disabled={busy} onPointerDown={(event) => event.preventDefault()} onClick={() => void deleteLocation(location)}>{confirmingDeleteId === location.id ? "한 번 더 삭제" : "삭제"}</button></span></>}</div>)}</div> : <div className="storage-location-empty" aria-live="polite"><strong>추가한 위치가 아직 없어요</strong><small>이름을 만들면 식품을 추가할 때 선택할 수 있어요.</small></div>}
-      <p className="storage-location-footnote"><InfoCircledIcon width={14} height={14} />현재 식품이나 과거 보관·입고 기록이 참조하는 위치는 이름을 보존하기 위해 삭제할 수 없어요. 다른 기기 변경은 화면을 다시 볼 때 자동으로 확인해요.</p>
+      {loading && !locations.length ? <div className="account-loading" role="status">보관 위치를 불러오고 있어요</div> : customLocations.length ? <div className="storage-location-list" role="list" aria-label="사용자 정의 보관 위치 목록">{customLocations.map((location) => <div className="storage-location-row" role="listitem" key={location.id}>{editingId === location.id ? <div className="storage-location-edit">{editingBaselineName !== location.name ? <small>현재 저장된 이름: {location.name}</small> : null}<KeyboardInput className="app-input" value={editingName} maxLength={80} autoComplete="off" aria-label={`${location.name} 보관 위치 이름 수정`} onFocus={(event) => { const target = event.currentTarget; window.requestAnimationFrame(() => scrollTargetWithinNearestContainer(target, "center", getMobileScrollBehavior())); }} onChange={(event) => { editingNameRef.current = event.target.value; setEditingName(event.target.value); setError(""); }} onBlur={() => keyboard.hide()} /><div><button className="grocy-refresh-button" type="button" disabled={busy || !editingName.trim()} onPointerDown={(event) => event.preventDefault()} onClick={() => void saveLocation(location)}>저장</button><button className="grocy-refresh-button" type="button" disabled={busy} onPointerDown={(event) => event.preventDefault()} onClick={cancelEdit}>취소</button></div></div> : <><span className="storage-location-row-copy"><strong>{location.name}</strong><small><MetadataText text={<>{location.storage_type === "refrigerated" ? "냉장" : location.storage_type === "frozen" ? "냉동" : "실온"}</>} /></small></span><span className="storage-location-row-actions"><button className="grocy-refresh-button" type="button" disabled={busy} onPointerDown={(event) => event.preventDefault()} onClick={() => beginEdit(location)}>이름 수정</button><button className="grocy-refresh-button storage-location-delete-button" type="button" disabled={busy} onPointerDown={(event) => event.preventDefault()} onClick={() => void deleteLocation(location)}>{confirmingDeleteId === location.id ? "한 번 더 삭제" : "삭제"}</button></span></>}</div>)}</div> : <div className="storage-location-empty" aria-live="polite"><strong>추가한 위치가 아직 없어요</strong></div>}
+      <p className="storage-location-footnote"><InfoCircledIcon width={14} height={14} />기록에서 사용한 위치는 삭제할 수 없어요. 이름은 바꿀 수 있어요.</p>
     </section>
   );
 }
@@ -1373,7 +1556,7 @@ function ReceiptPrivacyPanel({ workspaceSync, refreshNonce }: { workspaceSync: W
             const confirming = confirmingId === receipt.id;
             return (
               <div className="receipt-privacy-row" key={receipt.id}>
-                <div className="receipt-privacy-copy"><strong><MetadataText text={<>{receipt.merchant_name ? `${receipt.merchant_name} · ` : ""}{formatReceiptPurchaseDate(receipt.purchased_at)} 영수증</>} /></strong><small><MetadataText text={<>{receiptStatusLabel(receipt.status)} · 상품 {receipt.line_count}개{receipt.stock_created ? " · 식품 목록에 추가됨" : " · 식품 목록에 추가 전"}</>} /></small></div>
+                <div className="receipt-privacy-copy"><strong><MetadataText text={<>{receipt.merchant_name ? `${receipt.merchant_name} · ` : ""}{formatReceiptPurchaseDate(receipt.purchased_at)} 영수증</>} /></strong><small><MetadataText text={<>{receiptStatusLabel(receipt.status)} · 항목 {receipt.line_count}개{receipt.stock_created ? " · 식품 목록에 추가됨" : " · 식품 목록에 추가 전"}</>} /></small></div>
                 <span className={`receipt-privacy-badge ${receipt.source_redacted ? "receipt-privacy-badge-redacted" : ""}`}>{receipt.source_redacted ? "영수증 정보 삭제됨" : "영수증 정보 보관 중"}</span>
                 {receipt.source_redacted ? null : confirming ? (
                   <div className="receipt-privacy-confirm" role="alert"><small>{receipt.stock_created ? "식품 목록과 구매 기록은 그대로 두고 영수증 파일 이름과 읽은 문구만 삭제해요." : "식품 목록에 넣지 않은 영수증 정보만 삭제해요."}</small><div><button className="secondary-sheet-button" type="button" disabled={busy} onClick={() => setConfirmingId(null)}>취소</button><button className="danger-sheet-button" type="button" disabled={busy} onClick={() => void erase(receipt)}>{busy ? "삭제 중" : "삭제"}</button></div></div>
@@ -1392,7 +1575,7 @@ function AccountArchiveDisclosure({ workspaceSync, refreshNonce }: { workspaceSy
   const [open, setOpen] = useState(false);
   return (
     <details className="grocy-settings-block account-archive-disclosure" onToggle={(event) => setOpen((event.currentTarget as HTMLDetailsElement).open)}>
-      <summary className="grocy-block-heading"><strong>기록 관리</strong><small>자료 내보내기·영수증 정보 관리</small></summary>
+      <summary className="grocy-block-heading"><strong>기록 관리</strong><small>자료 내보내기·영수증 정보 관리</small><ChevronDownIcon className="account-disclosure-chevron" width={16} height={16} aria-hidden="true" /></summary>
       {open ? <div>
         <WorkspaceDataExportPanel workspaceSync={workspaceSync} />
         <ReceiptPrivacyPanel refreshNonce={refreshNonce} workspaceSync={workspaceSync} />
@@ -1401,12 +1584,12 @@ function AccountArchiveDisclosure({ workspaceSync, refreshNonce }: { workspaceSy
   );
 }
 
-function AccountNotificationDisclosure({ workspaceSync, refreshNonce }: { workspaceSync: WorkspaceSyncCoordinator; refreshNonce: number }) {
+function AccountNotificationDisclosure({ workspaceSync, refreshNonce, initialDraft, onDraftChange }: { workspaceSync: WorkspaceSyncCoordinator; refreshNonce: number; initialDraft?: NotificationSettingsDraft | null; onDraftChange?: (draft: NotificationSettingsDraft | null) => void }) {
   const [open, setOpen] = useState(false);
   return (
     <details className="grocy-settings-block account-notification-disclosure" onToggle={(event) => setOpen((event.currentTarget as HTMLDetailsElement).open)}>
-      <summary className="grocy-block-heading"><strong>알림 설정</strong><small>앱·기기 알림·조용한 시간</small></summary>
-      {open ? <NotificationPreferencesPanel refreshNonce={refreshNonce} workspaceSync={workspaceSync} /> : null}
+      <summary className="grocy-block-heading"><strong>알림 설정</strong><small>앱·기기 알림·조용한 시간</small><ChevronDownIcon className="account-disclosure-chevron" width={16} height={16} aria-hidden="true" /></summary>
+      {open ? <NotificationPreferencesPanel initialDraft={initialDraft} onDraftChange={onDraftChange} refreshNonce={refreshNonce} workspaceSync={workspaceSync} /> : null}
     </details>
   );
 }
@@ -1415,10 +1598,26 @@ function AccountStorageDisclosure({ workspaceSync, refreshNonce }: { workspaceSy
   const [open, setOpen] = useState(false);
   return (
     <details className="grocy-settings-block account-storage-disclosure" onToggle={(event) => setOpen((event.currentTarget as HTMLDetailsElement).open)}>
-      <summary className="grocy-block-heading"><strong>보관 위치 설정</strong><small>식품 추가·입고에서 선택할 위치를 관리해요.</small></summary>
+      <summary className="grocy-block-heading"><strong>보관 위치 설정</strong><small>식품 추가·입고에서 선택할 위치를 관리해요.</small><ChevronDownIcon className="account-disclosure-chevron" width={16} height={16} aria-hidden="true" /></summary>
       {open ? <StorageLocationPanel refreshNonce={refreshNonce} workspaceSync={workspaceSync} /> : null}
     </details>
   );
+}
+
+function AccountIntegrationDisclosure({ forceOpen, render }: { forceOpen: boolean; render: (open: boolean) => ReactNode }) {
+  const [open, setOpen] = useState(forceOpen);
+  const [hasOpened, setHasOpened] = useState(forceOpen);
+  useEffect(() => {
+    if (forceOpen) { setOpen(true); setHasOpened(true); }
+  }, [forceOpen]);
+  return <details className="grocy-settings-block account-integration-disclosure" open={open} onToggle={(event) => {
+    const nextOpen = event.currentTarget.open;
+    setOpen(nextOpen);
+    if (nextOpen) setHasOpened(true);
+  }}>
+    <summary className="grocy-block-heading"><strong>재고 앱 연결</strong><ChevronDownIcon className="account-disclosure-chevron" width={16} height={16} aria-hidden="true" /></summary>
+    {hasOpened ? render(open) : null}
+  </details>;
 }
 
 function GrocyIntegrationPanel({ active, workspaceSync, refreshNonce, focusGrocyOutboxId, returnToNotification = false, onReturnToNotification, onOpenFoodFromSync, onRefreshWorkspace }: { active: boolean; workspaceSync: WorkspaceSyncCoordinator; refreshNonce: number; focusGrocyOutboxId?: string | null; returnToNotification?: boolean; onReturnToNotification?: () => void; onOpenFoodFromSync?: (foodId: string, canonicalName: string, outboxId?: string) => void; onRefreshWorkspace?: () => Promise<boolean> }) {
@@ -1862,7 +2061,7 @@ function GrocyIntegrationPanel({ active, workspaceSync, refreshNonce, focusGrocy
     setRetryAction(null);
     try {
       await mealApi.retryGrocyOutbox(record.id, "사용자가 설정 화면에서 다시 시도");
-      setNotice(`${record.canonical_name} ${operationLabel(record)}을 다시 시도하도록 등록했어요.`);
+      setNotice(`${record.canonical_name} ${withKoreanObjectParticle(operationLabel(record))} 다시 시도하도록 등록했어요.`);
       await refresh();
       const workspaceSynced = await refreshParentWorkspace();
       if (workspaceSynced === false) setNotice((current) => `${current} 홈과 알림은 다시 연결한 뒤 불러올 수 있어요.`);
@@ -1900,7 +2099,7 @@ function GrocyIntegrationPanel({ active, workspaceSync, refreshNonce, focusGrocy
           <h3 id="grocy-integration-title">재고 앱 연결</h3>
           <p>식품 입고·먹음·폐기·보관 이동 기록을 함께 관리해요.</p>
         </div>
-        <button className="grocy-refresh-button" type="button" aria-label="재고 앱 연결 새로고침" disabled={loading || refreshing} aria-busy={loading || refreshing} onPointerDown={(event) => { event.preventDefault(); keyboard.hide(); void refresh(); }} onClick={(event) => { if (event.detail === 0) void refresh(); }}>
+        <button className="grocy-refresh-button" type="button" aria-label="재고 앱 연결 새로고침" disabled={loading || refreshing} aria-busy={loading || refreshing} onPointerDown={(event) => event.preventDefault()} onClick={() => { keyboard.hide(); void refresh(); }}>
           {refreshing ? "확인 중" : "새로고침"}
         </button>
       </div>
@@ -1910,10 +2109,10 @@ function GrocyIntegrationPanel({ active, workspaceSync, refreshNonce, focusGrocy
         <div><strong>{grocyStatusLabel(status?.status)}</strong><small>{status ? grocyStatusDetail(status.detail, status.configured) : (loading ? "연결 상태를 확인하고 있어요." : "연결 상태를 확인하지 못했어요.")}</small></div>
       </div>
 
-      <div className={`grocy-worker-card ${workerHeartbeat?.last_error ? "grocy-worker-error" : ""}`} data-worker-state={workerHeartbeat ? workerHeartbeat.last_error ? "error" : "ready" : "unknown"}>
-        <div><strong>재고 앱 자동 추가</strong><small><MetadataText text={<>{status?.configured !== true ? "재고 앱을 연결하면 식품을 자동으로 추가할 수 있어요." : workerHeartbeat ? workerHeartbeat.last_error ? `최근에 추가하지 못했어요: ${externalInventoryDetail(workerHeartbeat.last_error, "재고 앱에 식품을 추가하지 못했어요.")}` : workerHeartbeat.succeeded ? `최근 ${workerHeartbeat.succeeded}개를 재고 앱에 추가했어요 · ${formatWorkerTime(workerHeartbeat.last_tick_at)}` : `최근 확인 ${formatWorkerTime(workerHeartbeat.last_tick_at)} · 추가한 식품 없음` : "추가 내역을 불러오지 못했어요."}</>} /></small></div>
-        <span>{workerHeartbeat?.last_error ? "알림 문제" : workerHeartbeat ? "연결됨" : "불러오는 중"}</span>
-      </div>
+      {status?.configured === true || workerHeartbeat ? <div className={`grocy-worker-card ${workerHeartbeat?.last_error ? "grocy-worker-error" : ""}`} data-worker-state={workerHeartbeat ? workerHeartbeat.last_error ? "error" : "ready" : loading ? "loading" : "empty"}>
+        <div><strong>재고 앱 자동 추가</strong><small><MetadataText text={<>{status?.configured !== true ? "재고 앱을 연결하면 식품을 자동으로 추가할 수 있어요." : workerHeartbeat ? workerHeartbeat.last_error ? `최근에 추가하지 못했어요: ${externalInventoryDetail(workerHeartbeat.last_error, "재고 앱에 식품을 추가하지 못했어요.")}` : workerHeartbeat.succeeded ? `최근 ${workerHeartbeat.succeeded}개를 재고 앱에 추가했어요 · ${formatWorkerTime(workerHeartbeat.last_tick_at)}` : `최근 확인 ${formatWorkerTime(workerHeartbeat.last_tick_at)} · 추가한 식품 없음` : loading ? "추가 내역을 확인하고 있어요." : "아직 자동 추가 내역이 없어요."}</>} /></small></div>
+        <span>{workerHeartbeat?.last_error ? "확인 필요" : workerHeartbeat ? "최근 처리" : loading ? "확인 중" : "처리 내역 없음"}</span>
+      </div> : null}
 
       {recentlySucceededOutbox.length ? (
         <div className="grocy-settings-block" data-testid="grocy-sync-history">
@@ -1936,7 +2135,7 @@ function GrocyIntegrationPanel({ active, workspaceSync, refreshNonce, focusGrocy
       {notice ? <div className={`grocy-success${workspaceReadbackStale ? " grocy-success-stale" : ""}`} data-readback-state={workspaceReadbackStale ? "stale" : "confirmed"} role="status"><CheckCircledIcon width={15} height={15} /><span>{notice}</span>{workspaceReadbackStale && onRefreshWorkspace ? <button className="account-error-action" type="button" disabled={workspaceReadbackRefreshing} aria-busy={workspaceReadbackRefreshing} onClick={() => void refreshParentWorkspace()}>{workspaceReadbackRefreshing ? "불러오는 중" : "다시 불러오기"}</button> : null}</div> : null}
 
       <details ref={settingsBlockRef} className="grocy-settings-block" onToggle={(event) => setSettingsOpen(event.currentTarget.open)}>
-        <summary className="grocy-block-heading"><strong>재고 앱 설정</strong><small>{blockedOutbox.length + reconciliationOutbox.length + deadLetterOutbox.length + productTasks.length ? `살펴볼 식품 ${blockedOutbox.length + reconciliationOutbox.length + deadLetterOutbox.length + productTasks.length}개가 있어요.` : "보관 위치와 상품 연결을 관리해요."}</small></summary>
+        <summary className="grocy-block-heading"><strong>재고 앱 설정</strong><small>{blockedOutbox.length + reconciliationOutbox.length + deadLetterOutbox.length ? `살펴볼 식품 ${blockedOutbox.length + reconciliationOutbox.length + deadLetterOutbox.length}개가 있어요.` : "보관 위치와 상품 연결을 관리해요."}</small></summary>
         <div>
       <div className="grocy-settings-block">
         <div className="grocy-block-heading"><strong>보관 위치 연결</strong><small>재고 앱에서 사용하는 위치 번호를 연결해요.</small></div>
@@ -1949,7 +2148,7 @@ function GrocyIntegrationPanel({ active, workspaceSync, refreshNonce, focusGrocy
               <div className="grocy-location-row" key={option.value}>
                 <div><strong>{option.label}</strong><small>{option.value}</small></div>
                 <KeyboardInput className="grocy-number-input" type="number" inputMode="numeric" min={1} value={value} placeholder="예: 20" aria-label={`${option.label} 재고 앱 위치 번호`} disabled={status?.configured !== true} onChange={(event) => setLocationDrafts((current) => ({ ...current, [option.value]: event.target.value }))} onBlur={() => keyboard.hide()} />
-                <button className="grocy-save-button" type="button" disabled={disabled} onPointerDown={(event) => { event.preventDefault(); keyboard.hide(); void saveLocation(option.value); }} onClick={(event) => { if (event.detail === 0) void saveLocation(option.value); }}>{savingKey === `location:${option.value}` ? "저장 중" : "저장"}</button>
+                <button className="grocy-save-button" type="button" disabled={disabled} onPointerDown={(event) => event.preventDefault()} onClick={() => { keyboard.hide(); void saveLocation(option.value); }}>{savingKey === `location:${option.value}` ? "저장 중" : "저장"}</button>
               </div>
             );
           })}
@@ -1971,7 +2170,7 @@ function GrocyIntegrationPanel({ active, workspaceSync, refreshNonce, focusGrocy
                   <div className="grocy-product-task-fields">
                     <KeyboardInput className="grocy-number-input" type="number" inputMode="numeric" min={1} value={draft.productId} placeholder="상품 번호" aria-label={`${record.canonical_name} 재고 앱 상품 번호`} disabled={status?.configured !== true || busy} onChange={(event) => setProductDrafts((current) => ({ ...current, [key]: { ...draft, productId: event.target.value } }))} onBlur={() => keyboard.hide()} />
                     <KeyboardInput className="grocy-unit-input" value={draft.unit} placeholder={record.unit} aria-label={`${record.canonical_name} 재고 앱 상품 단위`} disabled={status?.configured !== true || busy} onChange={(event) => setProductDrafts((current) => ({ ...current, [key]: { ...draft, unit: event.target.value } }))} onBlur={() => keyboard.hide()} />
-                    <button className="grocy-save-button" type="button" disabled={status?.configured !== true || busy} onPointerDown={(event) => { event.preventDefault(); keyboard.hide(); void saveProduct(record); }} onClick={(event) => { if (event.detail === 0) void saveProduct(record); }}>{busy ? "저장 중" : "연결"}</button>
+                    <button className="grocy-save-button" type="button" disabled={status?.configured !== true || busy} onPointerDown={(event) => event.preventDefault()} onClick={() => { keyboard.hide(); void saveProduct(record); }}>{busy ? "저장 중" : "연결"}</button>
                   </div>
                 </div>
               );
@@ -1998,16 +2197,16 @@ function GrocyIntegrationPanel({ active, workspaceSync, refreshNonce, focusGrocy
                         <div className="grocy-product-task-fields">
                           <KeyboardInput className="grocy-number-input" type="number" inputMode="numeric" min={1} value={draft.productId} aria-label={`${mapping.canonical_name} 재고 앱 상품 번호`} disabled={busy} onChange={(event) => setProductDrafts((current) => ({ ...current, [key]: { ...draft, productId: event.target.value } }))} onBlur={() => keyboard.hide()} />
                           <KeyboardInput className="grocy-unit-input" value={draft.unit} aria-label={`${mapping.canonical_name} 재고 앱 상품 단위`} disabled={busy} onChange={(event) => setProductDrafts((current) => ({ ...current, [key]: { ...draft, unit: event.target.value } }))} onBlur={() => keyboard.hide()} />
-                          <button className="grocy-save-button" type="button" disabled={busy} aria-busy={busy} onPointerDown={(event) => { event.preventDefault(); keyboard.hide(); void saveProductMapping(mapping.canonical_name, key, mapping.grocy_unit ?? ""); }} onClick={(event) => { if (event.detail === 0) void saveProductMapping(mapping.canonical_name, key, mapping.grocy_unit ?? ""); }}>{busy ? "저장 중" : "저장"}</button>
+                          <button className="grocy-save-button" type="button" disabled={busy} aria-busy={busy} onPointerDown={(event) => event.preventDefault()} onClick={() => { keyboard.hide(); void saveProductMapping(mapping.canonical_name, key, mapping.grocy_unit ?? ""); }}>{busy ? "저장 중" : "저장"}</button>
                         </div>
-                        <button className="grocy-cancel-button" type="button" disabled={busy} onPointerDown={(event) => { event.preventDefault(); keyboard.hide(); setEditingProductKey(""); }} onClick={(event) => { if (event.detail === 0) setEditingProductKey(""); }}>취소</button>
+                        <button className="grocy-cancel-button" type="button" disabled={busy} onPointerDown={(event) => event.preventDefault()} onClick={() => { keyboard.hide(); setEditingProductKey(""); }}>취소</button>
                       </>
                     ) : (
                       <>
                         <div className="grocy-product-catalog-copy"><strong>{mapping.canonical_name}</strong><small><MetadataText text={<>재고 앱 상품 #{mapping.grocy_product_id} · {mapping.grocy_unit ?? "단위 미설정"} · {mapping.updated_by_email ?? mapping.updated_by ?? "변경한 사람 정보 없음"} · {formatMappingTime(mapping.updated_at)}</>} /></small></div>
                         <div className="grocy-product-catalog-actions">
-                          <button className="grocy-refresh-button" type="button" aria-label={`${mapping.canonical_name} 상품 연결 수정`} onPointerDown={(event) => { event.preventDefault(); keyboard.hide(); setProductDrafts((current) => ({ ...current, [key]: { productId: String(mapping.grocy_product_id), unit: mapping.grocy_unit ?? "" } })); setEditingProductKey(key); }} onClick={(event) => { if (event.detail === 0) { setProductDrafts((current) => ({ ...current, [key]: { productId: String(mapping.grocy_product_id), unit: mapping.grocy_unit ?? "" } })); setEditingProductKey(key); } }}>수정</button>
-                          <button className="grocy-refresh-button" type="button" aria-label={`${mapping.canonical_name} 상품 연결 내역 보기`} aria-expanded={mappingHistoryKey === key} onPointerDown={(event) => { event.preventDefault(); keyboard.hide(); void toggleProductHistory(mapping); }} onClick={(event) => { if (event.detail === 0) void toggleProductHistory(mapping); }}>{mappingHistoryKey === key ? "닫기" : "내역"}</button>
+                          <button className="grocy-refresh-button" type="button" aria-label={`${mapping.canonical_name} 상품 연결 수정`} onPointerDown={(event) => event.preventDefault()} onClick={() => { keyboard.hide(); setProductDrafts((current) => ({ ...current, [key]: { productId: String(mapping.grocy_product_id), unit: mapping.grocy_unit ?? "" } })); setEditingProductKey(key); }}>수정</button>
+                          <button className="grocy-refresh-button" type="button" aria-label={`${mapping.canonical_name} 상품 연결 내역 보기`} aria-expanded={mappingHistoryKey === key} onPointerDown={(event) => event.preventDefault()} onClick={() => { keyboard.hide(); void toggleProductHistory(mapping); }}>{mappingHistoryKey === key ? "닫기" : "내역"}</button>
                         </div>
                       </>
                     )}
@@ -2046,8 +2245,8 @@ function GrocyIntegrationPanel({ active, workspaceSync, refreshNonce, focusGrocy
                   <div className="grocy-reconciliation-copy"><div className="grocy-task-state-line"><strong>{record.canonical_name}</strong><span className="grocy-task-state-badge grocy-task-state-review">살펴봐 주세요</span></div><small><MetadataText text={<>{operationLabel(record)} · {externalInventoryDetail(record.last_error, "재고 앱에서 추가 여부를 살펴봐 주세요.")}</>} /></small></div>
                   <div className="grocy-reconciliation-actions" role="group" aria-label={`${record.canonical_name} 재고 앱 추가 여부 살펴보기`}>
                     <KeyboardInput className="grocy-transaction-input" value={reconciliationDrafts[record.id] ?? ""} placeholder="재고 앱 기록 번호" aria-label={`${record.canonical_name} 재고 앱 기록 번호`} disabled={busy} onChange={(event) => setReconciliationDrafts((current) => ({ ...current, [record.id]: event.target.value }))} onBlur={() => keyboard.hide()} />
-                    <button className="grocy-save-button" type="button" disabled={busy} aria-busy={busy} onPointerDown={(event) => { event.preventDefault(); keyboard.hide(); void reconcileOutbox(record, "already_applied"); }} onClick={(event) => { if (event.detail === 0) void reconcileOutbox(record, "already_applied"); }}>{busy ? "저장 중" : "이미 추가했어요"}</button>
-                    <button className="grocy-retry-button" type="button" disabled={busy} aria-busy={busy} onPointerDown={(event) => { event.preventDefault(); keyboard.hide(); void reconcileOutbox(record, "not_applied"); }} onClick={(event) => { if (event.detail === 0) void reconcileOutbox(record, "not_applied"); }}>아직 없어요 · 다시 보내기</button>
+                    <button className="grocy-save-button" type="button" disabled={busy} aria-busy={busy} onPointerDown={(event) => event.preventDefault()} onClick={() => { keyboard.hide(); void reconcileOutbox(record, "already_applied"); }}>{busy ? "저장 중" : "이미 추가했어요"}</button>
+                    <button className="grocy-retry-button" type="button" disabled={busy} aria-busy={busy} onPointerDown={(event) => event.preventDefault()} onClick={() => { keyboard.hide(); void reconcileOutbox(record, "not_applied"); }}><span>아직 없어요</span><span>다시 보내기</span></button>
                   </div>
                   <GrocyOutboxDetail record={record} onOpenFoodFromSync={onOpenFoodFromSync} />
                 </div>
@@ -2066,7 +2265,7 @@ function GrocyIntegrationPanel({ active, workspaceSync, refreshNonce, focusGrocy
               return (
                 <div className="grocy-dead-letter-row" key={record.id}>
                   <div><div className="grocy-task-state-line"><strong>{record.canonical_name}</strong><span className="grocy-task-state-badge grocy-task-state-retry">다시 시도할 수 있어요</span></div><small><MetadataText text={<>{operationLabel(record)} · {externalInventoryDetail(record.last_error ?? record.last_dead_letter_error, "재고 앱에 추가하지 못했어요.")}</>} /></small></div>
-                  <button className="grocy-save-button" type="button" disabled={busy} aria-busy={busy} onPointerDown={(event) => { event.preventDefault(); keyboard.hide(); void retryOutbox(record); }} onClick={(event) => { if (event.detail === 0) void retryOutbox(record); }}>{busy ? "재시도 중" : "재시도"}</button>
+                  <button className="grocy-save-button" type="button" disabled={busy} aria-busy={busy} onPointerDown={(event) => event.preventDefault()} onClick={() => { keyboard.hide(); void retryOutbox(record); }}>{busy ? "재시도 중" : "재시도"}</button>
                 <GrocyOutboxDetail record={record} onOpenFoodFromSync={onOpenFoodFromSync} />
                 </div>
               );
@@ -2077,8 +2276,8 @@ function GrocyIntegrationPanel({ active, workspaceSync, refreshNonce, focusGrocy
 
       <div className={`grocy-outbox-card grocy-outbox-card-${outboxCardState}`} data-outbox-overall-state={outboxCardState} data-sync-state={outboxCardState === "pending" ? "queued" : outboxCardState === "processing" ? "processing" : outboxCardState === "clear" ? "applied" : "action_required"} data-outbox-attention-count={blockedOutbox.length + reconciliationOutbox.length + deadLetterOutbox.length} data-outbox-pending-count={pendingOutbox.length} data-outbox-processing-count={inFlightOutbox.length} data-outbox-applied-count={recentlySucceededOutbox.length} role="group" aria-live="polite" aria-atomic="true" aria-relevant="text" aria-busy={processing || inFlightOutbox.length > 0} aria-label={`재고 앱 목록 · ${outboxCardHeading} · ${outboxCardSummary}`}>
         <div><strong>{outboxCardHeading}</strong><small>{outboxCardSummary}</small></div>
-        {inFlightOutbox.length ? <button className="grocy-refresh-button" type="button" disabled={scanning} onPointerDown={(event) => { event.preventDefault(); keyboard.hide(); void scanReconciliation(); }} onClick={(event) => { if (event.detail === 0) void scanReconciliation(); }}>{scanning ? "재고 앱을 확인하는 중" : "재고 앱에서 추가됐는지 확인"}</button> : null}
-          <button ref={processOutboxButtonRef} className="secondary-sheet-button grocy-process-button" type="button" disabled={status?.configured !== true || !pendingOutbox.length || processing} aria-busy={processing} onPointerDown={(event) => { event.preventDefault(); keyboard.hide(); void processOutbox(); }} onClick={(event) => { if (event.detail === 0) void processOutbox(); }}>{processing || inFlightOutbox.length ? "재고 앱에 추가하는 중" : pendingOutbox.length ? "지금 추가하기" : recentlySucceededOutbox.length ? "추가했어요" : "지금 추가하기"}{pendingOutbox.length ? <ArrowRightIcon width={15} height={15} /> : <CheckCircledIcon width={15} height={15} />}</button>
+        {inFlightOutbox.length ? <button className="grocy-refresh-button" type="button" disabled={scanning} onPointerDown={(event) => event.preventDefault()} onClick={() => { keyboard.hide(); void scanReconciliation(); }}>{scanning ? "재고 앱을 확인하는 중" : "재고 앱에서 추가됐는지 확인"}</button> : null}
+          <button ref={processOutboxButtonRef} className="secondary-sheet-button grocy-process-button" type="button" disabled={status?.configured !== true || !pendingOutbox.length || processing} aria-busy={processing} onPointerDown={(event) => event.preventDefault()} onClick={() => { keyboard.hide(); void processOutbox(); }}>{processing || inFlightOutbox.length ? "재고 앱에 추가하는 중" : pendingOutbox.length ? "지금 추가하기" : recentlySucceededOutbox.length ? "추가했어요" : "지금 추가하기"}{pendingOutbox.length ? <ArrowRightIcon width={15} height={15} /> : <CheckCircledIcon width={15} height={15} />}</button>
       </div>
         </div>
       </details>
@@ -2090,6 +2289,9 @@ export default function AccountSheet({
   onReturnToApp,
   active = false,
   initialPasswordResetToken,
+  focusNotificationSettings = false,
+  notificationDraft,
+  onNotificationDraftChange,
   workspaceSync,
   workspaceTransport,
   remoteRefreshRequired = false,
@@ -2102,12 +2304,16 @@ export default function AccountSheet({
   onReturnToNotification,
   onOpenFoodFromSync,
   onAuthenticated,
+  onAccountSessionStarted,
   onSignedOut,
   onAccountDeleted,
 }: {
   onReturnToApp?: () => void;
   active?: boolean;
   initialPasswordResetToken?: string;
+  focusNotificationSettings?: boolean;
+  notificationDraft?: NotificationSettingsDraft | null;
+  onNotificationDraftChange?: (draft: NotificationSettingsDraft | null) => void;
   workspaceSync: WorkspaceSyncCoordinator;
   workspaceTransport: WorkspaceSyncTransport | null;
   remoteRefreshRequired?: boolean;
@@ -2120,6 +2326,7 @@ export default function AccountSheet({
   onOpenFoodFromSync?: (foodId: string, canonicalName: string, outboxId?: string) => void;
   onRefreshWorkspace?: () => Promise<boolean>;
   onAuthenticated: AuthenticatedCallback;
+  onAccountSessionStarted?: () => void | Promise<void>;
   onSignedOut: () => void | Promise<void>;
   onAccountDeleted?: () => void | Promise<void>;
 }) {
@@ -2130,9 +2337,11 @@ export default function AccountSheet({
   const accountTabRefs = useRef<Record<AccountMode, HTMLButtonElement | null>>({ login: null, register: null });
   const accountEmailRef = useRef<HTMLInputElement | null>(null);
   const accountPasswordRef = useRef<HTMLInputElement | null>(null);
+  const accountAuthErrorRef = useRef<HTMLDivElement | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [authErrorField, setAuthErrorField] = useState<AccountAuthErrorField>(null);
   const [busy, setBusy] = useState(false);
   const [pendingGuestTransfer, setPendingGuestTransfer] = useState<{ session: ApiAuthSession; preview: ApiGuestTransferPreview | null; guestAccessToken: string; message: string } | null>(null);
   const guestTransferPreviewInFlightRef = useRef(false);
@@ -2140,7 +2349,7 @@ export default function AccountSheet({
   const [passwordResetToken] = useState(() => initialPasswordResetToken?.trim() || (typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("reset_token")?.trim() ?? "" : ""));
   const [externalRefreshNonce, setExternalRefreshNonce] = useState(0);
   const panelRefreshNonce = externalRefreshNonce + refreshNonce;
-  const remoteRefreshNotice = remoteRefreshRequired ? <div className="account-error account-remote-refresh" role="alert" aria-busy={remoteRefreshing}><InfoCircledIcon width={16} height={16} /><span><strong>다른 기기에서 계정 설정이 바뀌었어요</strong><small>지금 입력한 내용은 그대로예요. 새 설정을 불러오면 아직 저장하지 않은 내용은 사라질 수 있어요.</small></span><button className="account-error-action" type="button" disabled={remoteRefreshing} aria-busy={remoteRefreshing} onClick={() => onRefreshRemote?.()}>{remoteRefreshing ? "계정 설정 불러오는 중" : "계정 설정 불러오기"}</button></div> : null;
+  const remoteRefreshNotice = remoteRefreshRequired ? <div className="account-error account-remote-refresh" role="alert" aria-busy={remoteRefreshing}><InfoCircledIcon width={16} height={16} /><span><strong>새 계정 설정을 확인해 주세요</strong><small>지금 입력한 내용은 그대로예요. 새 설정을 불러오면 아직 저장하지 않은 내용은 사라질 수 있어요.</small></span><button className="account-error-action" type="button" disabled={remoteRefreshing} aria-busy={remoteRefreshing} onClick={() => onRefreshRemote?.()}>{remoteRefreshing ? "계정 설정 불러오는 중" : "계정 설정 불러오기"}</button></div> : null;
 
   useEffect(() => {
     if (!active || !remoteRefreshRequired || focusGrocyOutboxId) return;
@@ -2163,7 +2372,6 @@ export default function AccountSheet({
       }
     }).catch(() => {
       if (active) {
-        mealApi.clearSession();
         setAuthMe(null);
         setCheckingSession(false);
       }
@@ -2178,7 +2386,7 @@ export default function AccountSheet({
       initialAuthFocusHandledRef.current = false;
       return;
     }
-    if (checkingSession || authMe?.mode === "account" || passwordResetToken) {
+    if (focusNotificationSettings || checkingSession || authMe?.mode === "account" || passwordResetToken) {
       if (authMe?.mode === "account") initialAuthFocusHandledRef.current = false;
       return;
     }
@@ -2188,18 +2396,20 @@ export default function AccountSheet({
       initialAuthFocusHandledRef.current = true;
     }, 120);
     return () => window.clearTimeout(timer);
-  }, [active, authMe, checkingSession, mode, passwordResetToken]);
+  }, [active, authMe, checkingSession, focusNotificationSettings, mode, passwordResetToken]);
 
   useEffect(() => {
-    if (!error || busy || checkingSession || authMe?.mode === "account" || passwordResetToken) return;
+    if (!active || !error || busy || checkingSession || authMe?.mode === "account" || passwordResetToken) return;
     const frame = window.requestAnimationFrame(() => {
-      const target = mode === "register" && error.includes("이미 가입된 이메일")
+      const target = authErrorField === "email"
         ? accountEmailRef.current
-        : accountPasswordRef.current;
+        : authErrorField === "password" || authErrorField === "credentials"
+          ? accountPasswordRef.current
+          : accountAuthErrorRef.current;
       target?.focus({ preventScroll: true });
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [authMe, busy, checkingSession, error, mode, passwordResetToken]);
+  }, [active, authErrorField, authMe, busy, checkingSession, error, mode, passwordResetToken]);
 
   useEffect(() => {
     if (!workspaceTransport) return;
@@ -2231,6 +2441,8 @@ export default function AccountSheet({
       const hasGuestRecords = hasGuestTransferRecords(preview);
       if (preview.status === "ready" && hasGuestRecords) {
         setPendingGuestTransfer({ session, preview, guestAccessToken: storedTransfer.guest_access_token, message: preview.message });
+      } else if (preview.status === "conflict" && hasGuestRecords) {
+        setPendingGuestTransfer({ session, preview, guestAccessToken: storedTransfer.guest_access_token, message: preview.message });
       } else {
         clearStoredGuestTransfer();
       }
@@ -2243,26 +2455,40 @@ export default function AccountSheet({
     };
   }, [authMe, passwordResetToken, pendingGuestTransfer]);
 
+  const changeAuthInput = (field: "email" | "password", value: string) => {
+    if (busy) return;
+    if (field === "email") setEmail(value);
+    else setPassword(value);
+    if (accountAuthErrorAffectedByEdit(authErrorField, field)) {
+      setError("");
+      setAuthErrorField(null);
+    }
+  };
+
   const submit = async () => {
+    if (busy) return;
     keyboard.hide();
     setError("");
+    setAuthErrorField(null);
     if (!mealApi.isConfigured) {
       setError("서비스에 연결한 뒤 계정 기능을 사용할 수 있어요.");
       return;
     }
     if (password.length < 8) {
       setError("비밀번호는 8자 이상 입력해 주세요.");
+      setAuthErrorField("password");
       return;
     }
     setBusy(true);
     try {
-      const guestAccessToken = mode === "register" ? mealApi.guestToken : null;
+      const guestAccessToken = mealApi.guestToken;
       const session = mode === "login"
         ? await mealApi.loginAccount({ email, password })
         : await mealApi.registerAccount({ email, password });
       if (!session) throw new Error("account-session-missing");
+      await onAccountSessionStarted?.();
       setAuthMe({ mode: "account", user_id: session.user_id, email: session.email, workspace_id: session.workspace_id, role: session.role });
-      if (mode === "register" && guestAccessToken) {
+      if (guestAccessToken) {
         storeGuestTransfer(guestAccessToken, session.workspace_id);
         guestTransferPreviewInFlightRef.current = true;
         let preview: ApiGuestTransferPreview;
@@ -2280,17 +2506,15 @@ export default function AccountSheet({
           return;
         }
         if (preview?.status === "conflict" && hasGuestRecords) {
-          setPendingGuestTransfer({ session, preview: null, guestAccessToken, message: preview.message });
+          setPendingGuestTransfer({ session, preview, guestAccessToken, message: preview.message });
           return;
         }
       }
       await onAuthenticated(session);
     } catch (reason) {
-      setError(reason instanceof MealApiError && reason.status === 409
-        ? "이미 가입된 이메일이에요."
-        : mode === "login"
-          ? "이메일 또는 비밀번호를 확인해 주세요."
-          : "계정을 만들지 못했어요. 잠시 후 다시 시도해 주세요.");
+      const presentation = accountAuthErrorPresentation(mode, reason instanceof MealApiError ? reason.status : null);
+      setError(presentation.message);
+      setAuthErrorField(presentation.field);
     } finally {
       setBusy(false);
     }
@@ -2298,8 +2522,10 @@ export default function AccountSheet({
 
   const accountTabOrder: AccountMode[] = ["login", "register"];
   const focusAccountTab = (nextMode: AccountMode) => {
+    if (busy) return;
     setMode(nextMode);
     setError("");
+    setAuthErrorField(null);
     window.requestAnimationFrame(() => accountTabRefs.current[nextMode]?.focus());
   };
   const handleAccountTabKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
@@ -2343,6 +2569,10 @@ export default function AccountSheet({
     return <div className="account-sheet-content"><div className="account-lead"><div className="capture-visual compact"><ReaderIcon width={23} height={23} /></div><div><h3>계정 비밀번호 재설정</h3><p>메일 링크를 확인하고 새 비밀번호를 설정해 주세요.</p></div></div><PasswordRecoveryPanel initialToken={passwordResetToken} onAuthenticated={onAuthenticated} /></div>;
   }
 
+  if (focusNotificationSettings) {
+    return <section className="account-sheet-content">{remoteRefreshNotice}<NotificationPreferencesPanel standalone initialDraft={notificationDraft} onDraftChange={onNotificationDraftChange} workspaceSync={workspaceSync} refreshNonce={panelRefreshNonce} /></section>;
+  }
+
   if (authMe?.mode === "account" && authMe.email) {
     const finishAuthentication = async (successMessage?: string) => {
       if (!pendingGuestTransfer) return;
@@ -2366,7 +2596,7 @@ export default function AccountSheet({
         return;
       }
       if (preview.status === "conflict" && hasGuestRecords) {
-        setPendingGuestTransfer((current) => current ? { ...current, preview: null, message: preview.message } : current);
+        setPendingGuestTransfer((current) => current ? { ...current, preview, message: preview.message } : current);
         return;
       }
       clearStoredGuestTransfer();
@@ -2393,46 +2623,38 @@ export default function AccountSheet({
 
     return (
       <div className="account-sheet-content" aria-busy={checkingSession || busy || remoteRefreshing}>
-        <div className="account-lead"><div className="capture-visual compact"><CheckCircledIcon width={23} height={23} /></div><div><h3>계정에 연결됨</h3><p>{authMe.email}의 식품 기록을 이어가고 있어요.</p></div></div>
-        <div className="account-profile"><span className="account-profile-icon"><ReaderIcon width={18} height={18} /></span><span><strong>{authMe.email}</strong><small>{authMe.role === "recipe_admin" ? "레시피 운영자 권한이 있어요." : "다른 기기에서도 같은 식품 기록을 볼 수 있어요."}</small></span></div>
+        <div className="account-profile"><span className="account-profile-icon"><PersonIcon width={18} height={18} /></span><span><strong>{authMe.email}</strong>{authMe.role === "recipe_admin" ? <small>레시피 운영자 권한이 있어요.</small> : null}</span></div>
         {remoteRefreshNotice}
         {returnToNotification ? <div className="account-remote-refresh" role="note"><InfoCircledIcon width={15} height={15} /><span><strong>알림에서 열어 온 식품이에요</strong><small>재고 앱 기록을 닫으면 원래 알림으로 돌아가요.</small></span>{onReturnToNotification ? <button className="grocy-refresh-button" type="button" onClick={onReturnToNotification}>알림으로 돌아가기</button> : null}</div> : null}
         {authMe.account_status === "deleting" ? <div className="account-error" role="alert"><InfoCircledIcon width={16} height={16} /><span>이 계정의 삭제 작업이 아직 끝나지 않았어요. 아래 계정 삭제에서 같은 비밀번호와 DELETE를 입력해 다시 시도해 주세요.</span></div> : null}
-        {pendingGuestTransfer ? pendingGuestTransfer.preview ? <GuestTransferPanel preview={pendingGuestTransfer.preview} onImport={importGuestWorkspace} onSkip={skipGuestWorkspace} onConflict={retryGuestTransferPreview} /> : <GuestTransferRetryPanel message={pendingGuestTransfer.message} onRetry={retryGuestTransferPreview} onSkip={skipGuestWorkspace} /> : null}
+        {pendingGuestTransfer ? pendingGuestTransfer.preview?.status === "ready" ? <GuestTransferPanel preview={pendingGuestTransfer.preview} onImport={importGuestWorkspace} onSkip={skipGuestWorkspace} onConflict={retryGuestTransferPreview} /> : <GuestTransferRetryPanel conflict={pendingGuestTransfer.preview?.status === "conflict"} message={pendingGuestTransfer.message} onRetry={retryGuestTransferPreview} onSkip={skipGuestWorkspace} /> : null}
+        <p className="section-kicker">식품 기록 설정</p>
+        {mealApi.isConfigured ? <AccountStorageDisclosure key={`storage-locations:${authMe.workspace_id}`} workspaceSync={workspaceSync} refreshNonce={panelRefreshNonce} /> : null}
+        {mealApi.isConfigured ? <AccountNotificationDisclosure initialDraft={notificationDraft} onDraftChange={onNotificationDraftChange} key={`notification-preferences:${authMe.workspace_id}`} workspaceSync={workspaceSync} refreshNonce={panelRefreshNonce} /> : null}
+        {mealApi.isConfigured ? <AccountArchiveDisclosure key={`account-archive:${authMe.workspace_id}`} workspaceSync={workspaceSync} refreshNonce={panelRefreshNonce} /> : null}
+        {mealApi.isConfigured ? <AccountIntegrationDisclosure key={`grocy:${authMe.workspace_id}`} forceOpen={Boolean(focusGrocyOutboxId || returnToNotification)} render={(open) => <GrocyIntegrationPanel active={active && open} workspaceSync={workspaceSync} refreshNonce={panelRefreshNonce} focusGrocyOutboxId={focusGrocyOutboxId} returnToNotification={returnToNotification} onReturnToNotification={onReturnToNotification} onOpenFoodFromSync={onOpenFoodFromSync} onRefreshWorkspace={onRefreshWorkspace} />} /> : null}
         <p className="section-kicker">계정 보안</p>
         <PasswordChangePanel />
         <AccountDeletionPanel onDeleted={onAccountDeleted ?? deleteAccountAndSignOut} />
-        <p className="section-kicker">식품 기록 설정</p>
-        {mealApi.isConfigured ? <AccountStorageDisclosure key={`storage-locations:${authMe.workspace_id}`} workspaceSync={workspaceSync} refreshNonce={panelRefreshNonce} /> : null}
-        {mealApi.isConfigured ? <AccountNotificationDisclosure key={`notification-preferences:${authMe.workspace_id}`} workspaceSync={workspaceSync} refreshNonce={panelRefreshNonce} /> : null}
-        {mealApi.isConfigured ? <AccountArchiveDisclosure key={`account-archive:${authMe.workspace_id}`} workspaceSync={workspaceSync} refreshNonce={panelRefreshNonce} /> : null}
-        <p className="section-kicker">재고 앱 연결</p>
-        {mealApi.isConfigured ? <GrocyIntegrationPanel key={`grocy:${authMe.workspace_id}`} active={active} workspaceSync={workspaceSync} refreshNonce={panelRefreshNonce} focusGrocyOutboxId={focusGrocyOutboxId} returnToNotification={returnToNotification} onReturnToNotification={onReturnToNotification} onOpenFoodFromSync={onOpenFoodFromSync} onRefreshWorkspace={onRefreshWorkspace} /> : null}
         <button className="secondary-sheet-button" type="button" disabled={busy} onClick={() => void signOut()}>로그아웃</button>
         <div className="account-note"><InfoCircledIcon width={15} height={15} /><span>로그아웃하면 새 게스트 기록으로 바뀌어요. 현재 계정 기록은 삭제되지 않아요.</span></div>
       </div>
     );
   }
 
-  const authErrorField = error
-    ? mode === "register" && error.includes("이미 가입된 이메일")
-      ? "email"
-      : error.includes("이메일 또는 비밀번호")
-        ? "credentials"
-        : "password"
-    : null;
 
   return (
     <div className="account-sheet-content" aria-busy={checkingSession || busy || remoteRefreshing}>
       {remoteRefreshNotice}
       {returnToNotification ? <div className="account-remote-refresh" role="note"><InfoCircledIcon width={15} height={15} /><span><strong>알림에서 열어 온 식품이에요</strong><small>재고 앱 기록을 닫으면 원래 알림으로 돌아가요.</small></span>{onReturnToNotification ? <button className="grocy-refresh-button" type="button" onClick={onReturnToNotification}>알림으로 돌아가기</button> : null}</div> : null}
-      {mealApi.isConfigured && hasWorkspaceSession ? <AccountStorageDisclosure key={`storage-locations:${authMe?.workspace_id ?? "anonymous"}`} workspaceSync={workspaceSync} refreshNonce={panelRefreshNonce} /> : null}
-      {mealApi.isConfigured && hasWorkspaceSession ? <AccountNotificationDisclosure key={`notification-preferences:${authMe?.workspace_id ?? "anonymous"}`} workspaceSync={workspaceSync} refreshNonce={panelRefreshNonce} /> : null}
-      {mealApi.isConfigured && hasWorkspaceSession ? <AccountArchiveDisclosure key={`account-archive:${authMe?.workspace_id ?? "anonymous"}`} workspaceSync={workspaceSync} refreshNonce={panelRefreshNonce} /> : null}
-      <div className="account-tabs" role="tablist" aria-label="계정 방법" aria-orientation="horizontal"><button ref={(element) => { accountTabRefs.current.login = element; }} id="account-tab-login" type="button" role="tab" aria-selected={mode === "login"} aria-controls="account-panel-login" tabIndex={mode === "login" ? 0 : -1} className={`account-tab ${mode === "login" ? "account-tab-active" : ""}`} onKeyDown={handleAccountTabKeyDown} onClick={() => focusAccountTab("login")}>로그인</button><button ref={(element) => { accountTabRefs.current.register = element; }} id="account-tab-register" type="button" role="tab" aria-selected={mode === "register"} aria-controls="account-panel-register" tabIndex={mode === "register" ? 0 : -1} className={`account-tab ${mode === "register" ? "account-tab-active" : ""}`} onKeyDown={handleAccountTabKeyDown} onClick={() => focusAccountTab("register")}>회원가입</button></div>
-      <div className="account-tabpanel" id={`account-panel-${mode}`} role="tabpanel" aria-labelledby={`account-tab-${mode}`} tabIndex={0}><form className="account-form" onSubmit={(event) => { event.preventDefault(); void submit(); }}><label className="app-input-label" htmlFor="account-email-input">이메일</label><KeyboardInput ref={accountEmailRef} id="account-email-input" className="app-input" type="email" autoComplete="email" value={email} placeholder="name@example.com" aria-invalid={authErrorField === "email" || authErrorField === "credentials"} aria-describedby={error ? "account-auth-error" : undefined} style={authErrorField === "email" || authErrorField === "credentials" ? { borderColor: "var(--atelier-coral)", boxShadow: "0 0 0 3px color-mix(in srgb, var(--atelier-coral) 12%, transparent)" } : undefined} onChange={(event) => setEmail(event.target.value)} onBlur={() => keyboard.hide()} /><label className="app-input-label" htmlFor="account-password-input">비밀번호</label><KeyboardInput ref={accountPasswordRef} id="account-password-input" className="app-input" type="password" autoComplete={mode === "login" ? "current-password" : "new-password"} value={password} placeholder="8자 이상" aria-invalid={authErrorField === "password" || authErrorField === "credentials"} aria-describedby={error ? "account-auth-error" : undefined} style={authErrorField === "password" || authErrorField === "credentials" ? { borderColor: "var(--atelier-coral)", boxShadow: "0 0 0 3px color-mix(in srgb, var(--atelier-coral) 12%, transparent)" } : undefined} onChange={(event) => setPassword(event.target.value)} onBlur={() => keyboard.hide()} />{error ? <div id="account-auth-error" className="account-error" role="alert"><InfoCircledIcon width={16} height={16} /><span>{error}</span></div> : null}<button className="primary-sheet-button" type="submit" disabled={busy || !email.trim() || !password} onPointerDown={(event) => event.preventDefault()}>{busy ? "확인하는 중이에요" : mode === "login" ? "로그인" : "계정 만들기"}<ArrowRightIcon width={17} height={17} /></button></form></div>
+      <div className="account-tabs" role="tablist" aria-label="계정 방법" aria-orientation="horizontal"><button ref={(element) => { accountTabRefs.current.login = element; }} id="account-tab-login" type="button" role="tab" disabled={busy} aria-selected={mode === "login"} aria-controls="account-panel-login" tabIndex={mode === "login" ? 0 : -1} className={`account-tab ${mode === "login" ? "account-tab-active" : ""}`} onKeyDown={handleAccountTabKeyDown} onClick={() => focusAccountTab("login")}>로그인</button><button ref={(element) => { accountTabRefs.current.register = element; }} id="account-tab-register" type="button" role="tab" disabled={busy} aria-selected={mode === "register"} aria-controls="account-panel-register" tabIndex={mode === "register" ? 0 : -1} className={`account-tab ${mode === "register" ? "account-tab-active" : ""}`} onKeyDown={handleAccountTabKeyDown} onClick={() => focusAccountTab("register")}>회원가입</button></div>
+      <div className="account-tabpanel" id={`account-panel-${mode}`} role="tabpanel" aria-labelledby={`account-tab-${mode}`} tabIndex={0}><form className="account-form" onSubmit={(event) => { event.preventDefault(); void submit(); }}><label className="app-input-label" htmlFor="account-email-input">이메일</label><KeyboardInput ref={accountEmailRef} id="account-email-input" className="app-input" disabled={busy} type="email" autoComplete="email" value={email} placeholder="name@example.com" aria-invalid={authErrorField === "email" || authErrorField === "credentials"} aria-describedby={error ? "account-auth-error" : undefined} style={authErrorField === "email" || authErrorField === "credentials" ? { borderColor: "var(--atelier-coral)", boxShadow: "0 0 0 3px color-mix(in srgb, var(--atelier-coral) 12%, transparent)" } : undefined} onChange={(event) => changeAuthInput("email", event.target.value)} onBlur={() => keyboard.hide()} /><label className="app-input-label" htmlFor="account-password-input">비밀번호</label><KeyboardInput ref={accountPasswordRef} id="account-password-input" className="app-input" disabled={busy} type="password" autoComplete={mode === "login" ? "current-password" : "new-password"} value={password} placeholder={mode === "register" ? "8자 이상" : "비밀번호"} aria-invalid={authErrorField === "password" || authErrorField === "credentials"} aria-describedby={error ? "account-auth-error" : undefined} style={authErrorField === "password" || authErrorField === "credentials" ? { borderColor: "var(--atelier-coral)", boxShadow: "0 0 0 3px color-mix(in srgb, var(--atelier-coral) 12%, transparent)" } : undefined} onChange={(event) => changeAuthInput("password", event.target.value)} onBlur={() => keyboard.hide()} />{error ? <div ref={accountAuthErrorRef} id="account-auth-error" className="account-error" role="alert" tabIndex={-1}><InfoCircledIcon width={16} height={16} /><span>{error}</span></div> : null}<button className="primary-sheet-button" type="submit" disabled={busy || !email.trim() || !password} onPointerDown={(event) => event.preventDefault()}>{busy ? "확인하는 중이에요" : mode === "login" ? "로그인" : "계정 만들기"}<ArrowRightIcon width={17} height={17} /></button></form></div>
       {mode === "login" ? <PasswordRecoveryPanel onAuthenticated={onAuthenticated} /> : null}
       <div className="account-note"><CheckCircledIcon width={15} height={15} /><span style={{ display: "grid", minWidth: 0, gap: 2 }}><strong style={{ color: "var(--atelier-ink)", fontSize: 12, fontWeight: 600 }}>게스트 기록은 그대로예요</strong><small style={{ color: "var(--atelier-muted)", fontSize: 12, lineHeight: 1.45 }}>옮길 내용을 먼저 살펴볼 수 있어요.</small></span></div>
+      {mealApi.isConfigured && hasWorkspaceSession ? <p className="section-kicker">게스트 기록 설정</p> : null}
+      {mealApi.isConfigured && hasWorkspaceSession ? <AccountStorageDisclosure key={`storage-locations:${authMe?.workspace_id ?? "anonymous"}`} workspaceSync={workspaceSync} refreshNonce={panelRefreshNonce} /> : null}
+      {mealApi.isConfigured && hasWorkspaceSession ? <AccountNotificationDisclosure initialDraft={notificationDraft} onDraftChange={onNotificationDraftChange} key={`notification-preferences:${authMe?.workspace_id ?? "anonymous"}`} workspaceSync={workspaceSync} refreshNonce={panelRefreshNonce} /> : null}
+      {mealApi.isConfigured && hasWorkspaceSession ? <AccountArchiveDisclosure key={`account-archive:${authMe?.workspace_id ?? "anonymous"}`} workspaceSync={workspaceSync} refreshNonce={panelRefreshNonce} /> : null}
     </div>
   );
 }

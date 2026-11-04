@@ -1,8 +1,9 @@
 export type AuthoritativeMutationOptions<T> = {
   operation: string;
-  mutate: () => Promise<T | null | undefined>;
+  mutate: (assertCurrent: () => void) => Promise<T | null | undefined>;
   apply: (value: T) => void;
   sync: () => Promise<boolean>;
+  isCurrent?: () => boolean;
 };
 
 export type AuthoritativeMutationResult<T> = {
@@ -21,6 +22,15 @@ export class AuthoritativeMutationResponseError extends Error {
   }
 }
 
+export class MutationScopeChangedError extends Error {
+  readonly operation: string;
+  constructor(operation: string) {
+    super(`${operation}-workspace-changed`);
+    this.name = "MutationScopeChangedError";
+    this.operation = operation;
+  }
+}
+
 /**
  * Keeps a successful write visible when the follow-up workspace read is stale
  * or unavailable. The mutation response is applied before the read, and once
@@ -31,8 +41,20 @@ export async function runAuthoritativeMutation<T>({
   mutate,
   apply,
   sync,
+  isCurrent = () => true,
 }: AuthoritativeMutationOptions<T>): Promise<AuthoritativeMutationResult<T>> {
-  const value = await mutate();
+  const ensureCurrent = () => {
+    if (!isCurrent()) throw new MutationScopeChangedError(operation);
+  };
+  ensureCurrent();
+  let value: T | null | undefined;
+  try {
+    value = await mutate(ensureCurrent);
+  } catch (error) {
+    ensureCurrent();
+    throw error;
+  }
+  ensureCurrent();
   if (value === null || value === undefined) throw new AuthoritativeMutationResponseError(operation);
 
   apply(value);
@@ -43,6 +65,7 @@ export async function runAuthoritativeMutation<T>({
   } catch (error) {
     readbackError = error;
   }
+  ensureCurrent();
   if (!synced) apply(value);
   return { value, synced, readbackError };
 }

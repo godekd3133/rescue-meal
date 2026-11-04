@@ -1,11 +1,29 @@
+import { confirmedDateReadbackMatches } from "./dateMutationReadback";
+import { selectHomePriorityFoods } from "./homePriorityFoods";
+import { requiredInventoryTailSpace } from "./inventoryNavigationLayout";
+import { FoodPhoto } from "./FoodPhoto";
+import { contentNavigationPosition } from "./contentNavigationPosition";
+import { inventorySearchPhase } from "./inventorySearchPhase";
+import { revealAndFocusWithinNearestContainer as revealAndFocus } from "./appScroll";
+import { storageLocationSummary } from "./storageLocationPresentation";
+import { accountRevisionStatus } from "./accountRevision";
+import type { NotificationSettingsDraft } from "./notificationSettingsDraft";
+import { keyboardSafeSheetSnap } from "./keyboardSheetPresentation";
+import { useMobileDevice } from "./mobile/Device";
+import { dismissToastForNavigation, isRecoveryToastAction, toastFeedbackState } from "./toastNavigation";
+import { foodIdentityParts } from "./foodBrandPresentation";
+import { FOOD_IMAGES, imageForFoodName, imageForKnownFoodName } from "./foodPhotos";
+import type { FoodDetailGuidanceDraft } from "./FoodDetailSheet";
+import { MealApiError } from "./mealApi";
 import { Metadata, MetadataText } from "./Metadata";
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from "react";
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from "react";
 import { MotionConfig } from "motion/react";
 import {
   ArchiveIcon,
   ArrowRightIcon,
   BellIcon,
   CalendarIcon,
+  ClockIcon,
   CameraIcon,
   CheckCircledIcon,
   CheckIcon,
@@ -25,24 +43,32 @@ import {
   SunIcon,
   UploadIcon,
 } from "@radix-ui/react-icons";
-import { KeyboardInput, useKeyboard } from "./mobile/Keyboard";
+import { KeyboardInput, useKeyboard, useKeyboardInsets } from "./mobile/Keyboard";
 import { MobileScroll } from "./mobile/MobileScroll";
 import { getMobileScrollBehavior } from "./mobile/scroll";
 import { scrollTargetWithinContainer, scrollTargetWithinNearestContainer, targetScrollTop } from "./appScroll";
 import ConnectionStatus from "./ConnectionStatus";
-import { createReceiptCommitIdempotencyKey, isMealApiAuthError, isMealApiConflictError, isMealApiFoodDateConfirmedError, isMealApiFoodDatePersistenceError, isMealApiFoodLotSelectionError, isMealApiFoodLotTargetMissingError, isMealApiManualFoodPersistenceError, isMealApiNotificationReadPersistenceError, isMealApiProductInfoPersistenceError, isMealApiProductProvenancePersistenceError, isMealApiReceiptCommitPersistenceError, isMealApiShoppingListPersistenceError, isMealApiShoppingReceivePersistenceError, isMealApiStorageEventPersistenceError, isMealApiWorkspaceConflictError, MEAL_API_WORKSPACE_CONFLICT_MESSAGE, mealApi, type ApiDateKind, type ApiFood, type ApiGrocySyncStatus, type ApiNotification, type ApiOcrReviewObservation, type ApiProductProvenance, type ApiReceiptDraft, type ApiReceiptSummary, type ApiShoppingListItem, type ApiStorageLocation, type ApiStorageType } from "./mealApi";
+import { createReceiptCommitIdempotencyKey, isMealApiAuthError, isMealApiConflictError, isMealApiFoodDateConfirmedError, isMealApiFoodDatePersistenceError, isMealApiFoodLotSelectionError, isMealApiFoodLotTargetMissingError, isMealApiManualFoodPersistenceError, isMealApiNotificationReadPersistenceError, isMealApiProductInfoPersistenceError, isMealApiProductProvenancePersistenceError, isMealApiReceiptCommitPersistenceError, isMealApiShoppingListPersistenceError, isMealApiShoppingReceivePersistenceError, isMealApiShoppingPurchaseRecordedError, isMealApiStorageEventPersistenceError, isMealApiWorkspaceConflictError, MEAL_API_WORKSPACE_CONFLICT_MESSAGE, mealApi, type ApiDashboard, type ApiDateKind, type ApiFood, type ApiGrocySyncStatus, type ApiNotification, type ApiOcrReviewObservation, type ApiProductProvenance, type ApiReceiptDraft, type ApiReceiptSummary, type ApiShoppingListItem, type ApiStorageLocation, type ApiStorageType } from "./mealApi";
 import RuntimeConfigurationGuard from "./RuntimeConfigurationGuard";
 import RuntimeErrorBoundary from "./RuntimeErrorBoundary";
+import { PORTFOLIO_RECEIPT_LINES } from "./demo/portfolioFixtures";
+import { withKoreanObjectParticle, withKoreanTopicParticle } from "./koreanParticles";
 import InstallPrompt from "./InstallPrompt";
 import ServiceWorkerUpdatePrompt from "./ServiceWorkerUpdatePrompt";
 import { createWorkspaceSyncTransport, WorkspaceSyncCoordinator, type WorkspaceSyncInvalidation, type WorkspaceSyncTransport } from "./workspaceSync";
 import { clearCompletedOutboxHandoff } from "./completedOutboxHandoff";
 import { runAuthoritativeMutation } from "./mutationReadback";
 import { runStorageMutationRecovery } from "./storageMutationRecovery";
-import { getDateBadge, getInventoryDateOriginLabel } from "./datePresentation";
-import { getHomeReviewTopicLabel } from "./homeReviewSummary";
+import { getDateBadge, getInventoryDateOriginLabel, displayedDateSource } from "./datePresentation";
+import "@fontsource/jua/korean-400.css";
+import "@fontsource/jua/latin-400.css";
+import "./freshness.css";
+import FridgeShelves from "./FridgeShelves";
+import { foodFreshness, freshnessChipLabel, freshnessSpokenLabel } from "./freshness";
+import { getHomeReviewTopicLabel, shouldShowHomeDateGuide } from "./homeReviewSummary";
 import { demoCalendarDate } from "./demoCalendarDate";
 import { isValidEventQuantity, parseDisplayQuantity } from "./quantitySelection";
+import { formatQuantityAmount, subtractQuantity } from "./quantityArithmetic";
 
 export type StorageType = "냉장" | "냉동" | "실온";
 type InventoryStorageFilter = StorageType | "전체" | `location:${string}`;
@@ -77,12 +103,12 @@ type NotificationRetryAction = {
   onRetry: () => void;
 };
 type StorageMutationResult = {
+  affectedFoodId?: string;
   statuses: ApiGrocySyncStatus[];
   inventory: ApiFood[] | null;
 };
 type ProductInfoRetryAction = {
   foodId: string;
-  input: { name: string; brand: string; category: string };
   message: string;
 };
 type ProductProvenanceStatus = {
@@ -113,7 +139,11 @@ type PendingMealCompletionFocus = {
   beforeFoodsSignature: string;
   trigger: HTMLElement | null;
 };
+export type FoodSaveResult = { saved: true } | { saved: false; message: string; uncertain?: boolean };
+
 export type FoodItem = {
+  quantityReference?: { amount: number; unit: "g" | "ml" | "개" };
+  quantityUnit?: string;
   id: string;
   lotAction?: "create" | "correct";
   targetFoodId?: string;
@@ -133,11 +163,13 @@ export type FoodItem = {
   storageLocationName?: string;
   dateLabel: string;
   dateDetail: string;
+  priorityDate?: string;
   dateKind: DateKind;
   dateAssertionKind?: ApiDateKind;
   dateStorageHint?: ApiStorageType;
   dateStorageConditionText?: string;
   dateSource: string;
+  dateReviewCorrection?: boolean;
   image: string;
   category: string;
   priority: number;
@@ -155,7 +187,7 @@ export type ReceiptLine = {
   name: string;
   quantity: string;
   unit: string;
-  totalPrice: number;
+  totalPrice: number | null;
   storage: StorageType;
   storageLocationId?: string | null;
   confidence: number;
@@ -188,21 +220,11 @@ type PreparedReceiptLine = {
 };
 
 export type ReceiptCommitPayload = {
+  idempotencyKey?: string;
   lines: ReceiptLine[];
   draftId?: string;
   sourceFilename: string;
 };
-
-const FOOD_IMAGES = {
-  spinach: "/assets/food/spinach-photo.jpg",
-  tofu: "/assets/food/tofu-photo.jpg",
-  chicken: "/assets/food/chicken-photo.jpg",
-  mushroom: "/assets/food/mushroom-photo.jpg",
-  eggs: "/assets/food/eggs-photo.jpg",
-  milk: "/assets/food/milk-photo.jpg",
-  tomato: "/assets/food/tomato-photo.jpg",
-  groceries: "/assets/food/groceries-photo.jpg",
-} as const;
 
 const LEGACY_FOOD_IMAGES: Record<string, string> = {
   "/assets/food/spinach.png": FOOD_IMAGES.spinach,
@@ -245,6 +267,7 @@ function createDemoFoods(referenceDate = new Date()): FoodItem[] {
       quantity: "1모",
       storage: "냉장",
       dateLabel: formatApiDate(demoDate(1)),
+      priorityDate: demoDate(1),
       dateDetail: "먼저 먹기 참고",
       dateKind: "estimated_use_first",
       dateSource: "상품 유형 + 보관 방식",
@@ -270,7 +293,7 @@ function createDemoFoods(referenceDate = new Date()): FoodItem[] {
       category: "육류",
       priority: 3,
       confidence: 0.9,
-      note: "직접 확인한 날짜를 기준으로 보여드려요.",
+      note: "내가 정한 알림 날짜예요.",
       opened: false,
     },
     {
@@ -283,6 +306,7 @@ function createDemoFoods(referenceDate = new Date()): FoodItem[] {
       purchasedAt: `${demoDate(-2)}T13:20:00+09:00`,
       storage: "냉장",
       dateLabel: formatApiDate(demoDate(2)),
+      priorityDate: demoDate(2),
       dateDetail: "먼저 먹기 참고",
       dateKind: "estimated_use_first",
       dateSource: "영수증 + 상품 유형",
@@ -317,6 +341,7 @@ function createDemoFoods(referenceDate = new Date()): FoodItem[] {
       quantity: "1개",
       storage: "냉장",
       dateLabel: formatApiDate(demoDate(3)),
+      priorityDate: demoDate(3),
       dateDetail: "먼저 먹기 참고",
       dateKind: "estimated_use_first",
       dateSource: "영수증 + 상품 유형",
@@ -334,6 +359,7 @@ function createDemoFoods(referenceDate = new Date()): FoodItem[] {
       quantity: "1팩",
       storage: "실온",
       dateLabel: formatApiDate(demoDate(3)),
+      priorityDate: demoDate(3),
       dateDetail: "먼저 먹기 참고",
       dateKind: "estimated_use_first",
       dateSource: "상품 유형 + 보관 방식",
@@ -378,17 +404,9 @@ function withServerReadbackNotice(base: string, synced: boolean) {
 
 function mealCompletionMessage(foodIds: string[], skippedCount: number, consumedAllocations: Array<{ food_id: string; quantity: number }>) {
   const consumedCount = Math.max(foodIds.length, consumedAllocations.filter((allocation) => allocation.quantity > 0).length);
-  if (skippedCount > 0) return `조리를 기록했어요. 재료 ${consumedCount}가지를 사용했고 ${skippedCount}가지는 식품 목록에 남겼어요.`;
-  if (consumedCount > 0) return `조리를 기록했어요. 재료 ${consumedCount}가지를 사용했어요.`;
+  if (skippedCount > 0) return `조리 완료로 기록했어요. 사용한 양만큼 보관 수량을 줄였어요. ${skippedCount}가지는 이번 기록에서 제외했어요.`;
+  if (consumedCount > 0) return "조리 완료로 기록했어요. 사용한 양만큼 보관 수량을 줄였어요.";
   return "조리를 완료했다고 기록했어요.";
-}
-
-function withKoreanObjectParticle(value: string) {
-  const trimmed = value.trim();
-  if (!trimmed) return value;
-  const lastCodePoint = trimmed.charCodeAt(trimmed.length - 1);
-  const hasFinalConsonant = lastCodePoint >= 0xac00 && lastCodePoint <= 0xd7a3 && (lastCodePoint - 0xac00) % 28 !== 0;
-  return `${trimmed}${hasFinalConsonant ? "을" : "를"}`;
 }
 
 function addedFoodFollowUpLabel(food: FoodItem) {
@@ -435,6 +453,10 @@ const RECEIPT_LINES: ReceiptLine[] = [
   },
 ];
 
+const SAMPLE_RECEIPT_LINES: ReceiptLine[] = import.meta.env.VITE_PORTFOLIO_DEMO === "1"
+  ? PORTFOLIO_RECEIPT_LINES.map(({ imageKey, ...line }) => ({ ...line, storage: line.storage as StorageType, image: FOOD_IMAGES[imageKey] }))
+  : RECEIPT_LINES;
+
 const RECEIPT_SOURCE_REVIEW_FIXTURE = {
   source: "샘플 영수증",
   merchantName: "익명 동네마트",
@@ -459,6 +481,7 @@ const RECEIPT_SOURCE_UNMAPPED_FIXTURE = {
 const STORAGE_OPTIONS: StorageType[] = ["냉장", "냉동", "실온"];
 const THEME_STORAGE_KEY = "rescue-meal.theme";
 const IS_WEB_SURFACE = ((import.meta.env.VITE_APP_SHELL as string | undefined)?.trim().toLowerCase() ?? "web") === "web";
+const IS_PREVIEW_SURFACE = (import.meta.env.VITE_APP_SHELL as string | undefined)?.trim().toLowerCase() === "preview";
 const BarcodeScanner = lazy(() => import("./BarcodeScanner"));
 const loadBottomSheet = () => import("./mobile/BottomSheet").then(({ BottomSheet }) => ({ default: BottomSheet }));
 const LazyBottomSheet = lazy(loadBottomSheet);
@@ -477,13 +500,20 @@ const FoodDetailSheet = lazy(() => import("./FoodDetailSheet"));
 
 function DeferredBottomSheet({ open, onOpenChange, title, description, snap, children }: { open: boolean; onOpenChange: (open: boolean) => void; title: string; description?: string; snap?: number; children: ReactNode }) {
   const [hasOpened, setHasOpened] = useState(open);
+  const { device } = useMobileDevice();
+  const { keyboardHeight } = useKeyboardInsets();
+  const sheetSnap = IS_PREVIEW_SURFACE ? keyboardSafeSheetSnap(snap, device.geometry.screen.height, device.geometry.safeArea.top, keyboardHeight,
+    device.platform === "android" ? Math.max(device.geometry.safeArea.bottom, keyboardHeight) : keyboardHeight) : snap;
 
   useEffect(() => {
     if (open) setHasOpened(true);
   }, [open]);
 
   if (!hasOpened) return null;
-  return <Suspense fallback={open ? <ProcessingState label="화면을 준비하고 있어요" detail="잠시만 기다려 주세요." /> : null}><LazyBottomSheet open={open} onOpenChange={onOpenChange} title={title} description={description} snap={snap}>{children}</LazyBottomSheet></Suspense>;
+  return <div style={{ display: "contents" }} onPointerDownCapture={(event) => {
+    // Keep the close target stationary until its click dismisses the keyboard.
+    if (event.target instanceof Element && event.target.closest(".sheet-close-button")) event.preventDefault();
+  }}><Suspense fallback={open ? <ProcessingState label="화면을 준비하고 있어요" detail="잠시만 기다려 주세요." /> : null}><LazyBottomSheet open={open} onOpenChange={onOpenChange} title={title} description={description} snap={sheetSnap}>{children}</LazyBottomSheet></Suspense></div>;
 }
 
 function ReceiptReviewQueue({ receipts, onSelect, onAddReceipt, notice }: { receipts: ApiReceiptSummary[]; onSelect: (receiptId: string) => void; onAddReceipt: () => void; notice?: string }) {
@@ -497,7 +527,7 @@ function ReceiptReviewQueue({ receipts, onSelect, onAddReceipt, notice }: { rece
       {receipts.length ? <div className="receipt-review-queue-list" role="list" aria-label="살펴볼 영수증 목록">
         {receipts.map((receipt) => <div role="listitem" key={receipt.id}><button className="receipt-review-queue-row" type="button" onClick={() => onSelect(receipt.id)}>
           <span className="receipt-review-queue-row-icon"><FileTextIcon width={16} height={16} /></span>
-          <span className="receipt-review-queue-row-copy"><strong>{receipt.merchant_name ?? "저장된 영수증"}</strong><small><MetadataText text={<>{formatPurchasedAt(receipt.purchased_at) ?? "구매일 미등록"} · 상품 {receipt.line_count}개</>} /></small></span>
+          <span className="receipt-review-queue-row-copy"><strong>{receipt.merchant_name ?? "저장된 영수증"}</strong><small><MetadataText text={<>{formatPurchasedAt(receipt.purchased_at) ?? "구매일 미등록"} · 항목 {receipt.line_count}개</>} /></small></span>
           <span className="receipt-review-queue-row-action">이어서 살펴보기 <ChevronRightIcon width={14} height={14} /></span>
         </button></div>)}
       </div> : <div className="receipt-review-queue-empty" role="status"><strong>살펴볼 영수증이 없어요</strong><small>새 영수증을 추가해 식품을 기록해 보세요.</small><button className="secondary-sheet-button" type="button" onClick={onAddReceipt}><PlusIcon width={15} height={15} /> 영수증 추가</button></div>}
@@ -602,10 +632,11 @@ function createFood(input: Partial<FoodItem> & Pick<FoodItem, "name">): FoodItem
     id: createId("food"),
     lotAction: input.lotAction,
     targetFoodId: input.targetFoodId,
+    dateReviewCorrection: input.dateReviewCorrection,
     purchaseSource: input.purchaseSource,
     purchasedAt: input.purchasedAt,
     name: input.name,
-    brand: input.brand ?? "직접 추가한 식품",
+    brand: input.brand ?? "",
     quantity: input.quantity ?? "1개",
     storage: input.storage ?? "냉장",
     storageLocationId: input.storageLocationId,
@@ -654,7 +685,15 @@ function formatApiDate(value: string | null) {
   if (days === 0) return "오늘";
   if (days === 1) return "내일";
   if (days === 2) return "모레";
+  if (days === -1) return "어제";
+  if (days < -1 && days >= -30) return `${-days}일 전`;
   return `${month}월 ${day}일`;
+}
+
+function FreshnessChip({ food, referenceDate }: { food: FoodItem; referenceDate: Date }) {
+  const freshness = foodFreshness(food, referenceDate);
+  const text = freshness.daysLeft !== null && (freshness.daysLeft > 7 || freshness.daysLeft < -30) ? food.dateLabel : freshnessChipLabel(freshness);
+  return <strong className={`freshness-chip freshness-${freshness.bucket}`} data-estimated={freshness.estimated} aria-label={freshnessSpokenLabel(freshness)}>{text}</strong>;
 }
 
 function formatTodayEyebrow(value: Date) {
@@ -689,7 +728,7 @@ function mealPlanHint(priorityFoods: FoodItem[], foodCount: number, priorityNeed
   if (priorityNeedsReviewCount > 0) return `날짜나 보관 방법을 살펴볼 식품 ${priorityNeedsReviewCount}개`;
   const names = priorityFoods.slice(0, 3).map((food) => food.name);
   const suffix = priorityFoods.length > names.length ? ` 외 ${priorityFoods.length - names.length}개` : "";
-  return `${names.join("·")}${suffix}을 먼저 써볼까요?`;
+  return `${withKoreanObjectParticle(`${names.join("·")}${suffix}`)} 먼저 써볼까요?`;
 }
 
 function formatPurchasedAt(value?: string | null) {
@@ -773,19 +812,22 @@ function mapApiFood(food: ApiFood, storageLocations: ApiStorageLocation[] = []):
     } : undefined,
     name: food.display_name,
     brand,
-    quantity: `${food.quantity}${food.unit}`,
+    quantity: `${formatQuantityAmount(food.quantity)}${food.unit}`,
+    quantityUnit: food.unit,
+    quantityReference: food.quantity_reference ?? undefined,
     storage: storageFromApi(food.storage_type),
     storageLocationId: food.storage_location_id ?? undefined,
     storageLocationName: food.storage_location_id
       ? storageLocations.find((location) => location.id === food.storage_location_id)?.name
       : undefined,
     dateLabel: formatApiDate(displayDate),
+    priorityDate: displayDate ?? undefined,
     dateDetail: food.date_assertion.display_label.replaceAll("-", "."),
     dateKind,
     dateAssertionKind: assertionKind,
     dateStorageHint: food.date_assertion.applicable_storage_type ?? undefined,
     dateStorageConditionText: food.date_assertion.storage_condition_text ?? undefined,
-    dateSource: food.date_assertion.source_detail,
+    dateSource: displayedDateSource(dateKind, food.date_assertion.source_detail, estimate?.basis, food.date_assertion.source),
     image: imageForApiFood(food.display_name, food.image_path),
     category: food.category,
     priority: food.priority,
@@ -837,7 +879,7 @@ function attentionReviewReason(food: FoodItem, referenceDate: Date) {
   return dateReviewReason(food, referenceDate) ?? storageConditionReviewReason(food);
 }
 
-function priorityActionLabel(food: FoodItem, reviewReason: string | null) {
+function priorityActionLabel(reviewReason: string | null) {
   if (reviewReason?.startsWith("보관")) return "보관 확인";
   if (reviewReason) return "날짜 확인";
   return "먼저 살펴보기";
@@ -845,30 +887,6 @@ function priorityActionLabel(food: FoodItem, reviewReason: string | null) {
 
 function quantityParts(quantity: string) {
   return parseDisplayQuantity(quantity) ?? { amount: 0, unit: "개" };
-}
-
-function imageForFoodName(name: string) {
-  if (name.includes("시금치")) return FOOD_IMAGES.spinach;
-  if (name.includes("두부")) return FOOD_IMAGES.tofu;
-  if (name.includes("닭")) return FOOD_IMAGES.chicken;
-  if (name.includes("버섯")) return FOOD_IMAGES.mushroom;
-  if (name.includes("달걀") || name.includes("계란")) return FOOD_IMAGES.eggs;
-  if (name.includes("우유")) return FOOD_IMAGES.milk;
-  if (name.includes("토마토")) return FOOD_IMAGES.tomato;
-  return FOOD_IMAGES.groceries;
-}
-
-function foodSourceSummary(food: FoodItem) {
-  if (food.purchaseSource === "shopping_list") return "장보기";
-  if (food.purchaseSource === "receipt" && !food.brand.trim()) return "영수증";
-  return food.brand;
-}
-
-function imageForKnownFoodName(name: string) {
-  if (["시금치", "두부", "닭", "버섯", "달걀", "계란", "우유", "토마토"].some((token) => name.includes(token))) {
-    return imageForFoodName(name);
-  }
-  return null;
 }
 
 function imageForApiFood(name: string, imagePath: string) {
@@ -894,14 +912,14 @@ function canonicalReceiptName(value: string) {
 }
 
 function formatReceiptAmount(value: number) {
-  return value.toLocaleString("ko-KR", { maximumFractionDigits: 3 });
+  return formatQuantityAmount(value);
 }
 
 function formatReceiptLineDetail(line: ReceiptLine) {
   const quantity = parseReceiptQuantity(line.quantity);
   const quantityLabel = quantity === null ? line.quantity.trim() || "수량 확인" : formatReceiptAmount(quantity);
   const unitLabel = line.unit.trim() || "단위 확인";
-  return `${quantityLabel}${unitLabel} · ${line.totalPrice.toLocaleString("ko-KR")}원`;
+  return line.totalPrice === null ? `${quantityLabel}${unitLabel}` : `${quantityLabel}${unitLabel} · ${line.totalPrice.toLocaleString("ko-KR")}원`;
 }
 
 function receiptLineError(line: ReceiptLine) {
@@ -981,7 +999,7 @@ function PrototypeContent() {
   const homeTrustBeforeActions = !IS_WEB_SURFACE || isCompactWebViewport;
   const [themeMode, setThemeMode] = useState<ThemeMode>(getInitialTheme);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (typeof document === "undefined") return;
 
     document.documentElement.dataset.rescueTheme = themeMode;
@@ -1020,7 +1038,7 @@ function PrototypeContent() {
   // dashboard cache may be shown in the offline branch below. Demo mode keeps
   // its fixture fallback so local connected E2E and product walkthroughs can
   // exercise the UI without pretending to be a user's workspace.
-  const [foods, setFoods] = useState<FoodItem[]>(() => mealApi.deploymentMode === "production" ? [] : createDemoFoods());
+  const [foods, setFoods] = useState<FoodItem[]>(() => mealApi.isConfigured || mealApi.deploymentMode === "production" ? [] : createDemoFoods());
   const [storageLocations, setStorageLocations] = useState<ApiStorageLocation[]>([]);
   const storageLocationsRef = useRef<ApiStorageLocation[]>([]);
   const updateStorageLocations = (nextStorageLocations: ApiStorageLocation[]) => {
@@ -1043,17 +1061,21 @@ function PrototypeContent() {
   const mealDetailReturnRef = useRef(false);
   const mealDetailReturnFocusIdRef = useRef<string | null>(null);
   const mealDetailReturnScrollTopRef = useRef<number | null>(null);
-  const mealDetailSessionReturnRef = useRef(false);
+  const mealRelatedSessionReturnRef = useRef(false);
   const accountDetailReturnRef = useRef(false);
   const accountOriginNavRef = useRef<"home" | "food">("home");
   const notificationDetailReturnRef = useRef(false);
   const notificationReturnSheetRef = useRef<"meal" | null>(null);
   const notificationAccountReturnRef = useRef(false);
+  const [accountNotificationSettingsOpen, setAccountNotificationSettingsOpen] = useState(false);
+  const accountNotificationSettingsRef = useRef(false);
+  const [notificationSettingsDraft, setNotificationSettingsDraft] = useState<NotificationSettingsDraft | null>(null);
   const notificationReturnFocusIdRef = useRef<string | null>(null);
   const notificationInitialFocusRef = useRef(false);
   const mealPlanOptionsRef = useRef({ maxMinutes: 30, servings: 1 });
   const guidanceReturnSheetRef = useRef<"detail" | null>(null);
-  const addReturnSheetRef = useRef<"detail" | null>(null);
+  const [detailGuidanceDraft, setDetailGuidanceDraft] = useState<FoodDetailGuidanceDraft | null>(null);
+  const addReturnSheetRef = useRef<"detail" | "meal" | null>(null);
   const addReturnFoodContextRef = useRef<{ id: string; name: string; dateSummary: string | null } | null>(null);
   const sheetRef = useRef<SheetName>(null);
   sheetRef.current = sheet;
@@ -1065,10 +1087,14 @@ function PrototypeContent() {
   const inventoryReturnContextRef = useRef<InventoryReturnContext | null>(null);
   const [addMode, setAddMode] = useState<AddMode>("receipt");
   const [selectedFoodId, setSelectedFoodId] = useState<string | null>(null);
-  const [detailEntryIntent, setDetailEntryIntent] = useState<"date-review" | "provenance-review" | "consume-action" | null>(null);
+  const selectedFoodIdRef = useRef(selectedFoodId);
+  selectedFoodIdRef.current = selectedFoodId;
+  const [detailEntryIntent, setDetailEntryIntent] = useState<"date-review" | "provenance-review" | "consume-action" | "quantity-review" | null>(null);
   const [detailSyncFocusId, setDetailSyncFocusId] = useState<string | null>(null);
   const pendingDateMutationKeysRef = useRef(new Set<string>());
+  const dateMutationVersionsRef = useRef(new Map<string, number>());
   const pendingReceiptCommitKeysRef = useRef(new Set<string>());
+  const receiptCommitRetryRef = useRef<{ key: string; run: () => Promise<FoodSaveResult> } | null>(null);
   const pendingManualFoodMutationKeysRef = useRef(new Set<string>());
   const [detailHistoryRefreshKey, setDetailHistoryRefreshKey] = useState(0);
   const detailHistoryDisclosureOpenRef = useRef(false);
@@ -1087,6 +1113,7 @@ function PrototypeContent() {
   const [storageFilter, setStorageFilter] = useState<InventoryStorageFilter>("전체");
   const [inventoryStatusFilter, setInventoryStatusFilter] = useState<InventoryStatusFilter>("all");
   const [inventoryQuery, setInventoryQuery] = useState("");
+  const [inventorySearchComposing, setInventorySearchComposing] = useState(false);
   const inventorySearchFocusRef = useRef(false);
   const [inventorySearchResults, setInventorySearchResults] = useState<FoodItem[]>([]);
   const [inventorySearchTotal, setInventorySearchTotal] = useState<number | null>(null);
@@ -1095,18 +1122,30 @@ function PrototypeContent() {
   const [inventorySearchError, setInventorySearchError] = useState("");
   const [inventorySearchKey, setInventorySearchKey] = useState("");
   const [inventorySearchRetry, setInventorySearchRetry] = useState(0);
-  const [toast, setToast] = useState<string | null>(null);
+  const [toast, updateToast] = useState<string | null>(null);
+  const [toastPhase, setToastPhase] = useState<"pending" | "notice">("notice");
+  const setToast = (message: string | null, phase: "pending" | "notice" = "notice") => {
+    setToastPhase(message ? phase : "notice");
+    updateToast(message);
+  };
   const toastRef = useRef<string | null>(null);
   toastRef.current = toast;
-  const [toastAction, setToastAction] = useState<ToastAction | null>(null);
+  const [toastAction, updateToastAction] = useState<ToastAction | null>(null);
+  const toastActionRef = useRef<ToastAction | null>(null);
+  const setToastAction = (action: ToastAction | null) => {
+    toastActionRef.current = action;
+    updateToastAction(action);
+  };
   const [toastActionBusy, setToastActionBusy] = useState(false);
   const [notifications, setNotifications] = useState<ApiNotification[]>([]);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [notificationsError, setNotificationsError] = useState("");
+  const [notificationTargetIssue, setNotificationTargetIssue] = useState<{ id: string; message: string; loading: boolean; onRefresh: () => void } | null>(null);
   const [notificationsNotice, setNotificationsNotice] = useState("");
   const [notificationRetryAction, setNotificationRetryAction] = useState<NotificationRetryAction | null>(null);
   const [notificationSyncFocus, setNotificationSyncFocus] = useState<NotificationSyncFocus | null>(null);
   const [notificationFocusRequest, setNotificationFocusRequest] = useState(0);
+  const notificationTargetGenerationRef = useRef(0);
   const [pendingNotificationSyncRecordId, setPendingNotificationSyncRecordId] = useState<string | null>(null);
   const notificationRevisionRef = useRef<number | null>(null);
   const notificationPollingInFlightRef = useRef(false);
@@ -1116,19 +1155,23 @@ function PrototypeContent() {
   const notificationFocusOverrideRef = useRef(false);
   const [productInfoRetryAction, setProductInfoRetryAction] = useState<ProductInfoRetryAction | null>(null);
   const [productInfoSavingFoodId, setProductInfoSavingFoodId] = useState<string | null>(null);
+  const [storageSavingFoodIds, setStorageSavingFoodIds] = useState<Set<string>>(new Set());
+  const storageSavingFoodIdsRef = useRef(new Set<string>());
+  const [storageSaveRecovery, setStorageSaveRecovery] = useState<{ foodId: string; message: string; retry: () => void; canEdit: boolean } | null>(null);
   const [productInfoNotice, setProductInfoNotice] = useState<{ foodId: string; message: string; requiresRefresh?: boolean } | null>(null);
   const [productProvenanceStatus, setProductProvenanceStatus] = useState<ProductProvenanceStatus | null>(null);
   const [productProvenanceMutatingFoodId, setProductProvenanceMutatingFoodId] = useState<string | null>(null);
   const [productProvenanceNotice, setProductProvenanceNotice] = useState<{ foodId: string; message: string; requiresRefresh?: boolean } | null>(null);
   const [demoNotificationReadAt, setDemoNotificationReadAt] = useState<Record<string, string>>({});
+  const [demoNotificationCreatedAt] = useState(() => new Date().toISOString());
   const [shoppingList, setShoppingList] = useState<ApiShoppingListItem[]>([]);
   const [shoppingListStatus, setShoppingListStatus] = useState<ShoppingListStatus>("idle");
   const [shoppingListError, setShoppingListError] = useState("");
   const [shoppingListNotice, setShoppingListNotice] = useState("");
   const [shoppingListMutating, setShoppingListMutating] = useState(false);
   const [shoppingListRetryAction, setShoppingListRetryAction] = useState<ShoppingListRetryAction | null>(null);
-  const [recentlyReceivedFood, setRecentlyReceivedFood] = useState<{ id: string; name: string } | null>(null);
-  const recentlyReceivedFoodRef = useRef<{ id: string; name: string } | null>(null);
+  const [recentlyReceivedFood, setRecentlyReceivedFood] = useState<{ id: string; name: string; quantity?: string } | null>(null);
+  const recentlyReceivedFoodRef = useRef<{ id: string; name: string; quantity?: string } | null>(null);
   const shoppingListMutatingRef = useRef(false);
   shoppingListMutatingRef.current = shoppingListMutating;
   const shoppingListRevisionRef = useRef<number | null>(null);
@@ -1152,6 +1195,9 @@ function PrototypeContent() {
   const dashboardSyncInFlightRef = useRef(false);
   const [resumeReceiptId, setResumeReceiptId] = useState<string | null>(null);
   const [addSheetSessionKey, setAddSheetSessionKey] = useState(0);
+  const addSheetSessionKeyRef = useRef(addSheetSessionKey);
+  addSheetSessionKeyRef.current = addSheetSessionKey;
+  const sheetOpeningIntentRef = useRef(0);
   const addSheetOpenRequestRef = useRef(0);
   const mealSheetOpenRequestRef = useRef(0);
   const [reviewMode] = useState(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("review") === "1");
@@ -1164,6 +1210,12 @@ function PrototypeContent() {
     workspaceSyncRef.current = new WorkspaceSyncCoordinator(() => mealApi.prepareWorkspace(), mealApi.workspaceKey);
   }
   const workspaceSync = workspaceSyncRef.current;
+  const captureMutationScope = () => {
+    const workspace = workspaceSync.captureScope();
+    const session = mealApi.captureSession();
+    return () => workspace() && session();
+  };
+
   const [workspaceTransport, setWorkspaceTransport] = useState<WorkspaceSyncTransport | null>(null);
 
   useEffect(() => {
@@ -1183,6 +1235,14 @@ function PrototypeContent() {
     window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
   }, [passwordResetToken]);
 
+  const inventoryStickyInset = (inventory: HTMLElement) => {
+    const toolbar = inventory.querySelector<HTMLElement>(".inventory-toolbar");
+    if (!toolbar) return 0;
+    const style = window.getComputedStyle(toolbar);
+    const top = Number.parseFloat(style.top);
+    return style.position === "sticky" && Number.isFinite(top) ? Math.max(0, top) : 0;
+  };
+
   const restoreContentNavigation = (destination: "home" | "food") => {
     const scroll = document.querySelector<HTMLElement>(".app-screen.mobile-scroll, .app-screen .mobile-scroll");
     const screen = document.querySelector<HTMLElement>("[data-testid=\"device-screen\"]");
@@ -1198,12 +1258,12 @@ function PrototypeContent() {
       } else {
         const inventory = document.querySelector<HTMLElement>(".inventory-section");
         if (scroll && inventory) {
-          const desiredTop = targetScrollTop(scroll, inventory, "start");
-          const maxScrollTop = Math.max(0, scroll.scrollHeight - scroll.clientHeight);
-          setInventoryNavTailSpace(Math.ceil(Math.max(0, desiredTop - maxScrollTop)));
+          const desiredTop = targetScrollTop(scroll, inventory, "start", inventoryStickyInset(inventory));
+          const currentTailSpace = document.querySelector<HTMLElement>(".inventory-nav-tail-space")?.clientHeight ?? 0;
+          setInventoryNavTailSpace(requiredInventoryTailSpace({ desiredTop, scrollHeight: scroll.scrollHeight, clientHeight: scroll.clientHeight, currentTailSpace }));
           window.requestAnimationFrame(() => {
             if (screen) screen.scrollTop = 0;
-            scrollTargetWithinContainer(scroll, inventory, "start", "auto");
+            scrollTargetWithinContainer(scroll, inventory, "start", "auto", inventoryStickyInset(inventory));
             navigationIntentLastScrollTopRef.current = scroll.scrollTop;
             activeContentNavRef.current = destination;
             navigationIntentRef.current = destination;
@@ -1220,21 +1280,17 @@ function PrototypeContent() {
     });
   };
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (inventoryNavTailSpace <= 0 || activeContentNavRef.current !== "food") return;
-    let frame: number | null = null;
-    frame = window.requestAnimationFrame(() => {
-      const scroll = document.querySelector<HTMLElement>(".app-screen.mobile-scroll, .app-screen .mobile-scroll");
-      const inventory = document.querySelector<HTMLElement>(".inventory-section");
-      const screen = document.querySelector<HTMLElement>("[data-testid=\"device-screen\"]");
-      if (!scroll || !inventory) return;
-      if (screen) screen.scrollTop = 0;
-      scrollTargetWithinContainer(scroll, inventory, "start", "auto");
-      navigationIntentLastScrollTopRef.current = scroll.scrollTop;
-    });
-    return () => {
-      if (frame !== null) window.cancelAnimationFrame(frame);
-    };
+    const scroll = document.querySelector<HTMLElement>(".app-screen.mobile-scroll, .app-screen .mobile-scroll");
+    const inventory = document.querySelector<HTMLElement>(".inventory-section");
+    const screen = document.querySelector<HTMLElement>("[data-testid=\"device-screen\"]");
+    if (!scroll || !inventory) return;
+    if (screen) screen.scrollTop = 0;
+    // The spacer must exist in layout before alignment; a later frame can let
+    // the scroll observer interpret the temporary clamped position as Home.
+    scrollTargetWithinContainer(scroll, inventory, "start", "auto", inventoryStickyInset(inventory));
+    navigationIntentLastScrollTopRef.current = scroll.scrollTop;
   }, [inventoryNavTailSpace]);
 
   useEffect(() => {
@@ -1249,13 +1305,12 @@ function PrototypeContent() {
         const screen = document.querySelector<HTMLElement>("[data-testid=\"device-screen\"]");
         if (!inventory) return;
         if (screen) screen.scrollTop = 0;
-        const desiredTop = targetScrollTop(scroll, inventory, "start");
+        const desiredTop = targetScrollTop(scroll, inventory, "start", inventoryStickyInset(inventory));
         const currentTailSpace = document.querySelector<HTMLElement>(".inventory-nav-tail-space")?.clientHeight ?? 0;
-        const maxScrollWithoutTail = Math.max(0, scroll.scrollHeight - scroll.clientHeight - currentTailSpace);
-        const nextTailSpace = Math.ceil(Math.max(0, desiredTop - maxScrollWithoutTail));
+        const nextTailSpace = requiredInventoryTailSpace({ desiredTop, scrollHeight: scroll.scrollHeight, clientHeight: scroll.clientHeight, currentTailSpace });
         setInventoryNavTailSpace((current) => current === nextTailSpace ? current : nextTailSpace);
         if (nextTailSpace === currentTailSpace) {
-          scrollTargetWithinContainer(scroll, inventory, "start", "auto");
+          scrollTargetWithinContainer(scroll, inventory, "start", "auto", inventoryStickyInset(inventory));
           navigationIntentLastScrollTopRef.current = scroll.scrollTop;
         }
       });
@@ -1268,6 +1323,12 @@ function PrototypeContent() {
   }, []);
 
   const changeSheet = (next: SheetName) => {
+    if (dismissToastForNavigation(sheetRef.current, next, toastActionRef.current?.label)) {
+      setToast(null);
+      setToastAction(null);
+    }
+    if (sheet === "detail" && next !== "guidance") setDetailGuidanceDraft(null);
+    sheetOpeningIntentRef.current += 1;
     if (next === "account" && sheet === null) {
       accountOriginNavRef.current = activeContentNavRef.current;
     }
@@ -1275,6 +1336,10 @@ function PrototypeContent() {
     const resolvedNext = next === null && sheet === "add" && addReturnSheetRef.current
       ? addReturnSheetRef.current
       : next;
+    if (sheet === "notifications" && resolvedNext !== "notifications") {
+      notificationTargetGenerationRef.current += 1;
+      setNotificationTargetIssue(null);
+    }
     if (resolvedNext !== sheet) keyboardHideRef.current();
     if (resolvedNext === "receipt-queue" && sheet !== "receipt-queue") receiptQueueInitialFocusRef.current = true;
     if (resolvedNext !== null && sheet === null) {
@@ -1284,7 +1349,7 @@ function PrototypeContent() {
     if (resolvedNext === null && sheet === "meal") {
       const returnSheet = mealReturnSheetRef.current;
       mealReturnSheetRef.current = null;
-      if (!returnSheet) mealDetailSessionReturnRef.current = false;
+      if (!returnSheet) mealRelatedSessionReturnRef.current = false;
       if (returnSheet) {
         pendingMealCompletionFocusRef.current = null;
         setSheet(returnSheet);
@@ -1365,6 +1430,12 @@ function PrototypeContent() {
       notificationInitialFocusRef.current = false;
       setNotificationSyncFocus(null);
     }
+    if (resolvedNext === null && sheet === "account" && accountNotificationSettingsRef.current) {
+      accountNotificationSettingsRef.current = false;
+      setAccountNotificationSettingsOpen(false);
+      setSheet("notifications");
+      return;
+    }
     if (resolvedNext === null && sheet === "account" && notificationAccountReturnRef.current) {
       notificationAccountReturnRef.current = false;
       setAccountGrocyOutboxFocusId(null);
@@ -1401,7 +1472,8 @@ function PrototypeContent() {
     setSheet(resolvedNext);
   };
 
-  const openGuidanceSheet = () => {
+  const openGuidanceSheet = (draft?: FoodDetailGuidanceDraft) => {
+    setDetailGuidanceDraft(sheet === "detail" ? draft ?? null : null);
     guidanceReturnSheetRef.current = sheet === "detail" ? "detail" : null;
     changeSheet("guidance");
   };
@@ -2046,7 +2118,13 @@ function PrototypeContent() {
       const scoped = pending.sourceNav === "home"
         ? Array.from(document.querySelectorAll<HTMLElement>(".priority-card"))
         : Array.from(document.querySelectorAll<HTMLElement>("[data-inventory-food-id]"));
-      return scoped.find(matches) ?? null;
+      // A saved date can move the food out of the home priority set; then
+      // return focus to its food-list row instead of dropping it on <body>.
+      return scoped.find(matches)
+        ?? (pending.sourceNav === "home"
+          ? Array.from(document.querySelectorAll<HTMLElement>("[data-inventory-food-id]"))
+            .find((element) => !element.hasAttribute("disabled") && element.dataset.inventoryFoodId === pending.foodId) ?? null
+          : null);
     };
     const cleanup = () => {
       observer.disconnect();
@@ -2109,8 +2187,10 @@ function PrototypeContent() {
     };
   }, [foods, sheet]);
 
-  const findFoodById = (foodId: string) => foods.find((food) => food.id === foodId)
-    ?? inventorySearchResults.find((food) => food.id === foodId)
+  const foodLookupSnapshotRef = useRef({ foods, inventorySearchResults });
+  foodLookupSnapshotRef.current = { foods, inventorySearchResults };
+  const findFoodById = (foodId: string) => foodLookupSnapshotRef.current.foods.find((food) => food.id === foodId)
+    ?? foodLookupSnapshotRef.current.inventorySearchResults.find((food) => food.id === foodId)
     ?? null;
   const selectedFood = selectedFoodId ? findFoodById(selectedFoodId) : null;
   const customStorageLocations = useMemo(
@@ -2119,8 +2199,14 @@ function PrototypeContent() {
   );
   const selectedStorageLocation = customStorageLocations.find((location) => `location:${location.id}` === storageFilter) ?? null;
   const priorityFoods = useMemo(
-    () => foods.filter((food) => food.priority <= 3).sort((a, b) => a.priority - b.priority),
+    () => selectHomePriorityFoods(foods),
     [foods],
+  );
+  const priorityFoodIds = useMemo(() => new Set(priorityFoods.map((food) => food.id)), [priorityFoods]);
+  // "Rescue today": passed, today/tomorrow and within-3-days foods — what the fridge door's red/orange rings show.
+  const rescueTodayCount = useMemo(
+    () => foods.filter((food) => ["past", "today", "soon"].includes(foodFreshness(food, currentDate).bucket)).length,
+    [currentDate, foods],
   );
   const mealDateReviewFoods = useMemo(
     () => foods.slice(0, 3)
@@ -2147,6 +2233,7 @@ function PrototypeContent() {
     });
     return getHomeReviewTopicLabel(topics);
   }, [currentDate, inventoryNeedsReviewFoods]);
+  const showHomeTrustCard = foods.length > 0 && shouldShowHomeDateGuide(inventoryNeedsReviewCount, priorityFoods.map((food) => food.dateKind));
   const homeTrustTitle = inventoryNeedsReviewCount
     ? `${inventoryReviewTopicLabel} 살펴볼 식품 ${inventoryNeedsReviewCount}개`
     : "먼저 살펴볼 날짜는 소비기한이 아니에요";
@@ -2172,17 +2259,17 @@ function PrototypeContent() {
     [currentDate, inventoryScopeFoods],
   );
   const inventoryScopedPriorityCount = useMemo(
-    () => inventoryScopeFoods.filter((food) => food.priority <= 3).length,
-    [inventoryScopeFoods],
+    () => inventoryScopeFoods.filter((food) => priorityFoodIds.has(food.id)).length,
+    [inventoryScopeFoods, priorityFoodIds],
   );
   const filteredFoods = useMemo(() => {
     const byStatus = inventoryStatusFilter === "needs-review"
       ? inventoryScopeFoods.filter((food) => Boolean(attentionReviewReason(food, currentDate)))
       : inventoryStatusFilter === "priority"
-        ? inventoryScopeFoods.filter((food) => food.priority <= 3)
+        ? selectHomePriorityFoods(inventoryScopeFoods.filter((food) => priorityFoodIds.has(food.id)))
         : inventoryScopeFoods;
     return byStatus;
-  }, [currentDate, inventoryScopeFoods, inventoryStatusFilter]);
+  }, [currentDate, inventoryScopeFoods, inventoryStatusFilter, priorityFoodIds]);
   const todayEyebrow = formatTodayEyebrow(currentDate);
   const currentMealPlanHint = mealPlanHint(priorityFoods, foods.length, priorityNeedsReviewCount);
   const hasInventoryQuery = inventoryQuery.trim().length > 0;
@@ -2191,8 +2278,17 @@ function PrototypeContent() {
   const inventorySearchRequestKey = `${normalizedInventoryQuery}|${storageFilter}`;
   const inventorySearchOwnsResults = inventorySearchActive && inventorySearchKey === inventorySearchRequestKey && inventorySearchStatus !== "idle";
   const inventoryCount = inventoryStatusFilter === "all" && inventorySearchOwnsResults && inventorySearchTotal != null ? inventorySearchTotal : filteredFoods.length;
-  const inventorySearchPending = inventorySearchOwnsResults && inventorySearchStatus === "loading";
+  const inventorySearchViewPhase = inventorySearchPhase({
+    active: inventorySearchActive, composing: inventorySearchComposing, requestKey: inventorySearchRequestKey,
+    responseKey: inventorySearchKey, status: inventorySearchStatus,
+    resultCount: inventorySearchResults.length,
+  });
+  const inventorySearchWaiting = inventorySearchViewPhase === "waiting" || inventorySearchViewPhase === "composing";
+  const inventorySearchPending = inventorySearchWaiting || inventorySearchViewPhase === "refreshing";
   const inventoryDataUnknown = mealApi.isConfigured && connectionState !== "connected" && !foods.length;
+  const initialInventoryLoading = inventoryDataUnknown && connectionState === "checking" && !hasInventoryQuery && storageFilter === "전체" && inventoryStatusFilter === "all";
+  const hasKnownEmptyInventory = !inventoryDataUnknown && foods.length === 0;
+  const showInventoryTools = (!hasKnownEmptyInventory && !inventoryDataUnknown) || hasInventoryQuery || storageFilter !== "전체" || inventoryStatusFilter !== "all";
   const inventoryDataStatusLabel = connectionState === "checking"
     ? "식품 목록을 불러오는 중이에요"
     : connectionState === "auth_required"
@@ -2205,8 +2301,8 @@ function PrototypeContent() {
       : "인터넷에 연결한 뒤 다시 불러와 주세요.";
   const priorityDataStatusLabel = connectionState === "offline" ? "식품 목록을 불러오지 못했어요" : inventoryDataStatusLabel;
   const priorityDataStatusDescription = connectionState === "offline" ? "연결되면 먼저 살펴볼 식품을 보여드려요." : inventoryDataStatusDescription;
-  const inventoryListStatusLabel = connectionState === "offline" ? "인터넷에 연결되지 않았어요" : inventoryDataStatusLabel;
-  const inventoryListStatusDescription = connectionState === "offline" ? "다시 연결하면 식품 목록을 불러올 수 있어요." : inventoryDataStatusDescription;
+  const inventoryListStatusLabel = connectionState === "offline" ? "식품 목록을 불러오지 못했어요" : inventoryDataStatusLabel;
+  const inventoryListStatusDescription = connectionState === "offline" ? "다시 연결하면 식품 목록을 불러올 수 있어요." : connectionState === "auth_required" ? "기존 기록 공간을 유지하고 있어요. 다시 로그인하면 기록을 이어서 볼 수 있어요." : inventoryDataStatusDescription;
   const mealPlanStatusDescription = connectionState === "offline" ? "인터넷에 다시 연결한 뒤 식단을 만들 수 있어요." : inventoryDataStatusDescription;
   const demoOfflineFixturePreview = mealApi.deploymentMode === "demo" && connectionState === "offline" && !dashboardStaleAt && foods.length > 0;
   const priorityHeadingAccessibleName = inventoryDataUnknown
@@ -2217,13 +2313,13 @@ function PrototypeContent() {
         ? `최근에 불러온 식품 중 먼저 살펴볼 항목 ${priorityFoods.length}개`
       : `먼저 살펴볼 식품 ${priorityFoods.length}개`;
   const inventoryStatusLabel = inventoryStatusFilter === "needs-review" ? "날짜·보관 확인" : inventoryStatusFilter === "priority" ? "먼저 살펴보기" : "";
-  const inventoryScopeIsStale = inventorySearchActive && inventorySearchStatus === "error" && filteredFoods.length > 0;
-  const inventoryScopeLabel = [
+  const inventoryScopeIsStale = inventorySearchViewPhase === "stale" && filteredFoods.length > 0;
+  const inventoryScopeParts = [
     inventoryScopeIsStale ? "이전 결과" : "",
     hasInventoryQuery ? `“${inventoryQuery.trim()}” 검색 결과` : "",
     storageFilter !== "전체" ? `${selectedStorageLocation?.name ?? storageFilter} 보관 식품` : "",
     inventoryStatusLabel,
-  ].filter(Boolean).join(" · ");
+  ].filter(Boolean);
   const inventorySearchLoadingLabel = hasInventoryQuery
     ? `“${inventoryQuery.trim()}” 검색 결과를 불러오고 있어요`
     : storageFilter !== "전체"
@@ -2234,9 +2330,9 @@ function PrototypeContent() {
     : storageFilter !== "전체"
       ? `${selectedStorageLocation?.name ?? storageFilter} 보관 식품을 불러오지 못했어요`
       : "재고를 불러오지 못했어요";
-  const showInventoryScope = Boolean(inventoryScopeLabel)
-    && !(inventorySearchPending && !filteredFoods.length)
-    && !(inventorySearchStatus === "error" && !filteredFoods.length);
+  const showInventoryScope = inventoryScopeParts.length > 0
+    && !inventorySearchWaiting
+    && inventorySearchViewPhase !== "error";
   const inventoryHasEmptyResult = (hasInventoryQuery || storageFilter !== "전체" || inventoryStatusFilter !== "all") && !filteredFoods.length;
   const pendingReceiptSummaries = useMemo(
     () => receiptSummaries
@@ -2311,7 +2407,7 @@ function PrototypeContent() {
       frame = null;
       const viewportTop = scroll.getBoundingClientRect().top;
       const inventoryTop = inventory.getBoundingClientRect().top;
-      const threshold = viewportTop + Math.min(scroll.clientHeight * 0.42, 360);
+
       const atBottom = scroll.scrollTop >= scroll.scrollHeight - scroll.clientHeight - 8;
       // Programmatic scroll can settle with a small fractional/overscroll delta
       // on mobile. Do not interpret that settling noise as the user abandoning
@@ -2343,7 +2439,10 @@ function PrototypeContent() {
       }
       navigationIntentRef.current = null;
       navigationIntentLastScrollTopRef.current = null;
-      const nextNav = inventoryTop <= threshold || atBottom ? "food" : "home";
+      const nextNav = contentNavigationPosition({
+        scrollTop: scroll.scrollTop, scrollHeight: scroll.scrollHeight, clientHeight: scroll.clientHeight,
+        viewportTop, viewportHeight: scroll.getBoundingClientRect().height, inventoryTop,
+      });
       activeContentNavRef.current = nextNav;
       setActiveNav((current) => current === nextNav ? current : nextNav);
     };
@@ -2380,6 +2479,10 @@ function PrototypeContent() {
 
   useEffect(() => {
     const requestKey = `${normalizedInventoryQuery}|${storageFilter}`;
+    if (inventorySearchComposing) {
+      workspaceSync.invalidate("inventory-search");
+      return;
+    }
     const active = inventorySearchCanUseServer && (Boolean(normalizedInventoryQuery) || storageFilter !== "전체");
     if (!active) {
       workspaceSync.invalidate("inventory-search");
@@ -2412,8 +2515,7 @@ function PrototypeContent() {
         })
         .catch((reason) => {
           if (isMealApiAuthError(reason)) {
-            mealApi.clearSession();
-            resetWorkspaceReads();
+                resetWorkspaceReads();
             setDashboardStaleAt(null);
             setConnectionState("auth_required");
             setInventorySearchError("로그인이 만료됐어요. 다시 로그인해 주세요.");
@@ -2427,7 +2529,7 @@ function PrototypeContent() {
       window.clearTimeout(timer);
       workspaceSync.invalidate("inventory-search");
     };
-  }, [connectionState, inventorySearchCanUseServer, inventorySearchRetry, normalizedInventoryQuery, storageFilter, workspaceSync]);
+  }, [connectionState, inventorySearchCanUseServer, inventorySearchComposing, inventorySearchRetry, normalizedInventoryQuery, storageFilter, workspaceSync]);
 
   useEffect(() => {
     setInventorySearchResults((current) => {
@@ -2449,10 +2551,9 @@ function PrototypeContent() {
     const scroll = document.querySelector<HTMLElement>(".app-screen.mobile-scroll, .app-screen .mobile-scroll");
     const inventory = document.querySelector<HTMLElement>(".inventory-section");
     if (!scroll || !inventory) return;
-    const offset = inventory.getBoundingClientRect().top - scroll.getBoundingClientRect().top;
     const maxScrollTop = Math.max(0, scroll.scrollHeight - scroll.clientHeight);
-    const targetScrollTop = Math.max(0, Math.min(maxScrollTop, scroll.scrollTop + offset));
-    scroll.scrollTop = targetScrollTop;
+    const nextScrollTop = Math.max(0, Math.min(maxScrollTop, targetScrollTop(scroll, inventory, "start", inventoryStickyInset(inventory))));
+    scroll.scrollTop = nextScrollTop;
 
     const input = document.querySelector<HTMLElement>(".inventory-search-input");
     if (!input) return;
@@ -2545,7 +2646,6 @@ function PrototypeContent() {
       return true;
     } catch (reason) {
       if (isMealApiAuthError(reason)) {
-        mealApi.clearSession();
         resetWorkspaceReads();
         setDashboardStaleAt(null);
         setConnectionState("auth_required");
@@ -2630,7 +2730,6 @@ function PrototypeContent() {
       return true;
     } catch (reason) {
       if (isMealApiAuthError(reason)) {
-        mealApi.clearSession();
         resetWorkspaceReads();
         setDashboardStaleAt(null);
         setConnectionState("auth_required");
@@ -2701,7 +2800,6 @@ function PrototypeContent() {
       return true;
     } catch (reason) {
       if (isMealApiAuthError(reason)) {
-        mealApi.clearSession();
         resetWorkspaceReads();
         setDashboardStaleAt(null);
         setConnectionState("auth_required");
@@ -2715,6 +2813,7 @@ function PrototypeContent() {
   };
 
   const resetWorkspaceReads = () => {
+    sheetOpeningIntentRef.current += 1;
     workspaceSync.invalidateAll();
     dashboardRevisionRef.current = null;
     dashboardPollingInFlightRef.current = false;
@@ -2737,12 +2836,17 @@ function PrototypeContent() {
     shoppingListPollingInFlightRef.current = false;
     shoppingListSyncInFlightRef.current = false;
     shoppingListRefreshQueuedRef.current = false;
+    shoppingListMutatingRef.current = false;
+    setShoppingListMutating(false);
+    setShoppingListRetryAction(null);
+    setNotificationRetryAction(null);
     receiptSummariesRevisionRef.current = null;
     receiptSummariesPollingInFlightRef.current = false;
     receiptSummariesSyncInFlightRef.current = false;
     setNotifications([]);
     setNotificationsLoading(false);
     setNotificationsError("");
+    setNotificationTargetIssue(null);
     setNotificationsNotice("");
     setShoppingList([]);
     setShoppingListStatus("idle");
@@ -2752,10 +2856,18 @@ function PrototypeContent() {
   };
 
   const resetWorkspacePresentation = () => {
+    setNotificationSettingsDraft(null);
+    accountNotificationSettingsRef.current = false;
+    setAccountNotificationSettingsOpen(false);
     resetWorkspaceReads();
+    setDetailGuidanceDraft(null);
+    storageSavingFoodIdsRef.current.clear();
+    setStorageSavingFoodIds(new Set());
+    setStorageSaveRecovery(null);
     setFoods([]);
     updateStorageLocations([]);
     setInventoryQuery("");
+    setInventorySearchComposing(false);
     setStorageFilter("전체");
     setInventorySearchResults([]);
     setInventorySearchTotal(null);
@@ -2781,7 +2893,7 @@ function PrototypeContent() {
     const message = index === 0
       ? `${food.name} 날짜를 확인해 주세요.`
       : hasReferenceWindow
-        ? `${food.name}: ${food.dateLabel}은 참고로 표시한 날짜예요. 소비기한과는 다르니 포장지 날짜를 확인해 주세요.`
+        ? `${food.name}: ${withKoreanTopicParticle(food.dateLabel)} 참고로 표시한 날짜예요. 소비기한과는 다르니 포장지 날짜를 확인해 주세요.`
         : isUserReminder
           ? `${food.name}: 내가 기록한 날짜는 ${food.dateLabel}이에요. 포장지의 소비기한과 다를 수 있으니 날짜와 보관 방법도 살펴봐 주세요.`
           : food.dateKind === "unknown"
@@ -2800,7 +2912,7 @@ function PrototypeContent() {
       source: DEMO_NOTIFICATION_SOURCE[food.dateKind],
       action: "food",
       read_at: demoNotificationReadAt[`demo-priority:${food.id}`] ?? null,
-      created_at: new Date().toISOString(),
+      created_at: demoNotificationCreatedAt,
     };
   });
   const visibleNotifications = mealApi.isConfigured ? notifications : demoNotifications;
@@ -2856,23 +2968,22 @@ function PrototypeContent() {
       : shoppingRemainingCount > 0
         ? `장보기 ${shoppingRemainingCount}개가 남아 있어요`
       : shoppingList.length
-        ? "모두 샀어요 · 식품 목록에 추가해 주세요"
+        ? "모두 샀어요"
           : "아직 담은 재료가 없어요";
-  const shoppingSummaryDescription = shoppingListStatus === "error"
-    ? "목록을 새로고침해 주세요."
+  const shoppingSummaryDescriptionParts = shoppingListStatus === "error"
+    ? ["목록을 새로고침해 주세요."]
     : shoppingList.length
-      ? shoppingRemainingCount > 0
-        ? `${shoppingCompletedCount}개 구매 완료 · ${shoppingOriginLabel}`
-        : `${shoppingCompletedCount}개 샀어요 · 식품 목록에 추가해 주세요 · ${shoppingOriginLabel}`
-      : "식단에서 재료를 담거나 직접 추가해 보세요.";
+      ? [shoppingCompletedCount > 0 ? `${shoppingCompletedCount}개 구매 완료` : null, shoppingOriginLabel]
+      : [foods.length ? "식단에서 재료를 담거나 직접 추가해 보세요." : "살 식품을 직접 추가해 보세요."];
   const shoppingSummaryIsEmpty = !shoppingList.length && shoppingListStatus !== "loading" && shoppingListStatus !== "error";
-  const showShoppingSummary = !mealApi.isConfigured || (connectionState === "connected" && shoppingListStatus !== "idle");
+  const showShoppingSummary = (!mealApi.isConfigured || (connectionState === "connected" && shoppingListStatus !== "idle"))
+    && (!shoppingSummaryIsEmpty || foods.length > 0);
 
   useEffect(() => {
-    if (!toast || toastAction?.message === toast) return;
+    if (!toast || toastPhase === "pending" || toastAction?.message === toast) return;
     const timer = window.setTimeout(() => setToast(null), 2600);
     return () => window.clearTimeout(timer);
-  }, [toast, toastAction]);
+  }, [toast, toastAction, toastPhase]);
 
   useEffect(() => {
     if (toastAction && toastAction.message !== toast) setToastAction(null);
@@ -2883,8 +2994,17 @@ function PrototypeContent() {
   }, [toastAction?.message, toastAction?.label]);
 
   const showRetryToast = (message: string, onRetry: () => void) => {
+    const isCurrent = captureMutationScope();
     setToastActionBusy(false);
-    setToastAction({ message, label: "다시 시도", onInvoke: onRetry });
+    setToastAction({ message, label: "다시 시도", onInvoke: () => {
+      if (!isCurrent()) {
+        setToast(null);
+        setToastAction(null);
+        setToastActionBusy(false);
+        return;
+      }
+      onRetry();
+    } });
     setToast(message);
   };
 
@@ -2965,13 +3085,15 @@ function PrototypeContent() {
         // the polling baseline here so the first visibility probe can detect a
         // remote change instead of consuming it as initialisation.
         rememberDashboardRevision(mealApi.workspaceRevision);
+        // The mount-time notification read can be dropped when this request
+        // moves the coordinator from the anonymous to the signed-in workspace.
+        void refreshNotifications();
         void refreshShoppingList();
         void refreshReceiptSummaries();
       }
     }).catch((reason) => {
       if (!active) return;
       if (isMealApiAuthError(reason)) {
-        mealApi.clearSession();
         resetWorkspaceReads();
         setDashboardStaleAt(null);
         setConnectionState("auth_required");
@@ -3016,9 +3138,8 @@ function PrototypeContent() {
         if (revision <= previousRevision || sheetRef.current !== null) return;
         const synced = await syncDashboard(true);
         if (synced && inventorySearchActive) setInventorySearchRetry((current) => current + 1);
-        if (synced && sheetRef.current === null && toastRef.current === null) {
-          setToast("다른 기기에서 식품을 바꿨어요. 목록을 새로 불러왔어요.");
-        }
+        // A workspace revision also covers settings and other records.
+        // Keep automatic refresh quiet rather than guessing who changed food.
       } catch {
         // A bounded probe is advisory. Preserve the visible dashboard and let
         // the next visible/interval probe retry.
@@ -3072,7 +3193,7 @@ function PrototypeContent() {
           notificationRefreshQueuedRef.current = true;
           return;
         }
-        await refreshNotifications("다른 기기에서 알림을 바꿨어요. 목록을 새로 불러왔어요.");
+        await refreshNotifications();
       } catch {
         // A bounded probe is advisory. Keep the current list when the probe
         // cannot complete and let the next visible/interval probe retry.
@@ -3111,7 +3232,7 @@ function PrototypeContent() {
           shoppingListRefreshQueuedRef.current = true;
           return;
         }
-        await refreshShoppingList("다른 기기에서 장보기 목록을 바꿨어요. 목록을 새로 불러왔어요.");
+        await refreshShoppingList();
       } catch {
         // A bounded probe is advisory. Preserve the current list and retry
         // on the next visible/interval probe.
@@ -3146,7 +3267,7 @@ function PrototypeContent() {
           return;
         }
         if (revision <= previousRevision || sheetRef.current !== "receipt-queue") return;
-        await refreshReceiptSummaries("다른 기기에서 확인할 영수증이 바뀌었어요. 목록을 새로 불러왔어요.");
+        await refreshReceiptSummaries();
       } catch {
         // A bounded probe is advisory. Preserve the current queue and retry
         // on the next visible/interval probe.
@@ -3208,22 +3329,14 @@ function PrototypeContent() {
       accountPollingInFlightRef.current = true;
       try {
         const previousRevision = accountRevisionRef.current;
-        const knownClientRevision = mealApi.workspaceRevision;
-        if (previousRevision !== null && knownClientRevision !== null && knownClientRevision > previousRevision) {
-          rememberAccountRevision(knownClientRevision);
-          return;
-        }
         const result = await workspaceSync.run("dashboard", (signal) => mealApi.getDashboardRevision(signal));
         if (!result.current || result.error || !result.value) return;
         const revision = result.value.revision;
         if (!Number.isSafeInteger(revision) || revision < 0) return;
-        if (previousRevision === null) {
-          rememberAccountRevision(revision);
-          return;
-        }
-        if (revision <= previousRevision || sheetRef.current !== "account") return;
-        rememberAccountRevision(revision);
-        setAccountRemoteRefreshRequired(true);
+        if (sheetRef.current !== "account") return;
+        const status = accountRevisionStatus(previousRevision, revision, mealApi.workspaceMutationRevision);
+        rememberAccountRevision(status.revision);
+        if (status.needsRefresh) setAccountRemoteRefreshRequired(true);
       } catch {
         // A bounded probe is advisory. Preserve all account panel drafts and
         // retry on the next visible/interval probe.
@@ -3243,7 +3356,9 @@ function PrototypeContent() {
     };
   }, [accountRemoteRefreshRequired, accountRemoteRefreshing, sheet, workspaceSync]);
 
-  const openAdd = (mode: AddMode = "receipt", receiptId: string | null = null, returnSheet: "detail" | null = null) => {
+  const openAdd = (mode: AddMode = "receipt", receiptId: string | null = null, returnSheet: "detail" | "meal" | null = null) => {
+    const isCurrentWorkspace = captureMutationScope();
+    const openingIntent = ++sheetOpeningIntentRef.current;
     // Start the primary intake chunk on user intent so the sheet's dialog
     // shell and its file/camera controls become ready together. Keep the
     // lazy split to avoid increasing the initial bundle for users who do not
@@ -3255,6 +3370,7 @@ function PrototypeContent() {
     const activeElement = document.activeElement;
     addOriginFocusRef.current = activeElement instanceof HTMLElement ? activeElement : null;
     addReturnSheetRef.current = returnSheet;
+    if (returnSheet === "meal") mealRelatedSessionReturnRef.current = true;
     addReturnFoodContextRef.current = returnSheet === "detail" && selectedFood
       ? {
         id: selectedFood.id,
@@ -3268,16 +3384,16 @@ function PrototypeContent() {
     setResumeReceiptId(receiptId);
     setAddSheetSessionKey((current) => current + 1);
     void Promise.all([loadAddFoodSheet(), loadBottomSheet()]).then(() => {
-      if (requestId !== addSheetOpenRequestRef.current) return;
+      if (requestId !== addSheetOpenRequestRef.current || openingIntent !== sheetOpeningIntentRef.current || !isCurrentWorkspace()) return;
       setToast(null);
       setToastAction(null);
       changeSheet("add");
     }).catch(() => {
-      if (requestId !== addSheetOpenRequestRef.current) return;
+      if (requestId !== addSheetOpenRequestRef.current || openingIntent !== sheetOpeningIntentRef.current || !isCurrentWorkspace()) return;
       // Preserve the originating detail sheet on a lazy-load retry. Without
       // the returnSheet argument, a label review retry would reopen as a
       // standalone intake flow and lose the date-review context.
-      showRetryToast("입력 화면을 준비하지 못했어요.", () => openAdd(mode, receiptId, returnSheet));
+      showRetryToast("입력 화면을 준비하지 못했어요.", () => { if (isCurrentWorkspace()) openAdd(mode, receiptId, returnSheet); });
     });
   };
 
@@ -3288,6 +3404,8 @@ function PrototypeContent() {
   }, [receiptSourceReviewMode]);
 
   const openMealPlan = () => {
+    const isCurrentWorkspace = captureMutationScope();
+    const openingIntent = ++sheetOpeningIntentRef.current;
     const returnNav = activeContentNavRef.current ?? "home";
     if (mealApi.isConfigured && connectionState !== "connected") {
       const message = connectionState === "auth_required"
@@ -3301,7 +3419,7 @@ function PrototypeContent() {
     mealDetailReturnRef.current = false;
     mealDetailReturnFocusIdRef.current = null;
     mealDetailReturnScrollTopRef.current = null;
-    mealDetailSessionReturnRef.current = false;
+    mealRelatedSessionReturnRef.current = false;
     pendingMealCompletionFocusRef.current = null;
     mealReturnSheetRef.current = sheet === "shopping" ? "shopping" : null;
     if (sheet === "shopping") shoppingInitialFocusRef.current = false;
@@ -3311,16 +3429,16 @@ function PrototypeContent() {
     mealSheetOpenRequestRef.current = requestId;
     keyboard.hide();
     void loadMealPlanSheet().then(() => {
-      if (requestId !== mealSheetOpenRequestRef.current) return;
+      if (requestId !== mealSheetOpenRequestRef.current || openingIntent !== sheetOpeningIntentRef.current || !isCurrentWorkspace()) return;
       setToast(null);
       setToastAction(null);
       setActiveNav("meal");
       setMealPlanSheetMounted(true);
       changeSheet("meal");
     }).catch(() => {
-      if (requestId !== mealSheetOpenRequestRef.current) return;
+      if (requestId !== mealSheetOpenRequestRef.current || openingIntent !== sheetOpeningIntentRef.current || !isCurrentWorkspace()) return;
       setActiveNav(mealSheetOriginNavRef.current);
-      showRetryToast("식단 화면을 준비하지 못했어요.", openMealPlan);
+      showRetryToast("식단 화면을 준비하지 못했어요.", () => { if (isCurrentWorkspace()) openMealPlan(); });
     });
   };
 
@@ -3336,43 +3454,75 @@ function PrototypeContent() {
     if (mealApi.workspaceRevision !== null) rememberDetailRevision(mealApi.workspaceRevision);
   };
 
-  const openDetail = (food: FoodItem, source: "home" | "inventory" = "inventory", intentOverride: "date-review" | "provenance-review" | "consume-action" | null = null) => {
+  // Push notifications open `/?food=<id>` (one food), `/?open=priority` (daily summary)
+  // or `/?open=grocy` (an external inventory sync push).
+  const notificationDeepLinkRef = useRef<{ foodId: string | null; openPriority: boolean; openGrocy: boolean } | null>(
+    typeof window === "undefined" ? null : (() => {
+      const params = new URLSearchParams(window.location.search);
+      const foodId = params.get("food")?.trim() || null;
+      const openPriority = params.get("open") === "priority";
+      const openGrocy = params.get("open") === "grocy";
+      return foodId || openPriority || openGrocy ? { foodId, openPriority, openGrocy } : null;
+    })(),
+  );
+  useEffect(() => {
+    const deepLink = notificationDeepLinkRef.current;
+    if (!deepLink || typeof window === "undefined") return;
+    if (connectionState !== "connected" && connectionState !== "fixture") return;
+    // Wait for the inventory itself: the connection can report ready before the
+    // dashboard foods (and the priority heading) have rendered.
+    const food = deepLink.foodId ? findFoodById(deepLink.foodId) : undefined;
+    const heading = document.getElementById("priority-title");
+    if (!deepLink.openGrocy && !food && !foods.length && !heading) return;
+    notificationDeepLinkRef.current = null;
+    const url = new URL(window.location.href);
+    url.searchParams.delete("food");
+    url.searchParams.delete("open");
+    window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
+    if (deepLink.openGrocy) {
+      // The sync notification lists the record and its retry/settings actions.
+      openNotifications("action_required");
+      return;
+    }
+    if (food) {
+      openDetail(food, "home");
+      return;
+    }
+    if (deepLink.foodId) setToast("알림의 식품을 목록에서 찾지 못했어요. 이미 먹거나 정리했을 수 있어요.");
+    if (!heading) return;
+    heading.scrollIntoView({ block: "start" });
+    if (!heading.hasAttribute("tabindex")) heading.setAttribute("tabindex", "-1");
+    heading.focus({ preventScroll: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [connectionState, foods]);
+
+  const openDetail = (food: FoodItem, source: "home" | "inventory" = "inventory", intentOverride: "date-review" | "provenance-review" | "consume-action" | "browse" | null = null) => {
     if (source === "inventory") captureInventoryReturnContext(food.id);
     else inventoryReturnContextRef.current = null;
     detailHistoryDisclosureOpenRef.current = false;
     detailRevisionRef.current = dashboardRevisionRef.current;
     if (detailRevisionRef.current === null) rememberCurrentDetailRevision();
     setDetailRemoteRefreshRequired(false);
-    const needsDateReview = Boolean(attentionReviewReason(food, currentDate));
-    const needsProvenanceReview = Boolean(food.productProvenance && !needsDateReview);
-    // Browsing an item is not the same as asking to recheck its date. Keep the
-    // summary in the first view; explicit review routes may focus the action.
-    const defaultEntryIntent = needsDateReview
-      ? null
-      : needsProvenanceReview
-        ? "provenance-review"
-        : source === "home" && food.priority <= 3
-          ? "consume-action"
-          : null;
-    setDetailEntryIntent(intentOverride ?? defaultEntryIntent);
+    // Only an explicit action route may move focus away from the detail summary.
+    setDetailEntryIntent(intentOverride === "browse" ? null : intentOverride);
     setSelectedFoodId(food.id);
     changeSheet("detail");
   };
 
-  const openFoodDetailFromMeal = (foodId: string) => {
+  const openFoodDetailFromMeal =(foodId: string, intentOverride: "date-review" | "quantity-review" | null = null) => {
     const food = findFoodById(foodId);
     if (!food) return;
     const mealScroller = document.querySelector<HTMLElement>(".meal-sheet-content")?.closest<HTMLElement>(".sheet-content");
     mealDetailReturnRef.current = true;
     mealDetailReturnFocusIdRef.current = food.id;
     mealDetailReturnScrollTopRef.current = mealScroller?.scrollTop ?? null;
-    mealDetailSessionReturnRef.current = true;
+    mealRelatedSessionReturnRef.current = true;
     inventoryReturnContextRef.current = null;
     detailHistoryDisclosureOpenRef.current = false;
     detailRevisionRef.current = dashboardRevisionRef.current;
     if (detailRevisionRef.current === null) rememberCurrentDetailRevision();
     setDetailRemoteRefreshRequired(false);
-    setDetailEntryIntent(null);
+    setDetailEntryIntent(intentOverride);
     setSelectedFoodId(food.id);
     changeSheet("detail");
   };
@@ -3462,6 +3612,8 @@ function PrototypeContent() {
   };
 
   const openNotifications = (syncFocus: NotificationSyncFocus | null = null) => {
+    notificationTargetGenerationRef.current += 1;
+    setNotificationTargetIssue(null);
     if (mealApi.isConfigured && connectionState !== "connected") {
       const message = connectionState === "auth_required"
         ? "로그인하면 저장한 알림을 볼 수 있어요"
@@ -3501,6 +3653,14 @@ function PrototypeContent() {
     if (shoppingListStatus === "idle" || shoppingListStatus === "error") void refreshShoppingList();
   };
 
+  const openShoppingInventoryFood = (foodId: string) => {
+    const food = findFoodById(foodId);
+    if (!food) return;
+    shoppingDetailReturnRef.current = true;
+    shoppingInitialFocusRef.current = true;
+    openDetail(food, "inventory", "browse");
+  };
+
   const openRecentlyReceivedFood = () => {
     const recent = recentlyReceivedFood ?? recentlyReceivedFoodRef.current;
     if (!recent) return;
@@ -3508,8 +3668,7 @@ function PrototypeContent() {
     if (food) {
       shoppingDetailReturnRef.current = true;
       shoppingInitialFocusRef.current = true;
-      openDetail(food, "inventory");
-      setDetailEntryIntent("date-review");
+      openDetail(food, "inventory", "browse");
       return;
     }
     recentlyReceivedFoodRef.current = null;
@@ -3525,7 +3684,8 @@ function PrototypeContent() {
   };
 
   const addManualShoppingItem = async (input: { canonicalName: string; quantity: number; unit: string }) => {
-    if (shoppingListMutating) return false;
+    const isCurrent = captureMutationScope();
+    if (!isCurrent() || shoppingListMutatingRef.current) return false;
     beginShoppingListMutation();
     setShoppingListError("");
     setShoppingListRetryAction(null);
@@ -3542,20 +3702,24 @@ function PrototypeContent() {
         setShoppingListStatus("ready");
         setShoppingListError("");
         setShoppingListRetryAction(null);
-      setShoppingListNotice(`${manualAddMessage}. 구매한 뒤 수량과 보관 위치를 확인해 식품 목록에 추가해 주세요.`);
-        setToast(manualAddMessage);
+      setShoppingListNotice(manualAddMessage);
+        setToast(null);
+        setToastAction(null);
         return true;
       }
       const response = await mealApi.addManualShoppingListItem(input.canonicalName, input.quantity, input.unit);
+      if (!isCurrent()) return false;
       if (!response) throw new Error("shopping-list-manual-add-empty");
       setShoppingList(response.items);
       rememberCurrentShoppingListRevision();
       setShoppingListStatus("ready");
-      setToast("장보기 목록에 직접 추가했어요");
+      setShoppingListNotice(response.added_count ? `${withKoreanObjectParticle(input.canonicalName)} 장보기 목록에 추가했어요` : response.updated_count ? `${input.canonicalName} 수량을 변경했어요` : "");
+      setToast(null);
+      setToastAction(null);
       return true;
     } catch (reason) {
+      if (!isCurrent()) return false;
       if (isMealApiAuthError(reason)) {
-        mealApi.clearSession();
         setShoppingList([]);
         setDashboardStaleAt(null);
         setConnectionState("auth_required");
@@ -3565,18 +3729,20 @@ function PrototypeContent() {
         setShoppingListError(MEAL_API_WORKSPACE_CONFLICT_MESSAGE);
       } else if (isMealApiShoppingListPersistenceError(reason)) {
         setShoppingListError("장보기 항목을 직접 추가하지 못했어요. 기존 목록을 유지했어요");
-        setShoppingListRetryAction({ label: "다시 시도", onRetry: () => void addManualShoppingItem(input) });
+        setShoppingListRetryAction({ label: "다시 시도", onRetry: () => { if (isCurrent()) void addManualShoppingItem(input); } });
       } else {
-        setShoppingListError("장보기 항목을 직접 추가하지 못했어요.");
+        setShoppingListError("장보기 항목이 저장됐는지 확인하지 못했어요. 다시 추가하기 전에 목록을 확인해 주세요.");
+        setShoppingListRetryAction({ label: "목록 확인", onRetry: () => { if (isCurrent()) void refreshShoppingList(); } });
       }
       return false;
     } finally {
-      finishShoppingListMutation();
+      if (isCurrent()) finishShoppingListMutation();
     }
   };
 
   const receiveShoppingItem = async (item: ApiShoppingListItem, input: { quantity: number; storageType: ApiStorageType; storageLocationId?: string | null }) => {
-    if (shoppingListMutating) return false;
+    const isCurrent = captureMutationScope();
+    if (!isCurrent() || shoppingListMutatingRef.current) return false;
     beginShoppingListMutation();
     setShoppingListError("");
     setShoppingListRetryAction(null);
@@ -3611,21 +3777,28 @@ function PrototypeContent() {
         setShoppingListStatus("ready");
         setShoppingListError("");
         setShoppingListRetryAction(null);
-        recentlyReceivedFoodRef.current = { id: food.id, name: food.name };
-        setRecentlyReceivedFood({ id: food.id, name: food.name });
+        recentlyReceivedFoodRef.current = { id: food.id, name: food.name, quantity: food.quantity };
+        setRecentlyReceivedFood({ id: food.id, name: food.name, quantity: food.quantity });
         const receiveMessage = `${withKoreanObjectParticle(food.name)} 재고에 추가했어요`;
-        setToastAction({ message: receiveMessage, label: "식품 정보 보기", onInvoke: openRecentlyReceivedFood });
-        setToast(receiveMessage);
+        if (sheetRef.current === "shopping") {
+          setToastAction(null);
+          setToast(null);
+        } else {
+          setToastAction({ message: receiveMessage, label: "식품 정보 보기", onInvoke: openRecentlyReceivedFood });
+          setToast(receiveMessage);
+        }
         return true;
       }
       const response = await mealApi.receiveShoppingListItem(item.id, input.quantity, input.storageType, idempotencyKey, input.storageLocationId);
+      if (!isCurrent()) return false;
       if (!response) throw new Error("shopping-list-receive-empty");
       shoppingReceiveKeys.current.delete(requestFingerprint);
-      let receivedFoodForReadback: { id: string; name: string } | null = null;
+      let receivedFoodForReadback: { id: string; name: string; quantity?: string } | null = null;
       if (response.inventory_lot?.id) {
         receivedFoodForReadback = {
           id: response.inventory_lot.id,
           name: response.inventory_lot.display_name ?? response.inventory_lot.canonical_name ?? item.canonical_name,
+          quantity: `${formatReceiptAmount(response.received_quantity)}${response.inventory_lot.unit}`,
         };
         recentlyReceivedFoodRef.current = receivedFoodForReadback;
         setRecentlyReceivedFood(receivedFoodForReadback);
@@ -3634,6 +3807,7 @@ function PrototypeContent() {
       rememberCurrentShoppingListRevision();
       setShoppingListStatus("ready");
       const synced = await syncDashboard();
+      if (!isCurrent()) return false;
       const receiveMessage = synced
         ? response.removed_planned_source_count > 0
           ? `${withKoreanObjectParticle(item.canonical_name)} 재고에 추가하고 식단 장보기를 정리했어요`
@@ -3649,8 +3823,11 @@ function PrototypeContent() {
           message: finalReceiveMessage,
           label: "목록 새로고침",
           onInvoke: () => {
+            if (!isCurrent()) return;
             void syncDashboard(false, false).then(async (latestSynced) => {
+              if (!isCurrent()) return;
               if (latestSynced) await refreshShoppingList();
+              if (!isCurrent()) return;
               if (receivedFoodForReadback) {
                 recentlyReceivedFoodRef.current = receivedFoodForReadback;
                 setRecentlyReceivedFood(receivedFoodForReadback);
@@ -3665,18 +3842,20 @@ function PrototypeContent() {
             });
           },
         });
+      } else if (response.inventory_lot?.id && sheetRef.current === "shopping") {
+        setToastAction(null);
       } else if (response.inventory_lot?.id) {
         setToastAction({
           message: finalReceiveMessage,
           label: "식품 정보 보기",
-          onInvoke: openRecentlyReceivedFood,
+          onInvoke: () => { if (isCurrent()) openRecentlyReceivedFood(); },
         });
       }
-      setToast(finalReceiveMessage);
+      setToast(synced && response.inventory_lot?.id && sheetRef.current === "shopping" ? null : finalReceiveMessage);
       return true;
     } catch (reason) {
+      if (!isCurrent()) return false;
       if (isMealApiAuthError(reason)) {
-        mealApi.clearSession();
         setShoppingList([]);
         setDashboardStaleAt(null);
         setConnectionState("auth_required");
@@ -3684,22 +3863,27 @@ function PrototypeContent() {
       } else if (isMealApiWorkspaceConflictError(reason)) {
         void syncDashboard();
         setShoppingListError(MEAL_API_WORKSPACE_CONFLICT_MESSAGE);
-        setShoppingListRetryAction({ label: "다시 불러오기", onRetry: () => void refreshShoppingList() });
+        setShoppingListRetryAction({ label: "다시 불러오기", onRetry: () => { if (isCurrent()) void refreshShoppingList(); } });
+      } else if (isMealApiShoppingPurchaseRecordedError(reason)) {
+        void refreshShoppingList();
+        setShoppingListError("이미 식품 목록에 추가된 구매예요. 목록에서 추가한 식품을 확인해 주세요.");
+        setShoppingListRetryAction({ label: "목록 새로고침", onRetry: () => { if (isCurrent()) void refreshShoppingList(); } });
       } else if (isMealApiShoppingReceivePersistenceError(reason)) {
         setShoppingListError("구매한 항목을 저장하지 못했어요. 기존 장보기 목록과 재고를 유지했어요.");
-        setShoppingListRetryAction({ label: "다시 시도", onRetry: () => void receiveShoppingItem(item, input) });
+        setShoppingListRetryAction({ label: "다시 시도", onRetry: () => { if (isCurrent()) void receiveShoppingItem(item, input); } });
       } else {
         setShoppingListError("구매한 식품을 목록에 추가하지 못했어요. 다시 시도해 주세요.");
-        setShoppingListRetryAction({ label: "다시 시도", onRetry: () => void receiveShoppingItem(item, input) });
+        setShoppingListRetryAction({ label: "다시 시도", onRetry: () => { if (isCurrent()) void receiveShoppingItem(item, input); } });
       }
       return false;
     } finally {
-      finishShoppingListMutation();
+      if (isCurrent()) finishShoppingListMutation();
     }
   };
 
   const toggleShoppingItem = async (item: ApiShoppingListItem) => {
-    if (shoppingListMutating) return;
+    const isCurrent = captureMutationScope();
+    if (!isCurrent() || shoppingListMutatingRef.current) return;
     beginShoppingListMutation();
     setShoppingListError("");
     setShoppingListRetryAction(null);
@@ -3709,16 +3893,17 @@ function PrototypeContent() {
         const now = new Date().toISOString();
         setShoppingList((current) => current.map((candidate) => candidate.id === item.id ? { ...candidate, checked, updated_at: now } : candidate));
         setShoppingListStatus("ready");
-        setShoppingListNotice(checked ? "구매 완료로 표시했어요. 식품 목록에 추가해 주세요." : "구매 예정으로 바꿨어요.");
+        setShoppingListNotice(checked ? "구매 완료로 표시했어요." : "구매 예정으로 바꿨어요.");
         return;
       }
       const updated = await mealApi.updateShoppingListItem(item.id, !item.checked);
+      if (!isCurrent()) return;
       if (!updated) throw new Error("shopping-list-update-empty");
       setShoppingList((current) => current.map((candidate) => candidate.id === updated.id ? updated : candidate));
       rememberCurrentShoppingListRevision();
     } catch (reason) {
+      if (!isCurrent()) return false;
       if (isMealApiAuthError(reason)) {
-        mealApi.clearSession();
         setShoppingList([]);
         setDashboardStaleAt(null);
         setConnectionState("auth_required");
@@ -3729,17 +3914,18 @@ function PrototypeContent() {
       } else if (isMealApiShoppingListPersistenceError(reason)) {
         const message = "장보기 항목을 저장하지 못했어요. 기존 목록은 그대로예요.";
         setShoppingListError(message);
-        setShoppingListRetryAction({ label: "다시 시도", onRetry: () => void toggleShoppingItem(item) });
+        setShoppingListRetryAction({ label: "다시 시도", onRetry: () => { if (isCurrent()) void toggleShoppingItem(item); } });
       } else {
         setShoppingListError("장보기 항목을 저장하지 못했어요.");
       }
     } finally {
-      finishShoppingListMutation();
+      if (isCurrent()) finishShoppingListMutation();
     }
   };
 
   const removeShoppingItem = async (item: ApiShoppingListItem) => {
-    if (shoppingListMutating) return;
+    const isCurrent = captureMutationScope();
+    if (!isCurrent() || shoppingListMutatingRef.current) return;
     beginShoppingListMutation();
     setShoppingListError("");
     setShoppingListRetryAction(null);
@@ -3752,12 +3938,13 @@ function PrototypeContent() {
         return;
       }
       const result = await mealApi.deleteShoppingListItem(item.id);
+      if (!isCurrent()) return;
       if (!result?.removed) throw new Error("shopping-list-delete-empty");
       setShoppingList((current) => current.filter((candidate) => candidate.id !== item.id));
       rememberCurrentShoppingListRevision();
     } catch (reason) {
+      if (!isCurrent()) return false;
       if (isMealApiAuthError(reason)) {
-        mealApi.clearSession();
         setShoppingList([]);
         setDashboardStaleAt(null);
         setConnectionState("auth_required");
@@ -3768,12 +3955,12 @@ function PrototypeContent() {
       } else if (isMealApiShoppingListPersistenceError(reason)) {
         const message = "장보기 항목을 삭제하지 못했어요. 기존 목록을 유지했어요";
         setShoppingListError(message);
-        setShoppingListRetryAction({ label: "다시 시도", onRetry: () => void removeShoppingItem(item) });
+        setShoppingListRetryAction({ label: "다시 시도", onRetry: () => { if (isCurrent()) void removeShoppingItem(item); } });
       } else {
         setShoppingListError("장보기 항목을 삭제하지 못했어요.");
       }
     } finally {
-      finishShoppingListMutation();
+      if (isCurrent()) finishShoppingListMutation();
     }
   };
 
@@ -3800,20 +3987,25 @@ function PrototypeContent() {
     return nextItems;
   };
 
-  const markNotificationRead = async (notification: ApiNotification) => {
+  const markNotificationRead = async (notification: ApiNotification, retrying = false) => {
+    const isCurrent = captureMutationScope();
+    if (!isCurrent()) return;
     const readAt = new Date().toISOString();
     if (!mealApi.isConfigured) {
       setDemoNotificationReadAt((current) => ({ ...current, [notification.id]: readAt }));
       return;
     }
     notificationReadInFlightRef.current += 1;
-    const retryingNotificationRead = Boolean(notificationRetryAction);
+    // The retry closure is created in the failing render, where the retry action state is not set yet;
+    // pass the retry intent explicitly so the failure and its busy retry stay visible until the result.
+    const retryingNotificationRead = retrying || Boolean(notificationRetryAction);
     if (!retryingNotificationRead) {
       setNotificationsError("");
       setNotificationRetryAction(null);
     }
     try {
       const updated = await mealApi.markNotificationRead(notification.id);
+      if (!isCurrent()) return;
       if (!updated) throw new Error("notification-read-empty");
       notificationReadOverridesRef.current.set(updated.id, updated.read_at ?? readAt);
       setNotifications((current) => current.map((item) => item.id === updated.id ? { ...updated, read_at: updated.read_at ?? readAt } : item));
@@ -3821,23 +4013,26 @@ function PrototypeContent() {
       setNotificationsError("");
       setNotificationRetryAction(null);
     } catch (reason) {
+      if (!isCurrent()) return;
       if (isMealApiWorkspaceConflictError(reason)) {
         void refreshNotifications();
         setNotificationsError(MEAL_API_WORKSPACE_CONFLICT_MESSAGE);
-        setNotificationRetryAction({ label: "다시 불러오기", onRetry: () => void refreshNotifications() });
+        setNotificationRetryAction({ label: "다시 불러오기", onRetry: () => { if (isCurrent()) void refreshNotifications(); } });
       } else if (isMealApiNotificationReadPersistenceError(reason)) {
         setNotificationsError("알림을 읽음으로 표시하지 못했어요. 기존 알림은 그대로예요.");
-        setNotificationRetryAction({ label: "다시 시도", onRetry: () => void markNotificationRead(notification) });
+        setNotificationRetryAction({ label: "다시 시도", onRetry: () => { if (isCurrent()) void markNotificationRead(notification, true); } });
       } else {
         setNotificationsError("알림을 읽음으로 표시하지 못했어요.");
-        setNotificationRetryAction({ label: "다시 시도", onRetry: () => void markNotificationRead(notification) });
+        setNotificationRetryAction({ label: "다시 시도", onRetry: () => { if (isCurrent()) void markNotificationRead(notification, true); } });
       }
     } finally {
-      finishNotificationRead();
+      if (isCurrent()) finishNotificationRead();
     }
   };
 
   const markAllNotificationsRead = async () => {
+    const isCurrent = captureMutationScope();
+    if (!isCurrent()) return;
     const readAt = new Date().toISOString();
     if (!mealApi.isConfigured) {
       setDemoNotificationReadAt((current) => Object.fromEntries(demoNotifications.map((notification) => [notification.id, current[notification.id] ?? readAt])));
@@ -3848,6 +4043,7 @@ function PrototypeContent() {
     setNotificationRetryAction(null);
     try {
       const result = await mealApi.markAllNotificationsRead();
+      if (!isCurrent()) return;
       if (!result) throw new Error("notifications-read-all-empty");
       notifications.forEach((notification) => {
         notificationReadOverridesRef.current.set(notification.id, notification.read_at ?? readAt);
@@ -3855,23 +4051,29 @@ function PrototypeContent() {
       rememberCurrentNotificationRevision();
       await refreshNotifications();
     } catch (reason) {
+      if (!isCurrent()) return;
       if (isMealApiWorkspaceConflictError(reason)) {
         void refreshNotifications();
         setNotificationsError(MEAL_API_WORKSPACE_CONFLICT_MESSAGE);
-        setNotificationRetryAction({ label: "다시 불러오기", onRetry: () => void refreshNotifications() });
+        setNotificationRetryAction({ label: "다시 불러오기", onRetry: () => { if (isCurrent()) void refreshNotifications(); } });
       } else if (isMealApiNotificationReadPersistenceError(reason)) {
         setNotificationsError("알림을 읽음으로 표시하지 못했어요. 기존 알림은 그대로예요.");
-        setNotificationRetryAction({ label: "다시 시도", onRetry: () => void markAllNotificationsRead() });
+        setNotificationRetryAction({ label: "다시 시도", onRetry: () => { if (isCurrent()) void markAllNotificationsRead(); } });
       } else {
         setNotificationsError("알림을 읽음으로 표시하지 못했어요.");
-        setNotificationRetryAction({ label: "다시 시도", onRetry: () => void markAllNotificationsRead() });
+        setNotificationRetryAction({ label: "다시 시도", onRetry: () => { if (isCurrent()) void markAllNotificationsRead(); } });
       }
     } finally {
-      finishNotificationRead();
+      if (isCurrent()) finishNotificationRead();
     }
   };
 
   const openNotificationTarget = (notification: ApiNotification) => {
+    const isCurrent = captureMutationScope();
+    if (!isCurrent()) return;
+    const targetGeneration = ++notificationTargetGenerationRef.current;
+    const isCurrentTarget = () => isCurrent() && notificationTargetGenerationRef.current === targetGeneration && sheetRef.current === "notifications";
+    setNotificationTargetIssue(null);
     notificationInitialFocusRef.current = false;
     void markNotificationRead(notification);
     if (notification.action === "food" && notification.food_id) {
@@ -3880,18 +4082,28 @@ function PrototypeContent() {
         notificationDetailReturnRef.current = false;
         notificationReturnFocusIdRef.current = null;
         inventoryReturnContextRef.current = null;
-        changeSheet(null);
-        setToastAction({
+        setToast(null);
+        setToastAction(null);
+        setNotificationTargetIssue({
+          id: notification.id,
           message,
-          label: "목록 새로고침",
-          onInvoke: () => {
+          loading: false,
+          onRefresh: () => {
+            if (!isCurrentTarget()) return;
+            setNotificationTargetIssue((current) => current?.id === notification.id ? { ...current, loading: true } : current);
             void syncDashboard().then((synced) => {
-              setToast(synced ? "식품 목록을 새로고침했어요." : "식품 목록을 불러오지 못했어요.");
-              if (synced) openInventory();
+              if (!isCurrentTarget()) return;
+              if (synced) {
+                setNotificationTargetIssue(null);
+                notificationReturnSheetRef.current = null;
+                openInventory();
+                setToast("식품 목록을 새로고침했어요.");
+              } else {
+                setNotificationTargetIssue((current) => current?.id === notification.id ? { ...current, loading: false, message: "식품 목록을 불러오지 못했어요. 다시 시도해 주세요." } : current);
+              }
             });
           },
         });
-        setToast(message);
         return;
       }
       notificationDetailReturnRef.current = true;
@@ -3953,7 +4165,7 @@ function PrototypeContent() {
     if (mealApi.workspaceRevision !== null) rememberDashboardRevision(mealApi.workspaceRevision);
   };
 
-  const syncDashboard = async (homeOnly = false, refreshDependentSurfaces = true) => {
+  const syncDashboard = async (homeOnly = false, refreshDependentSurfaces = true, onReadback?: (payload: ApiDashboard) => void) => {
     dashboardSyncInFlightRef.current = true;
     try {
       const result = await workspaceSync.run("dashboard", async (signal) => {
@@ -3969,6 +4181,7 @@ function PrototypeContent() {
       const payload = dashboardResult?.payload;
       if (!payload) return false;
       if (homeOnly && sheetRef.current !== null) return false;
+      onReadback?.(payload);
       const nextStorageLocations = payload.storage_locations ?? [];
       updateStorageLocations(nextStorageLocations);
       setFoods(payload.inventory.map((food) => mapApiFood(food, nextStorageLocations)));
@@ -3998,7 +4211,6 @@ function PrototypeContent() {
       return true;
     } catch (reason) {
       if (isMealApiAuthError(reason)) {
-        mealApi.clearSession();
         resetWorkspaceReads();
         setDashboardStaleAt(null);
         setConnectionState("auth_required");
@@ -4044,18 +4256,20 @@ function PrototypeContent() {
   const retryConnection = () => {
     setConnectionState("checking");
     void syncDashboard().then((synced) => {
-      setToast(synced ? "인터넷에 다시 연결했어요." : "연결하지 못했어요. 잠시 후 다시 시도해 주세요.");
+      setToast(synced ? "기록을 다시 불러왔어요." : "연결하지 못했어요. 잠시 후 다시 시도해 주세요.");
     });
   };
 
   const clearInventorySearch = () => {
-    keyboard.hide();
     setInventoryQuery("");
+    setInventorySearchComposing(false);
+    revealAndFocus(document.querySelector<HTMLInputElement>(".inventory-search-input"), { block: "nearest" });
   };
 
   const clearInventoryFilters = () => {
     keyboard.hide();
     setInventoryQuery("");
+    setInventorySearchComposing(false);
     setStorageFilter("전체");
     setInventoryStatusFilter("all");
     if (activeContentNavRef.current === "food") {
@@ -4064,6 +4278,22 @@ function PrototypeContent() {
         document.querySelector<HTMLElement>('.inventory-status-filters button[aria-pressed="true"]')?.focus({ preventScroll: true });
       });
     }
+  };
+
+  const clearInventoryOnlyFilters = () => {
+    keyboard.hide();
+    setStorageFilter("전체");
+    setInventoryStatusFilter("all");
+    if (activeContentNavRef.current === "food") restoreContentNavigation("food");
+    window.requestAnimationFrame(() => {
+      document.querySelector<HTMLElement>('.inventory-status-filters button[aria-pressed="true"]')?.focus({ preventScroll: true });
+    });
+  };
+
+  const editInventorySearch = () => {
+    const input = document.querySelector<HTMLInputElement>(".inventory-search-input");
+    revealAndFocus(input, { block: "nearest" });
+    input?.select();
   };
 
   const retryInventorySearch = () => {
@@ -4097,6 +4327,12 @@ function PrototypeContent() {
   const openStorageInventory = (storage: StorageType) => {
     openInventory("", true);
     setStorageFilter(storage);
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        if (activeContentNavRef.current !== "food" || sheetRef.current !== null) return;
+        document.querySelector<HTMLSelectElement>(".inventory-toolbar .filter-select-wrap select")?.focus({ preventScroll: true });
+      });
+    });
   };
 
   const navigateFromBottom = (destination: "home" | "food") => {
@@ -4121,8 +4357,7 @@ function PrototypeContent() {
       })
       .catch((reason) => {
         if (isMealApiAuthError(reason)) {
-          mealApi.clearSession();
-          resetWorkspaceReads();
+            resetWorkspaceReads();
           setDashboardStaleAt(null);
           setConnectionState("auth_required");
           setInventorySearchError("로그인이 만료됐어요. 다시 로그인해 주세요.");
@@ -4131,6 +4366,17 @@ function PrototypeContent() {
         }
         setInventorySearchStatus("error");
       });
+  };
+
+  const handleAccountSessionStarted = async () => {
+    clearCompletedOutboxHandoff();
+    resetWorkspacePresentation();
+    setAddSheetSessionKey((current) => current + 1);
+    shoppingReceiveKeys.current.clear();
+    setToast("");
+    setToastAction(null);
+    setConnectionState("checking");
+    await syncDashboard();
   };
 
   const handleAuthenticated = async (session: { mode: "account" | "guest" }, successMessage?: string) => {
@@ -4161,6 +4407,7 @@ function PrototypeContent() {
     const synced = await syncDashboard();
       setToast(synced ? serverRevoked ? "로그아웃하고 새 게스트 기록 공간으로 전환했어요" : "이 기기에서 로그아웃하고 새 게스트 기록 공간으로 전환했어요" : "로그아웃했지만 식품 목록을 읽지 못했어요");
   };
+
 
   const handleAccountDeleted = async () => {
     clearCompletedOutboxHandoff();
@@ -4205,7 +4452,7 @@ function PrototypeContent() {
           const consumedQuantity = quantitiesByFoodId.get(food.id);
           if (consumedQuantity == null) return [];
           const currentQuantity = quantityParts(food.quantity);
-          const remaining = Number((currentQuantity.amount - consumedQuantity).toFixed(3));
+          const remaining = subtractQuantity(currentQuantity.amount, consumedQuantity);
           return remaining > 0 ? [{ ...food, quantity: `${remaining}${currentQuantity.unit}` }] : [];
         })
         .map((food, index) => ({ ...food, priority: index + 1 })));
@@ -4214,7 +4461,7 @@ function PrototypeContent() {
       return;
     }
     setToastAction(null);
-    setToast("조리 완료를 저장하고 있어요.");
+    setToast("조리 완료를 저장하고 있어요.", "pending");
     void syncDashboard().then((synced) => {
       const completionSyncMessage = withGrocySyncNotice(completionMessage, grocySyncStatus);
       const finalCompletionMessage = withServerReadbackNotice(completionSyncMessage, synced);
@@ -4232,14 +4479,19 @@ function PrototypeContent() {
     hasMissingIngredients = false,
     addMissingIngredients?: () => void | Promise<void>,
   ) => {
+    if (sheetRef.current === "meal") {
+      setToast(null);
+      setToastAction(null);
+      return;
+    }
     const message = !mealApi.isConfigured
       ? kind === "multi-day"
         ? hasMissingIngredients
-          ? "미리보기 3일 식단을 저장했어요 · 부족 재료를 장보기 목록에 담아 주세요"
-          : "미리보기 3일 식단을 저장했어요 · 화면을 벗어나면 초기화돼요"
+          ? "미리보기 3일 식단을 저장했어요. 부족 재료를 장보기 목록에 담아 주세요."
+          : "미리보기 3일 식단을 저장했어요. 화면을 벗어나면 초기화돼요."
         : hasMissingIngredients
-          ? "미리보기 식단을 저장했어요 · 부족 재료를 장보기 목록에 담아 주세요"
-          : "미리보기 식단을 저장했어요 · 화면을 벗어나면 초기화돼요"
+          ? "미리보기 식단을 저장했어요. 부족 재료를 장보기 목록에 담아 주세요."
+          : "미리보기 식단을 저장했어요. 화면을 벗어나면 초기화돼요."
       : kind === "multi-day"
         ? hasMissingIngredients
         ? "3일 식단을 저장했어요. 부족한 재료는 장보기 목록에 담아 주세요."
@@ -4370,6 +4622,8 @@ function PrototypeContent() {
   };
 
   const saveFood = (foodId: string, storage: StorageType, opened: boolean, eventQuantity: number, storageLocationId: string | null = null) => {
+    if (storageSavingFoodIdsRef.current.has(foodId)) return;
+    const isCurrentWorkspace = captureMutationScope();
     const previousFood = findFoodById(foodId);
     if (!previousFood || !isValidEventQuantity(eventQuantity, quantityParts(previousFood.quantity).amount)) {
       setToast("현재 보관 수량 안에서 기록할 양을 입력해 주세요.");
@@ -4390,19 +4644,12 @@ function PrototypeContent() {
       previousFood && !previousFood.opened && opened ? "개봉 상태" : null,
       isPartial ? "수량" : null,
     ].filter((value): value is string => Boolean(value));
-    const pendingChangeSummary = pendingChangeLabels.join("·");
-    const persistenceFailureMessage = pendingChangeLabels.length > 1
-      ? `보관 정보를 저장하지 못했어요. ${pendingChangeSummary} 변경 전 내용은 그대로예요.`
-      : "보관 정보를 저장하지 못했어요. 기존 내용은 그대로예요.";
-    const rollbackFailureMessage = pendingChangeLabels.length > 1
-      ? `보관 정보를 저장하지 못했어요. ${pendingChangeSummary} 변경 전 내용으로 되돌렸어요.`
-      : "보관 정보를 저장하지 못했어요. 기존 내용은 그대로예요.";
-    const storageSavedMessage = shouldSplit ? "보관 위치를 저장하고 수량을 나눴어요." : "보관 위치를 저장했어요.";
-    const storageScopeLabel = pendingChangeLabels.join("·");
+    const persistenceFailureMessage = "보관 정보를 저장하지 못했어요. 기존 기록은 그대로예요.";
+    const storageSavedMessage = shouldSplit ? `${previousFood.name} 수량을 나눠 변경 내용을 저장했어요.` : `${previousFood.name}의 변경 내용을 저장했어요.`;
+    const storageScopeLabel = pendingChangeLabels.join(", ");
     const withStorageScope = (includeScope: boolean) => includeScope && storageScopeLabel
       ? `${storageSavedMessage} 바꾼 내용 · ${storageScopeLabel}`
       : storageSavedMessage;
-    const previousFoods = foods;
     const applyOptimistic = () => {
       if (!(mealApi.isConfigured && shouldSplit) && previousFood) {
         if (shouldSplit) {
@@ -4435,11 +4682,18 @@ function PrototypeContent() {
         }
       }
     };
-    if (!mealApi.isConfigured || !previousFood) applyOptimistic();
-    changeSheet(null);
-    setToast(mealApi.isConfigured ? "보관 위치를 저장하고 있어요." : storageSavedMessage);
+    if (!mealApi.isConfigured) {
+      applyOptimistic();
+      changeSheet(null);
+      setToast(storageSavedMessage);
+    }
     if (mealApi.isConfigured && previousFood) {
-      const persistEvents = async (): Promise<StorageMutationResult> => {
+      storageSavingFoodIdsRef.current.add(foodId);
+      setStorageSavingFoodIds(new Set(storageSavingFoodIdsRef.current));
+      setStorageSaveRecovery(null);
+      setToast("");
+      setToastAction(null);
+      const persistEvents = async (assertCurrent: () => void): Promise<StorageMutationResult> => {
         const moveRequested = storageChanged;
         const openRequested = !previousFood.opened && opened;
         let targetFoodId = foodId;
@@ -4458,7 +4712,7 @@ function PrototypeContent() {
           sequence.events.forEach((event) => {
             if (event.grocy_sync_status) statuses.push(event.grocy_sync_status);
           });
-          return { statuses, inventory: sequence.events[sequence.events.length - 1]?.inventory ?? null };
+          return { statuses, inventory: sequence.events[sequence.events.length - 1]?.inventory ?? null, affectedFoodId: sequence.final_food_id };
         }
         let inventory: ApiFood[] | null = null;
         if (moveRequested) {
@@ -4468,6 +4722,7 @@ function PrototypeContent() {
             to_storage_location_id: nextStorageLocationId || undefined,
             quantity: isPartial ? eventQuantity : undefined,
           }, `${storageMutationKey}:move`);
+          assertCurrent();
           if (moved?.grocy_sync_status) statuses.push(moved.grocy_sync_status);
           inventory = moved?.inventory ?? inventory;
           if (moved?.created_child_food_id) targetFoodId = moved.created_child_food_id;
@@ -4478,18 +4733,24 @@ function PrototypeContent() {
             quantity: targetFoodId === foodId && isPartial ? eventQuantity : undefined,
           }, `${storageMutationKey}:open`);
           if (openedEvent?.grocy_sync_status) statuses.push(openedEvent.grocy_sync_status);
+          assertCurrent();
           inventory = openedEvent?.inventory ?? inventory;
+          if (openedEvent?.created_child_food_id) targetFoodId = openedEvent.created_child_food_id;
         }
-        return { statuses, inventory };
+        return { statuses, inventory, affectedFoodId: targetFoodId };
       };
       const persistAndSync = () => {
         void runStorageMutationRecovery({
-          applyOptimistic,
-          restore: () => setFoods(previousFoods),
+          isCurrent: isCurrentWorkspace,
+          applyOptimistic: () => undefined,
+          restore: () => undefined,
           mutate: persistEvents,
           sync: syncStorageMutation,
           onSuccess: ({ value: result, synced }) => {
-            if (result.inventory) {
+            storageSavingFoodIdsRef.current.delete(foodId);
+            setStorageSavingFoodIds(new Set(storageSavingFoodIdsRef.current));
+            setStorageSaveRecovery((current) => current?.foodId === foodId ? null : current);
+            if (result.inventory && !synced) {
               setFoods(result.inventory.map((food, index) => ({ ...mapApiFood(food, storageLocations), priority: index + 1 })));
             }
             const externalSyncDeferred = hasDeferredExternalSync(result.statuses);
@@ -4498,20 +4759,44 @@ function PrototypeContent() {
             const externalSyncNeedsAttention = needsExternalSyncAttention(result.statuses);
             if (externalSyncNeedsAttention) {
               setToastAction({ message: finalStorageMessage, label: "재고 앱 설정 보기", onInvoke: () => changeSheet("account") });
+            } else if (shouldSplit && result.affectedFoodId) {
+              const affectedFoodId = result.affectedFoodId;
+              setToastAction({ message: finalStorageMessage, label: "나눈 식품 보기", onInvoke: () => {
+                if (!isCurrentWorkspace()) return;
+                const changedFood = findFoodById(affectedFoodId);
+                if (!changedFood) {
+                  setToast("나눈 식품을 목록에서 찾지 못했어요.");
+                  return;
+                }
+                if (sheetRef.current === "meal") openFoodDetailFromMeal(affectedFoodId);
+                else openDetail(changedFood, activeContentNavRef.current === "home" ? "home" : "inventory", "browse");
+              } });
             } else {
               setToastAction(null);
             }
             setToast(finalStorageMessage);
+            if (sheetRef.current === "detail" && selectedFoodIdRef.current === foodId) changeSheet(null);
           },
           onFailure: (reason, retry) => {
-            showRetryToast(
-              isMealApiWorkspaceConflictError(reason)
-                ? MEAL_API_WORKSPACE_CONFLICT_MESSAGE
-                : isMealApiStorageEventPersistenceError(reason)
-                  ? persistenceFailureMessage
-                  : rollbackFailureMessage,
-              () => { void retry(); },
-            );
+            storageSavingFoodIdsRef.current.delete(foodId);
+            setStorageSavingFoodIds(new Set(storageSavingFoodIdsRef.current));
+            const canEdit = isMealApiWorkspaceConflictError(reason) || isMealApiStorageEventPersistenceError(reason);
+            const message = isMealApiWorkspaceConflictError(reason)
+              ? MEAL_API_WORKSPACE_CONFLICT_MESSAGE
+              : isMealApiStorageEventPersistenceError(reason) ? persistenceFailureMessage
+                : "저장 결과를 확인하지 못했어요. 같은 요청으로 다시 확인할 수 있어요.";
+            const retrySameRequest = () => {
+              if (!isCurrentWorkspace() || storageSavingFoodIdsRef.current.has(foodId)) return;
+              storageSavingFoodIdsRef.current.add(foodId);
+              setStorageSavingFoodIds(new Set(storageSavingFoodIdsRef.current));
+              setStorageSaveRecovery(null);
+              void retry();
+            };
+            if (sheetRef.current === "detail" && selectedFoodIdRef.current === foodId) {
+              setStorageSaveRecovery({ foodId, message, retry: retrySameRequest, canEdit });
+              setToast("");
+              setToastAction(null);
+            } else showRetryToast(`${previousFood.name}: ${message}`, retrySameRequest);
           },
         });
       };
@@ -4520,6 +4805,7 @@ function PrototypeContent() {
   };
 
   const consumeFood = (foodId: string, eventQuantity?: number) => {
+    const isCurrentWorkspace = captureMutationScope();
     const food = findFoodById(foodId);
     if (!food || !isValidEventQuantity(eventQuantity ?? quantityParts(food.quantity).amount, quantityParts(food.quantity).amount)) {
       setToast("현재 보관 수량 안에서 먹은 양을 입력해 주세요.");
@@ -4533,12 +4819,12 @@ function PrototypeContent() {
     const withConsumeScope = (includeScope: boolean) => includeScope ? `${consumeSuccessMessage} · ${consumeScopeMessage}` : consumeSuccessMessage;
     const previousFoods = foods;
     const optimisticFoods = (isPartial
-      ? previousFoods.map((item) => item.id === foodId ? { ...item, quantity: `${Number((quantity.amount - (eventQuantity ?? 0)).toFixed(3))}${quantity.unit}` } : item)
+      ? previousFoods.map((item) => item.id === foodId ? { ...item, quantity: `${subtractQuantity(quantity.amount, eventQuantity ?? 0)}${quantity.unit}` } : item)
       : previousFoods.filter((item) => item.id !== foodId)
     ).map((item, index) => ({ ...item, priority: index + 1 }));
     const applyOptimistic = () => {
       if (isPartial) {
-        setFoods((current) => current.map((item) => item.id === foodId ? { ...item, quantity: `${Number((quantity.amount - (eventQuantity ?? 0)).toFixed(3))}${quantity.unit}` } : item));
+        setFoods((current) => current.map((item) => item.id === foodId ? { ...item, quantity: `${subtractQuantity(quantity.amount, eventQuantity ?? 0)}${quantity.unit}` } : item));
       } else {
         setFoods((current) => current.filter((item) => item.id !== foodId));
       }
@@ -4546,10 +4832,11 @@ function PrototypeContent() {
     if (!mealApi.isConfigured) applyOptimistic();
     changeSheet(null);
     setToastAction(null);
-    setToast(mealApi.isConfigured ? "먹은 기록을 저장하고 있어요" : consumeSuccessMessage);
+    setToast(mealApi.isConfigured ? "먹은 기록을 저장하고 있어요" : consumeSuccessMessage, mealApi.isConfigured ? "pending" : "notice");
     if (mealApi.isConfigured) {
       const persistAndSync = () => {
         void runStorageMutationRecovery({
+          isCurrent: isCurrentWorkspace,
           applyOptimistic,
           restore: () => setFoods(previousFoods),
           mutate: async () => {
@@ -4590,6 +4877,7 @@ function PrototypeContent() {
   };
 
   const discardFood = (foodId: string, eventQuantity?: number) => {
+    const isCurrentWorkspace = captureMutationScope();
     const food = findFoodById(foodId);
     if (!food || !isValidEventQuantity(eventQuantity ?? quantityParts(food.quantity).amount, quantityParts(food.quantity).amount)) {
       setToast("현재 보관 수량 안에서 폐기할 양을 입력해 주세요.");
@@ -4599,14 +4887,14 @@ function PrototypeContent() {
     const quantity = food ? quantityParts(food.quantity) : { amount: eventQuantity ?? 1, unit: "개" };
     const isPartial = eventQuantity !== undefined && eventQuantity < quantity.amount;
     const discardSuccessMessage = food
-      ? isPartial ? `${food.name} ${eventQuantity}${quantity.unit}을 폐기 기록으로 남겼어요` : `${food.name} 폐기 기록을 남겼어요`
+      ? isPartial ? `${food.name} ${withKoreanObjectParticle(`${eventQuantity}${quantity.unit}`)} 폐기 기록으로 남겼어요` : `${food.name} 폐기 기록을 남겼어요`
       : "폐기 기록을 저장했어요";
     const discardScopeMessage = `기록 범위: ${isPartial ? `${eventQuantity}${quantity.unit}` : `전체 ${quantity.amount}${quantity.unit}`}`;
     const withDiscardScope = (includeScope: boolean) => includeScope ? `${discardSuccessMessage} · ${discardScopeMessage}` : discardSuccessMessage;
     const previousFoods = foods;
     const applyOptimistic = () => {
       if (isPartial) {
-        setFoods((current) => current.map((item) => item.id === foodId ? { ...item, quantity: `${Number((quantity.amount - (eventQuantity ?? 0)).toFixed(3))}${quantity.unit}` } : item));
+        setFoods((current) => current.map((item) => item.id === foodId ? { ...item, quantity: `${subtractQuantity(quantity.amount, eventQuantity ?? 0)}${quantity.unit}` } : item));
       } else {
         setFoods((current) => current.filter((item) => item.id !== foodId));
       }
@@ -4614,10 +4902,11 @@ function PrototypeContent() {
     if (!mealApi.isConfigured) applyOptimistic();
     changeSheet(null);
     setToastAction(null);
-    setToast(mealApi.isConfigured ? "폐기 기록을 저장하고 있어요." : discardSuccessMessage);
+    setToast(mealApi.isConfigured ? "폐기 기록을 저장하고 있어요." : discardSuccessMessage, mealApi.isConfigured ? "pending" : "notice");
     if (mealApi.isConfigured) {
       const persistAndSync = () => {
         void runStorageMutationRecovery({
+          isCurrent: isCurrentWorkspace,
           applyOptimistic,
           restore: () => setFoods(previousFoods),
           mutate: async () => {
@@ -4626,7 +4915,10 @@ function PrototypeContent() {
           },
           sync: syncStorageMutation,
           onSuccess: ({ value: result, synced }) => {
-            if (result.inventory) {
+            storageSavingFoodIdsRef.current.delete(foodId);
+            setStorageSavingFoodIds(new Set(storageSavingFoodIdsRef.current));
+            setStorageSaveRecovery((current) => current?.foodId === foodId ? null : current);
+            if (result.inventory && !synced) {
               setFoods(result.inventory.map((item, index) => ({ ...mapApiFood(item, storageLocations), priority: index + 1 })));
             }
             const discardSyncMessage = withGrocySyncNotice(withDiscardScope(hasDeferredExternalSync(result.statuses) || !synced), result.statuses);
@@ -4655,6 +4947,7 @@ function PrototypeContent() {
   };
 
   const confirmFoodDate = (foodId: string, dateValue: string, kind: "sell_by" | "use_by" | "best_before" | "user_reminder") => {
+    const workspaceCurrent = captureMutationScope();
     const mutationKey = `${foodId}:${dateValue}:${kind}`;
     if (pendingDateMutationKeysRef.current.has(mutationKey)) return;
     pendingDateMutationKeysRef.current.add(mutationKey);
@@ -4663,8 +4956,12 @@ function PrototypeContent() {
       pendingDateMutationKeysRef.current.delete(mutationKey);
       return;
     }
+    const version = (dateMutationVersionsRef.current.get(foodId) ?? 0) + 1;
+    dateMutationVersionsRef.current.set(foodId, version);
+    const isCurrentWorkspace = () => workspaceCurrent() && dateMutationVersionsRef.current.get(foodId) === version;
     const returnedFromNotification = notificationDetailReturnRef.current;
     const actualPrinted = kind !== "user_reminder";
+    const sourceDetail = actualPrinted ? "포장지에서 사용자 확인" : "사용자 알림 설정";
     const updatedFood: FoodItem = {
       ...food,
       dateLabel: formatApiDate(dateValue),
@@ -4686,7 +4983,7 @@ function PrototypeContent() {
     queueFoodDateFocus(food);
     changeSheet(null);
     setToastAction(null);
-    setToast(mealApi.isConfigured ? "확인한 날짜를 저장하고 있어요." : displaySavedDateMessage);
+    setToast(mealApi.isConfigured ? "확인한 날짜를 저장하고 있어요." : displaySavedDateMessage, mealApi.isConfigured ? "pending" : "notice");
     if (!mealApi.isConfigured) {
       setFoods((current) => current.map((item) => item.id === foodId ? updatedFood : item));
       setToastAction(null);
@@ -4695,10 +4992,11 @@ function PrototypeContent() {
     }
     void runAuthoritativeMutation({
       operation: "food-date",
+      isCurrent: isCurrentWorkspace,
       mutate: () => mealApi.updateDateAssertion(foodId, {
         kind,
         date_value: dateValue,
-        source_detail: actualPrinted ? "포장지에서 사용자 확인" : "사용자 알림 설정",
+        source_detail: sourceDetail,
       }),
       apply: (updatedApiFood) => {
         const updatedReadModel = mapApiFood(updatedApiFood, storageLocations);
@@ -4707,6 +5005,7 @@ function PrototypeContent() {
       sync: syncDashboard,
     })
       .then(({ synced }) => {
+        if (!isCurrentWorkspace()) return;
         const finalDateMessage = withServerReadbackNotice(displaySavedDateMessage, synced);
         if (!synced) {
           setToastAction({
@@ -4724,20 +5023,35 @@ function PrototypeContent() {
         setToast(finalDateMessage);
       })
       .catch(async (reason) => {
-        await syncDashboard();
+        if (!isCurrentWorkspace()) return;
+        const checkSavedDate = async () => {
+          let observed: ApiFood | undefined;
+          const synced = await syncDashboard(false, true, (payload) => { observed = payload.inventory.find((item) => item.id === foodId); });
+          if (!isCurrentWorkspace()) return false;
+          if (!confirmedDateReadbackMatches(observed, foodId, dateValue, kind, sourceDetail)) return false;
+          setToastAction(null);
+          setToast(withServerReadbackNotice("저장된 날짜를 목록에서 확인했어요.", synced));
+          return true;
+        };
+        if (await checkSavedDate()) return;
+        if (!isCurrentWorkspace()) return;
         const message = isMealApiWorkspaceConflictError(reason)
           ? MEAL_API_WORKSPACE_CONFLICT_MESSAGE
           : isMealApiFoodDatePersistenceError(reason)
             ? "확인한 날짜를 저장하지 못했어요. 기존 정보를 유지했어요"
-            : "날짜 저장에 실패해 기존 정보를 유지했어요";
+            : "날짜 저장 여부를 확인하지 못했어요. 다시 저장하기 전에 목록을 확인해 주세요.";
         if (isMealApiWorkspaceConflictError(reason)) setToast(message);
         else if (isMealApiFoodDatePersistenceError(reason)) showRetryToast(message, () => confirmFoodDate(foodId, dateValue, kind));
-        else setToast(message);
+        else {
+          setToastAction({ message, label: "목록 확인", onInvoke: () => { if (isCurrentWorkspace()) void checkSavedDate(); } });
+          setToast(message);
+        }
       })
       .finally(() => pendingDateMutationKeysRef.current.delete(mutationKey));
   };
 
   const removeProductProvenance = (foodId: string) => {
+    const isCurrentWorkspace = captureMutationScope();
     const food = findFoodById(foodId);
     if (!food?.productProvenance) return;
     if (productProvenanceMutatingFoodId === foodId) return;
@@ -4755,6 +5069,7 @@ function PrototypeContent() {
     setToast(`${food.name}의 상품 정보를 지우는 중이에요`);
     void runAuthoritativeMutation({
       operation: "product-provenance",
+      isCurrent: isCurrentWorkspace,
       mutate: () => mealApi.clearProductProvenance(foodId),
       apply: (updatedApiFood) => {
         const updatedReadModel = mapApiFood(updatedApiFood, storageLocations);
@@ -4763,6 +5078,7 @@ function PrototypeContent() {
       sync: syncDashboard,
     })
       .then(({ synced }) => {
+        if (!isCurrentWorkspace()) return;
         setProductProvenanceStatus(null);
         const noticeMessage = synced
           ? `${food.name}의 상품 정보를 지웠어요. 이전 변경 기록은 그대로예요.`
@@ -4775,6 +5091,7 @@ function PrototypeContent() {
         setToast(noticeMessage);
       })
       .catch(async (reason) => {
+        if (!isCurrentWorkspace()) return;
         const conflict = isMealApiWorkspaceConflictError(reason);
         const persistenceFailure = isMealApiProductProvenancePersistenceError(reason);
         // A failed mutation did not produce an authoritative response, so
@@ -4785,6 +5102,7 @@ function PrototypeContent() {
         }
         if (conflict) {
           await syncDashboard();
+        if (!isCurrentWorkspace()) return;
           setProductProvenanceStatus({ foodId, message: MEAL_API_WORKSPACE_CONFLICT_MESSAGE, retryable: false });
           setToast(MEAL_API_WORKSPACE_CONFLICT_MESSAGE);
         } else if (persistenceFailure) {
@@ -4800,10 +5118,30 @@ function PrototypeContent() {
           setProductProvenanceStatus({ foodId, message: "상품 정보를 지우지 못했어요. 기존 정보는 그대로예요.", retryable: true });
         }
       })
-      .finally(() => setProductProvenanceMutatingFoodId(null));
+      .finally(() => { if (isCurrentWorkspace()) setProductProvenanceMutatingFoodId(null); });
+  };
+
+  const updateQuantityReference = async (foodId: string, reference: { amount: number; unit: "g" | "ml" | "개" } | null) => {
+    const isCurrent = captureMutationScope();
+    if (!mealApi.isConfigured) {
+      setFoods((current) => current.map((food) => food.id === foodId ? { ...food, quantityReference: reference ?? undefined } : food));
+      if (reference && detailEntryIntent === "quantity-review") changeSheet(null);
+      return;
+    }
+    const { synced } = await runAuthoritativeMutation({
+      operation: "quantity-reference", isCurrent,
+      mutate: () => mealApi.updateQuantityReference(foodId, reference),
+      apply: (updated) => setFoods((current) => current.map((food) => food.id === foodId ? mapApiFood(updated, storageLocations) : food)),
+      sync: syncDashboard,
+    });
+    if (!isCurrent()) return;
+    if (synced) rememberCurrentDetailRevision();
+    setToast(withServerReadbackNotice(reference ? "내용량을 저장했어요." : "입력한 내용량을 지웠어요.", synced));
+    if (reference && synced && detailEntryIntent === "quantity-review" && sheetRef.current === "detail" && selectedFoodIdRef.current === foodId) changeSheet(null);
   };
 
   const updateProductInfo = (foodId: string, input: { name: string; brand: string; category: string }) => {
+    const isCurrentWorkspace = captureMutationScope();
     const food = findFoodById(foodId);
     if (!food) return;
     setProductInfoRetryAction(null);
@@ -4816,8 +5154,8 @@ function PrototypeContent() {
       category: input.category,
       productProvenance: undefined,
     };
-    setFoods((current) => current.map((item) => item.id === foodId ? updatedFood : item));
     if (!mealApi.isConfigured) {
+      setFoods((current) => current.map((item) => item.id === foodId ? updatedFood : item));
       setProductInfoSavingFoodId(null);
       setToastAction(null);
       setProductInfoNotice({ foodId, message: `${input.name} 상품 정보를 저장했어요`, requiresRefresh: false });
@@ -4825,9 +5163,10 @@ function PrototypeContent() {
       return;
     }
     setToastAction(null);
-    setToast("상품 정보를 저장하고 있어요.");
+    setToast("상품 정보를 저장하고 있어요.", "pending");
     void runAuthoritativeMutation({
       operation: "product-info",
+      isCurrent: isCurrentWorkspace,
       mutate: () => mealApi.updateProductInfo(foodId, {
         canonical_name: input.name,
         brand: input.brand,
@@ -4840,8 +5179,13 @@ function PrototypeContent() {
       sync: syncDashboard,
     })
       .then(({ synced }) => {
+        if (!isCurrentWorkspace()) return;
         setProductInfoSavingFoodId(null);
         setProductInfoRetryAction(null);
+        if (synced && sheetRef.current === "detail" && selectedFoodIdRef.current === foodId) {
+          rememberCurrentDetailRevision();
+          setDetailRemoteRefreshRequired(false);
+        }
         const savedProductInfoMessage = `${input.name} 상품 정보를 저장했어요. 이전 정보는 변경 기록에 남았어요.`;
         const finalProductInfoMessage = withServerReadbackNotice(savedProductInfoMessage, synced);
         setProductInfoNotice({ foodId, message: finalProductInfoMessage, requiresRefresh: !synced });
@@ -4861,24 +5205,25 @@ function PrototypeContent() {
         setToast(finalProductInfoMessage);
       })
       .catch(async (reason) => {
-        // Only the mutation failure path restores the previous local state.
-        // A successful PATCH followed by a failed dashboard read is handled
-        // above without hiding the durable server result.
+        if (!isCurrentWorkspace()) return;
+        // Keep the editable draft intact; connected product fields change only after acknowledgement.
         setProductInfoSavingFoodId(null);
         setProductInfoNotice(null);
-        setFoods((current) => current.map((item) => item.id === foodId ? food : item));
         const persistenceFailure = isMealApiProductInfoPersistenceError(reason);
         if (persistenceFailure) {
           setProductInfoRetryAction({
             foodId,
-            input,
             message: "상품 정보를 저장하지 못했어요. 기존 정보를 유지했어요",
           });
         }
         await syncDashboard();
+        if (!isCurrentWorkspace()) return;
         if (isMealApiWorkspaceConflictError(reason)) {
           setToast(MEAL_API_WORKSPACE_CONFLICT_MESSAGE);
         } else if (persistenceFailure) {
+          // The detail's inline retry owns this failure; do not leave the pending "saving" toast behind.
+          setToastAction(null);
+          setToast(null);
           return;
         } else {
           setToast("상품 정보 저장에 실패해 기존 정보를 유지했어요");
@@ -4886,8 +5231,23 @@ function PrototypeContent() {
       });
   };
 
-  const addManualFood = (food: FoodItem) => {
-    if (pendingManualFoodMutationKeysRef.current.has(food.id)) return;
+  const addManualFood = async (food: FoodItem): Promise<FoodSaveResult> => {
+    const isCurrentWorkspace = captureMutationScope();
+    const submittedQuantity = parseDisplayQuantity(food.quantity);
+    if (!submittedQuantity) return { saved: false, message: "수량과 단위를 다시 확인해 주세요." };
+    if (mealApi.isConfigured && (!mealApi.hasSession || workspaceSync.currentWorkspaceKey !== mealApi.workspaceKey)) {
+      return { saved: false, message: "기록 공간에 연결한 뒤 저장해 주세요." };
+    }
+    if (pendingManualFoodMutationKeysRef.current.has(food.id)) return { saved: false, message: "저장하고 있어요. 잠시만 기다려 주세요." };
+    const submissionSession = addSheetSessionKey;
+    const finishInput = () => {
+      if (sheetRef.current !== "add" || addSheetSessionKeyRef.current !== submissionSession) return false;
+      const returnedToCorrectedDetail = food.lotAction === "correct"
+        && addReturnSheetRef.current === "detail"
+        && addReturnFoodContextRef.current?.id === food.targetFoodId;
+      changeSheet(null);
+      return returnedToCorrectedDetail;
+    };
     const isLotCorrection = food.lotAction === "correct";
     const correctionTarget = isLotCorrection && food.targetFoodId
       ? foods.find((existingFood) => existingFood.id === food.targetFoodId)
@@ -4895,52 +5255,60 @@ function PrototypeContent() {
     const normalizeManualFoodName = (value: string) => value.trim().replace(/\s+/g, " ");
     if (!mealApi.isConfigured && isLotCorrection && (!correctionTarget || normalizeManualFoodName(correctionTarget.name) !== normalizeManualFoodName(food.name))) {
       setToast("기존 식품을 찾지 못했어요. 식품 목록을 새로고침해 주세요.");
-      return;
+      return { saved: false, message: "기존 식품을 찾지 못했어요. 식품 목록을 다시 확인해 주세요." };
     }
     pendingManualFoodMutationKeysRef.current.add(food.id);
     if (!isLotCorrection) queueAddedFoodFocus(food.name);
-    if (sheet === "add") changeSheet(null);
     setToastAction(null);
-    const followUpLabel = isLotCorrection ? null : addedFoodFollowUpLabel(food);
+    const followUpLabel = isLotCorrection ? "식품 보기" : addedFoodFollowUpLabel(food);
     const reviewAddedFood = (foodId: string) => {
+      if (!isCurrentWorkspace()) return;
       pendingAddedFoodFocusRef.current = null;
       const addedFood = findFoodById(foodId) ?? (food.id === foodId ? food : null);
       if (addedFood) {
+        if (sheetRef.current === "meal") {
+          openFoodDetailFromMeal(addedFood.id, "date-review");
+          return;
+        }
         openDetail(addedFood, "home", "date-review");
       } else {
         openInventory();
-        setToast(`${food.name}을 식품 목록에서 확인해 주세요`);
+        setToast(`${withKoreanObjectParticle(food.name)} 식품 목록에서 확인해 주세요`);
       }
     };
     if (!mealApi.isConfigured) {
       mergeFoods([food]);
+      const returnedToCorrectedDetail = finishInput();
       if (isLotCorrection) {
-        setToast(`${food.name}의 날짜를 기존 기록에 저장했어요`);
+        const message = `${food.name}의 날짜를 기존 기록에 저장했어요`;
+        setToastAction(returnedToCorrectedDetail ? null : { message, label: "식품 보기", onInvoke: () => reviewAddedFood(food.targetFoodId ?? food.id) });
+        setToast(message);
         pendingManualFoodMutationKeysRef.current.delete(food.id);
-        return;
+        return { saved: true } as const;
       }
       if (followUpLabel) {
         setToastAction({ message: `${withKoreanObjectParticle(food.name)} 식품 목록에 추가했어요`, label: followUpLabel, onInvoke: () => reviewAddedFood(food.id) });
       }
       setToast(`${withKoreanObjectParticle(food.name)} 식품 목록에 추가했어요`);
       pendingManualFoodMutationKeysRef.current.delete(food.id);
-      return;
+      return { saved: true } as const;
     }
-    setToast(isLotCorrection ? `${food.name} 날짜를 저장하고 있어요.` : `${withKoreanObjectParticle(food.name)} 식품 목록에 추가하고 있어요.`);
+    setToast(isLotCorrection ? `${food.name} 날짜를 저장하고 있어요.` : `${withKoreanObjectParticle(food.name)} 식품 목록에 추가하고 있어요.`, "pending");
     let authoritativeFoodId = food.id;
     const dateKind = food.dateKind === "actual_printed"
       ? food.dateAssertionKind ?? "use_by"
       : food.dateKind === "user_confirmed" ? "user_reminder" : "unknown";
     const targetFoodId = food.lotAction === "correct" ? food.targetFoodId : undefined;
-    void runAuthoritativeMutation({
+    return runAuthoritativeMutation({
       operation: "manual-food",
+      isCurrent: isCurrentWorkspace,
       mutate: () => mealApi.createManualFood({
         canonical_name: food.name,
         lot_action: food.lotAction ?? "create",
-        ...(targetFoodId ? { target_food_id: targetFoodId } : {}),
+        ...(targetFoodId ? { target_food_id: targetFoodId, date_review_correction: Boolean(food.dateReviewCorrection || food.dateSource === "label_ocr") } : {}),
         idempotencyKey: `manual-food:${food.id}`,
-        quantity: Number.parseFloat(food.quantity) || 1,
-        unit: food.quantity.replace(/[\d.\s]/g, "") || "개",
+        quantity: submittedQuantity.amount,
+        unit: submittedQuantity.unit,
         storage_type: storageToApi(food.storage),
         category: food.category,
         note: food.note,
@@ -4981,11 +5349,14 @@ function PrototypeContent() {
       // mutation boundary instead of relying only on dashboard coalescing.
       sync: async () => {
         const synced = await syncDashboard();
+        if (!isCurrentWorkspace()) return false;
         await refreshNotifications();
         return synced;
       },
     })
       .then(({ synced }) => {
+        if (!isCurrentWorkspace()) return { saved: false, message: "기록 공간이 바뀌었어요." } as const;
+        const returnedToCorrectedDetail = finishInput();
         const addedFoodMessage = isLotCorrection
           ? `${food.name}의 날짜를 기존 기록에 저장했어요`
           : `${withKoreanObjectParticle(food.name)} 식품 목록에 추가했어요`;
@@ -5000,20 +5371,23 @@ function PrototypeContent() {
               });
             },
           });
-        } else if (followUpLabel) {
+        } else if (followUpLabel && !returnedToCorrectedDetail) {
           setToastAction({ message: finalAddedFoodMessage, label: followUpLabel, onInvoke: () => reviewAddedFood(authoritativeFoodId) });
         } else {
           setToastAction(null);
         }
         setToast(finalAddedFoodMessage);
+        return { saved: true } as const;
       })
       .catch(async (reason) => {
-        await syncDashboard();
+        if (!isCurrentWorkspace()) return { saved: false, message: "기록 공간이 바뀌었어요." } as const;
+        await syncDashboard().catch(() => false);
+        if (!isCurrentWorkspace()) return { saved: false, message: "기록 공간이 바뀌었어요." } as const;
         if (isLotCorrection && isMealApiFoodLotTargetMissingError(reason)) {
           const message = "선택한 식품 기록을 찾지 못해 날짜를 저장하지 않았어요. 식품 목록을 다시 확인해 주세요.";
           setToastAction({ message, label: "식품 목록 보기", onInvoke: () => openInventory(food.name, true) });
           setToast(message);
-          return;
+          return { saved: false, message } as const;
         }
         const message = isMealApiAuthError(reason)
           ? "로그인이 만료됐어요. 다시 로그인해 주세요"
@@ -5024,23 +5398,33 @@ function PrototypeContent() {
             : isMealApiFoodDateConfirmedError(reason)
                 ? "이미 확인된 날짜가 있어 기존 기록을 유지했어요"
                 : isMealApiManualFoodPersistenceError(reason)
-                  ? isLotCorrection ? "날짜를 저장하지 못했어요. 기존 식품 기록을 유지했어요" : "식품을 저장하지 못했어요. 기존 목록을 유지했어요"
-                : "식품을 추가하지 못했어요. 기존 목록은 그대로예요.";
-        if (isMealApiAuthError(reason) || isMealApiWorkspaceConflictError(reason) || isMealApiFoodLotSelectionError(reason) || isMealApiFoodDateConfirmedError(reason)) setToast(message);
-        else showRetryToast(message, () => addManualFood(food));
+                  ? isLotCorrection ? "날짜를 저장하지 못했어요." : "식품을 저장하지 못했어요."
+                : reason instanceof MealApiError && reason.status >= 400 && reason.status < 500
+                  ? reason.status === 429 ? "요청이 많아 잠시 저장할 수 없어요." : "저장 요청을 처리할 수 없어요. 내용을 확인해 주세요."
+                  : "저장 결과를 확인하지 못했어요.";
+        if (sheetRef.current === "add" && addSheetSessionKeyRef.current === submissionSession) {
+          setToast(null);
+          setToastAction(null);
+        } else if (isMealApiAuthError(reason) || isMealApiWorkspaceConflictError(reason) || isMealApiFoodLotSelectionError(reason) || isMealApiFoodDateConfirmedError(reason)) setToast(message);
+        else showRetryToast(message, () => { void addManualFood(food); });
+        const rejected = (reason instanceof MealApiError && reason.status >= 400 && reason.status < 500) || isMealApiManualFoodPersistenceError(reason);
+        return { saved: false, message, uncertain: !rejected } as const;
       })
       .finally(() => pendingManualFoodMutationKeysRef.current.delete(food.id));
   };
 
-  const addReceiptFoods = ({ lines, draftId, sourceFilename }: ReceiptCommitPayload) => {
+  const addReceiptFoods = async ({ lines, draftId, sourceFilename, idempotencyKey }: ReceiptCommitPayload): Promise<FoodSaveResult> => {
+    const submissionSession = addSheetSessionKeyRef.current;
+    const submissionKey = idempotencyKey ?? createReceiptCommitIdempotencyKey();
+    if (receiptCommitRetryRef.current?.key === submissionKey) return receiptCommitRetryRef.current.run();
+    const isCurrentWorkspace = captureMutationScope();
     const preparedLines = lines.map(prepareReceiptLine).filter((line): line is PreparedReceiptLine => line !== null);
     if (preparedLines.length !== lines.length) {
       setToast("상품명, 수량, 단위를 확인한 뒤 식품 목록에 추가해 주세요.");
-      return;
+      return { saved: false, message: "상품명, 수량, 단위를 확인해 주세요." };
     }
     const receiptCommitKey = draftId ?? `${sourceFilename || "sample-receipt.jpg"}:${lines.map((line) => line.backendId ?? line.name).join("|")}`;
-    if (pendingReceiptCommitKeysRef.current.has(receiptCommitKey)) return;
-    pendingReceiptCommitKeysRef.current.add(receiptCommitKey);
+    if (pendingReceiptCommitKeysRef.current.has(receiptCommitKey)) return { saved: false, message: "저장 결과를 확인하고 있어요.", uncertain: true };
     const lineFoods = preparedLines.map(({ line, canonicalName, quantity, unit, storage, storageLocationId }) => createFood({
       name: canonicalName,
       brand: "",
@@ -5059,25 +5443,27 @@ function PrototypeContent() {
       barcode: line.barcode ?? undefined,
       note: "",
     }));
-    queueAddedFoodFocus(lineFoods[0]?.name ?? "");
-    changeSheet(null);
+    const closeSavedReceipt = () => {
+      queueAddedFoodFocus(lineFoods[0]?.name ?? "");
+      if (sheetRef.current === "add" && addSheetSessionKeyRef.current === submissionSession) changeSheet(null);
+    };
     if (!mealApi.isConfigured) {
       mergeFoods(lineFoods);
+      closeSavedReceipt();
       const message = `영수증에서 식품 ${lines.length}개를 목록에 추가했어요.`;
       setToastAction(null);
       setToast(message);
       pendingReceiptCommitKeysRef.current.delete(receiptCommitKey);
-      return;
+      return { saved: true };
     }
     setToastAction(null);
-    setToast(`영수증에서 식품 ${lines.length}개를 추가하고 있어요.`);
     {
       const apiLines = preparedLines.map(({ line, canonicalName, quantity, unit }) => ({
         raw_name: line.rawName ?? line.name,
         quantity,
         unit,
         barcode: line.barcode ?? null,
-        total_price: line.totalPrice,
+        total_price: line.totalPrice ?? undefined,
         line_type: "product" as const,
         canonical_name: canonicalName,
         match_confidence: line.confidence,
@@ -5093,17 +5479,18 @@ function PrototypeContent() {
         purchased_at: new Date().toISOString(),
         lines: apiLines,
       };
-      const commitIdempotencyKey = createReceiptCommitIdempotencyKey();
+      const commitIdempotencyKey = submissionKey;
       let createdDraft: ApiReceiptDraft | null = null;
       let commitLineIds = selectedBackendLineIds;
       let commitOverrides = overrides;
-      const commitDraft = async () => {
+      const commitDraft = async (assertCurrent: () => void) => {
         const targetDraftId = draftId ?? createdDraft?.id;
         if (targetDraftId) {
           return mealApi.commitReceipt(targetDraftId, commitLineIds, commitOverrides, commitIdempotencyKey);
         }
         const draft = await mealApi.createReceiptDraft(draftPayload);
         if (!draft) throw new Error("receipt-draft-failed");
+        assertCurrent();
         createdDraft = draft;
         commitLineIds = draft.lines.map((line) => line.id);
         commitOverrides = Object.fromEntries(draft.lines.map((line, index) => [line.id, {
@@ -5118,9 +5505,13 @@ function PrototypeContent() {
         }]));
         return mealApi.commitReceipt(draft.id, commitLineIds, commitOverrides, commitIdempotencyKey);
       };
-      const persistAndSync = () => {
+      const persistAndSync = async (): Promise<FoodSaveResult> => {
+        if (!isCurrentWorkspace()) return { saved: false, message: "계정이 바뀌었어요. 현재 계정에서 다시 열어 주세요." };
+        if (pendingReceiptCommitKeysRef.current.has(receiptCommitKey)) return { saved: false, message: "저장 결과를 확인하고 있어요.", uncertain: true };
+        pendingReceiptCommitKeysRef.current.add(receiptCommitKey);
         return runAuthoritativeMutation({
           operation: "receipt-commit",
+      isCurrent: isCurrentWorkspace,
           mutate: commitDraft,
           apply: (commit) => {
             const updatedFoods = commit.inventory.map((food) => mapApiFood(food, storageLocations));
@@ -5129,6 +5520,9 @@ function PrototypeContent() {
           sync: syncDashboard,
         })
           .then(({ value: commit, synced }) => {
+            if (!isCurrentWorkspace()) return { saved: false, message: "계정이 바뀌었어요. 현재 계정에서 다시 열어 주세요." } as const;
+            closeSavedReceipt();
+            if (receiptCommitRetryRef.current?.key === submissionKey) receiptCommitRetryRef.current = null;
             const updatedFoods = commit.inventory.map((food) => mapApiFood(food, storageLocations));
             const idempotencyReplayed = commit.idempotency_replayed === true;
             const receiptCommitMessage = idempotencyReplayed
@@ -5144,48 +5538,53 @@ function PrototypeContent() {
               setToastAction(nextDateReviewFood ? { message: finalReceiptMessage, label: "식품 정보 보기", onInvoke: () => openDetail(nextDateReviewFood, "inventory", "date-review") } : null);
             }
             setToast(finalReceiptMessage);
+            return { saved: true } as const;
           })
           .catch(async (reason) => {
+            if (!isCurrentWorkspace()) return { saved: false, message: "계정이 바뀌었어요. 현재 계정에서 다시 열어 주세요." } as const;
             await syncDashboard();
+            if (!isCurrentWorkspace()) return { saved: false, message: "계정이 바뀌었어요. 현재 계정에서 다시 열어 주세요." } as const;
+            const rejected = (reason instanceof MealApiError && reason.status >= 400 && reason.status < 500) || isMealApiReceiptCommitPersistenceError(reason);
             const message = isMealApiAuthError(reason)
-              ? "로그인이 만료됐어요. 다시 로그인해 주세요"
+              ? "로그인이 만료됐어요. 다시 로그인해 주세요."
               : isMealApiWorkspaceConflictError(reason)
                 ? MEAL_API_WORKSPACE_CONFLICT_MESSAGE
                 : isMealApiConflictError(reason)
-                  ? "이 영수증은 이미 식품 목록에 추가했어요. 기존 목록은 그대로예요."
-                  : isMealApiReceiptCommitPersistenceError(reason)
-                    ? "영수증에서 식품을 추가하지 못했어요. 기존 목록은 그대로예요."
-                    : "영수증에서 식품을 추가하지 못했어요. 기존 목록은 그대로예요.";
-            if (isMealApiAuthError(reason) || isMealApiWorkspaceConflictError(reason) || isMealApiConflictError(reason)) {
-              setToast(message);
-            } else {
-              showRetryToast(message, persistAndSync);
-            }
+                  ? "이 영수증은 이미 식품 목록에 추가됐어요. 저장된 식품을 확인해 주세요."
+                  : rejected ? "영수증을 저장하지 못했어요. 입력한 내용은 그대로예요."
+                    : "저장 결과를 확인하지 못했어요. 같은 내용으로 다시 확인해 주세요.";
+            if (sheetRef.current === "add" && addSheetSessionKeyRef.current === submissionSession) {
+              setToast(null);
+              setToastAction(null);
+            } else showRetryToast(message, () => { void persistAndSync(); });
+            return { saved: false, message, uncertain: !rejected } as const;
           })
           .finally(() => pendingReceiptCommitKeysRef.current.delete(receiptCommitKey));
       };
-      persistAndSync();
+      receiptCommitRetryRef.current = { key: submissionKey, run: persistAndSync };
+      return persistAndSync();
     }
   };
 
   const detailSheetSnap = Math.min(0.993, Math.max(0.78, (viewportHeight - 6) / Math.max(1, viewportHeight)));
   const homeAddFoodAction = foods.length ? <button className="add-food-button" style={!IS_WEB_SURFACE ? { marginTop: 0, minHeight: 53, gap: 4, justifyContent: "center", padding: "0 8px", border: "1px solid var(--atelier-border-strong)", borderRadius: 13, background: "color-mix(in srgb, var(--atelier-surface) 82%, transparent)", textAlign: "center" } : undefined} type="button" aria-label="식품 추가하기" onClick={() => openAdd("receipt")}>
     <span className="add-food-plus"><PlusIcon width={20} height={20} /></span>
-    <span><strong><span className="add-food-label-prefix">식품 </span>추가</strong><small>영수증·바코드·라벨·직접 입력</small></span>
+    <span><strong><span className="add-food-label-prefix">식품 </span>추가</strong></span>
     <ArrowRightIcon width={18} height={18} />
   </button> : null;
+  const singleHomeReviewFood = inventoryNeedsReviewFoods.length === 1 ? inventoryNeedsReviewFoods[0] : null;
   const homeTrustCard = (
     <button
       className="trust-card"
       data-trust-state={inventoryNeedsReviewCount ? "needs-review" : "neutral"}
-      aria-label={`${homeTrustTitle}. ${homeTrustDescription} ${inventoryNeedsReviewCount ? "확인할 식품 목록 보기" : "날짜 안내 보기"}`}
+      aria-label={`${homeTrustTitle}. ${homeTrustDescription} ${singleHomeReviewFood ? `${singleHomeReviewFood.name} 날짜와 보관 정보 확인` : inventoryNeedsReviewCount ? "확인할 식품 목록 보기" : "날짜 안내 보기"}`}
       style={!IS_WEB_SURFACE ? { marginTop: 9 } : undefined}
       type="button"
-      onClick={() => inventoryNeedsReviewCount ? openNeedsReviewInventory() : openGuidanceSheet()}
+      onClick={() => singleHomeReviewFood ? openDetail(singleHomeReviewFood, "home", "date-review") : inventoryNeedsReviewCount ? openNeedsReviewInventory() : openGuidanceSheet()}
     >
       <span className="trust-icon"><InfoCircledIcon width={18} height={18} /></span>
-      <span className="trust-card-copy"><strong style={inventoryNeedsReviewCount ? { color: "var(--atelier-coral)" } : undefined}>{homeTrustTitle}</strong><small>{homeTrustDescription}</small></span>
-      <span className="trust-card-action" aria-hidden="true">{inventoryNeedsReviewCount ? "목록 보기" : "안내 보기"}</span>
+      <span className="trust-card-copy"><strong style={inventoryNeedsReviewCount ? { color: "var(--atelier-coral)" } : undefined}>{homeTrustTitle}</strong></span>
+      <span className="trust-card-action" aria-hidden="true">{singleHomeReviewFood ? "확인하기" : inventoryNeedsReviewCount ? "목록 보기" : "안내 보기"}</span>
       <ChevronRightIcon width={16} height={16} />
     </button>
   );
@@ -5208,7 +5607,7 @@ function PrototypeContent() {
                 data-testid="theme-toggle"
                 aria-label={themeMode === "light" ? "현재 라이트모드, 다크모드로 전환" : "현재 다크모드, 라이트모드로 전환"}
                 aria-pressed={themeMode === "dark"}
-                title={themeMode === "light" ? "현재 라이트모드 · 다크모드로 전환" : "현재 다크모드 · 라이트모드로 전환"}
+                title={themeMode === "light" ? "다크 모드로 전환" : "라이트 모드로 전환"}
                 onClick={toggleTheme}
               >
                 {themeMode === "light" ? <MoonIcon width={18} height={18} /> : <SunIcon width={18} height={18} />}
@@ -5223,21 +5622,21 @@ function PrototypeContent() {
           {connectionState === "checking" && !foods.length ? (
             <div className="service-bootstrap-status" role="status" aria-live="polite">
               <span className="service-bootstrap-dot" aria-hidden="true" />
-              <span><strong>기록을 불러오고 있어요</strong><small>보관 중인 식품과 먼저 살펴볼 재료를 확인하고 있어요.</small></span>
+              <span><strong>기록을 불러오고 있어요</strong></span>
             </div>
           ) : null}
 
-          {connectionState === "auth_required" ? (
+          {connectionState === "auth_required" && !inventoryDataUnknown ? (
             <div className="session-expired-callout" role="alert">
               <InfoCircledIcon width={17} height={17} />
               <span><strong>계정 연결이 만료됐어요</strong><small>기록을 안전하게 이어가려면 다시 로그인해 주세요. 다른 기록 공간으로 자동 전환하지 않았어요.</small></span>
               <button type="button" onClick={() => changeSheet("account")}>다시 로그인</button>
             </div>
           ) : null}
-          {connectionState === "offline" ? (
+          {connectionState === "offline" && !inventoryDataUnknown ? (
             <div className="connection-retry-callout" role="alert">
               <InfoCircledIcon width={17} height={17} />
-              <span><strong>{demoOfflineFixturePreview ? "예시 식품 미리보기" : "인터넷에 연결되지 않았어요"}</strong><small>{demoOfflineFixturePreview ? "실제 기록은 불러오지 못했어요. 연결되면 식품 목록을 다시 불러올 수 있어요." : dashboardStaleAt ? `마지막으로 불러온 식품(${formatDashboardCacheTime(dashboardStaleAt)})을 보여드려요. 기록은 지금 수정할 수 없어요.` : "식품 목록을 불러오지 못했어요."}</small></span>
+              <span><strong>{demoOfflineFixturePreview ? "예시 식품 미리보기" : "기록을 새로 불러오지 못했어요"}</strong><small>{demoOfflineFixturePreview ? "실제 기록은 불러오지 못했어요. 연결되면 식품 목록을 다시 불러올 수 있어요." : dashboardStaleAt ? "최근 확인한 식품을 보여드려요. 연결 후 수정할 수 있어요." : "식품 목록을 불러오지 못했어요."}</small>{dashboardStaleAt ? <small><MetadataText text={formatDashboardCacheTime(dashboardStaleAt)} /></small> : null}</span>
             </div>
           ) : null}
           {connectionState === "connected" && receiptSummariesStatus === "ready" && latestPendingReceipt ? (
@@ -5246,7 +5645,7 @@ function PrototypeContent() {
               <span className="receipt-review-entry-copy">
                 <span className="receipt-review-entry-kicker">영수증</span>
                 <strong>살펴볼 영수증 {pendingReceiptSummaries.length > 1 ? `${pendingReceiptSummaries.length}개` : "1개"}</strong>
-                <small><MetadataText text={<>{latestPendingReceipt.merchant_name ? `${latestPendingReceipt.merchant_name} · ` : "저장된 영수증 · "}{formatPurchasedAt(latestPendingReceipt.purchased_at) ?? "구매일 미등록"} · 상품 {latestPendingReceipt.line_count}개</>} /></small>
+                <small><MetadataText text={<>{latestPendingReceipt.merchant_name ? `${latestPendingReceipt.merchant_name} · ` : "저장된 영수증 · "}{formatPurchasedAt(latestPendingReceipt.purchased_at) ?? "구매일 미등록"} · 항목 {latestPendingReceipt.line_count}개</>} /></small>
               </span>
               <span className="receipt-review-entry-action">{pendingReceiptSummaries.length > 1 ? "모두 보기" : "이어서 살펴보기"} <ChevronRightIcon width={15} height={15} /></span>
             </button>
@@ -5256,38 +5655,31 @@ function PrototypeContent() {
             <section className="greeting-block" aria-labelledby="greeting-title">
               <div>
                 <p className="eyebrow">{todayEyebrow}</p>
-                <h1 id="greeting-title">{!inventoryDataUnknown && !foods.length ? <>오늘 먹을 재료,<br /><em>하나부터 기록해요.</em></> : <>오늘은,<br /><em>있는 재료로 한 끼.</em></>}</h1>
-                {inventoryDataUnknown || !foods.length ? <p className="hero-description">{inventoryDataUnknown ? inventoryDataStatusDescription : "손에 있는 식품부터 하나씩 기록해 보세요."}</p> : null}
+                {!inventoryDataUnknown && foods.length ? <h1 id="greeting-title" className="rescue-hero" aria-label={`오늘 구할 음식 ${rescueTodayCount}개`}><span className="rescue-hero-copy">오늘 구할 음식</span><span><span className="rescue-hero-count" data-zero={rescueTodayCount === 0}>{rescueTodayCount}</span><span className="rescue-hero-unit">개</span></span></h1> : <h1 id="greeting-title">첫 식품을<br /><em>기록해 보세요.</em></h1>}
+
               </div>
             </section>
 
-            {!inventoryDataUnknown && foods.length > 0 ? <nav className="pantry-shortcuts" aria-label="보관 중인 식품 바로 찾기">
-              {(["냉장", "냉동", "실온"] as const).map((storage) => {
-                const count = foods.filter((food) => food.storage === storage).length;
-                return <button key={storage} type="button" onClick={() => openStorageInventory(storage)} aria-label={`${storage} 보관 식품 ${count}개 보기`}>
-                  <span className={`storage-dot ${getStorageClass(storage)}`} aria-hidden="true" />
-                  <span>{storage}</span><strong>{count}</strong><ChevronRightIcon width={13} height={13} aria-hidden="true" />
-                </button>;
-              })}
-            </nav> : null}
+            {!inventoryDataUnknown && foods.length > 0 ? <FridgeShelves foods={foods} referenceDate={currentDate} onOpenStorage={openStorageInventory} onOpenFood={(food) => openDetail(food, "home")} /> : null}
             {!mealApi.isConfigured ? <p className="home-demo-note"><InfoCircledIcon width={14} height={14} aria-hidden="true" />예시 식품으로 체험 중이에요. 변경 내용은 새로고침하면 사라져요.</p> : null}
           </div>
 
-          <section className="priority-section" aria-labelledby="priority-title">
-            {homeTrustBeforeActions ? homeTrustCard : null}
+          {!inventoryDataUnknown ? <section className="priority-section" aria-labelledby={hasKnownEmptyInventory ? undefined : "priority-title"} aria-label={hasKnownEmptyInventory ? "식품 기록 시작" : undefined}>
+            {homeTrustBeforeActions && showHomeTrustCard && !foods.length ? homeTrustCard : null}
 
             <div className={`home-action-row${foods.length ? " home-action-row-with-add" : ""}`}>
-              <button className="meal-plan-button" type="button" disabled={inventoryDataUnknown && connectionState === "checking"} onClick={() => inventoryDataUnknown ? connectionState === "auth_required" ? changeSheet("account") : retryConnection() : connectionState === "auth_required" ? changeSheet("account") : connectionState === "offline" ? retryConnection() : foods.length ? openMealPlan() : openAdd("manual")}>
+              <button className="meal-plan-button" type="button" aria-label={hasKnownEmptyInventory ? "첫 식품 직접 추가" : undefined} disabled={inventoryDataUnknown && connectionState === "checking"} onClick={() => inventoryDataUnknown ? connectionState === "auth_required" ? changeSheet("account") : retryConnection() : connectionState === "auth_required" ? changeSheet("account") : connectionState === "offline" ? retryConnection() : foods.length ? openMealPlan() : openAdd("manual")}>
                 <span className="meal-plan-icon">{connectionState === "offline" ? <ReloadIcon width={17} height={17} /> : <LightningBoltIcon width={17} height={17} />}</span>
-                <span><strong>{inventoryDataUnknown ? connectionState === "auth_required" ? "다시 로그인하기" : connectionState === "checking" ? "기록을 불러오는 중" : "다시 연결하기" : connectionState === "auth_required" ? "다시 로그인하기" : connectionState === "offline" ? "식품 목록 다시 불러오기" : foods.length ? "오늘 식단 만들기" : "첫 식품 직접 추가"}</strong><small>{inventoryDataUnknown ? mealPlanStatusDescription : connectionState === "auth_required" ? "기록을 이어서 볼 수 있어요." : connectionState === "offline" ? mealPlanStatusDescription : currentMealPlanHint}</small></span>
+                <span><strong>{inventoryDataUnknown ? connectionState === "auth_required" ? "다시 로그인하기" : connectionState === "checking" ? "기록을 불러오는 중" : "다시 연결하기" : connectionState === "auth_required" ? "다시 로그인하기" : connectionState === "offline" ? "식품 목록 다시 불러오기" : foods.length ? "오늘 식단 만들기" : "직접 입력"}</strong>{!hasKnownEmptyInventory ? <small>{inventoryDataUnknown ? mealPlanStatusDescription : connectionState === "auth_required" ? "기록을 이어서 볼 수 있어요." : connectionState === "offline" ? mealPlanStatusDescription : currentMealPlanHint}</small> : null}</span>
                 <ArrowRightIcon width={18} height={18} />
               </button>
               {homeAddFoodAction}
             </div>
 
-            {!inventoryDataUnknown && !foods.length ? <button className="first-food-receipt" type="button" onClick={() => openAdd("receipt")}><ReaderIcon width={16} height={16} aria-hidden="true" /><span>장을 보고 왔다면 영수증으로 한 번에 추가</span><ChevronRightIcon width={14} height={14} aria-hidden="true" /></button> : null}
+            {!inventoryDataUnknown && !foods.length ? <button className="first-food-receipt" type="button" onClick={() => openAdd("receipt")}><ReaderIcon width={16} height={16} aria-hidden="true" /><span>영수증으로 추가</span><ChevronRightIcon width={14} height={14} aria-hidden="true" /></button> : null}
 
 
+            {!hasKnownEmptyInventory ? <>
             <div className="section-heading">
               <div>
                 <h2 id="priority-title" aria-label={priorityHeadingAccessibleName}>
@@ -5317,26 +5709,20 @@ function PrototypeContent() {
                       onClick={() => openDetail(food, "home")}
                     >
                       <div className="food-image-wrap">
-                        <img src={food.image} alt="" className="food-image" draggable={false} />
+                        <FoodPhoto src={food.image} foodName={food.name} loading="eager" alt="" className="food-image" draggable={false} />
                       </div>
                       <span className="priority-copy">
                         <span className="food-name-line">
                           <strong>{food.name}</strong>
                           {food.opened ? <span className="opened-dot" title="개봉됨" /> : null}
                         </span>
-                        <span className="food-subline"><MetadataText text={<>{foodSourceSummary(food)} · {food.quantity}</>} /></span>
+                        <span className="food-subline"><Metadata parts={[...foodIdentityParts(food.brand, food.purchaseSource), food.quantity]} /></span>
                         <span className="food-meta-line">
-                          <span className={`storage-pill ${getStorageClass(food.storage)}`}>{food.storageLocationName ?? food.storage}</span>
-                          <span className="date-source">{getDateBadge(food)}</span>
+                          <span className={`storage-pill ${getStorageClass(food.storage)}`}>{storageLocationSummary(food.storageLocationName, food.storage)}</span>
                         </span>
                       </span>
                       <span className="priority-date">
-                        <small
-                          className={`priority-state-label ${reviewReason ? "priority-state-review" : "priority-state-action"}`}
-                          title={reviewReason ?? (food.dateKind === "estimated_use_first" ? "소비기한이 아닌 먼저 살펴볼 시점이에요" : "날짜와 보관 방법을 살펴본 뒤 사용해요")}
-                        >{priorityActionLabel(food, reviewReason)}</small>
-                        <strong>{food.dateLabel}</strong>
-                        <ChevronRightIcon width={14} height={14} />
+                        <FreshnessChip food={food} referenceDate={currentDate} />
                       </span>
                     </button>
                   );
@@ -5351,6 +5737,8 @@ function PrototypeContent() {
             </div>
 
 
+            </> : null}
+
             {showHomeSyncSummary ? (
               <button className="shopping-summary-card" type="button" aria-label={homeSyncSummaryAccessibleName} data-sync-focus={homeSyncFocus} data-sync-state={homeSyncFocus} data-sync-attention-count={homeSyncAttentionCount} data-sync-queued-count={homeSyncQueuedCount} data-sync-processing-count={homeSyncProcessingCount} onClick={() => openNotifications(homeSyncFocus)}>
                 <span className="shopping-summary-icon"><SewingPinIcon width={17} height={17} /></span>
@@ -5363,34 +5751,35 @@ function PrototypeContent() {
               </button>
             ) : null}
 
-          </section>
+          </section> : null}
 
-          {!homeTrustBeforeActions ? homeTrustCard : null}
+          {!inventoryDataUnknown && !homeTrustBeforeActions && showHomeTrustCard && !foods.length ? homeTrustCard : null}
 
-          {showShoppingSummary ? (
+          {showShoppingSummary && !shoppingSummaryIsEmpty ? (
             <button className={`shopping-summary-card${shoppingSummaryIsEmpty ? " shopping-summary-card-empty" : ""}`} type="button" aria-label={shoppingSummaryIsEmpty ? `장보기 목록 열기. ${shoppingSummaryTitle}` : undefined} aria-describedby={shoppingSummaryIsEmpty ? "shopping-summary-empty-help" : undefined} onClick={openShoppingList}>
               <span className="shopping-summary-icon"><ReaderIcon width={17} height={17} /></span>
               <span className="shopping-summary-copy">
                 <span className="shopping-summary-kicker">장보기</span>
                 <strong>{shoppingSummaryTitle}</strong>
-                <small id={shoppingSummaryIsEmpty ? "shopping-summary-empty-help" : undefined} className={shoppingSummaryIsEmpty ? "shopping-summary-empty-help" : undefined}>{shoppingSummaryDescription}</small>
+                <small id={shoppingSummaryIsEmpty ? "shopping-summary-empty-help" : undefined} className={shoppingSummaryIsEmpty ? "shopping-summary-empty-help" : undefined}><Metadata parts={shoppingSummaryDescriptionParts} /></small>
               </span>
               <ChevronRightIcon width={16} height={16} />
             </button>
           ) : null}
 
-          <section className={`inventory-section${inventoryHasEmptyResult || inventoryDataUnknown ? " inventory-section-empty-result" : ""}${inventoryDataUnknown ? " inventory-section-unknown" : ""}`} aria-labelledby="inventory-title" aria-busy={inventorySearchPending}>
+          <section className={`inventory-section${inventoryHasEmptyResult || inventoryDataUnknown ? " inventory-section-empty-result" : ""}${inventoryDataUnknown ? " inventory-section-unknown" : ""}`} aria-labelledby="inventory-title" aria-busy={initialInventoryLoading || inventorySearchPending}>
+            {initialInventoryLoading ? <><h2 id="inventory-title" className="sr-only">내 식품 목록</h2><div className="inventory-loading-placeholder" aria-hidden="true">{[0, 1, 2].map((row) => <div key={row}><span /><span /><span /></div>)}</div></> : <>
             <div className="inventory-toolbar">
               <div className="section-heading inventory-heading">
                 <div className="inventory-heading-copy">
-                  <p className="section-kicker">내 식품 목록</p>
-                  <h2 id="inventory-title" aria-label={inventoryDataUnknown ? "내 식품 목록을 불러오지 못했어요" : `내 식품 목록 ${inventoryCount}`}>내 식품 목록 <span>{inventoryDataUnknown ? "—" : inventoryCount}</span></h2>
+                  <h2 id="inventory-title" aria-label={inventorySearchViewPhase === "composing" ? "내 식품 목록" : inventorySearchWaiting ? "내 식품 목록 검색 중" : inventoryDataUnknown ? "내 식품 목록" : showInventoryTools ? `내 식품 목록 ${inventoryCount}` : "내 식품 목록"}>내 식품 목록 {showInventoryTools ? <span>{inventoryDataUnknown || inventorySearchWaiting ? "—" : inventoryCount}</span> : null}</h2>
                 </div>
                 <div style={{ display: "flex", gap: 6, alignItems: "center", flex: "0 0 auto" }}>
                   <button className="icon-button inventory-add-button" style={{ display: "inline-flex", width: 62, height: 44, gap: 4, alignItems: "center", justifyContent: "center", padding: "0 6px", borderRadius: 11, whiteSpace: "nowrap" }} type="button" aria-label="식품 목록에 추가" title="식품 목록에 추가" onClick={() => openAdd("receipt")}>
                     <PlusIcon width={16} height={16} aria-hidden="true" />
                     <span>추가</span>
                   </button>
+                  {showInventoryTools ? <>
                   <label className="filter-select-wrap">
                     <span className="sr-only">보관 위치 필터</span>
                     <select value={storageFilter} onChange={(event) => {
@@ -5404,49 +5793,46 @@ function PrototypeContent() {
                       {customStorageLocations.length ? <optgroup label="내 보관 위치">{customStorageLocations.map((location) => <option key={location.id} value={`location:${location.id}`}>{location.name}만</option>)}</optgroup> : null}
                     </select>
                     <ChevronDownIcon width={13} height={13} />
-                  </label>
+                  </label>                  </> : null}
+
                 </div>
               </div>
+              {showInventoryTools ? <>
               <label className="inventory-search">
                 <MagnifyingGlassIcon width={15} height={15} aria-hidden="true" />
-                <KeyboardInput className="inventory-search-input" type="search" value={inventoryQuery} placeholder="식품 검색" aria-label="식품·브랜드·카테고리 검색" onChange={(event) => setInventoryQuery(event.target.value)} onFocus={() => { inventorySearchFocusRef.current = true; window.requestAnimationFrame(keepInventorySearchVisible); }} onBlur={() => { inventorySearchFocusRef.current = false; keyboard.hide(); }} />
+                <KeyboardInput className="inventory-search-input" type="search" value={inventoryQuery} placeholder="식품 검색" aria-label="식품·브랜드·카테고리 검색" onCompositionStart={() => setInventorySearchComposing(true)} onCompositionEnd={(event) => { setInventoryQuery(event.currentTarget.value); setInventorySearchComposing(false); }} onChange={(event) => setInventoryQuery(event.target.value)} onFocus={() => { inventorySearchFocusRef.current = true; window.requestAnimationFrame(keepInventorySearchVisible); }} onBlur={() => { inventorySearchFocusRef.current = false; setInventorySearchComposing(false); keyboard.hide(); }} />
                 {hasInventoryQuery ? <button type="button" aria-label="식품 검색어 지우기" onPointerDown={(event) => event.preventDefault()} onClick={clearInventorySearch}><Cross2Icon width={14} height={14} /></button> : null}
               </label>
               <div className="inventory-status-filters" role="group" aria-label={`식품 상태 필터${inventoryScopeIsStale ? " · 이전 결과" : ""}`} data-scope-state={inventoryScopeIsStale ? "stale" : inventorySearchPending ? "loading" : "current"} aria-busy={inventorySearchPending}>
-                <button className={inventoryStatusFilter === "all" ? "inventory-status-filter-active" : ""} type="button" aria-pressed={inventoryStatusFilter === "all"} aria-controls="inventory-list" onClick={() => { setInventoryStatusFilter("all"); if (activeContentNavRef.current === "food") restoreContentNavigation("food"); }}>전체 <span>{inventoryScopeFoods.length}</span></button>
-                <button className={inventoryStatusFilter === "needs-review" ? "inventory-status-filter-active inventory-status-filter-warning" : "inventory-status-filter-warning"} type="button" aria-pressed={inventoryStatusFilter === "needs-review"} aria-controls="inventory-list" onClick={() => { setInventoryStatusFilter("needs-review"); if (activeContentNavRef.current === "food") restoreContentNavigation("food"); }}>날짜·보관 확인 <span>{inventoryScopedNeedsReviewCount}</span></button>
-                <button className={inventoryStatusFilter === "priority" ? "inventory-status-filter-active inventory-status-filter-priority" : "inventory-status-filter-priority"} type="button" aria-pressed={inventoryStatusFilter === "priority"} aria-controls="inventory-list" onClick={() => { setInventoryStatusFilter("priority"); if (activeContentNavRef.current === "food") restoreContentNavigation("food"); }}>먼저 살펴보기 <span>{inventoryScopedPriorityCount}</span></button>
+                <button className={inventoryStatusFilter === "all" ? "inventory-status-filter-active" : ""} type="button" aria-pressed={inventoryStatusFilter === "all"} aria-controls="inventory-list" onClick={() => { setInventoryStatusFilter("all"); if (activeContentNavRef.current === "food") restoreContentNavigation("food"); }}>전체 <span>{inventoryDataUnknown || inventorySearchWaiting ? "—" : inventoryScopeFoods.length}</span></button>
+                <button className={inventoryStatusFilter === "needs-review" ? "inventory-status-filter-active inventory-status-filter-warning" : "inventory-status-filter-warning"} type="button" aria-pressed={inventoryStatusFilter === "needs-review"} aria-controls="inventory-list" onClick={() => { setInventoryStatusFilter("needs-review"); if (activeContentNavRef.current === "food") restoreContentNavigation("food"); }}>날짜·보관 확인 <span>{inventoryDataUnknown || inventorySearchWaiting ? "—" : inventoryScopedNeedsReviewCount}</span></button>
+                <button className={inventoryStatusFilter === "priority" ? "inventory-status-filter-active inventory-status-filter-priority" : "inventory-status-filter-priority"} type="button" aria-pressed={inventoryStatusFilter === "priority"} aria-controls="inventory-list" onClick={() => { setInventoryStatusFilter("priority"); if (activeContentNavRef.current === "food") restoreContentNavigation("food"); }}>먼저 살펴보기 <span>{inventoryDataUnknown || inventorySearchWaiting ? "—" : inventoryScopedPriorityCount}</span></button>
               </div>
               {showInventoryScope ? <div className="inventory-filter-summary" role="status" aria-live="polite">
-                <span><Metadata parts={[inventoryScopeLabel, `${inventoryCount}개`]} /></span>
-                <button type="button" onClick={clearInventoryFilters}>검색·필터 초기화</button>
+                <span><Metadata parts={[...inventoryScopeParts, inventoryDataUnknown ? null : `${inventoryCount}개`]} /></span>
+                {!inventoryHasEmptyResult ? <button type="button" onClick={clearInventoryFilters}>전체 목록 보기</button> : null}
               </div> : null}
+              </> : null}
             </div>
 
-            {inventorySearchActive && inventorySearchPending && !filteredFoods.length ? <div className="inventory-search-state inventory-search-loading" role="status"><span className="inventory-search-loading-icon" aria-hidden="true"><MagnifyingGlassIcon width={16} height={16} /></span><span>{inventorySearchLoadingLabel}</span></div> : inventorySearchActive && inventorySearchStatus === "error" && !filteredFoods.length ? <div className="inventory-search-state inventory-search-error" role="alert"><span><strong>{inventorySearchErrorLabel}</strong><small>{inventorySearchError || "잠시 후 다시 시도해 주세요."}</small></span><button type="button" onClick={retryInventorySearch}>다시 시도</button></div> : filteredFoods.length ? <>
-              {inventorySearchActive && inventorySearchStatus === "error" ? <div className="inventory-search-inline-error" role="alert"><span>{inventorySearchError || "더 많은 재고를 불러오지 못했어요."}</span><button type="button" onClick={retryInventorySearch}>다시 시도</button></div> : null}
+            {inventorySearchViewPhase === "composing" ? null : inventorySearchWaiting ? <div className="inventory-search-state inventory-search-loading" role="status"><span className="inventory-search-loading-icon" aria-hidden="true"><MagnifyingGlassIcon width={16} height={16} /></span><span>{inventorySearchLoadingLabel}</span></div> : inventorySearchViewPhase === "error" ?  <div className="inventory-search-state inventory-search-error" role="alert"><span><strong>{inventorySearchErrorLabel}</strong><small>{inventorySearchError || "잠시 후 다시 시도해 주세요."}</small></span><button type="button" onClick={retryInventorySearch}>다시 시도</button></div> : filteredFoods.length ? <>
+              {inventorySearchViewPhase === "stale" ? <div className="inventory-search-inline-error" role="alert"><span>{inventorySearchError || "더 많은 재고를 불러오지 못했어요."}</span><button type="button" onClick={retryInventorySearch}>다시 시도</button></div> : null}
             <div className="inventory-list" id="inventory-list">
               {filteredFoods.map((food) => {
                 const reviewReason = attentionReviewReason(food, currentDate);
-                const dateOriginLabel = getInventoryDateOriginLabel(food);
-                const reviewDetail = reviewReason
-                      ? food.dateKind === "unknown"
-                        ? reviewReason
-                        : `${reviewReason} · ${food.dateLabel}`
-                  : null;
 
                 return (
                   <button className="inventory-row" type="button" key={food.id} data-inventory-food-id={food.id} data-date-state={food.dateKind} onClick={() => openDetail(food, "inventory")}>
-                    <div className="inventory-image-wrap"><img src={food.image} alt="" className="inventory-image" draggable={false} /></div>
+                    <div className="inventory-image-wrap"><FoodPhoto src={food.image} foodName={food.name} alt="" className="inventory-image" draggable={false} /></div>
                     <span className="inventory-copy">
                       <strong>{food.name}</strong>
-                      <small><MetadataText text={<>{foodSourceSummary(food)} · {food.quantity}{food.storageLocationName ? ` · ${food.storageLocationName}` : ""}</>} /></small>
-                      <small className="inventory-storage-meta"><span><MetadataText text={<>{food.storage}{dateOriginLabel ? ` · ${dateOriginLabel}` : ""}</>} /></span></small>
+                      <small><Metadata parts={[...foodIdentityParts(food.brand, food.purchaseSource), food.quantity, food.storageLocationName]} /></small>
+                      <small className="inventory-storage-meta"><span>{food.storage}</span></small>
                     </span>
-                    <span className={`inventory-status ${reviewReason ? "inventory-status-warning" : ""}`} data-inventory-status={reviewReason ? "needs-review" : food.priority <= 3 ? "priority" : "stored"}>
-                                            <span className="inventory-status-content">
-                        <span className="inventory-status-label">{reviewReason ? reviewReason === "보관 방법 확인" ? "보관 확인" : "날짜 확인" : food.priority <= 3 ? <><b>먼저 살펴보기</b><span className="inventory-date-value">{food.dateLabel}</span></> : food.dateLabel}</span>
-                        {reviewDetail ? <small className="inventory-review-detail"><MetadataText text={reviewDetail} /></small> : null}
+                    <span className={`inventory-status ${reviewReason ? "inventory-status-warning" : ""}`} data-inventory-status={reviewReason ? "needs-review" : priorityFoodIds.has(food.id) ? "priority" : "stored"}>
+                      <span className="inventory-status-content">
+                        <FreshnessChip food={food} referenceDate={currentDate} />
+                        {reviewReason ? <small className="inventory-review-detail">{reviewReason === "보관 방법 확인" ? "보관 확인" : "날짜 확인"}</small> : null}
                       </span>
                     </span>
                     <ChevronRightIcon className="row-chevron" width={15} height={15} />
@@ -5454,15 +5840,16 @@ function PrototypeContent() {
                 );
               })}
             </div>
-            {inventorySearchOwnsResults && inventorySearchHasMore ? <button className="inventory-load-more" type="button" disabled={inventorySearchPending} aria-busy={inventorySearchPending} onClick={loadMoreInventory}>{inventorySearchPending ? "더 불러오는 중" : `더 보기 · ${Math.max(0, (inventorySearchTotal ?? 0) - filteredFoods.length)}개 남음`}</button> : null}
-            </> : <div className={`inventory-empty-state${inventoryDataUnknown ? " inventory-unknown-state" : ""}`}>
+            {inventorySearchOwnsResults && inventorySearchHasMore ? <button className="inventory-load-more" type="button" disabled={inventorySearchPending} aria-busy={inventorySearchPending} onClick={loadMoreInventory}>{inventorySearchPending ? "더 불러오는 중" : <Metadata parts={["더 보기", `${Math.max(0, (inventorySearchTotal ?? 0) - filteredFoods.length)}개 남음`]} />}</button> : null}
+            </> : <div className={`inventory-empty-state${inventoryDataUnknown ? " inventory-unknown-state" : ""}`} role={inventoryDataUnknown ? "alert" : undefined}>
               <span className="inventory-empty-icon"><ArchiveIcon width={18} height={18} /></span>
               <span className="inventory-empty-copy">
-                <strong>{inventoryDataUnknown ? inventoryListStatusLabel : hasInventoryQuery ? `“${inventoryQuery.trim()}” 검색 결과가 없어요` : inventoryStatusFilter === "needs-review" ? "날짜나 보관 방법을 살펴볼 식품이 없어요" : inventoryStatusFilter === "priority" ? "먼저 살펴볼 식품이 없어요" : foods.length ? `${selectedStorageLocation?.name ?? storageFilter} 보관 식품이 없어요` : "아직 등록된 식품이 없어요"}</strong>
-                <small>{inventoryDataUnknown ? inventoryListStatusDescription : hasInventoryQuery || inventoryStatusFilter !== "all" ? "다른 상태를 선택하거나 검색·필터 조건을 초기화해 보세요." : foods.length ? "다른 보관 위치를 선택하거나 새 식품을 추가해 보세요." : "첫 식품을 기록하면 이곳에서 보관 상태와 날짜를 관리할 수 있어요."}</small>
-                {inventoryDataUnknown ? <button className="inventory-empty-action" type="button" onClick={() => connectionState === "auth_required" ? changeSheet("account") : retryConnection()}>{connectionState === "auth_required" ? "계정 다시 연결" : "다시 연결"}</button> : hasInventoryQuery || inventoryStatusFilter !== "all" ? <button className="inventory-empty-action" type="button" onClick={clearInventoryFilters}>검색·필터 초기화</button> : storageFilter !== "전체" ? <button className="inventory-empty-action" type="button" onClick={() => setStorageFilter("전체")}>전체 목록 보기</button> : <button className="inventory-empty-action" type="button" onClick={() => openAdd("receipt")}>식품 추가하기</button>}
+                <strong>{inventoryDataUnknown ? inventoryListStatusLabel : hasInventoryQuery ? "검색 결과가 없어요" : inventoryStatusFilter === "needs-review" ? "날짜나 보관 방법을 살펴볼 식품이 없어요" : inventoryStatusFilter === "priority" ? "먼저 살펴볼 식품이 없어요" : foods.length ? `${selectedStorageLocation?.name ?? storageFilter} 보관 식품이 없어요` : "아직 등록된 식품이 없어요"}</strong>
+                {inventoryDataUnknown ? <small>{inventoryListStatusDescription}</small> : null}
+                {inventoryDataUnknown ? <button className="inventory-empty-action" type="button" onClick={() => connectionState === "auth_required" ? changeSheet("account") : retryConnection()}>{connectionState === "auth_required" ? "계정 다시 연결" : "다시 연결"}</button> : hasInventoryQuery ? <span className="inventory-empty-actions"><button className="inventory-empty-action" type="button" onPointerDown={(event) => event.preventDefault()} onClick={editInventorySearch}>검색어 수정</button>{storageFilter !== "전체" || inventoryStatusFilter !== "all" ? <button className="inventory-empty-action" type="button" onPointerDown={(event) => event.preventDefault()} onClick={clearInventoryOnlyFilters}>필터 해제</button> : null}</span> : storageFilter !== "전체" || inventoryStatusFilter !== "all" ? <button className="inventory-empty-action" type="button" onPointerDown={(event) => event.preventDefault()} onClick={clearInventoryOnlyFilters}>필터 해제</button> : <button className="inventory-empty-action" type="button" onClick={() => openAdd("receipt")}>식품 추가하기</button>}
               </span>
             </div>}
+            </>}
           </section>
 
           {!inventoryDataUnknown && inventoryStatusFilter === "needs-review" && filteredFoods.length > 0 ? (
@@ -5470,7 +5857,7 @@ function PrototypeContent() {
               <div className="inventory-review-guide-heading">
                 <span className="inventory-review-guide-icon"><InfoCircledIcon width={17} height={17} aria-hidden="true" /></span>
                 <h3 id="inventory-review-guide-title">식품을 살펴볼 때</h3>
-                <button className="inventory-review-guide-action" type="button" aria-label="날짜와 보관 확인 방법 자세히 보기" onClick={openGuidanceSheet}>
+                <button className="inventory-review-guide-action" type="button" aria-label="날짜와 보관 확인 방법 자세히 보기" onClick={() => openGuidanceSheet()}>
                   자세히 <ChevronRightIcon width={14} height={14} aria-hidden="true" />
                 </button>
               </div>
@@ -5523,15 +5910,22 @@ function PrototypeContent() {
           : addMode === "label" && addReturnFoodContextRef.current
             ? `${addReturnFoodContextRef.current.name}의 포장지 날짜를 확인해요. 저장 전까지 기록은 그대로예요.`
             : addMode === "label"
-              ? "날짜가 보이는 포장 면을 촬영해 주세요. 읽은 날짜와 보관 위치를 살펴본 뒤 식품 목록에 추가해요."
+              ? undefined
             : addMode === "receipt"
-                ? "영수증에서 읽은 상품과 수량을 살펴본 뒤 식품 목록에 추가해요."
+                ? undefined
                 : addMode === "barcode"
                   ? "바코드로 상품을 찾고, 맞는 상품인지 살펴봐요."
                   : undefined}
         snap={addReturnFoodContextRef.current ? 0.9 : 0.84}
       >
-        <AddFoodSheet mode={addMode} onModeChange={setAddMode} onAddManual={addManualFood} onAddReceipt={addReceiptFoods} resumeReceiptId={resumeReceiptId} initialLabelTargetFoodId={addReturnFoodContextRef.current?.id ?? null} initialLabelTargetFoodName={addReturnFoodContextRef.current?.name ?? null} initialLabelTargetDateSummary={addReturnFoodContextRef.current?.dateSummary ?? null} sessionKey={addSheetSessionKey} receiptLines={RECEIPT_LINES} existingFoods={foods} storageLocations={storageLocations} createFood={createFood} formatApiDate={formatApiDate} storageFromApi={storageFromApi} imageForFoodName={imageForFoodName} formatReceiptLineDetail={formatReceiptLineDetail} receiptLineError={receiptLineError} reviewFixture={receiptSourceReviewMode ? receiptSourceUnmappedMode ? RECEIPT_SOURCE_UNMAPPED_FIXTURE : RECEIPT_SOURCE_REVIEW_FIXTURE : undefined} />
+        <AddFoodSheet mode={addMode} onModeChange={setAddMode} onAddManual={addManualFood} onAddReceipt={addReceiptFoods} resumeReceiptId={resumeReceiptId} onViewInventory={() => {
+          setResumeReceiptId(null);
+          addReturnSheetRef.current = null;
+          addReturnFoodContextRef.current = null;
+          sheetRestoreFocusRef.current = document.querySelector<HTMLElement>(".inventory-status-filters button")
+            ?? document.querySelector<HTMLElement>(".inventory-add-button");
+          openInventory("", true);
+        }} initialLabelTargetFoodId={addReturnFoodContextRef.current?.id ?? null} initialLabelTargetFoodName={addReturnFoodContextRef.current?.name ?? null} initialLabelTargetDateSummary={addReturnFoodContextRef.current?.dateSummary ?? null} sessionKey={addSheetSessionKey} receiptLines={SAMPLE_RECEIPT_LINES} existingFoods={foods} storageLocations={storageLocations} createFood={createFood} formatApiDate={formatApiDate} storageFromApi={storageFromApi} imageForFoodName={imageForFoodName} formatReceiptLineDetail={formatReceiptLineDetail} receiptLineError={receiptLineError} reviewFixture={receiptSourceReviewMode ? receiptSourceUnmappedMode ? RECEIPT_SOURCE_UNMAPPED_FIXTURE : RECEIPT_SOURCE_REVIEW_FIXTURE : undefined} />
       </DeferredBottomSheet>
 
       <DeferredBottomSheet
@@ -5556,8 +5950,12 @@ function PrototypeContent() {
             <FoodDetailSheet
               food={selectedFood}
               readOnly={connectionState === "offline"}
+              storageSaving={storageSavingFoodIds.has(selectedFood.id)}
+              storageRecovery={storageSaveRecovery?.foodId === selectedFood.id ? storageSaveRecovery : null}
+              onEditStorageRecovery={() => setStorageSaveRecovery(null)}
               autoFocusDateReview={detailEntryIntent === "date-review"}
               autoFocusPrimaryAction={detailEntryIntent === "consume-action"}
+              autoFocusQuantityReference={detailEntryIntent === "quantity-review"}
               autoFocusProvenanceReview={detailEntryIntent === "provenance-review"}
               focusSyncOutboxId={detailSyncFocusId}
               historyRefreshKey={detailHistoryRefreshKey}
@@ -5568,7 +5966,6 @@ function PrototypeContent() {
               remoteRefreshRequired={detailRemoteRefreshRequired}
               onRefreshRemote={refreshDetailFromRemote}
               productInfoError={productInfoRetryAction?.foodId === selectedFood.id ? productInfoRetryAction.message : undefined}
-              onRetryProductInfo={productInfoRetryAction?.foodId === selectedFood.id ? () => updateProductInfo(selectedFood.id, productInfoRetryAction.input) : undefined}
               productInfoSaving={productInfoSavingFoodId === selectedFood.id}
               productInfoNotice={productInfoNotice?.foodId === selectedFood.id ? productInfoNotice.message : undefined}
               onRefreshProductInfo={productInfoNotice?.foodId === selectedFood.id && productInfoNotice.requiresRefresh ? refreshProductInfoFromRemote : undefined}
@@ -5583,6 +5980,8 @@ function PrototypeContent() {
               onConfirmDate={confirmFoodDate}
               onRemoveProductProvenance={removeProductProvenance}
               onUpdateProductInfo={updateProductInfo}
+              onUpdateQuantityReference={updateQuantityReference}
+              guidanceDraft={detailGuidanceDraft}
               onShowGuidance={openGuidanceSheet}
               onOpenLabelReview={() => openAdd("label", null, "detail")}
               onOpenSyncRecord={openSyncRecordFromDetail}
@@ -5595,12 +5994,12 @@ function PrototypeContent() {
       {mealPlanSheetMounted ? <Suspense fallback={sheet === "meal" ? <ProcessingState label="식단 화면을 준비하고 있어요" detail="잠시만 기다려 주세요." /> : null}>
         <MealPlanSheet
           active={sheet === "meal"}
-          returningFromDetail={mealDetailSessionReturnRef.current}
+          returningFromRelatedFlow={mealRelatedSessionReturnRef.current}
+          parentRestoresFocus={Boolean(mealDetailReturnFocusIdRef.current)}
           plannerContextKey={JSON.stringify(foods.map(({ id, name, quantity, storage, storageLocationId, openedAt, dateDetail, dateKind, dateSource }) => [id, name, quantity, storage, storageLocationId ?? null, openedAt ?? null, dateDetail, dateKind, dateSource]))}
           onOpenChange={(open) => changeSheet(open ? "meal" : null)}
           onAuthenticationRequired={() => {
-            mealApi.clearSession();
-            resetWorkspaceReads();
+                resetWorkspaceReads();
             setDashboardStaleAt(null);
             setConnectionState("auth_required");
           }}
@@ -5613,7 +6012,7 @@ function PrototypeContent() {
           workspaceSync={workspaceSync}
           workspaceTransport={workspaceTransport}
           onOpenFoodDetail={openFoodDetailFromMeal}
-          onOpenAdd={() => openAdd("receipt")}
+          onOpenAdd={() => openAdd("receipt", null, "meal")}
           onOpenSyncReview={(state) => openNotifications(state)}
           onOpenShoppingList={openShoppingList}
           onAddDemoShoppingItems={addDemoShoppingItems}
@@ -5626,10 +6025,9 @@ function PrototypeContent() {
         open={sheet === "shopping"}
         onOpenChange={(open) => changeSheet(open ? "shopping" : null)}
         title="장보기 목록"
-        description="살 재료를 모아 구매 여부를 기록해요."
         snap={0.82}
       >
-        <Suspense fallback={<ProcessingState label="장보기 목록을 준비하고 있어요" detail="저장한 식단과 식품 목록을 살펴보고 있어요." />}><ShoppingListSheet inventoryFoods={connectionState === "connected" || !mealApi.isConfigured ? foods : []} items={shoppingList} loading={shoppingListStatus === "loading"} mutating={shoppingListMutating} error={shoppingListError} notice={shoppingListNotice} retryAction={shoppingListRetryAction} recentlyReceivedFoodName={recentlyReceivedFood?.name ?? recentlyReceivedFoodRef.current?.name} onOpenReceivedFood={openRecentlyReceivedFood} onOpenMeal={openMealPlan} initialFocus={shoppingInitialFocusRef.current} demoMode={!mealApi.isConfigured} storageLocations={storageLocations} onRefresh={() => void refreshShoppingList()} onToggle={(item) => void toggleShoppingItem(item)} onDelete={(item) => void removeShoppingItem(item)} onAddManual={addManualShoppingItem} onReceive={receiveShoppingItem} /></Suspense>
+        <Suspense fallback={<ProcessingState label="장보기 목록을 준비하고 있어요" detail="저장한 식단과 식품 목록을 살펴보고 있어요." />}><ShoppingListSheet inventoryFoods={connectionState === "connected" || !mealApi.isConfigured ? foods : []} items={shoppingList} loading={shoppingListStatus === "loading"} mutating={shoppingListMutating} error={shoppingListError} notice={shoppingListNotice} retryAction={shoppingListRetryAction} recentlyReceivedFoodName={recentlyReceivedFood?.name ?? recentlyReceivedFoodRef.current?.name} recentlyReceivedFoodQuantity={recentlyReceivedFood?.quantity ?? recentlyReceivedFoodRef.current?.quantity} onOpenReceivedFood={openRecentlyReceivedFood} onOpenInventoryFood={openShoppingInventoryFood} onOpenMeal={openMealPlan} initialFocus={shoppingInitialFocusRef.current} demoMode={!mealApi.isConfigured} storageLocations={storageLocations} onRefresh={() => void refreshShoppingList()} onToggle={(item) => void toggleShoppingItem(item)} onDelete={(item) => void removeShoppingItem(item)} onAddManual={addManualShoppingItem} onReceive={receiveShoppingItem} /></Suspense>
       </DeferredBottomSheet>
 
       <DeferredBottomSheet
@@ -5644,21 +6042,20 @@ function PrototypeContent() {
       <DeferredBottomSheet
         open={sheet === "account"}
         onOpenChange={(open) => changeSheet(open ? "account" : null)}
-        title={mealApi.isConfigured ? "내 계정" : "체험 안내"}
-        description={mealApi.isConfigured ? "식품 기록을 여러 기기에서 이어 보세요." : undefined}
+        title={accountNotificationSettingsOpen ? "알림 설정" : mealApi.isConfigured ? "내 계정" : "체험 안내"}
+        description={mealApi.isConfigured && !accountNotificationSettingsOpen ? "식품 기록을 여러 기기에서 이어 보세요." : undefined}
         snap={mealApi.isConfigured ? 0.9 : 0.55}
       >
-        <Suspense fallback={<ProcessingState label="계정 화면을 준비하고 있어요" detail="잠시만 기다려 주세요." />}><AccountSheet onReturnToApp={() => changeSheet(null)} active={sheet === "account"} initialPasswordResetToken={passwordResetToken} workspaceSync={workspaceSync} workspaceTransport={workspaceTransport} remoteRefreshRequired={accountRemoteRefreshRequired} remoteRefreshing={accountRemoteRefreshing} refreshNonce={accountRefreshNonce} onRefreshRemote={() => void refreshAccountFromRemote()} onRefreshWorkspace={syncDashboard} focusGrocyOutboxId={accountGrocyOutboxFocusId} returnToNotification={notificationAccountReturnRef.current} onReturnToNotification={() => changeSheet(null)} onOpenFoodFromSync={openFoodFromSyncHistory} onAuthenticated={handleAuthenticated} onSignedOut={handleSignedOut} onAccountDeleted={handleAccountDeleted} /></Suspense>
+        <Suspense fallback={<ProcessingState label="계정 화면을 준비하고 있어요" detail="잠시만 기다려 주세요." />}><AccountSheet notificationDraft={notificationSettingsDraft} onNotificationDraftChange={setNotificationSettingsDraft} focusNotificationSettings={accountNotificationSettingsOpen} onReturnToApp={() => changeSheet(null)} active={sheet === "account"} initialPasswordResetToken={passwordResetToken} workspaceSync={workspaceSync} workspaceTransport={workspaceTransport} remoteRefreshRequired={accountRemoteRefreshRequired} remoteRefreshing={accountRemoteRefreshing} refreshNonce={accountRefreshNonce} onRefreshRemote={() => void refreshAccountFromRemote()} onRefreshWorkspace={syncDashboard} focusGrocyOutboxId={accountGrocyOutboxFocusId} returnToNotification={notificationAccountReturnRef.current} onReturnToNotification={() => changeSheet(null)} onOpenFoodFromSync={openFoodFromSyncHistory} onAuthenticated={handleAuthenticated} onAccountSessionStarted={handleAccountSessionStarted} onSignedOut={handleSignedOut} onAccountDeleted={handleAccountDeleted} /></Suspense>
       </DeferredBottomSheet>
 
       <DeferredBottomSheet
         open={sheet === "notifications"}
         onOpenChange={(open) => changeSheet(open ? "notifications" : null)}
         title="알림"
-        description="식품 알림과 재고 앱 소식을 모았어요."
         snap={0.72}
       >
-        <Suspense fallback={<ProcessingState label="알림을 준비하고 있어요" detail="확인이 필요한 항목을 불러옵니다." />}><NotificationSheet notifications={visibleNotifications} loading={mealApi.isConfigured && notificationsLoading} error={notificationsError} notice={notificationsNotice} retryAction={notificationRetryAction} onSelect={openNotificationTarget} onReadAll={() => void markAllNotificationsRead()} returnFocusNotificationId={notificationReturnFocusIdRef.current} initialSyncFocus={notificationSyncFocus} onSyncFocusHandled={() => setNotificationSyncFocus(null)} /></Suspense>
+        <Suspense fallback={<ProcessingState label="알림을 준비하고 있어요" detail="확인이 필요한 항목을 불러옵니다." />}><NotificationSheet onOpenSettings={mealApi.isConfigured && connectionState === "connected" ? () => { accountNotificationSettingsRef.current = true; setAccountNotificationSettingsOpen(true); changeSheet("account"); } : undefined} targetIssue={notificationTargetIssue} notifications={visibleNotifications} loading={mealApi.isConfigured && notificationsLoading} error={notificationsError} notice={notificationsNotice} retryAction={notificationRetryAction} onSelect={openNotificationTarget} onReadAll={() => void markAllNotificationsRead()} returnFocusNotificationId={notificationReturnFocusIdRef.current} initialSyncFocus={notificationSyncFocus} onSyncFocusHandled={() => setNotificationSyncFocus(null)} /></Suspense>
       </DeferredBottomSheet>
 
       <DeferredBottomSheet
@@ -5670,7 +6067,7 @@ function PrototypeContent() {
         <Suspense fallback={<ProcessingState label="레시피 목록을 준비하고 있어요" detail="잠시만 기다려 주세요." />}><RecipeReviewPanel workspaceTransport={workspaceTransport} /></Suspense>
       </DeferredBottomSheet>
 
-      {toast ? <div className="toast-layer" data-active-sheet={sheet ?? "none"} style={{ position: "absolute", zIndex: 1102, inset: 0, pointerEvents: "none" }}><div className={`toast${toastAction?.message === toast && toastAction.label === "다시 시도" ? " toast-retry" : ""}`} data-toast-action={toastAction?.message === toast ? toastAction.label : undefined} role="status" aria-live="polite" aria-atomic="true" style={{ pointerEvents: "auto" }}><CheckCircledIcon width={17} height={17} /><span className="toast-message"><MetadataText text={toast} /></span>{toastAction?.message === toast ? <button className="toast-action" type="button" disabled={toastAction.label === "다시 시도" && toastActionBusy} aria-busy={toastAction.label === "다시 시도" && toastActionBusy} onClick={() => { const action = toastAction; const isRetry = action.label === "다시 시도"; if (isRetry) { setToastActionBusy(true); action.onInvoke(); } else { setToast(null); setToastAction(null); action.onInvoke(); } window.setTimeout(focusToastRecoveryTarget, 0); }}>{toastAction.label === "다시 시도" && toastActionBusy ? "다시 시도 중" : toastAction.label}</button> : null}</div></div> : null}
+      {toast ? <div className="toast-layer" data-active-sheet={sheet ?? "none"} style={{ position: "absolute", zIndex: 1102, inset: 0, pointerEvents: "none" }}><div className={`toast${toastAction?.message === toast && isRecoveryToastAction(toastAction.label) ? " toast-recovery" : ""}${toastAction?.message === toast && toastAction.label === "다시 시도" ? " toast-retry" : ""}`} data-toast-state={toastFeedbackState(toastPhase, toastAction?.message === toast ? toastAction.label : undefined)} data-toast-action={toastAction?.message === toast ? toastAction.label : undefined} role="status" aria-live="polite" aria-atomic="true" style={{ pointerEvents: "auto" }}>{toastAction?.message === toast && isRecoveryToastAction(toastAction.label) ? <InfoCircledIcon width={17} height={17} aria-hidden="true" /> : toastPhase === "pending" ? <ClockIcon width={17} height={17} aria-hidden="true" /> : <CheckCircledIcon width={17} height={17} aria-hidden="true" />}<span className="toast-message"><MetadataText text={toast} /></span>{toastAction?.message === toast ? <button className="toast-action" type="button" disabled={toastAction.label === "다시 시도" && toastActionBusy} aria-busy={toastAction.label === "다시 시도" && toastActionBusy} onClick={() => { const action = toastAction; const isRetry = action.label === "다시 시도"; if (isRetry) { setToastActionBusy(true); action.onInvoke(); } else { setToast(null); setToastAction(null); action.onInvoke(); } window.setTimeout(focusToastRecoveryTarget, 0); }}>{toastAction.label === "다시 시도" && toastActionBusy ? "다시 시도 중" : toastAction.label}</button> : null}</div></div> : null}
     </>
     </MotionConfig>
   );

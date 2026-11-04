@@ -1,3 +1,5 @@
+import { revealAndFocusWithinNearestContainer as revealAndFocus } from "./appScroll";
+import { recipeLicenseLabel } from "./recipeReviewPresentation";
 import { MetadataText } from "./Metadata";
 import { useEffect, useRef, useState } from "react";
 import { CheckCircledIcon, InfoCircledIcon, ReaderIcon, UploadIcon } from "@radix-ui/react-icons";
@@ -105,6 +107,12 @@ export default function RecipeReviewPanel({ workspaceTransport }: RecipeReviewPa
   const [sourceStatus, setSourceStatus] = useState<ApiRecipeSourceStatus | null>(null);
   const [importForm, setImportForm] = useState<ImportFormState>(initialImportForm);
   const [error, setError] = useState("");
+  const errorRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!error) return;
+    const frame = window.requestAnimationFrame(() => revealAndFocus(errorRef.current?.querySelector<HTMLButtonElement>("button") ?? errorRef.current, { block: "nearest" }));
+    return () => window.cancelAnimationFrame(frame);
+  }, [error]);
   const [notice, setNotice] = useState("");
   const [retryAction, setRetryAction] = useState<ReviewRetryAction | null>(null);
   const [claiming, setClaiming] = useState(false);
@@ -160,12 +168,14 @@ export default function RecipeReviewPanel({ workspaceTransport }: RecipeReviewPa
     setLoading(true);
     setError("");
     setNotice("");
-    void loadSourceStatus();
     try {
       let nextActorId = normalizedToken ? "legacy-review-token" : null;
       if (!normalizedToken) {
         const auth = await mealApi.getAuthMe();
         if (auth?.role !== "recipe_admin") {
+          setActorId(null);
+          setDrafts([]);
+          setEditor(null);
           setError("레시피 관리 계정으로 로그인하거나 관리 코드를 입력해 주세요.");
           return;
         }
@@ -189,6 +199,7 @@ export default function RecipeReviewPanel({ workspaceTransport }: RecipeReviewPa
       setReviewToken(normalizedToken);
       setActorId(nextActorId);
       setCanPublish(nextCanPublish);
+      void loadSourceStatus();
       const currentDraft = selectedId ? draftsRef.current.find((draft) => draft.id === selectedId) : null;
       const nextSelectedDraft = selectedId ? response.find((draft) => draft.id === selectedId) : null;
       const preserveCurrentEditor = Boolean(options.preserveEditor && selectedId && editorRef.current);
@@ -209,6 +220,11 @@ export default function RecipeReviewPanel({ workspaceTransport }: RecipeReviewPa
       setNotice(nextNotice ?? (response.length ? `확인할 레시피 ${response.length}개를 불러왔어요.` : "확인할 레시피가 없어요."));
       }
     } catch (reason) {
+      if (reason instanceof MealApiError && (reason.status === 401 || reason.status === 403)) {
+        setActorId(null);
+        setDrafts([]);
+        setEditor(null);
+      }
       setError(errorMessage(reason));
     } finally {
       setLoading(false);
@@ -275,6 +291,9 @@ export default function RecipeReviewPanel({ workspaceTransport }: RecipeReviewPa
       if (!normalizedToken) {
         const auth = await mealApi.getAuthMe();
         if (auth?.role !== "recipe_admin") {
+          setActorId(null);
+          setDrafts([]);
+          setEditor(null);
           setError("레시피 관리 계정으로 로그인하거나 관리 코드를 입력해 주세요.");
           return;
         }
@@ -299,6 +318,7 @@ export default function RecipeReviewPanel({ workspaceTransport }: RecipeReviewPa
   };
 
   const selectDraft = (draft: ApiRecipeDraft) => {
+    if (busyRef.current) return;
     setSelectedId(draft.id);
     setEditor(draft);
     setEditorRefreshRequired(false);
@@ -329,7 +349,7 @@ export default function RecipeReviewPanel({ workspaceTransport }: RecipeReviewPa
   const activeClaim = Boolean(editor?.claimed_by && (!editor.claim_expires_at || new Date(editor.claim_expires_at).getTime() > Date.now()));
   const claimIsMine = Boolean(activeClaim && editor?.claimed_by && actorId && editor.claimed_by === actorId);
   const claimExpired = Boolean(editor?.claimed_by && !activeClaim);
-  const canEdit = claimIsMine && !editorRefreshRequired;
+  const canEdit = claimIsMine && !editorRefreshRequired && !saving && !claiming && !loading;
 
   const updateDraftState = (response: ApiRecipeDraft) => {
     setEditor(response);
@@ -481,6 +501,7 @@ export default function RecipeReviewPanel({ workspaceTransport }: RecipeReviewPa
   };
 
   const changeQueueFilter = (assignment: ApiRecipeReviewAssignment) => {
+    if (busyRef.current) return;
     setQueueFilter(assignment);
     void loadDrafts(reviewToken, undefined, assignment);
   };
@@ -506,6 +527,7 @@ export default function RecipeReviewPanel({ workspaceTransport }: RecipeReviewPa
         <div className="capture-visual compact"><ReaderIcon width={22} height={22} /></div>
         <div><h3>공개할 레시피</h3><p>내용을 살펴본 레시피만 식단에 보여요.</p></div>
       </div>
+      {actorId && !reviewToken.trim() ? <button className="secondary-sheet-button" type="button" disabled={loading || saving || claiming} onClick={() => void loadDrafts("", undefined, queueFilter, { preserveEditor: true })}>{loading ? "불러오는 중" : "목록 새로고침"}</button> : <>
       <div className="recipe-review-warning"><InfoCircledIcon width={16} height={16} /><span>코드는 이 화면을 닫으면 지워져요. 기기나 앱 설정에는 저장하지 않아요.</span></div>
       <form className="recipe-review-token-form" onSubmit={(event) => { event.preventDefault(); void loadDrafts(); }}>
         <label className="app-input-label" htmlFor="recipe-review-token">레시피 관리 코드</label>
@@ -513,14 +535,15 @@ export default function RecipeReviewPanel({ workspaceTransport }: RecipeReviewPa
         <small className="recipe-review-token-hint">레시피 관리 계정으로 로그인했다면 코드를 입력하지 않아도 돼요.</small>
         <button className="primary-sheet-button" type="submit" disabled={loading}>{loading ? "불러오는 중이에요" : "확인할 레시피 불러오기"}<CheckCircledIcon width={17} height={17} /></button>
       </form>
-      {sourceStatus ? <section className="recipe-review-source-status" aria-label="레시피 정보 연결">
+      </>}
+      {actorId && sourceStatus ? <section className="recipe-review-source-status" aria-label="레시피 정보 연결">
         <div className="recipe-review-source-status-heading">
           <div><span className={`recipe-review-status-dot ${sourceStatus.configured ? "recipe-review-status-ready" : "recipe-review-status-disabled"}`} /> <strong>{sourceStatus.configured ? "레시피 정보에 연결됨" : "레시피 정보를 불러올 수 없음"}</strong><small>{sourceStatus.source_name}</small></div>
           <a href={sourceStatus.source_url} target="_blank" rel="noreferrer">서비스 안내</a>
         </div>
-        <p>{sourceStatus.detail}</p>
+        <p>{sourceStatus.configured ? "공개할 원본 레시피를 가져올 수 있어요." : "원본 레시피 서비스 연결을 확인해 주세요."}</p>
       </section> : null}
-      {sourceStatus?.configured ? <form className="recipe-review-import-form" onSubmit={(event) => { event.preventDefault(); void importDrafts(); }}>
+      {actorId && sourceStatus?.configured ? <form className="recipe-review-import-form" onSubmit={(event) => { event.preventDefault(); void importDrafts(); }}>
         <div className="recipe-review-import-heading"><span className="recipe-review-section-label">공개 레시피 가져오기</span><small>가져온 레시피는 바로 공개되지 않아요. 내용을 확인한 뒤 식단에 추가할 수 있어요.</small></div>
         <div className="recipe-review-import-range">
           <label className="app-input-label" htmlFor="recipe-import-start">첫 번째 항목</label>
@@ -539,23 +562,22 @@ export default function RecipeReviewPanel({ workspaceTransport }: RecipeReviewPa
           <KeyboardInput id="recipe-import-changed-after" className="app-input" value={importForm.changedAfter} onChange={(event) => setImportForm((current) => ({ ...current, changedAfter: event.target.value }))} placeholder="YYYYMMDD" inputMode="numeric" />
         </div>
         <button className="secondary-sheet-button recipe-review-import-button" type="submit" disabled={loading || importing || sourceLoading}>{importing ? "레시피를 확인하고 있어요" : "레시피 가져오기"}<UploadIcon width={16} height={16} /></button>
-      </form> : sourceStatus ? <div className="recipe-review-source-disabled"><InfoCircledIcon width={15} height={15} /><span>레시피 정보 연결이 완료되면 공개 레시피를 가져올 수 있어요.</span></div> : null}
-      {error ? <div className="recipe-error" role="alert"><InfoCircledIcon width={16} height={16} /><span>{error}</span>{retryAction ? <button className="account-error-action" type="button" onClick={retry}>다시 시도</button> : null}</div> : null}
+      </form> : null}
+      {error ? <div ref={errorRef} className="recipe-error" role="alert" tabIndex={-1}><InfoCircledIcon width={16} height={16} /><span>{error}</span>{retryAction ? <button className="account-error-action" type="button" onClick={retry}>다시 시도</button> : null}</div> : null}
       {notice ? <div className="recipe-review-notice" role="status"><CheckCircledIcon width={16} height={16} />{notice}</div> : null}
-      {actorId ? <div className="recipe-review-filter-bar" aria-label="레시피 확인 목록">
+      {actorId && (drafts.length > 0 || queueFilter !== "all" || loading) ? <div className="recipe-review-filter-bar" aria-label="레시피 확인 목록">
           <span className="recipe-review-section-label">수정 상태</span>
-        <small className="recipe-review-sync-hint">{catalogRevision === null ? "다른 기기의 변경 사항을 확인하고 있어요." : "다른 기기에서 목록이 바뀌면 알려드려요. 화면으로 돌아올 때도 새로 확인해요."}</small>
         <div>
-          {(["all", "mine", "unassigned"] as const).map((assignment) => <button key={assignment} className={queueFilter === assignment ? "recipe-review-filter-active" : ""} type="button" aria-pressed={queueFilter === assignment} onClick={() => changeQueueFilter(assignment)}>{assignment === "all" ? "전체" : assignment === "mine" ? "내가 수정 중" : "수정자 없음"}</button>)}
+          {(["all", "mine", "unassigned"] as const).map((assignment) => <button key={assignment} className={queueFilter === assignment ? "recipe-review-filter-active" : ""} type="button" aria-pressed={queueFilter === assignment} disabled={loading || saving || claiming} onClick={() => changeQueueFilter(assignment)}>{assignment === "all" ? "전체" : assignment === "mine" ? "내가 수정 중" : "수정자 없음"}</button>)}
         </div>
       </div> : null}
       {drafts.length ? <div className="recipe-review-layout">
         <div className="recipe-review-list" aria-label="살펴볼 레시피 목록">
           <span className="recipe-review-section-label">레시피 목록 {drafts.length}</span>
-          {drafts.map((draft) => <button type="button" className={`recipe-review-list-item ${draft.id === selectedId ? "recipe-review-list-item-active" : ""}`} key={draft.id} onClick={() => selectDraft(draft)}><strong>{draft.title}</strong><small><MetadataText text={<>가져온 날 · {formatRetrievedAt(draft.retrieved_at)}</>} /></small></button>)}
+          {drafts.map((draft) => <button type="button" className={`recipe-review-list-item ${draft.id === selectedId ? "recipe-review-list-item-active" : ""}`} key={draft.id} disabled={loading || saving || claiming} onClick={() => selectDraft(draft)}><strong>{draft.title}</strong><small><MetadataText text={<>가져온 날 · {formatRetrievedAt(draft.retrieved_at)}</>} /></small></button>)}
         </div>
         {editor ? <div className="recipe-review-editor">
-          <div className="recipe-review-source"><strong>{editor.title}</strong><small><MetadataText text={<>{editor.source_name} · {editor.license}</>} /></small><a href={editor.source_url} target="_blank" rel="noreferrer">원본 레시피 보기</a></div>
+          <div className="recipe-review-source"><strong>{editor.title}</strong><small><MetadataText text={<>{editor.source_name} · {recipeLicenseLabel(editor.license)}</>} /></small><a href={editor.source_url} target="_blank" rel="noreferrer">원본 레시피 보기</a></div>
           {editorRefreshRequired ? <div className="recipe-review-editor-stale" role="alert"><div><strong>레시피 내용이 바뀌었어요</strong><small>다른 사람이 내용을 바꿨어요. 작성 중인 내용은 그대로 보관했어요. 새 내용을 불러와 이어서 수정해 주세요.</small></div><button className="recipe-review-claim-button" type="button" disabled={claiming || saving} onClick={reloadSelectedEditor}>새 내용 불러오기</button></div> : <div className={`recipe-review-claim-bar ${claimIsMine ? "recipe-review-claim-mine" : claimExpired ? "recipe-review-claim-expired" : activeClaim ? "recipe-review-claim-other" : "recipe-review-claim-open"}`} role="status">
             <div><strong>{claimIsMine ? "내가 수정 중" : activeClaim ? "다른 사람이 수정 중" : claimExpired ? "수정 시간이 끝났어요" : "수정 중인 사람 없음"}</strong><small><MetadataText text={<>{claimIsMine ? `${formatClaimExpiry(editor.claim_expires_at)} · ${canPublish ? "저장·공개·제외를 할 수 있어요." : "저장할 수 있지만 공개하거나 제외할 권한은 없어요."}` : activeClaim ? `${editor.claimed_by_email ?? "다른 운영자"} · ${formatClaimExpiry(editor.claim_expires_at)}` : "내용을 고치려면 수정을 시작해 주세요."}</>} /></small></div>
             {claimIsMine ? <button className="recipe-review-claim-button" type="button" disabled={claiming || saving} onClick={() => void release()}>수정 마치기</button> : activeClaim ? null : <button className="recipe-review-claim-button" type="button" disabled={claiming || saving} onClick={() => void claim()}>{claiming ? "수정 중" : "수정 시작"}</button>}
@@ -565,7 +587,7 @@ export default function RecipeReviewPanel({ workspaceTransport }: RecipeReviewPa
           {auditEvents.length ? <div className="recipe-review-audit" aria-label="레시피 변경 기록"><span className="recipe-review-section-label">최근 변경</span>{auditEvents.slice().reverse().map((event) => <div className="recipe-review-audit-row" key={event.id}><span><strong>{event.action === "imported" ? "원본 가져옴" : event.action === "updated" ? "내용 수정" : event.action === "approved" ? "식단 공개" : event.action === "rejected" ? "공개 안 함" : event.action === "claimed" ? "수정 시작" : "수정 마침"}</strong><small><MetadataText text={<>{event.actor_email ?? event.actor_id} · {new Date(event.occurred_at).toLocaleString("ko-KR", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}</>} /></small></span><small>{auditEventDetail(event.action)}</small></div>)}</div> : null}
           <label className="recipe-review-checkbox"><input type="checkbox" disabled={!canEdit} checked={licenseConfirmed} onChange={(event) => setLicenseConfirmed(event.target.checked)} /><span>원본 이용조건·이미지 재사용 권한을 확인했습니다.</span></label>
           <label className="app-input-label" htmlFor="recipe-review-note">검토 메모</label><KeyboardTextarea id="recipe-review-note" className="app-input recipe-review-textarea" disabled={!canEdit} value={reviewerNote} onChange={(event) => setReviewerNote(event.target.value)} placeholder="수정한 내용이나 공개하지 않을 이유를 적어 주세요." />
-          <div className="recipe-review-actions"><button className="secondary-sheet-button" type="button" disabled={saving || !canEdit} onClick={() => void saveReview()}>저장</button><button className="primary-sheet-button" type="button" disabled={saving || !canEdit || !canPublish} onClick={() => void approve()}>식단에 공개</button><button className="recipe-review-reject-button" type="button" disabled={saving || !canEdit || !canPublish} onClick={() => void reject()}>공개 안 함</button></div>
+          <div className="recipe-review-actions"><button className="secondary-sheet-button" type="button" disabled={saving || !canEdit} onClick={() => void saveReview()}>{saving ? "저장 중" : "저장"}</button><button className="primary-sheet-button" type="button" disabled={saving || !canEdit || !canPublish || !licenseConfirmed} onClick={() => void approve()}>식단에 공개</button><button className="recipe-review-reject-button" type="button" disabled={saving || !canEdit || !canPublish} onClick={() => void reject()}>공개 안 함</button></div>
         </div> : null}
       </div> : null}
     </div>

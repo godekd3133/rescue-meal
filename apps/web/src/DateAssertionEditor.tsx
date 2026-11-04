@@ -1,9 +1,12 @@
+import { dateEditorPresentation } from "./dateEditorPresentation";
 import { MetadataText } from "./Metadata";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { CalendarIcon, CheckIcon } from "@radix-ui/react-icons";
 import { KeyboardInput, useKeyboard } from "./mobile";
 
 export type DateConfirmationKind = "sell_by" | "use_by" | "best_before" | "user_reminder";
+
+export type DateAssertionDraft = { value: string; kind: DateConfirmationKind | null };
 
 const options: Array<[DateConfirmationKind, string]> = [
   ["sell_by", "유통기한"],
@@ -18,19 +21,27 @@ export default function DateAssertionEditor({
   onConfirm,
   initialValue = "",
   initialKind = null,
+  originalKind,
+  onDraftChange,
   title = "포장지에서 확인한 날짜",
-  description = "날짜가 무엇을 뜻하는지도 골라 주세요.",
+  description = "",
 }: {
   onCancel: () => void;
   onConfirm: (value: string, kind: DateConfirmationKind) => void;
   initialValue?: string;
   initialKind?: DateConfirmationKind | null;
+  originalKind?: DateConfirmationKind | null;
+  onDraftChange?: (draft: DateAssertionDraft) => void;
   title?: string;
   description?: string;
 }) {
   const keyboard = useKeyboard();
   const [value, setValue] = useState(initialValue);
   const [kind, setKind] = useState<DateConfirmationKind | null>(initialKind);
+  const originalKindRef = useRef(initialKind);
+  useEffect(() => {
+    onDraftChange?.({ value, kind });
+  }, [value, kind, onDraftChange]);
   const initialKindButtonRef = useRef<HTMLButtonElement | null>(null);
   const firstDateKindButtonRef = useRef<HTMLButtonElement | null>(null);
   const dateKindButtonRefs = useRef<Array<HTMLButtonElement | null>>([]);
@@ -48,13 +59,8 @@ export default function DateAssertionEditor({
     return () => window.clearTimeout(timer);
   }, []);
 
-  const readableDate = /^\d{4}-\d{2}-\d{2}$/.test(value) ? `선택한 날짜 · ${value.replaceAll("-", ".")}` : "날짜를 선택해 주세요";
-  const dateEditorSaveHint = !kind
-    ? "날짜 종류를 먼저 선택해 주세요."
-    : !value
-      ? "포장지에서 확인한 날짜를 입력해 주세요."
-      : "날짜는 직접 확인한 내용으로 저장돼요.";
-  const dateEditorSaveLabel = !kind ? "날짜 종류 선택" : !value ? "날짜 입력" : "확인 후 저장";
+  const readableDate = /^\d{4}-\d{2}-\d{2}$/.test(value) ? `선택한 날짜 · ${value.replaceAll("-", ".")}` : "";
+  const presentation = dateEditorPresentation(kind, value, title, description, originalKind !== undefined ? originalKind : originalKindRef.current);
 
   const handleDateKindKeyDown = (event: KeyboardEvent<HTMLButtonElement>, currentIndex: number) => {
     if (!["ArrowDown", "ArrowLeft", "ArrowRight", "ArrowUp", "End", "Home"].includes(event.key)) return;
@@ -86,7 +92,7 @@ export default function DateAssertionEditor({
     <div className="date-editor" role="group" aria-label="확인한 날짜 입력">
       <div className="date-editor-heading">
         <CalendarIcon width={17} height={17} />
-        <span><strong>{title}</strong><small>{description}</small></span>
+        <span><strong>{presentation.title}</strong>{presentation.description ? <small>{presentation.description}</small> : null}</span>
       </div>
       <div className="date-kind-picker" role="radiogroup" aria-label="날짜 종류" aria-describedby={!kind ? "date-kind-selection-hint" : undefined}>
         {options.map(([option, label], index) => {
@@ -118,23 +124,23 @@ export default function DateAssertionEditor({
         className="app-input date-input"
         type="date"
         value={value}
-        aria-describedby="confirmed-date-readable"
+        aria-describedby={readableDate ? "confirmed-date-readable" : undefined}
         onChange={(event) => setValue(event.target.value)}
         onBlur={() => keyboard.hide()}
       />
-      <small id="confirmed-date-readable" className="date-input-readable"><MetadataText text={readableDate} /></small>
+      {readableDate ? <small id="confirmed-date-readable" className="date-input-readable"><MetadataText text={readableDate} /></small> : null}
       <div className="date-editor-actions">
         <button className="secondary-sheet-button" type="button" onClick={onCancel}>취소</button>
         <button
           className="primary-sheet-button"
           type="button"
-          aria-describedby="date-editor-save-hint"
+          aria-describedby={presentation.saveHint ? "date-editor-save-hint" : undefined}
           disabled={!value || !kind}
           onPointerDown={(event) => event.preventDefault()}
           onClick={confirmDate}
-        >{dateEditorSaveLabel}</button>
+        >{presentation.saveLabel}</button>
       </div>
-      <p id="date-editor-save-hint" className="date-editor-footnote" role="status" aria-live="polite">{dateEditorSaveHint}</p>
+      {presentation.saveHint ? <p id="date-editor-save-hint" className="date-editor-footnote" role="status" aria-live="polite">{presentation.saveHint}</p> : null}
     </div>
   );
 }

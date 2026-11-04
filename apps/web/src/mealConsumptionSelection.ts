@@ -14,7 +14,7 @@ type ConsumptionSelection = {
 function boundedQuantity(quantity: number, maxQuantity: number) {
   const maximum = Number.isFinite(maxQuantity) ? Math.max(0, maxQuantity) : 0;
   const value = Number.isFinite(quantity) ? Math.max(0, quantity) : 0;
-  return Math.min(maximum, Number(Math.min(value, maximum).toFixed(3)));
+  return Math.min(value, maximum);
 }
 
 export function updateMealConsumptionSelection(selection: ConsumptionSelection, requestedQuantity: number) {

@@ -89,7 +89,8 @@
 }
 
 .detail-quantity-input-wrap input {
-  width: 100%;
+  flex: 1 1 0;
+  width: 0;
   min-width: 0;
   min-height: 44px;
   padding: 8px 0 8px 12px;

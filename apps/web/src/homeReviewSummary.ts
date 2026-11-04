@@ -7,3 +7,7 @@ export function getHomeReviewTopicLabel(topics: ReadonlySet<HomeReviewTopic>): H
   if (topics.has("storage")) return "보관 방법을";
   return "포장지 날짜를";
 }
+
+export function shouldShowHomeDateGuide(reviewCount: number, visibleDateKinds: readonly string[]) {
+  return reviewCount > 0 || visibleDateKinds.includes("estimated_use_first");
+}

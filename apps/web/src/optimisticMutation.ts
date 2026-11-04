@@ -1,8 +1,9 @@
 export type OptimisticMutationOptions<T> = {
   applyOptimistic: () => void;
   restore: () => void;
-  mutate: () => Promise<T>;
+  mutate: (assertCurrent: () => void) => Promise<T>;
   sync: () => Promise<boolean>;
+  isCurrent?: () => boolean;
 };
 
 export type OptimisticMutationResult<T> = {
@@ -21,16 +22,23 @@ export async function runOptimisticMutation<T>({
   restore,
   mutate,
   sync,
+  isCurrent = () => true,
 }: OptimisticMutationOptions<T>): Promise<OptimisticMutationResult<T>> {
+  const assertCurrent = () => {
+    if (!isCurrent()) throw new MutationScopeChangedError("optimistic-mutation");
+  };
+  assertCurrent();
   applyOptimistic();
 
   let value: T;
   try {
-    value = await mutate();
+    value = await mutate(assertCurrent);
   } catch (error) {
+    assertCurrent();
     restore();
     throw error;
   }
+  assertCurrent();
 
   let synced = false;
   let readbackError: unknown;
@@ -39,6 +47,8 @@ export async function runOptimisticMutation<T>({
   } catch (error) {
     readbackError = error;
   }
+  assertCurrent();
   if (!synced) applyOptimistic();
   return { value, synced, readbackError };
 }
+import { MutationScopeChangedError } from "./mutationReadback.ts";
