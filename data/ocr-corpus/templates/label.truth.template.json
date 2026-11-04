@@ -1,0 +1,9 @@
+{
+  "schema": "rescue-meal.ocr-truth.label.v1",
+  "dates": [
+    {"kind": "use_by", "value": "2026-11-20"},
+    {"kind": "production_date", "value": "2026-10-21"}
+  ],
+  "storage": "refrigerated",
+  "notes": "kind: use_by(소비기한) | sell_by(유통기한·판매기한) | best_before(품질유지기한) | production_date(제조일·생산일) | packaging_date(포장일) | unknown(라벨만 보고는 어느 날짜인지 판단 불가). storage: refrigerated | frozen | ambient | unknown. 사진에 보이는 날짜만 적는다."
+}

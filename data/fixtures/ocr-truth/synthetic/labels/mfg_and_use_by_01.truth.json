@@ -1,0 +1,1 @@
+{"schema": "rescue-meal.ocr-truth.label.v1", "dates": [{"kind": "production_date", "value": "2026-10-25"}, {"kind": "use_by", "value": "2026-11-08"}], "storage": "refrigerated", "notes": "제조일과 소비기한이 인접한 가장 흔한 형식."}

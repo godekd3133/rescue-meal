@@ -1,0 +1,533 @@
+{
+  "schema": "rescue-meal.ocr-benchmark.v1",
+  "generated_at": "2026-11-04T15:54:00+09:00",
+  "config": {
+    "mode": "end-to-end",
+    "corpus_label": "e2e-corpus",
+    "worker_url": "http://127.0.0.1:8012",
+    "ocr_model_version": "PP-OCRv5_mobile_det+korean_PP-OCRv5_mobile_rec",
+    "name_threshold": 0.8,
+    "confident_threshold": 0.8,
+    "python": "3.14.7",
+    "platform": "Darwin arm64"
+  },
+  "scored_documents": 13,
+  "drafts_written": [],
+  "skipped": [],
+  "receipts": {
+    "summary": {
+      "documents": 6,
+      "pipeline_status": {
+        "complete": 6
+      },
+      "merchant_accuracy": 0.8,
+      "merchant_outcomes": {
+        "correct": 4,
+        "both_absent": 1,
+        "missed": 1
+      },
+      "purchased_at_accuracy": 1.0,
+      "purchased_at_outcomes": {
+        "correct": 5,
+        "both_absent": 1
+      },
+      "grocery_kind_accuracy": 1.0,
+      "line_precision": 0.6897,
+      "line_recall": 0.6897,
+      "line_counts": {
+        "truth_lines": 29,
+        "predicted_lines": 29,
+        "matched_lines": 20,
+        "exact_name_matches": 2
+      },
+      "quantity_match_rate": 0.95,
+      "amount_match_rate": 0.85,
+      "review_line_rate": 0.2414,
+      "receipt_review_rate": 0.8,
+      "silent_wrong_matched_lines": 2,
+      "silent_extra_lines": 6,
+      "flagged_but_correct_lines": 3,
+      "timing": {
+        "count": 6,
+        "p50_ms": 2145.01,
+        "p90_ms": 6130.09,
+        "max_ms": 9164.33,
+        "mean_ms": 3855.92
+      },
+      "ocr_timing": {
+        "count": 6,
+        "p50_ms": 2131.92,
+        "p90_ms": 6090.83,
+        "max_ms": 9106.7,
+        "mean_ms": 3830.94
+      }
+    },
+    "documents": [
+      {
+        "id": "receipts/grocery_mart_sanitized_01",
+        "status": "complete",
+        "observations": 52,
+        "quality_status": "pass",
+        "ocr_input_profile": "source",
+        "timing_ms": {
+          "preprocess": 36.19,
+          "ocr": 6090.83,
+          "parse": 3.07,
+          "total": 6130.09
+        },
+        "metrics": {
+          "merchant": "correct",
+          "purchased_at": "correct",
+          "grocery_kind_correct": true,
+          "truth_lines": 10,
+          "predicted_lines": 10,
+          "matched_lines": 9,
+          "exact_name_matches": 2,
+          "quantity_correct": 9,
+          "quantity_compared": 9,
+          "amount_correct": 9,
+          "amount_compared": 9,
+          "review_lines": 2,
+          "grocery": true,
+          "receipt_needs_review": true,
+          "silent_wrong_matched_lines": 0,
+          "silent_extra_lines": 1,
+          "flagged_but_correct_lines": 2,
+          "template_id": "grocery-mart-v1"
+        }
+      },
+      {
+        "id": "receipts/restaurant_sanitized_01",
+        "status": "complete",
+        "observations": 10,
+        "quality_status": "pass",
+        "ocr_input_profile": "source",
+        "timing_ms": {
+          "preprocess": 14.09,
+          "ocr": 1477.32,
+          "parse": 0.08,
+          "total": 1491.48
+        },
+        "metrics": {
+          "merchant": "both_absent",
+          "purchased_at": "both_absent",
+          "grocery_kind_correct": true,
+          "truth_lines": 0,
+          "predicted_lines": 0,
+          "matched_lines": 0,
+          "exact_name_matches": 0,
+          "quantity_correct": 0,
+          "quantity_compared": 0,
+          "amount_correct": 0,
+          "amount_compared": 0,
+          "review_lines": 0,
+          "grocery": false,
+          "receipt_needs_review": true,
+          "silent_wrong_matched_lines": 0,
+          "silent_extra_lines": 0,
+          "flagged_but_correct_lines": 0,
+          "template_id": "restaurant-card-v1"
+        }
+      },
+      {
+        "id": "receipts/retail_beverage_sanitized_01",
+        "status": "complete",
+        "observations": 78,
+        "quality_status": "pass",
+        "ocr_input_profile": "source",
+        "timing_ms": {
+          "preprocess": 56.92,
+          "ocr": 9106.7,
+          "parse": 0.71,
+          "total": 9164.33
+        },
+        "metrics": {
+          "merchant": "correct",
+          "purchased_at": "correct",
+          "grocery_kind_correct": true,
+          "truth_lines": 10,
+          "predicted_lines": 10,
+          "matched_lines": 6,
+          "exact_name_matches": 0,
+          "quantity_correct": 6,
+          "quantity_compared": 6,
+          "amount_correct": 6,
+          "amount_compared": 6,
+          "review_lines": 0,
+          "grocery": true,
+          "receipt_needs_review": false,
+          "silent_wrong_matched_lines": 0,
+          "silent_extra_lines": 4,
+          "flagged_but_correct_lines": 0,
+          "template_id": "retail-beverage-v1"
+        }
+      },
+      {
+        "id": "receipts/syn_inline_amount_01",
+        "status": "complete",
+        "observations": 17,
+        "quality_status": "pass",
+        "ocr_input_profile": "source",
+        "timing_ms": {
+          "preprocess": 12.88,
+          "ocr": 2098.4,
+          "parse": 0.18,
+          "total": 2111.46
+        },
+        "metrics": {
+          "merchant": "correct",
+          "purchased_at": "correct",
+          "grocery_kind_correct": true,
+          "truth_lines": 3,
+          "predicted_lines": 3,
+          "matched_lines": 2,
+          "exact_name_matches": 0,
+          "quantity_correct": 1,
+          "quantity_compared": 2,
+          "amount_correct": 0,
+          "amount_compared": 2,
+          "review_lines": 1,
+          "grocery": true,
+          "receipt_needs_review": true,
+          "silent_wrong_matched_lines": 1,
+          "silent_extra_lines": 1,
+          "flagged_but_correct_lines": 0,
+          "template_id": "grocery-mart-v1"
+        }
+      },
+      {
+        "id": "receipts/syn_no_item_number_01",
+        "status": "complete",
+        "observations": 17,
+        "quality_status": "pass",
+        "ocr_input_profile": "source",
+        "timing_ms": {
+          "preprocess": 12.43,
+          "ocr": 2046.97,
+          "parse": 0.19,
+          "total": 2059.59
+        },
+        "metrics": {
+          "merchant": "missed",
+          "purchased_at": "correct",
+          "grocery_kind_correct": true,
+          "truth_lines": 3,
+          "predicted_lines": 3,
+          "matched_lines": 0,
+          "exact_name_matches": 0,
+          "quantity_correct": 0,
+          "quantity_compared": 0,
+          "amount_correct": 0,
+          "amount_compared": 0,
+          "review_lines": 3,
+          "grocery": true,
+          "receipt_needs_review": true,
+          "silent_wrong_matched_lines": 0,
+          "silent_extra_lines": 0,
+          "flagged_but_correct_lines": 0,
+          "template_id": "grocery-mart-v1"
+        }
+      },
+      {
+        "id": "receipts/syn_ocr_noise_01",
+        "status": "complete",
+        "observations": 17,
+        "quality_status": "pass",
+        "ocr_input_profile": "source",
+        "timing_ms": {
+          "preprocess": 12.9,
+          "ocr": 2165.44,
+          "parse": 0.22,
+          "total": 2178.56
+        },
+        "metrics": {
+          "merchant": "correct",
+          "purchased_at": "correct",
+          "grocery_kind_correct": true,
+          "truth_lines": 3,
+          "predicted_lines": 3,
+          "matched_lines": 3,
+          "exact_name_matches": 0,
+          "quantity_correct": 3,
+          "quantity_compared": 3,
+          "amount_correct": 2,
+          "amount_compared": 3,
+          "review_lines": 1,
+          "grocery": true,
+          "receipt_needs_review": true,
+          "silent_wrong_matched_lines": 1,
+          "silent_extra_lines": 0,
+          "flagged_but_correct_lines": 1,
+          "template_id": "grocery-mart-v1"
+        }
+      }
+    ]
+  },
+  "labels": {
+    "summary": {
+      "documents": 7,
+      "pipeline_status": {
+        "complete": 7
+      },
+      "date_value_recall": 0.8571,
+      "date_value_precision": 0.8571,
+      "date_counts": {
+        "truth_dates": 7,
+        "predicted_dates": 7,
+        "truth_dates_found": 6,
+        "predicted_dates_correct": 6
+      },
+      "kind_correct_rate": 0.1667,
+      "kind_misclassification_rate": 0.0,
+      "kind_abstain_rate": 0.8333,
+      "consumption_date_outcomes": {
+        "both_absent": 2,
+        "wrong": 1,
+        "missed": 4
+      },
+      "consumption_date_wrong": 1,
+      "confident_wrong_consumption_date": 1,
+      "confident_wrong_ids": [
+        "labels/syn_lot_number_near_keyword_01"
+      ],
+      "storage_accuracy": 0.8571,
+      "label_review_rate": 1.0,
+      "timing": {
+        "count": 7,
+        "p50_ms": 852.23,
+        "p90_ms": 1235.18,
+        "max_ms": 1398.2,
+        "mean_ms": 864.38
+      },
+      "ocr_timing": {
+        "count": 7,
+        "p50_ms": 839.35,
+        "p90_ms": 1222.28,
+        "max_ms": 1384.94,
+        "mean_ms": 846.88
+      }
+    },
+    "documents": [
+      {
+        "id": "labels/packaged_no_date_sanitized_01",
+        "status": "complete",
+        "observations": 6,
+        "quality_status": "pass",
+        "ocr_input_profile": "source",
+        "timing_ms": {
+          "preprocess": 13.08,
+          "ocr": 1384.94,
+          "parse": 0.18,
+          "total": 1398.2
+        },
+        "metrics": {
+          "truth_dates": 0,
+          "predicted_dates": 0,
+          "truth_dates_found": 0,
+          "predicted_dates_correct": 0,
+          "kind_correct": 0,
+          "kind_abstained": 0,
+          "kind_wrong": 0,
+          "consumption_date": "both_absent",
+          "consumption_selected_confidence": null,
+          "confident_wrong_consumption_date": false,
+          "storage_correct": true,
+          "label_requires_review": true
+        }
+      },
+      {
+        "id": "labels/produce_ambiguous_sanitized_01",
+        "status": "complete",
+        "observations": 6,
+        "quality_status": "pass",
+        "ocr_input_profile": "source",
+        "timing_ms": {
+          "preprocess": 12.79,
+          "ocr": 1222.28,
+          "parse": 0.11,
+          "total": 1235.18
+        },
+        "metrics": {
+          "truth_dates": 1,
+          "predicted_dates": 1,
+          "truth_dates_found": 1,
+          "predicted_dates_correct": 1,
+          "kind_correct": 1,
+          "kind_abstained": 0,
+          "kind_wrong": 0,
+          "consumption_date": "both_absent",
+          "consumption_selected_confidence": null,
+          "confident_wrong_consumption_date": false,
+          "storage_correct": true,
+          "label_requires_review": true
+        }
+      },
+      {
+        "id": "labels/syn_lot_number_near_keyword_01",
+        "status": "complete",
+        "observations": 3,
+        "quality_status": "pass",
+        "ocr_input_profile": "source",
+        "timing_ms": {
+          "preprocess": 12.83,
+          "ocr": 839.35,
+          "parse": 0.06,
+          "total": 852.23
+        },
+        "metrics": {
+          "truth_dates": 0,
+          "predicted_dates": 1,
+          "truth_dates_found": 0,
+          "predicted_dates_correct": 0,
+          "kind_correct": 0,
+          "kind_abstained": 0,
+          "kind_wrong": 0,
+          "consumption_date": "wrong",
+          "consumption_selected_confidence": 0.94,
+          "confident_wrong_consumption_date": true,
+          "storage_correct": true,
+          "label_requires_review": true
+        }
+      },
+      {
+        "id": "labels/syn_mfg_and_use_by_01",
+        "status": "complete",
+        "observations": 4,
+        "quality_status": "pass",
+        "ocr_input_profile": "source",
+        "timing_ms": {
+          "preprocess": 13.55,
+          "ocr": 846.0,
+          "parse": 0.06,
+          "total": 859.61
+        },
+        "metrics": {
+          "truth_dates": 2,
+          "predicted_dates": 2,
+          "truth_dates_found": 2,
+          "predicted_dates_correct": 2,
+          "kind_correct": 0,
+          "kind_abstained": 2,
+          "kind_wrong": 0,
+          "consumption_date": "missed",
+          "consumption_selected_confidence": null,
+          "confident_wrong_consumption_date": false,
+          "storage_correct": true,
+          "label_requires_review": true
+        }
+      },
+      {
+        "id": "labels/syn_sell_by_single_line_01",
+        "status": "complete",
+        "observations": 2,
+        "quality_status": "pass",
+        "ocr_input_profile": "source",
+        "timing_ms": {
+          "preprocess": 12.96,
+          "ocr": 744.73,
+          "parse": 0.06,
+          "total": 757.75
+        },
+        "metrics": {
+          "truth_dates": 2,
+          "predicted_dates": 2,
+          "truth_dates_found": 2,
+          "predicted_dates_correct": 2,
+          "kind_correct": 0,
+          "kind_abstained": 2,
+          "kind_wrong": 0,
+          "consumption_date": "missed",
+          "consumption_selected_confidence": null,
+          "confident_wrong_consumption_date": false,
+          "storage_correct": true,
+          "label_requires_review": true
+        }
+      },
+      {
+        "id": "labels/syn_two_digit_year_01",
+        "status": "complete",
+        "observations": 1,
+        "quality_status": "review_required",
+        "ocr_input_profile": "low_contrast_enhanced",
+        "timing_ms": {
+          "preprocess": 28.95,
+          "ocr": 486.19,
+          "parse": 0.03,
+          "total": 515.17
+        },
+        "metrics": {
+          "truth_dates": 1,
+          "predicted_dates": 0,
+          "truth_dates_found": 0,
+          "predicted_dates_correct": 0,
+          "kind_correct": 0,
+          "kind_abstained": 0,
+          "kind_wrong": 0,
+          "consumption_date": "missed",
+          "consumption_selected_confidence": null,
+          "confident_wrong_consumption_date": false,
+          "storage_correct": false,
+          "label_requires_review": true
+        }
+      },
+      {
+        "id": "labels/syn_until_only_01",
+        "status": "complete",
+        "observations": 1,
+        "quality_status": "review_required",
+        "ocr_input_profile": "low_contrast_enhanced",
+        "timing_ms": {
+          "preprocess": 27.86,
+          "ocr": 404.65,
+          "parse": 0.04,
+          "total": 432.54
+        },
+        "metrics": {
+          "truth_dates": 1,
+          "predicted_dates": 1,
+          "truth_dates_found": 1,
+          "predicted_dates_correct": 1,
+          "kind_correct": 0,
+          "kind_abstained": 1,
+          "kind_wrong": 0,
+          "consumption_date": "missed",
+          "consumption_selected_confidence": null,
+          "confident_wrong_consumption_date": false,
+          "storage_correct": true,
+          "label_requires_review": true
+        }
+      }
+    ]
+  },
+  "observations": [
+    "`receipts/grocery_mart_sanitized_01`: 상품 라인 1개를 찾지 못함.",
+    "`receipts/grocery_mart_sanitized_01`: 정답에 없는 상품 라인 1개 추출.",
+    "`receipts/grocery_mart_sanitized_01`: 값이 맞는 라인 2개를 검토로 넘김.",
+    "`receipts/retail_beverage_sanitized_01`: 상품 라인 4개를 찾지 못함.",
+    "`receipts/retail_beverage_sanitized_01`: 정답에 없는 상품 라인 4개 추출.",
+    "`receipts/syn_inline_amount_01`: 상품 라인 1개를 찾지 못함.",
+    "`receipts/syn_inline_amount_01`: 정답에 없는 상품 라인 1개 추출.",
+    "`receipts/syn_inline_amount_01`: 수량 1건 / 금액 2건 불일치 (검토 표시 없이 틀린 라인 1).",
+    "`receipts/syn_no_item_number_01`: 매장명 missed.",
+    "`receipts/syn_no_item_number_01`: 상품 라인 3개를 찾지 못함.",
+    "`receipts/syn_no_item_number_01`: 정답에 없는 상품 라인 3개 추출.",
+    "`receipts/syn_ocr_noise_01`: 수량 0건 / 금액 1건 불일치 (검토 표시 없이 틀린 라인 1).",
+    "`receipts/syn_ocr_noise_01`: 값이 맞는 라인 1개를 검토로 넘김.",
+    "`labels/syn_lot_number_near_keyword_01`: **틀린 날짜를 소비기한으로 확신함**.",
+    "`labels/syn_mfg_and_use_by_01`: 소비기한 missed.",
+    "`labels/syn_sell_by_single_line_01`: 소비기한 missed.",
+    "`labels/syn_two_digit_year_01`: 소비기한 missed.",
+    "`labels/syn_two_digit_year_01`: 정답 날짜 1개를 찾지 못함.",
+    "`labels/syn_two_digit_year_01`: 보관조건 불일치.",
+    "`labels/syn_until_only_01`: 소비기한 missed.",
+    "[라벨·parser] 제조일과 소비기한이 인접한 가장 흔한 표기에서 두 날짜 모두 kind=unknown(0.35)이 된다. 128자 문맥 창 안에 서로 다른 날짜 키워드가 둘 이상이면 보류하는 규칙 때문이며, 안전하지만 소비기한 자동 제안이 사라진다(synthetic `mfg_and_use_by_01`, `sell_by_single_line_01`).",
+    "[라벨·parser] 연도 두 자리 표기(`26.11.20`)를 날짜 후보로 인식하지 못한다(`two_digit_year_01`).",
+    "[라벨·parser, 안전] `소비기한` 문구 근처의 8자리 LOT/제조번호(`20261015`)를 날짜로 읽어 use_by confidence 0.94로 고른다. 이 리포트에서 유일한 '확신한 틀린 소비기한'이다(`lot_number_near_keyword_01`).",
+    "입력은 fixture·synthetic 텍스트 13건을 Apple SD Gothic Neo로 렌더링한 합성 JPG(±1.2° 회전, 약한 blur, 금액 열 우측 정렬)다. 실제 감열지 사진보다 쉬운 조건이며 사진은 저장소에 두지 않았다. 처리 시간은 Mac arm64, worker 1개(동시성 1), `/ready` warm-up 이후 값이다.",
+    "[영수증·OCR 경로] 표 머리말(`상품명 단가 수량 금액`) observation이 첫 상품명 앞에 붙어 첫 라인이 매번 정답과 매칭되지 않는다(`grocery_mart_sanitized_01`, `retail_beverage_sanitized_01`). review_reason도 붙지 않는다.",
+    "[영수증·OCR 경로] 상품명 정리 정규식이 `캔`·용량 숫자를 지워 `○○/캔 500ml`이 `○○/ m`처럼 깨진다. 검토 표시 없이 저장될 수 있다(`retail_beverage_sanitized_01`).",
+    "[영수증·OCR 경로] 금액이 다음 행 값으로 연결되거나(`syn_inline_amount_01`) `2.500`이 500원으로 읽히는데(`syn_ocr_noise_01`) review_reason이 없다. '검토 표시 없이 틀린 라인' 2건이 여기서 나온다.",
+    "[영수증·OCR 경로] 품번 없는 영수증은 이름이 빈 상품 라인 3개를 만든다(검토 표시는 있음, `syn_no_item_number_01`).",
+    "[영수증·OCR 경로] 용량·입수 표기(`5입`, `2팩`)가 이름에서 빠지고 수량 후보로 쓰일 수 있어, 매칭은 용량 표기를 뺀 핵심명 기준을 함께 쓴다(실행 조건 참고)."
+  ]
+}

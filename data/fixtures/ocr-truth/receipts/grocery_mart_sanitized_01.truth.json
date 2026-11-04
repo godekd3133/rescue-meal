@@ -1,0 +1,19 @@
+{
+  "schema": "rescue-meal.ocr-truth.receipt.v1",
+  "merchant_name": "지역 식자재마트",
+  "purchased_at": "2018-01-30",
+  "grocery": true,
+  "lines": [
+    {"name": "한라봉 1박스(3kg)", "quantity": 3, "total_price": 37500, "unit_price": 12500},
+    {"name": "풀무원 찰떡국떡 1kg", "quantity": 1, "total_price": 2980, "unit_price": 2980},
+    {"name": "한돈등심", "quantity": 1, "total_price": 5490, "unit_price": 5490},
+    {"name": "오뚜기)빵가루 200g", "quantity": 1, "total_price": 1100, "unit_price": 1100},
+    {"name": "농심)신라면멀티 5입", "quantity": 1, "total_price": 3350, "unit_price": 3350},
+    {"name": "흙당근", "quantity": 1, "total_price": 1880, "unit_price": 1880},
+    {"name": "안동꿀부사 10개", "quantity": 1, "total_price": 6500, "unit_price": 6500},
+    {"name": "하림 IFF 냉동가슴살 1kg", "quantity": 1, "total_price": 5900, "unit_price": 5900},
+    {"name": "동원)골든스위트콘 340g", "quantity": 1, "total_price": 1300, "unit_price": 1300},
+    {"name": "맛타리버섯 2팩", "quantity": 1, "total_price": 1000, "unit_price": 1000}
+  ],
+  "notes": "sanitized fixture 텍스트에서 사람이 작성한 정답."
+}

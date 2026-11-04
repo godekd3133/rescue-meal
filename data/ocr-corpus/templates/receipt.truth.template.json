@@ -1,0 +1,11 @@
+{
+  "schema": "rescue-meal.ocr-truth.receipt.v1",
+  "merchant_name": "지역 식자재마트",
+  "purchased_at": "2026-11-01",
+  "grocery": true,
+  "lines": [
+    {"name": "풀무원 찰떡국떡 1kg", "quantity": 1, "total_price": 2980},
+    {"name": "한라봉 1박스(3kg)", "quantity": 3, "total_price": 37500, "unit_price": 12500}
+  ],
+  "notes": "영수증에 찍힌 상품 행만 적는다. 할인·합계·결제 행은 적지 않는다. 금액은 쉼표 없는 정수(원). 모르면 null."
+}

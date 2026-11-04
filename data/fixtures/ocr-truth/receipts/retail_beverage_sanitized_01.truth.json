@@ -1,0 +1,19 @@
+{
+  "schema": "rescue-meal.ocr-truth.receipt.v1",
+  "merchant_name": "지역 주류마트",
+  "purchased_at": "2025-10-24",
+  "grocery": true,
+  "lines": [
+    {"name": "지리산샘물 500mL 뚜껑(20)", "quantity": 4, "total_price": 9920, "unit_price": 2480},
+    {"name": "처음처럼(병) 360ml", "quantity": 2, "total_price": 2900, "unit_price": 1450},
+    {"name": "누아 수리치즈 750ml", "quantity": 1, "total_price": 9900, "unit_price": 9900},
+    {"name": "비나미울라 1887 리저브 까베르네", "quantity": 1, "total_price": 10200, "unit_price": 10200},
+    {"name": "조니워커 블랙 700ml", "quantity": 1, "total_price": 51700, "unit_price": 51700},
+    {"name": "하이네켄 캔 500ml", "quantity": 1, "total_price": 2750, "unit_price": 2750},
+    {"name": "삿포로/캔 500ml", "quantity": 1, "total_price": 2150, "unit_price": 2150},
+    {"name": "아사히/캔 500ml", "quantity": 1, "total_price": 2300, "unit_price": 2300},
+    {"name": "칭타오/캔 500ml", "quantity": 2, "total_price": 5600, "unit_price": 2800},
+    {"name": "코카)캐나다드라이 토닉워터 250ml", "quantity": 1, "total_price": 750, "unit_price": 750}
+  ],
+  "notes": "할인 행($특매할인)은 정답 라인에 넣지 않는다."
+}

@@ -288,6 +288,101 @@ OCR 입력 전 방향을 보정했다는 처리 기록이며, OCR 정확도나 �
 
 현재 rule snapshot은 제품 안전 데이터베이스로 승인된 상태가 아니라 개발용 reference priority입니다. 운영판에서는 MFDS 등 관할 출처, 제품 category, 포장 상태, 실제 표시 날짜를 함께 검증한 뒤 rule version을 승격해야 합니다.
 
+## 실제 사진 정확도 벤치마크
+
+실제 마트 영수증·식품 라벨 30~50장으로 OCR과 추출 정확도를 재는 도구입니다.
+`services/api/scripts/ocr_benchmark.py`는 API intake와 같은 순서(품질 gate → EXIF 회전 →
+OCR 입력 보정 → OCR worker `/ocr` → receipt/label parser)를 `app.pipeline` 모듈로 직접
+호출합니다. API 서버는 띄우지 않으므로 8000/5173 포트를 쓰지 않고, parser·worker 코드는
+바꾸지 않습니다.
+
+### 사진을 넣고 실행하는 한 줄
+
+OCR worker를 띄운 뒤(`cd services/ocr-worker && uv run uvicorn app.main:app --host 127.0.0.1 --port 8002`),
+사진을 `data/ocr-corpus/receipts/`, `data/ocr-corpus/labels/`에 넣고 실행합니다.
+
+```bash
+cd services/api && uv run python scripts/ocr_benchmark.py --worker-url http://127.0.0.1:8002
+```
+
+처음 실행하면 정답 파일이 없는 사진마다 `<id>.truth.draft.json`이 생기고 채점은 건너뜁니다.
+초안을 고쳐 `<id>.truth.json`으로 이름을 바꾼 뒤 같은 명령을 다시 실행하면 리포트가 나옵니다.
+worker 시작 후 첫 호출은 `/ready`로 모델을 warm-up하므로, 장당 시간에는 모델 로딩이 들어가지 않습니다.
+
+### 사진 찍는 요령
+
+- 실제로 앱을 쓸 때처럼 찍습니다. 일부러 잘 찍은 사진만 모으면 정확도가 부풀려집니다.
+  다만 한 장에 영수증 한 장, 라벨 한 면만 담습니다.
+- 영수증: 매장명·판매일 머리말부터 마지막 상품 행까지 들어오게 찍고, 긴 영수증은 그대로
+  한 장으로 둡니다(이어 찍기는 아직 지원하지 않음). 구겨짐·감열지 흐림·형광등 반사가 섞인 사진도 포함합니다.
+- 라벨: 날짜가 인쇄된 면(뚜껑·측면 포함)과 보관방법 문구가 보이게 찍습니다. 날짜 면과
+  보관 면이 다르면 날짜 면을 우선하고, 정답에는 그 사진에 보이는 것만 적습니다.
+- 섞어 넣을 것: 대형마트·동네 마트·편의점 영수증, 품번 없는 영수증, 할인 행이 많은 영수증,
+  식당 영수증 몇 장(입고 제외가 정답), 제조일+소비기한 라벨, 유통기한 라벨, 연도 두 자리
+  라벨, 날짜 없는 면, LOT/제조번호가 함께 찍힌 라벨.
+- JPG/PNG/WEBP만 읽습니다. iPhone HEIC와 PDF는 건너뛰고 리포트의 "건너뛴 파일"에 남으니
+  JPG로 내보내서 넣습니다. 짧은 변이 320px 미만이면 품질 gate가 거절하며 그것도 결과로 집계됩니다.
+- 파일 이름은 `r001.jpg`, `l001.jpg`처럼 개인정보 없는 id로 짓습니다. id는 리포트에 남습니다.
+
+### 정답 작성
+
+형식은 `data/ocr-corpus/templates/`의 템플릿을 따릅니다.
+
+- 영수증(`rescue-meal.ocr-truth.receipt.v1`): `merchant_name`, `purchased_at`(YYYY-MM-DD),
+  `grocery`(식당·카페면 false), `lines[]`의 `name`·`quantity`·`total_price`(행 합계, 원 단위 정수).
+  할인·합계·결제 행은 넣지 않습니다. 영수증에 없는 값은 `null`.
+- 라벨(`rescue-meal.ocr-truth.label.v1`): `dates[]`의 `kind`와 `value`, `storage`.
+  `kind`는 `use_by`(소비기한), `sell_by`(유통기한·판매기한), `best_before`(품질유지기한),
+  `production_date`(제조일), `packaging_date`(포장일), `unknown`(라벨만으로 어느 날짜인지
+  판단 불가 → 앱이 확정하지 말아야 함) 중 하나입니다. `storage`는 `refrigerated`/`frozen`/`ambient`/`unknown`.
+- 사진에서 사람이 읽을 수 없는 값은 추측하지 말고 `null`로 둡니다.
+
+사진, 정답, 초안, `_results/` 상세 결과는 `data/ocr-corpus/.gitignore`로 커밋에서 제외됩니다.
+커밋되는 것은 README와 템플릿뿐입니다.
+
+### 다른 실행 방법
+
+```bash
+cd services/api
+# 사진 없이 parser만: 저장소 sanitized fixture + data/fixtures/ocr-truth 정답
+uv run python scripts/ocr_benchmark.py --text-only
+# 지어낸 인쇄 형식 probe 8건 (parser 약점 재현용)
+uv run python scripts/ocr_benchmark.py --text-only --corpus ../../data/fixtures/ocr-truth/synthetic --out ../../evidence/ocr-benchmark-YYYY-MM-DD-synthetic-probe
+```
+
+`--text-only --corpus <폴더>`는 `<id>.txt`(OCR 원문 또는 손으로 옮긴 텍스트)를 parser에 바로 넣습니다.
+`--name-threshold`(기본 0.8), `--confident-threshold`(기본 0.8), `--out`, `--details-dir`,
+`--no-drafts`, `--overwrite-drafts`, `--observation "문장"`(리포트 "관찰된 약점"에 추가)을 지원합니다.
+
+### 출력
+
+- `evidence/ocr-benchmark-<날짜>-<mode>.md`·`.json`: 지표와 문서 id만 있습니다. 상품명·OCR 원문·이미지는 없습니다.
+- `data/ocr-corpus/_results/details-*.json`: 정답 대 추출 상품명, 날짜 원문 등 실패 원인을
+  보는 상세 결과입니다. 개인정보가 들어 있어 gitignore 대상입니다.
+
+### 지표 해석
+
+| 지표 | 정의 | 읽는 법 |
+|---|---|---|
+| 매장명·구매일 정확도 | 정답에 값이 있는 영수증 중 일치 비율. 매장명은 `(주)`·공백 제거 후 비교 | `missed`는 못 찾음, `spurious`는 정답이 없는데 만들어 냄 |
+| 라인 precision / recall | 상품명 1:1 매칭 수 ÷ 추출 라인 / ÷ 정답 라인 | precision이 낮으면 머리말·할인·바코드가 상품으로 섞이고, recall이 낮으면 상품을 놓침 |
+| 상품명 매칭 기준 | NFKC → 소문자 → 앞 품번·공백·괄호·구두점 제거 후 `difflib.SequenceMatcher` 비율이 기준 이상. 전체명과 용량·입수(`500ml`, `5입`)를 뺀 핵심명 중 큰 값을 쓰고, 점수 높은 쌍부터 greedy로 1:1 배정 | 이름 완전일치 수는 정규화한 전체명이 같은 경우만 셉니다 |
+| 수량·금액 일치율 | 매칭된 라인 중 수량, 행 합계 금액이 정답과 같은 비율 | 매칭되지 않은 라인은 분모에 없으므로 recall과 함께 봅니다 |
+| 검토 필요 비율 | 라인: `review_reason`이 붙은 상품 라인 ÷ 추출 라인. 영수증: 식료품 영수증 중 검토 라인·경고·OCR 실패가 하나라도 있는 비율 | 높을수록 등록이 귀찮아집니다 |
+| 검토 표시 없이 틀린 라인 / 가짜 라인 | 수량·금액이 틀렸거나 정답에 없는데 `review_reason`이 없는 라인 | 사용자가 그대로 저장할 위험. 0이 목표 |
+| 날짜 값 recall / precision | 정답 날짜 중 후보에 같은 값이 있는 비율 / 후보 중 정답에 있는 값 비율 | |
+| 날짜 종류 정분류·오분류·보류 | 값이 맞은 날짜에서 종류가 같음 / 다른 구체적 종류 / `unknown` | 오분류(예: 제조일→소비기한)는 위험, 보류는 안전하지만 사용자 수고 |
+| **확신한 틀린 소비기한** | 앱이 고르는 소비기한 후보(`consumption_date_candidate`)가 정답 소비기한과 다르거나 정답에 소비기한이 없는데, confidence ≥ `--confident-threshold` | 안전상 가장 위험한 오류. 0이 아니면 해당 id부터 봅니다 |
+| 장당 처리 시간 | end-to-end: 품질 gate~parser 합계(p50/p90/max)와 OCR worker 왕복 시간. text-only: parser만 | warm-up 이후 값. worker 동시성 1 기준 |
+
+표본이 30~50장이면 비율 1건 차이가 2~3%p입니다. 비율보다 실패 id와 상세 결과를 먼저 봅니다.
+
+### 2026-11-04 기준선
+
+- [fixture text-only](../evidence/ocr-benchmark-2026-11-04-text-only.md): sanitized fixture 5건. parser 상한(OCR이 완벽할 때)으로 읽어야 합니다.
+- [synthetic probe text-only](../evidence/ocr-benchmark-2026-11-04-synthetic-probe.md): 지어낸 인쇄 형식 8건. 라벨 1건에서 LOT 번호를 소비기한으로 확신(confidence 0.94)했습니다.
+- [합성 이미지 end-to-end](../evidence/ocr-benchmark-2026-11-04-synthetic-image-e2e.md): 위 13건을 렌더링한 JPG를 실제 PaddleOCR worker(포트 8012)로 처리했습니다. 실제 사진 정확도가 아닙니다.
+
 ## 현재 테스트 fixture
 
 - `services/api/tests/test_pipeline.py`

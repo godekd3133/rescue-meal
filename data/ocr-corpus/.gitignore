@@ -1,0 +1,11 @@
+# 실제 영수증·라벨 사진, OCR 원문, 정답 파일은 개인정보다.
+# 이 폴더에서는 README, 템플릿, 빈 폴더 표시 파일만 커밋한다.
+*
+!.gitignore
+!README.md
+!receipts/
+!labels/
+!templates/
+!receipts/.gitkeep
+!labels/.gitkeep
+!templates/*.json

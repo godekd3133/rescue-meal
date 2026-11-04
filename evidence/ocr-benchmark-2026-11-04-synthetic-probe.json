@@ -1,0 +1,348 @@
+{
+  "schema": "rescue-meal.ocr-benchmark.v1",
+  "generated_at": "2026-11-04T15:53:30+09:00",
+  "config": {
+    "mode": "text-only",
+    "corpus_label": "data/fixtures/ocr-truth/synthetic",
+    "worker_url": null,
+    "ocr_model_version": null,
+    "name_threshold": 0.8,
+    "confident_threshold": 0.8,
+    "python": "3.14.7",
+    "platform": "Darwin arm64"
+  },
+  "scored_documents": 8,
+  "drafts_written": [],
+  "skipped": [],
+  "receipts": {
+    "summary": {
+      "documents": 3,
+      "pipeline_status": {
+        "complete": 3
+      },
+      "merchant_accuracy": 0.6667,
+      "merchant_outcomes": {
+        "correct": 2,
+        "missed": 1
+      },
+      "purchased_at_accuracy": 1.0,
+      "purchased_at_outcomes": {
+        "correct": 3
+      },
+      "grocery_kind_accuracy": 1.0,
+      "line_precision": 0.5,
+      "line_recall": 0.3333,
+      "line_counts": {
+        "truth_lines": 9,
+        "predicted_lines": 6,
+        "matched_lines": 3,
+        "exact_name_matches": 3
+      },
+      "quantity_match_rate": 1.0,
+      "amount_match_rate": 1.0,
+      "review_line_rate": 0.0,
+      "receipt_review_rate": 0.0,
+      "silent_wrong_matched_lines": 0,
+      "silent_extra_lines": 3,
+      "flagged_but_correct_lines": 0,
+      "timing": {
+        "count": 3,
+        "p50_ms": 0.17,
+        "p90_ms": 1.52,
+        "max_ms": 1.52,
+        "mean_ms": 0.58
+      },
+      "ocr_timing": {
+        "count": 0,
+        "p50_ms": null,
+        "p90_ms": null,
+        "max_ms": null,
+        "mean_ms": null
+      }
+    },
+    "documents": [
+      {
+        "id": "receipts/inline_amount_01",
+        "status": "complete",
+        "observations": 8,
+        "quality_status": null,
+        "ocr_input_profile": null,
+        "timing_ms": {
+          "parse": 1.52,
+          "total": 1.52
+        },
+        "metrics": {
+          "merchant": "correct",
+          "purchased_at": "correct",
+          "grocery_kind_correct": true,
+          "truth_lines": 3,
+          "predicted_lines": 3,
+          "matched_lines": 3,
+          "exact_name_matches": 3,
+          "quantity_correct": 3,
+          "quantity_compared": 3,
+          "amount_correct": 3,
+          "amount_compared": 3,
+          "review_lines": 0,
+          "grocery": true,
+          "receipt_needs_review": false,
+          "silent_wrong_matched_lines": 0,
+          "silent_extra_lines": 0,
+          "flagged_but_correct_lines": 0,
+          "template_id": "grocery-mart-v1"
+        }
+      },
+      {
+        "id": "receipts/no_item_number_01",
+        "status": "complete",
+        "observations": 8,
+        "quality_status": null,
+        "ocr_input_profile": null,
+        "timing_ms": {
+          "parse": 0.06,
+          "total": 0.06
+        },
+        "metrics": {
+          "merchant": "missed",
+          "purchased_at": "correct",
+          "grocery_kind_correct": true,
+          "truth_lines": 3,
+          "predicted_lines": 0,
+          "matched_lines": 0,
+          "exact_name_matches": 0,
+          "quantity_correct": 0,
+          "quantity_compared": 0,
+          "amount_correct": 0,
+          "amount_compared": 0,
+          "review_lines": 0,
+          "grocery": true,
+          "receipt_needs_review": false,
+          "silent_wrong_matched_lines": 0,
+          "silent_extra_lines": 0,
+          "flagged_but_correct_lines": 0,
+          "template_id": "grocery-mart-v1"
+        }
+      },
+      {
+        "id": "receipts/ocr_noise_01",
+        "status": "complete",
+        "observations": 12,
+        "quality_status": null,
+        "ocr_input_profile": null,
+        "timing_ms": {
+          "parse": 0.17,
+          "total": 0.17
+        },
+        "metrics": {
+          "merchant": "correct",
+          "purchased_at": "correct",
+          "grocery_kind_correct": true,
+          "truth_lines": 3,
+          "predicted_lines": 3,
+          "matched_lines": 0,
+          "exact_name_matches": 0,
+          "quantity_correct": 0,
+          "quantity_compared": 0,
+          "amount_correct": 0,
+          "amount_compared": 0,
+          "review_lines": 0,
+          "grocery": true,
+          "receipt_needs_review": false,
+          "silent_wrong_matched_lines": 0,
+          "silent_extra_lines": 3,
+          "flagged_but_correct_lines": 0,
+          "template_id": "grocery-mart-v1"
+        }
+      }
+    ]
+  },
+  "labels": {
+    "summary": {
+      "documents": 5,
+      "pipeline_status": {
+        "complete": 5
+      },
+      "date_value_recall": 0.8333,
+      "date_value_precision": 0.8333,
+      "date_counts": {
+        "truth_dates": 6,
+        "predicted_dates": 6,
+        "truth_dates_found": 5,
+        "predicted_dates_correct": 5
+      },
+      "kind_correct_rate": 0.0,
+      "kind_misclassification_rate": 0.0,
+      "kind_abstain_rate": 1.0,
+      "consumption_date_outcomes": {
+        "wrong": 1,
+        "missed": 4
+      },
+      "consumption_date_wrong": 1,
+      "confident_wrong_consumption_date": 1,
+      "confident_wrong_ids": [
+        "labels/lot_number_near_keyword_01"
+      ],
+      "storage_accuracy": 1.0,
+      "label_review_rate": 1.0,
+      "timing": {
+        "count": 5,
+        "p50_ms": 0.03,
+        "p90_ms": 0.11,
+        "max_ms": 0.11,
+        "mean_ms": 0.05
+      },
+      "ocr_timing": {
+        "count": 0,
+        "p50_ms": null,
+        "p90_ms": null,
+        "max_ms": null,
+        "mean_ms": null
+      }
+    },
+    "documents": [
+      {
+        "id": "labels/lot_number_near_keyword_01",
+        "status": "complete",
+        "observations": 3,
+        "quality_status": null,
+        "ocr_input_profile": null,
+        "timing_ms": {
+          "parse": 0.11,
+          "total": 0.11
+        },
+        "metrics": {
+          "truth_dates": 0,
+          "predicted_dates": 1,
+          "truth_dates_found": 0,
+          "predicted_dates_correct": 0,
+          "kind_correct": 0,
+          "kind_abstained": 0,
+          "kind_wrong": 0,
+          "consumption_date": "wrong",
+          "consumption_selected_confidence": 0.94,
+          "confident_wrong_consumption_date": true,
+          "storage_correct": true,
+          "label_requires_review": true
+        }
+      },
+      {
+        "id": "labels/mfg_and_use_by_01",
+        "status": "complete",
+        "observations": 4,
+        "quality_status": null,
+        "ocr_input_profile": null,
+        "timing_ms": {
+          "parse": 0.08,
+          "total": 0.08
+        },
+        "metrics": {
+          "truth_dates": 2,
+          "predicted_dates": 2,
+          "truth_dates_found": 2,
+          "predicted_dates_correct": 2,
+          "kind_correct": 0,
+          "kind_abstained": 2,
+          "kind_wrong": 0,
+          "consumption_date": "missed",
+          "consumption_selected_confidence": null,
+          "confident_wrong_consumption_date": false,
+          "storage_correct": true,
+          "label_requires_review": true
+        }
+      },
+      {
+        "id": "labels/sell_by_single_line_01",
+        "status": "complete",
+        "observations": 2,
+        "quality_status": null,
+        "ocr_input_profile": null,
+        "timing_ms": {
+          "parse": 0.03,
+          "total": 0.03
+        },
+        "metrics": {
+          "truth_dates": 2,
+          "predicted_dates": 2,
+          "truth_dates_found": 2,
+          "predicted_dates_correct": 2,
+          "kind_correct": 0,
+          "kind_abstained": 2,
+          "kind_wrong": 0,
+          "consumption_date": "missed",
+          "consumption_selected_confidence": null,
+          "confident_wrong_consumption_date": false,
+          "storage_correct": true,
+          "label_requires_review": true
+        }
+      },
+      {
+        "id": "labels/two_digit_year_01",
+        "status": "complete",
+        "observations": 2,
+        "quality_status": null,
+        "ocr_input_profile": null,
+        "timing_ms": {
+          "parse": 0.01,
+          "total": 0.01
+        },
+        "metrics": {
+          "truth_dates": 1,
+          "predicted_dates": 0,
+          "truth_dates_found": 0,
+          "predicted_dates_correct": 0,
+          "kind_correct": 0,
+          "kind_abstained": 0,
+          "kind_wrong": 0,
+          "consumption_date": "missed",
+          "consumption_selected_confidence": null,
+          "confident_wrong_consumption_date": false,
+          "storage_correct": true,
+          "label_requires_review": true
+        }
+      },
+      {
+        "id": "labels/until_only_01",
+        "status": "complete",
+        "observations": 1,
+        "quality_status": null,
+        "ocr_input_profile": null,
+        "timing_ms": {
+          "parse": 0.01,
+          "total": 0.01
+        },
+        "metrics": {
+          "truth_dates": 1,
+          "predicted_dates": 1,
+          "truth_dates_found": 1,
+          "predicted_dates_correct": 1,
+          "kind_correct": 0,
+          "kind_abstained": 1,
+          "kind_wrong": 0,
+          "consumption_date": "missed",
+          "consumption_selected_confidence": null,
+          "confident_wrong_consumption_date": false,
+          "storage_correct": true,
+          "label_requires_review": true
+        }
+      }
+    ]
+  },
+  "observations": [
+    "`receipts/no_item_number_01`: 매장명 missed.",
+    "`receipts/no_item_number_01`: 상품 라인 3개를 찾지 못함.",
+    "`receipts/ocr_noise_01`: 상품 라인 3개를 찾지 못함.",
+    "`receipts/ocr_noise_01`: 정답에 없는 상품 라인 3개 추출.",
+    "`labels/lot_number_near_keyword_01`: **틀린 날짜를 소비기한으로 확신함**.",
+    "`labels/mfg_and_use_by_01`: 소비기한 missed.",
+    "`labels/sell_by_single_line_01`: 소비기한 missed.",
+    "`labels/two_digit_year_01`: 소비기한 missed.",
+    "`labels/two_digit_year_01`: 정답 날짜 1개를 찾지 못함.",
+    "`labels/until_only_01`: 소비기한 missed.",
+    "[라벨·parser] 제조일과 소비기한이 인접한 가장 흔한 표기에서 두 날짜 모두 kind=unknown(0.35)이 된다. 128자 문맥 창 안에 서로 다른 날짜 키워드가 둘 이상이면 보류하는 규칙 때문이며, 안전하지만 소비기한 자동 제안이 사라진다(synthetic `mfg_and_use_by_01`, `sell_by_single_line_01`).",
+    "[라벨·parser] 연도 두 자리 표기(`26.11.20`)를 날짜 후보로 인식하지 못한다(`two_digit_year_01`).",
+    "[라벨·parser, 안전] `소비기한` 문구 근처의 8자리 LOT/제조번호(`20261015`)를 날짜로 읽어 use_by confidence 0.94로 고른다. 이 리포트에서 유일한 '확신한 틀린 소비기한'이다(`lot_number_near_keyword_01`).",
+    "[영수증·parser] 품번(001…) 없는 영수증은 상품 라인을 하나도 만들지 못하고, 지점명이 붙은 매장명(`○○마트 성수점`)도 접미사 목록에 걸리지 않아 놓친다(`no_item_number_01`).",
+    "[영수증·parser] OCR 오인식(쉼표→마침표, 1→l, 0→O)이 들어간 텍스트 경로에서는 금액 토큰이 상품명에 붙고 금액이 틀린 채 review_reason 없이 통과한다(`ocr_noise_01`). 이름이 달라져 '검토 표시 없는 가짜 라인'으로 집계된다.",
+    "이 세트는 사람이 지어낸 텍스트 8건(`data/fixtures/ocr-truth/synthetic`)이다. 실제 사진 정확도를 대신하지 않는다."
+  ]
+}

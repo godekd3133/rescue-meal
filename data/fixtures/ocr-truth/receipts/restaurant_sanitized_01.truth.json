@@ -1,0 +1,14 @@
+{
+  "schema": "rescue-meal.ocr-truth.receipt.v1",
+  "merchant_name": null,
+  "purchased_at": null,
+  "grocery": false,
+  "lines": [
+    {"name": "로얄하이브레드", "quantity": 1, "total_price": 4500},
+    {"name": "부산물", "quantity": 2, "total_price": 5000},
+    {"name": "물냉탕", "quantity": 2, "total_price": 9800},
+    {"name": "크로와상", "quantity": 1, "total_price": 5900},
+    {"name": "맛있는LCC", "quantity": 1, "total_price": 3400}
+  ],
+  "notes": "식당 영수증. 앱은 재고로 입고하지 않아야 하므로 grocery=false. 매장명·날짜는 영수증에 없다."
+}

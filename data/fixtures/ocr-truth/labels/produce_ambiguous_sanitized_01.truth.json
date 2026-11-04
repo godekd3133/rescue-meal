@@ -1,0 +1,6 @@
+{
+  "schema": "rescue-meal.ocr-truth.label.v1",
+  "dates": [{"kind": "unknown", "value": "2017-06-28"}],
+  "storage": "unknown",
+  "notes": "(포장)년.월.일과 유효 년.월.일 두 칸 머리말 아래 날짜가 하나뿐이라 텍스트만으로 종류를 정할 수 없다. 정답 kind=unknown은 '확정하지 말고 사용자 검토로 넘겨야 한다'는 뜻."
+}
