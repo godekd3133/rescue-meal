@@ -1,0 +1,49 @@
+.demo-badge {
+  position: relative;
+  z-index: 60;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  height: 28px;
+  padding: 0 8px;
+  background: #191f28;
+  color: #fff;
+  font-size: 11px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.demo-badge button {
+  height: 22px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.demo-badge button:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 1px;
+}
+
+#root .app-shell-web {
+  min-height: 0;
+}
+
+#root .web-runtime-surface {
+  height: calc(100dvh - 28px);
+  min-height: 0;
+}
+
+/* Nothing can be photographed, uploaded, or looked up here: only the sample inputs stay. */
+.capture-actions,
+.label-recapture-details,
+.receipt-line-enrich-button {
+  display: none !important;
+}
