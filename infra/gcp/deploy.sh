@@ -162,14 +162,14 @@ api() {
 }
 
 worker_job() {
-  name=$1; script=$2; workspace_env=$3; token_secret=$4
+  name=$1; script=$2; workspace_env=$3; token_secret=$4; workspace_default=${5:-demo}
   API_URL=$(gcloud run services describe rescue-meal-api --project "$GCP_PROJECT_ID" --region "$REGION" --format='value(status.url)')
   gcloud run jobs describe "$name" --project "$GCP_PROJECT_ID" --region "$REGION" >/dev/null 2>&1 \
     || gcloud run jobs create "$name" --project "$GCP_PROJECT_ID" --region "$REGION" \
       --image "$AR_HOST/$GCP_PROJECT_ID/$AR_REPO/api:latest" \
       --command "/app/.venv/bin/python" --args "${script},--once" \
       --memory 512Mi --cpu 1 --task-timeout 300 --max-retries 1 \
-      --set-env-vars "RESCUE_MEAL_API_BASE_URL=${API_URL},${workspace_env}=demo" \
+      --set-env-vars "RESCUE_MEAL_API_BASE_URL=${API_URL},${workspace_env}=${workspace_default}" \
       --set-secrets "${token_secret}"
   gcloud run jobs add-iam-policy-binding "$name" --project "$GCP_PROJECT_ID" --region "$REGION" \
     --member="serviceAccount:$(compute_sa)" --role="roles/run.invoker" --quiet >/dev/null
@@ -187,7 +187,8 @@ worker_cron() {
 workers() {
   worker_job rescue-meal-notification-worker scripts/run_notification_worker.py \
     RESCUE_MEAL_NOTIFICATION_WORKSPACE_IDS \
-    "RESCUE_MEAL_NOTIFICATION_WORKER_TOKEN=rescue-meal-notification-token:latest"
+    "RESCUE_MEAL_NOTIFICATION_WORKER_TOKEN=rescue-meal-notification-token:latest" \
+    auto  # discover push-enabled workspaces via the API each run
   worker_cron rescue-meal-notification-worker rescue-meal-notify-tick "*/5 * * * *"
 
   worker_job rescue-meal-grocy-worker scripts/run_grocy_worker.py \

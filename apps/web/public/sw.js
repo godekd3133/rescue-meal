@@ -73,6 +73,15 @@ self.addEventListener("message", (event) => {
   }
 });
 
+function notificationTargetUrl(value) {
+  try {
+    const url = new URL(typeof value === "string" ? value : "/", self.location.origin);
+    return url.origin === self.location.origin ? `${url.pathname}${url.search}${url.hash}` : "/";
+  } catch {
+    return "/";
+  }
+}
+
 self.addEventListener("push", (event) => {
   let payload = {};
   try {
@@ -82,7 +91,7 @@ self.addEventListener("push", (event) => {
   }
   const title = typeof payload.title === "string" && payload.title.trim() ? payload.title : "Rescue Meal 알림";
   const body = typeof payload.body === "string" && payload.body.trim() ? payload.body : "확인할 식품과 보관 상태를 확인해 주세요.";
-  const targetUrl = typeof payload.url === "string" && payload.url.startsWith("/") ? payload.url : "/";
+  const targetUrl = notificationTargetUrl(payload.url);
   event.waitUntil(self.registration.showNotification(title, {
     body,
     tag: typeof payload.tag === "string" ? payload.tag : "rescue-meal-notification",
@@ -92,12 +101,29 @@ self.addEventListener("push", (event) => {
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const targetUrl = event.notification.data && typeof event.notification.data.url === "string" ? event.notification.data.url : "/";
+  const targetUrl = notificationTargetUrl(event.notification.data?.url);
   event.waitUntil(
     clients.matchAll({ type: "window", includeUncontrolled: true }).then((windowClients) => {
-      const existing = windowClients.find((client) => "focus" in client);
+      const appWindows = windowClients.filter((client) => {
+        try {
+          return typeof client.focus === "function" && new URL(client.url).origin === self.location.origin;
+        } catch {
+          return false;
+        }
+      });
+      const existing = appWindows.find((client) => client.focused) || appWindows[0];
       if (existing) {
-        return existing.navigate(targetUrl).then(() => existing.focus());
+        const current = new URL(existing.url);
+        const target = new URL(targetUrl, self.location.origin);
+        const alreadyThere = current.pathname === target.pathname
+          && ((!target.search && !target.hash) || current.href === target.href);
+        if (alreadyThere) return existing.focus();
+        // navigate() rejects for a window this worker does not control yet;
+        // fall back to a new window so the deep link (/?food=…, /?open=priority)
+        // is never dropped.
+        return existing.navigate(targetUrl)
+          .then((client) => client ? client.focus() : clients.openWindow(targetUrl))
+          .catch(() => clients.openWindow(targetUrl));
       }
       return clients.openWindow(targetUrl);
     }),

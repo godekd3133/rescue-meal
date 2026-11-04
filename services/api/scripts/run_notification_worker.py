@@ -16,7 +16,7 @@ if str(SERVICE_ROOT) not in sys.path:
     sys.path.insert(0, str(SERVICE_ROOT))
 
 from app.notification_delivery import NotificationWorkerSettings
-from app.worker_runner import request_http_tick, run_worker_loop
+from app.worker_runner import request_http_tick, request_http_workspace_ids, run_worker_loop
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -24,12 +24,21 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--once",
         action="store_true",
-        help="run one workspace tick and exit; useful for health checks and scheduled jobs",
+        help="run one cycle (discovery + workspace ticks) and exit; useful for health checks and scheduled jobs",
     )
     return parser
 
 
 def _disabled_result(settings: NotificationWorkerSettings) -> list[dict[str, object]]:
+    if settings.discovers_workspaces:
+        return [
+            {
+                "workspace_id": None,
+                "worker_id": settings.worker_id,
+                "status": "disabled",
+                "reason": "RESCUE_MEAL_NOTIFICATION_WORKER_TOKEN이 없어 API tick을 호출하지 않았습니다.",
+            }
+        ]
     return [
         {
             "workspace_id": workspace_id,
@@ -50,12 +59,21 @@ def run(*, once: bool = False, sleep=time.sleep, emit=None) -> int:
         output(json.dumps(_disabled_result(settings), ensure_ascii=False))
         return 0
 
+    headers = {"X-Rescue-Meal-Notification-Worker-Token": worker_token}
     with httpx.Client(base_url=api_base_url, timeout=10.0) as client:
+        def discover() -> tuple[list[str], dict[str, object] | None]:
+            return request_http_workspace_ids(
+                client,
+                path="/api/internal/notifications/workspaces",
+                headers=headers,
+                worker_id=settings.worker_id,
+            )
+
         def tick(workspace_id: str) -> tuple[dict[str, object], bool]:
             return request_http_tick(
                 client,
                 path=f"/api/internal/notifications/workspaces/{quote(workspace_id, safe='')}/tick",
-                headers={"X-Rescue-Meal-Notification-Worker-Token": worker_token},
+                headers=headers,
                 payload={
                     "worker_id": settings.worker_id,
                     "lease_seconds": settings.lease_seconds,
@@ -68,6 +86,7 @@ def run(*, once: bool = False, sleep=time.sleep, emit=None) -> int:
 
         return run_worker_loop(
             workspace_ids=settings.workspace_ids,
+            resolve_workspace_ids=discover if settings.discovers_workspaces else None,
             worker_id=settings.worker_id,
             interval_seconds=settings.interval_seconds,
             once=once,

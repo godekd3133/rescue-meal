@@ -64,15 +64,20 @@ Cloud Scheduler → Cloud Run jobs, each running the API image with `--once`:
 | `rescue-meal-grocy-worker` | `*/10 * * * *` | Grocy sync reconciliation | live (`grocy_configured: true`) |
 | `rescue-meal-product-enrichment-worker` | `*/10 * * * *` | external product lookups | infra ready — needs `MFDS_API_KEY` |
 
-Each job ticks the workspaces in its `RESCUE_MEAL_*_WORKSPACE_IDS` env
-(currently `demo`). To enable a real workspace, copy `workspace_id` from
-`GET /api/auth/me` after registering in the app and update the job env:
+The notification job is created with `RESCUE_MEAL_NOTIFICATION_WORKSPACE_IDS=auto`:
+each run asks the API (`GET /api/internal/notifications/workspaces`) for every
+workspace with push enabled and a subscription, so new sign-ups need no env
+change. A job created before this change still has `demo`; switch it once:
 
 ```bash
 gcloud run jobs update rescue-meal-notification-worker \
   --project rescue-meal-godekd3133 --region us-west1 \
-  --update-env-vars "RESCUE_MEAL_NOTIFICATION_WORKSPACE_IDS=<workspace-id>"
+  --update-env-vars "RESCUE_MEAL_NOTIFICATION_WORKSPACE_IDS=auto"
 ```
+
+The Grocy and product-enrichment jobs still tick the workspaces listed in their
+`RESCUE_MEAL_*_WORKSPACE_IDS` env (currently `demo`). To enable a real workspace
+there, copy `workspace_id` from `GET /api/auth/me` and update that job's env.
 
 Web Push needs the matching public key in the frontend build:
 `VITE_WEB_PUSH_VAPID_PUBLIC_KEY` (public half of the

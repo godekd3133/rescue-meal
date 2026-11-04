@@ -265,6 +265,8 @@ def test_notification_preferences_control_in_app_visibility_and_are_validated() 
         "timezone": "Asia/Seoul",
         "quiet_hours_start": None,
         "quiet_hours_end": None,
+        "push_mode": "daily_summary",
+        "daily_summary_time": "18:00",
     }
 
     updated = client.put(
@@ -389,3 +391,96 @@ def test_notification_worker_metrics_requires_token_and_counts_ticks(monkeypatch
     assert "rescue_meal_notification_worker_cancelled_total" in after.text
     assert "rescue_meal_notification_worker_cancellations_total{reason=\"notification_inactive\"}" in after.text
     assert "notification-worker-secret" not in after.text
+
+
+def test_personal_reminders_describe_chosen_dates_without_package_expiry_copy():
+    today = date(2026, 10, 11)
+    now = datetime(2026, 10, 11, 9, tzinfo=timezone.utc)
+    for offset, phrase in [(-1, "지났어요"), (0, "오늘이에요"), (2, "다가와요")]:
+        due = today + timedelta(days=offset)
+        notifications = build_notifications(foods=[FoodNotificationInput(
+            id="reminder-food", canonical_name="양배추", date_kind="user_reminder",
+            date_value=due, estimated_start_date=None, estimated_end_date=None,
+        )], grocy_items=[], read_at={}, today=today, now=now, lead_days=2)
+        assert len(notifications) == 1
+        reminder = notifications[0]
+        assert reminder.source == "user_reminder"
+        assert reminder.due_date == due
+        assert reminder.title == f"양배추 내 알림일이 {phrase}"
+        assert "내가 정한 날짜" in reminder.message
+        assert "포장 상태" not in reminder.message
+        assert "제조사" not in reminder.message
+        assert reminder.severity == ("urgent" if offset <= 0 else "attention")
+
+
+def test_updated_food_replaces_unknown_date_review_with_current_reminder():
+    now = datetime(2026, 10, 11, 9, tzinfo=timezone.utc)
+    base = dict(id="food-one", canonical_name="양배추", estimated_start_date=None, estimated_end_date=None)
+    old = build_notifications(foods=[FoodNotificationInput(**base, date_kind="unknown", date_value=None)], grocy_items=[], read_at={}, today=now.date(), now=now)
+    current = build_notifications(foods=[FoodNotificationInput(**base, date_kind="user_reminder", date_value=date(2026, 10, 13))], grocy_items=[], read_at={old[0].id: now}, today=now.date(), now=now)
+    assert len(current) == 1
+    assert current[0].kind == "date_due"
+    assert current[0].source == "user_reminder"
+    assert current[0].id != old[0].id
+    assert current[0].read_at is None
+
+
+def test_unchanged_notification_preferences_preserve_workspace_revision():
+    preferences = client.get("/api/notification-preferences").json()
+    before = client.get("/api/dashboard/revision").json()["revision"]
+    response = client.put("/api/notification-preferences", json=preferences)
+    assert response.status_code == 200
+    assert response.json() == preferences
+    assert client.get("/api/dashboard/revision").json()["revision"] == before
+
+
+def test_changed_notification_preferences_commit_once_on_retry():
+    preferences = client.get("/api/notification-preferences").json()
+    preferences["lead_days"] = 3
+    before = client.get("/api/dashboard/revision").json()["revision"]
+    changed = client.put("/api/notification-preferences", json=preferences)
+    assert changed.status_code == 200
+    assert changed.json() == preferences
+    committed = client.get("/api/dashboard/revision").json()["revision"]
+    assert committed > before
+    replay = client.put("/api/notification-preferences", json=preferences)
+    assert replay.status_code == 200
+    assert replay.json() == preferences
+    assert client.get("/api/dashboard/revision").json()["revision"] == committed
+
+
+def test_unchanged_preferences_do_not_report_failure_from_an_unneeded_flush(monkeypatch):
+    preferences = client.get("/api/notification-preferences").json()
+    before = client.get("/api/dashboard/revision").json()["revision"]
+    def fail_flush(_store):
+        raise AssertionError("unchanged preferences must not flush")
+    monkeypatch.setattr(type(main_module.store), "flush", fail_flush)
+    response = client.put("/api/notification-preferences", json=preferences)
+    assert response.status_code == 200
+    assert response.json() == preferences
+    assert client.get("/api/dashboard/revision").json()["revision"] == before
+
+
+def test_storage_mismatch_message_uses_the_particle_the_food_name_needs() -> None:
+    now = datetime(2026, 9, 4, 9, 0, tzinfo=timezone.utc)
+    for name, expected in (("저지방 우유", "저지방 우유는 "), ("닭가슴살", "닭가슴살은 "), ("Milk", "Milk는 ")):
+        notifications = build_notifications(
+            foods=[
+                FoodNotificationInput(
+                    id="storage-mismatch-particle",
+                    canonical_name=name,
+                    date_kind="use_by",
+                    date_value=date(2026, 9, 12),
+                    estimated_start_date=None,
+                    estimated_end_date=None,
+                    storage_type="refrigerated",
+                    applicable_storage_type="ambient",
+                )
+            ],
+            grocy_items=[],
+            read_at={},
+            today=date(2026, 9, 4),
+            now=now,
+            lead_days=0,
+        )
+        assert notifications[0].message.startswith(expected)

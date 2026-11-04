@@ -1,15 +1,17 @@
 """Web Push delivery contracts and a bounded workspace worker.
 
 The API owns notification derivation and workspace persistence. This module
-owns delivery state, quiet-hour decisions, retry policy, and the pywebpush
-adapter. A delivery worker must still be explicitly configured with VAPID
-credentials and a workspace allowlist.
+owns delivery state, quiet-hour decisions, retry policy, daily summary
+batching, and the pywebpush adapter. A delivery worker must still be configured
+with VAPID credentials; workspaces are either discovered from the API
+(``RESCUE_MEAL_NOTIFICATION_WORKSPACE_IDS`` unset or ``auto``) or taken from an
+explicit allowlist for backward compatibility.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 import hashlib
 import json
 import math
@@ -18,6 +20,7 @@ import re
 import secrets
 from threading import RLock
 from typing import Any, Callable, Literal
+from urllib.parse import quote
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -27,6 +30,12 @@ from .notifications import NotificationResponse, PushSubscriptionRecord, push_en
 
 
 NOTIFICATION_DELIVERY_LEASE_KEY = "notification-delivery"
+NOTIFICATION_WORKSPACE_DISCOVERY = "auto"
+DAILY_SUMMARY_NOTIFICATION_PREFIX = "daily-summary:"
+# Food reminders that are worth a once-a-day nudge. Undated "날짜를 확인해
+# 주세요" prompts (date_check) stay in the in-app list so a summary does not
+# repeat the same review chore every single day.
+DAILY_SUMMARY_KINDS = frozenset({"date_due", "storage_mismatch"})
 NotificationDeliveryStatus = Literal["pending", "in_flight", "succeeded", "dead_letter", "cancelled"]
 
 
@@ -122,9 +131,16 @@ def _bounded_float(name: str, default: float, *, minimum: float, maximum: float)
 
 
 def notification_workspace_ids_from_env() -> tuple[str, ...]:
+    """Return the explicit workspace allowlist, or ``()`` for API discovery.
+
+    Unset or ``auto`` means the worker asks the API which workspaces have push
+    enabled and at least one subscription. A comma-separated list keeps the
+    legacy fixed-allowlist behaviour.
+    """
+
     configured = os.getenv("RESCUE_MEAL_NOTIFICATION_WORKSPACE_IDS", "").strip()
-    if not configured:
-        configured = "demo"
+    if not configured or configured.lower() == NOTIFICATION_WORKSPACE_DISCOVERY:
+        return ()
     workspace_ids = tuple(dict.fromkeys(item.strip() for item in configured.split(",") if item.strip()))
     if not workspace_ids:
         raise ValueError("RESCUE_MEAL_NOTIFICATION_WORKSPACE_IDS가 비어 있습니다.")
@@ -142,6 +158,10 @@ class NotificationWorkerSettings:
     lease_seconds: int = 120
     stale_after_seconds: int = 900
     process_limit: int = 20
+
+    @property
+    def discovers_workspaces(self) -> bool:
+        return not self.workspace_ids
 
     @classmethod
     def from_env(cls) -> "NotificationWorkerSettings":
@@ -301,14 +321,85 @@ def delivery_id(notification_id: str, endpoint_fingerprint: str) -> str:
     return f"push-delivery-{digest}"
 
 
+def food_deep_link(food_id: str) -> str:
+    return f"/?food={quote(food_id, safe='')}"
+
+
+PRIORITY_DEEP_LINK = "/?open=priority"
+
+
 def build_push_payload(notification: NotificationResponse) -> dict[str, str]:
     tag = hashlib.sha256(notification.id.encode("utf-8")).hexdigest()[:24]
+    title = notification.title
+    body = notification.message
+    if notification.kind != "grocy_sync":
+        name = notification.canonical_name
+        if name not in title:
+            title = f"{name} {title}"
+        for prefix in (f"{name}: ", f"{name}의 "):
+            if body.startswith(prefix):
+                body = body[len(prefix):]
+                break
     return {
-        "title": notification.title,
-        "body": notification.message,
+        "title": title,
+        "body": body,
         "tag": f"rescue-meal:{tag}",
-        "url": "/",
+        "url": food_deep_link(notification.food_id) if notification.food_id else (
+            "/?open=grocy" if notification.kind == "grocy_sync" else "/"
+        ),
     }
+
+
+def daily_summary_notification_id(local_date: date) -> str:
+    return f"{DAILY_SUMMARY_NOTIFICATION_PREFIX}{local_date.isoformat()}"
+
+
+def daily_summary_candidates(notifications: list[NotificationResponse]) -> list[NotificationResponse]:
+    """Unread food reminders that belong in today's summary, priority order."""
+
+    return [
+        item for item in notifications
+        if item.read_at is None and item.kind in DAILY_SUMMARY_KINDS and item.food_id
+    ]
+
+
+def build_daily_summary_payload(local_date: date, notifications: list[NotificationResponse]) -> dict[str, str] | None:
+    """Build one summary push; never claims a food is safe or unsafe."""
+
+    candidates = daily_summary_candidates(notifications)
+    names: list[str] = []
+    food_ids: list[str] = []
+    for item in candidates:
+        if item.food_id not in food_ids:
+            food_ids.append(item.food_id)  # type: ignore[arg-type]
+            names.append(item.canonical_name)
+    if not food_ids:
+        return None
+    count = len(food_ids)
+    if count == 1:
+        body = f"{names[0]}의 표시 날짜와 보관 상태를 확인해 보세요."
+    else:
+        shown = ", ".join(names[:2])
+        rest = count - 2
+        body = f"{shown}{f' 외 {rest}개' if rest > 0 else ''}의 표시 날짜와 보관 상태를 확인해 보세요."
+    tag = hashlib.sha256(daily_summary_notification_id(local_date).encode("utf-8")).hexdigest()[:24]
+    return {
+        "title": f"오늘 먼저 살펴볼 식품 {count}개",
+        "body": body,
+        "tag": f"rescue-meal:{tag}",
+        "url": food_deep_link(food_ids[0]) if count == 1 else PRIORITY_DEEP_LINK,
+    }
+
+
+def _minutes(value: str) -> int:
+    return int(value[:2]) * 60 + int(value[3:])
+
+
+def local_now(now: datetime, timezone_name: str) -> datetime:
+    try:
+        return now.astimezone(ZoneInfo(timezone_name))
+    except ZoneInfoNotFoundError:
+        return now.astimezone(timezone.utc)
 
 
 def quiet_hours_active(
@@ -461,13 +552,15 @@ class NotificationDeliveryWorker:
         if not preferences.push_enabled:
             return NotificationWorkerTickResult(self._workspace_id(), self.settings.worker_id, True, True)
         current_notifications = self.notifications()
-        active_notification_ids = {item.id for item in current_notifications if item.read_at is None}
+        outgoing = self._outgoing_payloads(now, preferences, current_notifications)
+        active_notification_ids = {notification_id for notification_id, _ in outgoing}
+        active_notification_ids.update(self._active_summary_ids(now, preferences, current_notifications))
         active_endpoint_fingerprints = {
             push_endpoint_fingerprint(subscription.endpoint)
             for subscription in self.store.push_subscriptions.values()
         }
         recovered = self._recover_stale(now)
-        queued = self._enqueue(now, current_notifications)
+        queued = self._enqueue_payloads(now, outgoing)
         cancelled = self._cancel_inactive(active_notification_ids, active_endpoint_fingerprints, now)
         if quiet_hours_active(
             now,
@@ -539,6 +632,47 @@ class NotificationDeliveryWorker:
     def _workspace_id(self) -> str:
         return current_workspace_id()
 
+    @staticmethod
+    def _summary_due(now: datetime, preferences: Any) -> tuple[date, bool]:
+        current = local_now(now, preferences.timezone)
+        due = current.hour * 60 + current.minute >= _minutes(preferences.daily_summary_time)
+        return current.date(), due
+
+    def _active_summary_ids(self, now: datetime, preferences: Any, notifications: list[NotificationResponse]) -> set[str]:
+        """Today's summary stays deliverable while it still has unread items."""
+
+        if getattr(preferences, "push_mode", "daily_summary") != "daily_summary":
+            return set()
+        local_date, _ = self._summary_due(now, preferences)
+        if not daily_summary_candidates(notifications):
+            return set()
+        return {daily_summary_notification_id(local_date)}
+
+    def _outgoing_payloads(
+        self,
+        now: datetime,
+        preferences: Any,
+        notifications: list[NotificationResponse],
+    ) -> list[tuple[str, dict[str, str]]]:
+        """Decide which pushes this tick may enqueue.
+
+        ``each_item`` keeps one push per unread notification. ``daily_summary``
+        (the default) folds food reminders into one push per local day once the
+        configured send time has passed; Grocy sync failures stay individual
+        because they need an operator action, not a food check.
+        """
+
+        unread = [item for item in notifications if item.read_at is None]
+        if getattr(preferences, "push_mode", "daily_summary") != "daily_summary":
+            return [(item.id, build_push_payload(item)) for item in unread]
+        outgoing = [(item.id, build_push_payload(item)) for item in unread if item.kind == "grocy_sync"]
+        local_date, due = self._summary_due(now, preferences)
+        if due:
+            payload = build_daily_summary_payload(local_date, unread)
+            if payload is not None:
+                outgoing.append((daily_summary_notification_id(local_date), payload))
+        return outgoing
+
     def _recover_stale(self, now: datetime) -> int:
         recovered = 0
         for record in self.store.notification_deliveries.values():
@@ -592,18 +726,29 @@ class NotificationDeliveryWorker:
         return cancelled
 
     def _enqueue(self, now: datetime, notifications: list[NotificationResponse] | None = None) -> int:
-        queued = 0
+        """Legacy per-notification enqueue, kept for direct callers/tests."""
+
         pending_notifications = [item for item in (notifications if notifications is not None else self.notifications()) if item.read_at is None]
-        for notification in pending_notifications:
-            payload = build_push_payload(notification)
+        return self._enqueue_payloads(now, [(item.id, build_push_payload(item)) for item in pending_notifications])
+
+    def _enqueue_payloads(self, now: datetime, outgoing: list[tuple[str, dict[str, str]]]) -> int:
+        """Idempotently enqueue one delivery per (notification id, endpoint).
+
+        A daily summary uses ``daily-summary:<local date>`` as its notification
+        id, so the same deterministic delivery id prevents a second summary on
+        the same local day even after the first one succeeded.
+        """
+
+        queued = 0
+        for notification_id, payload in outgoing:
             for subscription in self.store.push_subscriptions.values():
                 fingerprint = push_endpoint_fingerprint(subscription.endpoint)
-                record_id = delivery_id(notification.id, fingerprint)
+                record_id = delivery_id(notification_id, fingerprint)
                 if record_id in self.store.notification_deliveries:
                     continue
                 self.store.notification_deliveries[record_id] = NotificationDeliveryRecord(
                     id=record_id,
-                    notification_id=notification.id,
+                    notification_id=notification_id,
                     endpoint_fingerprint=fingerprint,
                     payload=payload,
                     next_attempt_at=now,

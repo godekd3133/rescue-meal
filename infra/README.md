@@ -457,8 +457,11 @@ processes; in-memory mode remains process-local and is intended only for
 fixture development.
 
 The optional `notifications` profile starts `notification-worker`, which calls
-the service-token-protected API tick for the explicitly listed
-`RESCUE_MEAL_NOTIFICATION_WORKSPACE_IDS`. VAPID private key/subject stay in
+the service-token-protected API tick for every workspace that has push
+enabled and a subscription (discovered each cycle via
+`GET /api/internal/notifications/workspaces` when
+`RESCUE_MEAL_NOTIFICATION_WORKSPACE_IDS` is `auto` or empty), or only for an
+explicit comma-separated `RESCUE_MEAL_NOTIFICATION_WORKSPACE_IDS` list. VAPID private key/subject stay in
 the API container because the API owns subscription lookup and Web Push
 encryption. Leave the worker token or VAPID settings empty to keep delivery
 disabled while retaining the in-app notification center.

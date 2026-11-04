@@ -22,6 +22,10 @@ NotificationKind = Literal["date_due", "date_check", "storage_mismatch", "grocy_
 NotificationSeverity = Literal["urgent", "attention", "info"]
 NotificationSource = Literal["printed_date", "user_reminder", "estimated_window", "unknown_date", "storage_condition", "grocy_outbox"]
 NotificationAction = Literal["food", "grocy", "none"]
+# ``daily_summary`` sends at most one "오늘 먼저 살펴볼 식품 N개" push per local
+# day; ``each_item`` keeps the legacy one-push-per-notification behaviour.
+NotificationPushMode = Literal["daily_summary", "each_item"]
+DEFAULT_DAILY_SUMMARY_TIME = "18:00"
 GrocyNotificationStatus = Literal[
     "blocked",
     "pending",
@@ -80,6 +84,8 @@ class NotificationPreferences(BaseModel):
     timezone: str = Field(default_factory=_default_notification_timezone, min_length=1, max_length=64)
     quiet_hours_start: str | None = Field(default=None, pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$")
     quiet_hours_end: str | None = Field(default=None, pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$")
+    push_mode: NotificationPushMode = "daily_summary"
+    daily_summary_time: str = Field(default=DEFAULT_DAILY_SUMMARY_TIME, pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$")
 
     @field_validator("timezone")
     @classmethod
@@ -238,6 +244,13 @@ def build_notifications(
     )
 
 
+def _with_topic_particle(value: str) -> str:
+    """Attach 은/는 by the final syllable; non-Hangul endings read as vowel-final."""
+    last = ord(value[-1]) if value else 0
+    has_final_consonant = 0xAC00 <= last <= 0xD7A3 and (last - 0xAC00) % 28 != 0
+    return f"{value}{'은' if has_final_consonant else '는'}"
+
+
 def _storage_mismatch_notification(
     food: FoodNotificationInput,
     current_time: datetime,
@@ -253,7 +266,7 @@ def _storage_mismatch_notification(
         kind="storage_mismatch",
         severity="attention",
         title="포장지 보관조건을 확인해 주세요",
-        message=f"{food.canonical_name}은 {condition} 기준인데 현재 {actual_label}에 보관 중이에요. 포장지와 실제 상태를 다시 확인하세요.",
+        message=f"{_with_topic_particle(food.canonical_name)} {condition} 기준인데 현재 {actual_label}에 보관 중이에요. 포장지와 실제 상태를 다시 확인하세요.",
         canonical_name=food.canonical_name,
         food_id=food.id,
         source="storage_condition",
@@ -274,10 +287,19 @@ def _food_notification(
         if days_until > lead_days:
             return None
         source_label = _DATE_SOURCE_LABEL[food.date_kind]
-        if days_until < 0:
+        if food.date_kind == "user_reminder":
+            if days_until < 0:
+                title = f"{food.canonical_name} 내 알림일이 지났어요"
+            elif days_until == 0:
+                title = f"{food.canonical_name} 내 알림일이 오늘이에요"
+            else:
+                title = f"{food.canonical_name} 내 알림일이 다가와요"
+            message = f"내가 정한 날짜는 {format_date(food.date_value)}이에요."
+            severity: NotificationSeverity = "urgent" if days_until <= 0 else "attention"
+        elif days_until < 0:
             title = "확인할 날짜가 지났어요"
             message = f"{food.canonical_name}의 {source_label} {format_date(food.date_value)}이 지났어요. 포장 상태와 제조사 안내를 확인한 뒤 사용 여부를 결정하세요."
-            severity: NotificationSeverity = "urgent"
+            severity = "urgent"
         elif days_until == 0:
             title = "오늘 확인할 날짜예요"
             message = f"{food.canonical_name}의 {source_label}이 오늘({format_date(food.date_value)})이에요. 포장 상태와 보관 방법을 확인하세요."

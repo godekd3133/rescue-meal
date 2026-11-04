@@ -117,6 +117,8 @@ function createWorker(fetchImpl) {
 
   return {
     cacheStorage,
+    clients,
+    registration: self.registration,
     clientsClaimCalls: () => clientsClaimCalls,
     fetchCalls,
     handlers,
@@ -230,4 +232,88 @@ test("claims clients after old cache versions are removed", async () => {
 
   assert.deepEqual(await runtime.cacheStorage.keys(), []);
   assert.equal(runtime.clientsClaimCalls(), 1);
+});
+
+
+async function clickNotification(runtime, url) {
+  let waiting;
+  runtime.handlers.get("notificationclick")({ notification: {data:{url},close(){}}, waitUntil(promise){waiting=promise;} });
+  await waiting;
+}
+
+test("root notification reuses the app without discarding a draft", async () => {
+  const runtime=createWorker(async()=>new Response("ok"));
+  let draft="1.1234L",focused=0,navigations=0;
+  const window={url:ORIGIN+"/",focused:true,focus:async()=>{focused++;return window;},navigate:async()=>{navigations++;draft="";return window;}};
+  runtime.clients.matchAll=async()=>[window];
+  await clickNotification(runtime,"/");
+  assert.equal(draft,"1.1234L");assert.equal(navigations,0);assert.equal(focused,1);
+});
+
+test("notification chooses the focused app window", async () => {
+  const runtime=createWorker(async()=>new Response("ok"));const focused=[];
+  const window=(name,active)=>({url:ORIGIN+"/",focused:active,focus:async()=>focused.push(name),navigate:async function(){return this;}});
+  runtime.clients.matchAll=async()=>[window("older",false),window("current",true)];
+  await clickNotification(runtime,"/");assert.deepEqual(focused,["current"]);
+});
+
+test("protocol-relative notification targets remain inside the app", async () => {
+  const runtime=createWorker(async()=>new Response("ok"));const opened=[];
+  runtime.clients.openWindow=async url=>opened.push(url);
+  await clickNotification(runtime,"//other.example.test/path");assert.deepEqual(opened,["/"]);
+});
+
+test("a different same-origin target still navigates and focuses its returned client", async () => {
+  const runtime=createWorker(async()=>new Response("ok"));const events=[];
+  const next={focus:async()=>events.push("new-focus")};
+  runtime.clients.matchAll=async()=>[{url:ORIGIN+"/",focused:true,focus:async()=>events.push("old-focus"),navigate:async url=>{events.push(url);return next;}}];
+  await clickNotification(runtime,"/?notification=example");assert.deepEqual(events,["/?notification=example","new-focus"]);
+});
+
+test("a vanished window opens the validated target instead of focusing stale state", async () => {
+  const runtime=createWorker(async()=>new Response("ok"));const opened=[];
+  runtime.clients.openWindow=async url=>opened.push(url);
+  runtime.clients.matchAll=async()=>[{url:ORIGIN+"/old",focus:async()=>{throw new Error("stale");},navigate:async()=>null}];
+  await clickNotification(runtime,"/");assert.deepEqual(opened,["/"]);
+});
+
+
+test("push data stores only a same-origin notification target", async () => {
+  for (const target of ["//other.example.test/path", "https://other.example.test/path", "javascript:alert(1)"]) {
+    const runtime=createWorker(async()=>new Response("ok"));const shown=[];
+    runtime.registration.showNotification=async(title,options)=>shown.push({title,options});
+    let waiting;
+    runtime.handlers.get("push")({data:{json:()=>({title:"확인",body:"내용",url:target})},waitUntil(promise){waiting=promise;}});
+    await waiting;
+    assert.equal(shown[0].options.data.url,"/");
+  }
+});
+
+test("root notification preserves an app's existing query and draft", async () => {
+  const runtime=createWorker(async()=>new Response("ok"));let navigated=false,focused=false;
+  const window={url:ORIGIN+"/?receipt=example",focus:async()=>{focused=true;return window;},navigate:async()=>{navigated=true;return window;}};
+  runtime.clients.matchAll=async()=>[window];
+  await clickNotification(runtime,"/");assert.equal(navigated,false);assert.equal(focused,true);
+});
+
+test("summary and single-food push deep links survive push → click", async () => {
+  for (const target of ["/?open=priority", "/?food=spinach-1"]) {
+    const runtime=createWorker(async()=>new Response("ok"));const shown=[];const events=[];
+    runtime.registration.showNotification=async(title,options)=>shown.push({title,options});
+    let waiting;
+    runtime.handlers.get("push")({data:{json:()=>({title:"오늘 먼저 살펴볼 식품 2개",body:"내용",url:target})},waitUntil(promise){waiting=promise;}});
+    await waiting;
+    assert.equal(shown[0].options.data.url,target);
+    const next={focus:async()=>events.push("focus")};
+    runtime.clients.matchAll=async()=>[{url:ORIGIN+"/",focused:true,focus:async()=>events.push("old"),navigate:async url=>{events.push(url);return next;}}];
+    await clickNotification(runtime,shown[0].options.data.url);
+    assert.deepEqual(events,[target,"focus"]);
+  }
+});
+
+test("a deep link opens a new window when navigate() rejects for an uncontrolled tab", async () => {
+  const runtime=createWorker(async()=>new Response("ok"));const opened=[];
+  runtime.clients.openWindow=async url=>opened.push(url);
+  runtime.clients.matchAll=async()=>[{url:ORIGIN+"/",focused:true,focus:async()=>undefined,navigate:async()=>{throw new TypeError("not controlled");}}];
+  await clickNotification(runtime,"/?open=priority");assert.deepEqual(opened,["/?open=priority"]);
 });

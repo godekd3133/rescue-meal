@@ -38,7 +38,7 @@ def _notification(now: datetime) -> NotificationResponse:
 
 def _worker_store() -> WorkspaceStoreRouter:
     router = WorkspaceStoreRouter(InMemoryStore(seed=False))
-    router.update_notification_preferences(NotificationPreferences(push_enabled=True))
+    router.update_notification_preferences(NotificationPreferences(push_mode="each_item", push_enabled=True))
     router.upsert_push_subscription(
         PushSubscriptionRequest(endpoint="https://push.example.test/subscription/one", p256dh="p" * 32, auth="a" * 16)
     )
@@ -77,9 +77,9 @@ def test_notification_worker_queues_and_deduplicates_successful_delivery(monkeyp
     assert first.succeeded == 1
     assert second.queued == 0
     assert second.processed == 0
-    assert sent == [{"endpoint": "https://push.example.test/subscription/one", "title": "오늘 확인할 날짜예요", "subject": "mailto:ops@example.com"}]
+    assert sent == [{"endpoint": "https://push.example.test/subscription/one", "title": "우유 오늘 확인할 날짜예요", "subject": "mailto:ops@example.com"}]
     assert list(router.notification_deliveries.values())[0].status == "succeeded"
-    assert build_push_payload(notification)["url"] == "/"
+    assert build_push_payload(notification)["url"] == "/?food=milk-1"
 
 
 def test_notification_worker_respects_quiet_hours_without_processing_pending_delivery(monkeypatch) -> None:
@@ -87,7 +87,7 @@ def test_notification_worker_respects_quiet_hours_without_processing_pending_del
     monkeypatch.setenv("RESCUE_MEAL_VAPID_SUBJECT", "mailto:ops@example.com")
     now = datetime(2026, 9, 2, 23, 30, tzinfo=timezone.utc)
     router = _worker_store()
-    router.update_notification_preferences(NotificationPreferences(push_enabled=True, timezone="UTC", quiet_hours_start="22:00", quiet_hours_end="07:00"))
+    router.update_notification_preferences(NotificationPreferences(push_mode="each_item", push_enabled=True, timezone="UTC", quiet_hours_start="22:00", quiet_hours_end="07:00"))
     sent: list[object] = []
     worker = NotificationDeliveryWorker(store=router, settings=_settings(), notifications=lambda: [_notification(now)], now=lambda: now, sender=lambda *args: sent.append(args))
 
@@ -106,7 +106,7 @@ def test_notification_worker_respects_quiet_hours_in_the_saved_user_timezone(mon
     monkeypatch.setenv("RESCUE_MEAL_VAPID_SUBJECT", "mailto:ops@example.com")
     now = datetime(2026, 9, 3, 13, 30, tzinfo=timezone.utc)
     router = _worker_store()
-    router.update_notification_preferences(NotificationPreferences(push_enabled=True, timezone="Asia/Seoul", quiet_hours_start="22:00", quiet_hours_end="07:00"))
+    router.update_notification_preferences(NotificationPreferences(push_mode="each_item", push_enabled=True, timezone="Asia/Seoul", quiet_hours_start="22:00", quiet_hours_end="07:00"))
     sent: list[object] = []
     worker = NotificationDeliveryWorker(store=router, settings=_settings(), notifications=lambda: [_notification(now)], now=lambda: now, sender=lambda *args: sent.append(args))
 
@@ -125,6 +125,7 @@ def test_notification_worker_cancels_pending_delivery_when_notification_is_read_
     router = _worker_store()
     router.update_notification_preferences(
         NotificationPreferences(
+            push_mode="each_item",
             push_enabled=True,
             timezone="UTC",
             quiet_hours_start="22:00",
@@ -148,7 +149,7 @@ def test_notification_worker_cancels_pending_delivery_when_notification_is_read_
     assert router.notification_deliveries[next(iter(router.notification_deliveries))].status == "pending"
 
     notification.read_at = now
-    router.update_notification_preferences(NotificationPreferences(push_enabled=True, timezone="UTC"))
+    router.update_notification_preferences(NotificationPreferences(push_mode="each_item", push_enabled=True, timezone="UTC"))
     cancelled = worker.tick_workspace("demo")
 
     record = router.notification_deliveries[next(iter(router.notification_deliveries))]
@@ -172,6 +173,7 @@ def test_notification_worker_cancels_pending_delivery_when_subscription_is_remov
     router = _worker_store()
     router.update_notification_preferences(
         NotificationPreferences(
+            push_mode="each_item",
             push_enabled=True,
             timezone="UTC",
             quiet_hours_start="22:00",
@@ -399,3 +401,41 @@ def test_web_push_adapter_encrypts_and_posts_to_a_local_push_service() -> None:
     assert headers["authorization"].startswith("vapid ")
     assert body
     assert "날짜를 확인하세요".encode("utf-8") not in body
+
+
+def test_push_food_subject_is_visible_without_repeating_it_in_body():
+    notification = _notification(datetime(2026, 9, 2, tzinfo=timezone.utc))
+    payload = build_push_payload(notification)
+    assert payload["title"] == "우유 오늘 확인할 날짜예요"
+    assert payload["body"] == "표시 날짜를 확인하세요."
+    assert notification.title == "오늘 확인할 날짜예요"
+    assert notification.message == "우유의 표시 날짜를 확인하세요."
+
+
+def test_push_named_reminder_retains_date_meaning_and_delivery_identity():
+    notification = _notification(datetime(2026, 9, 2, tzinfo=timezone.utc))
+    original = build_push_payload(notification)
+    named = notification.model_copy(update={"title": "우유 내 알림일이 오늘이에요", "message": "내가 정한 날짜는 9월 2일이에요."})
+    payload = build_push_payload(named)
+    assert payload["title"] == named.title
+    assert payload["body"] == named.message
+    assert payload["tag"] == original["tag"]
+    assert payload["url"] == original["url"] == "/?food=milk-1"
+
+
+def test_push_subject_trim_uses_literal_names_with_punctuation():
+    notification = _notification(datetime(2026, 9, 2, tzinfo=timezone.utc)).model_copy(update={
+        "canonical_name": "우유(저지방)", "message": "우유(저지방): 포장지 날짜를 확인해 주세요.",
+    })
+    payload = build_push_payload(notification)
+    assert payload["title"] == "우유(저지방) 오늘 확인할 날짜예요"
+    assert payload["body"] == "포장지 날짜를 확인해 주세요."
+
+
+def test_push_sync_operation_retains_its_title_and_subject():
+    notification = _notification(datetime(2026, 9, 2, tzinfo=timezone.utc)).model_copy(update={
+        "kind": "grocy_sync", "title": "재고 앱에 반영했어요", "message": "우유: 반영이 끝났어요.",
+    })
+    payload = build_push_payload(notification)
+    assert payload["title"] == notification.title
+    assert payload["body"] == notification.message

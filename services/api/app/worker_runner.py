@@ -13,6 +13,9 @@ import httpx
 
 WorkerTick = Callable[[str], tuple[dict[str, object], bool]]
 WorkerOutput = Callable[[str], None]
+# Returns ``(workspace_ids, error_payload)``. ``error_payload`` is emitted and
+# counts as a failed cycle when discovery itself fails.
+WorkspaceResolver = Callable[[], tuple[Sequence[str], dict[str, object] | None]]
 
 MAX_WORKER_BACKOFF_SECONDS = 300.0
 
@@ -69,9 +72,31 @@ def request_http_tick(
         return {"workspace_id": workspace_id, "worker_id": worker_id, "error": exc.__class__.__name__}, True
 
 
+def request_http_workspace_ids(
+    client: Any,
+    *,
+    path: str,
+    headers: dict[str, str],
+    worker_id: str,
+) -> tuple[list[str], dict[str, object] | None]:
+    """Ask the API which workspaces to tick; expose only bounded error metadata."""
+
+    try:
+        response = client.get(path, headers=headers)
+        response.raise_for_status()
+        result = response.json()
+        workspace_ids = result.get("workspace_ids") if isinstance(result, dict) else None
+        if not isinstance(workspace_ids, list) or not all(isinstance(item, str) for item in workspace_ids):
+            return [], {"status": "discovery_failed", "worker_id": worker_id, "error": "invalid_response"}
+        return list(dict.fromkeys(workspace_ids)), None
+    except (httpx.HTTPError, ValueError) as exc:
+        return [], {"status": "discovery_failed", "worker_id": worker_id, "error": exc.__class__.__name__}
+
+
 def run_worker_loop(
     *,
-    workspace_ids: Sequence[str],
+    workspace_ids: Sequence[str] = (),
+    resolve_workspace_ids: WorkspaceResolver | None = None,
     worker_id: str,
     interval_seconds: float,
     once: bool,
@@ -87,13 +112,21 @@ def run_worker_loop(
     cycle resets the failure streak to the configured base interval.
     """
 
-    if not workspace_ids:
+    if not workspace_ids and resolve_workspace_ids is None:
         raise ValueError("workspace_ids must not be empty")
     output = emit or _print_line
     failure_streak = 0
     while True:
         cycle_failed = False
-        for workspace_id in workspace_ids:
+        cycle_workspace_ids: Sequence[str] = workspace_ids
+        if resolve_workspace_ids is not None:
+            cycle_workspace_ids, discovery_error = resolve_workspace_ids()
+            if discovery_error is not None:
+                _emit_json(output, discovery_error)
+                cycle_failed = True
+            elif not cycle_workspace_ids:
+                _emit_json(output, {"status": "idle", "worker_id": worker_id, "workspace_count": 0})
+        for workspace_id in cycle_workspace_ids:
             payload, failed = tick(workspace_id)
             _emit_json(output, payload)
             cycle_failed = cycle_failed or failed
