@@ -1,0 +1,31 @@
+.bottom-sheet :is(.label-result-fields, .manual-edit-fields, .receipt-line-editor) { --intake-error-ink: var(--atelier-coral); }
+html[data-rescue-theme="light"] .bottom-sheet :is(.label-result-fields, .manual-edit-fields, .receipt-line-editor) { --intake-error-ink: #9e4037; }
+
+.bottom-sheet .label-result-fields .label-new-lot-quantity-hint-error,
+.bottom-sheet .manual-quantity-error {
+  color: var(--intake-error-ink);
+}
+
+.bottom-sheet .label-result-fields .label-result-quantity-field input[aria-invalid="true"],
+.bottom-sheet .manual-edit-fields input[aria-invalid="true"],
+.bottom-sheet .receipt-line-editor input[aria-invalid="true"] {
+  border-color: var(--intake-error-ink);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--intake-error-ink) 14%, transparent);
+}
+
+.bottom-sheet .manual-quantity-error {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.bottom-sheet .receipt-line-editor .receipt-line-error {
+  color: var(--intake-error-ink);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.device-screen:has(.mobile-app-viewport[data-keyboard-visible="true"]) .bottom-sheet .receipt-review-submit-bar {
+  position: static;
+  bottom: auto;
+}

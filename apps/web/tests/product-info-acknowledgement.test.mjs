@@ -1,0 +1,16 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';import {stripTypeScriptTypes} from 'node:module';
+import {runAuthoritativeMutation} from '../src/mutationReadback.ts';
+const source=readFileSync(new URL('../src/Prototype.tsx',import.meta.url),'utf8');const a=source.indexOf('  const updateProductInfo ='),b=source.indexOf('\n  const addManualFood',a);
+function setup({selected='food',sheet='detail',synced=true}={}) {
+ let resolve,reject,current=true;const pending=new Promise((r,j)=>{resolve=r;reject=j});const calls=[];let foods=[{id:'food',name:'김치',brand:'old',category:'old',quantity:'500g'}];
+ const values={captureMutationScope:()=>()=>current,findFoodById:id=>foods.find(f=>f.id===id),mealApi:{isConfigured:true,updateProductInfo:()=>pending},setFoods:fn=>{foods=fn(foods);calls.push(['foods']);},runAuthoritativeMutation,mapApiFood:value=>value,storageLocations:[],syncDashboard:async()=>synced,isMealApiProductInfoPersistenceError:()=>true,isMealApiWorkspaceConflictError:()=>false,withServerReadbackNotice:message=>message,sheetRef:{current:sheet},selectedFoodIdRef:{current:selected},rememberCurrentDetailRevision:()=>calls.push(['revision'])};
+ for(const key of ['setProductInfoRetryAction','setProductInfoSavingFoodId','setProductInfoNotice','setToastAction','setToast','setDetailRemoteRefreshRequired'])values[key]=value=>calls.push([key,value]);
+ const fn=new Function(...Object.keys(values),stripTypeScriptTypes(source.slice(a,b))+';return updateProductInfo;')(...Object.values(values));
+ return {calls,fn,resolve,reject,foods:()=>foods,changeOwner:()=>{current=false;},settle:()=>new Promise(r=>setImmediate(r))};
+}
+const input={name:'배추김치 최신',brand:'new',category:'김치'},ack={id:'food',name:input.name,brand:input.brand,category:input.category,quantity:'500g'};
+test('pending connected product edits do not replace confirmed food fields',()=>{const c=setup();c.fn('food',input);assert.equal(c.foods()[0].name,'김치');assert.ok(!c.calls.some(x=>x[0]==='foods'));c.resolve(ack);});
+test('rejected product save leaves confirmed fields intact without a rollback rewrite',async()=>{const c=setup();c.fn('food',input);c.reject(Error('rejected'));await c.settle();assert.equal(c.foods()[0].name,'김치');assert.ok(!c.calls.some(x=>x[0]==='foods'));assert.ok(c.calls.some(x=>x[0]==='setProductInfoRetryAction'&&x[1]?.foodId==='food'));});
+test('confirmed current-food save advances detail baseline and clears stale warning',async()=>{const c=setup();c.fn('food',input);c.resolve(ack);await c.settle();assert.equal(c.foods()[0].name,input.name);assert.ok(c.calls.some(x=>x[0]==='revision'));assert.ok(c.calls.some(x=>x[0]==='setDetailRemoteRefreshRequired'&&x[1]===false));});
+for(const options of [{selected:'other'},{sheet:null},{synced:false}])test(`save does not clear unrelated or unverified detail warning ${JSON.stringify(options)}`,async()=>{const c=setup(options);c.fn('food',input);c.resolve(ack);await c.settle();assert.ok(!c.calls.some(x=>x[0]==='setDetailRemoteRefreshRequired'));});
+test('acknowledgement from the previous owner cannot update the new workspace',async()=>{const c=setup();c.fn('food',input);c.changeOwner();c.calls.length=0;c.resolve(ack);await c.settle();assert.deepEqual(c.calls,[]);});

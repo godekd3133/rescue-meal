@@ -1,0 +1,22 @@
+.bottom-sheet .detail-history .detail-section-heading > span {
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.bottom-sheet .detail-history .history-row strong {
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.bottom-sheet .detail-history .history-row :is(small,time) {
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.bottom-sheet .product-info-history .history-row > span:last-child > small:first-of-type .metadata-parts {
+  display: grid;
+  gap: 3px;
+}
+
+.history-read-error { display: flex; gap: 12px; align-items: center; justify-content: space-between; font-size: 13px; line-height: 1.45; }
+.history-read-error button { flex: 0 0 auto; min-height: 44px; padding: 0 12px; border: 1px solid var(--atelier-border); border-radius: 10px; background: transparent; color: var(--atelier-blue); font-size: 13px; }

@@ -192,3 +192,14 @@ test("workspace transport delivers a shared recipe catalog invalidation", async 
     receiver.close();
   }
 });
+
+test("mutation scopes survive read invalidation but not leaving and returning to the workspace", () => {
+  const coordinator = new WorkspaceSyncCoordinator(async () => "a", "a");
+  const current = coordinator.captureScope();
+  coordinator.invalidateAll();
+  assert.equal(current(), true);
+  coordinator.setWorkspace("b");
+  coordinator.setWorkspace("a");
+  assert.equal(current(), false);
+  assert.equal(coordinator.captureScope()(), true);
+});

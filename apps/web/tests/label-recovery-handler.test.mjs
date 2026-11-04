@@ -1,0 +1,9 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import {readFileSync} from 'node:fs';
+const source=readFileSync(new URL('../src/AddFoodSheet.tsx',import.meta.url),'utf8');
+const a=source.indexOf('  const continueWithManual = () => {'),b=source.indexOf('  const changeManualFoodName',a);assert.ok(a>=0&&b>a);
+function setup(targetId,foods){const calls=[];const values={initialLabelTargetFoodId:targetId,existingFoods:foods,keyboard:{hide(){}},labelDetectedProductName:'읽은 이름',labelDetectedStorage:'냉장',labelDetectedStorageLocationId:null};const env=new Proxy(values,{has:()=>true,get:(o,k)=>k===Symbol.unscopables?undefined:k in o?o[k]:(...v)=>calls.push([String(k),...v])});const handler=new Function('env',`with(env){${source.slice(a,b)};return continueWithManual;}`)(env);return {calls,handler};}
+test('a failed recheck keeps the exact food target and asks for a fresh manual date',()=>{const food={id:'existing',name:'시금치',quantity:'1팩',storage:'냉장'};const c=setup('existing',[food]);c.handler();assert.deepEqual(c.calls.find(([k])=>k==='chooseExistingLabelTarget'),['chooseExistingLabelTarget',food]);assert.ok(c.calls.some(([k,v])=>k==='setLabelManualDateEntry'&&v===true));assert.ok(c.calls.some(([k,v])=>k==='setLabelDetectedDate'&&v===''));assert.ok(c.calls.some(([k,v])=>k==='setLabelDateKind'&&v===null));assert.equal(c.calls.some(([k])=>k==='switchMode'),false);});
+test('a disappeared target does not silently become a new food entry',()=>{const c=setup('removed',[]);c.handler();assert.deepEqual(c.calls.map(([k])=>k),['setLabelError']);});
+test('a new food capture still offers ordinary manual entry',()=>{const c=setup(null,[]);c.handler();assert.ok(c.calls.some(([k,v])=>k==='setFoodName'&&v==='읽은 이름'));assert.ok(c.calls.some(([k,v])=>k==='switchMode'&&v==='manual'));});

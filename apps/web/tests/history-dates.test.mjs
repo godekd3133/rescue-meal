@@ -23,7 +23,7 @@ test("sorts and groups history without changing records within a day", () => {
   ];
   const sorted = sortHistoryNewest(events);
   assert.deepEqual(sorted.map((event) => event.id), ["today-late", "today-early", "yesterday", "old"]);
-  const groups = groupHistoryByDay(sorted);
+  const groups = groupHistoryByDay(sorted, now);
   assert.deepEqual(groups.map((group) => [group.label, group.items.map((event) => event.id)]), [
     ["오늘", ["today-late", "today-early"]],
     ["어제", ["yesterday"]],
@@ -33,5 +33,13 @@ test("sorts and groups history without changing records within a day", () => {
 
 test("formats only the local time for grouped history rows", () => {
   assert.equal(formatHistoryTime(localIso(2026, 9, 18, 8, 5)), "08:05");
-  assert.equal(formatHistoryTime("not-a-date"), "시간 확인 필요");
+  assert.equal(formatHistoryTime("not-a-date"), "시간을 알 수 없어요");
+});
+
+
+test("older years stay distinguishable while yesterday crosses a year boundary", () => {
+  const reference = new Date(2026, 0, 1, 12);
+  assert.equal(historyDayLabel(localIso(2025, 12, 31, 22), reference), "어제");
+  assert.equal(historyDayLabel(localIso(2025, 9, 18), reference), "2025년 9월 18일");
+  assert.equal(historyDayLabel(localIso(2026, 1, 1, 8), reference), "오늘");
 });

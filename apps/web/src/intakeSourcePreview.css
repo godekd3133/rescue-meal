@@ -1,0 +1,17 @@
+.bottom-sheet .label-source-preview-heading {
+  display: grid;
+  gap: 4px;
+  justify-content: stretch;
+}
+
+.bottom-sheet .label-source-preview-heading strong {
+  font-size: 13px;
+  word-break: keep-all;
+}
+
+.bottom-sheet .label-source-preview-heading small {
+  font-size: 12px;
+  line-height: 1.45;
+  white-space: normal;
+  word-break: keep-all;
+}

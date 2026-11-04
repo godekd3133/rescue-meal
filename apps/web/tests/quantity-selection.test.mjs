@@ -1,6 +1,31 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { halfEventQuantity, isValidEventQuantity, parseDisplayQuantity, quantityStep, reconcileQuantityDraft, stepEventQuantity, validateQuantitySelection } from "../src/quantitySelection.ts";
+import { halfEventQuantity, quantityDraftValue, isValidEventQuantity, parseDisplayQuantity, quantityStep, reconcileQuantityDraft, stepEventQuantity, validateQuantitySelection } from "../src/quantitySelection.ts";
+import { formatQuantityAmount, subtractQuantity } from "../src/quantityArithmetic.ts";
+
+test("imported precise whole lots remain recordable without rounding the available inventory", () => {
+  for (const available of [1.1234, 0.0001, 0.0000001]) {
+    assert.equal(isValidEventQuantity(available, available), true);
+    assert.deepEqual(validateQuantitySelection(String(available < 0.000001 ? available.toFixed(7) : available), available), { quantity: available, remaining: 0, error: null });
+    assert.equal(stepEventQuantity(available, 1, available, "팩"), available);
+  }
+  assert.equal(reconcileQuantityDraft("1.1234", 1.1234, 1.0234), "1.0234");
+  assert.deepEqual(validateQuantitySelection("0.1", 1.1234), { quantity: 0.1, remaining: 1.0234, error: null });
+  assert.equal(validateQuantitySelection("1.0234", 1.1234).quantity, 1.0234);
+  assert.equal(stepEventQuantity(1.1234, -1, 1.1234, "L"), 1.0234);
+  assert.equal(halfEventQuantity(1.1234), 0.5617);
+});
+
+test("decimal remainders and displayed quantities preserve source precision", () => {
+  assert.equal(subtractQuantity(1.1234, 0.1), 1.0234);
+  assert.equal(subtractQuantity(0.3, 0.1), 0.2);
+  assert.equal(subtractQuantity(0.0000003, 0.0000001), 0.0000002);
+  assert.equal(subtractQuantity(0.25, -0.1), 0.35);
+  assert.equal(formatQuantityAmount(1.0234), "1.0234");
+  assert.equal(formatQuantityAmount(0.0001), "0.0001");
+  assert.equal(formatQuantityAmount(1e-21), "0.000000000000000000001");
+  assert.equal(formatQuantityAmount(1000.5), "1,000.5");
+});
 
 test("formatted inventory quantities parse thousands without mixing the separator into the unit", () => {
   assert.deepEqual(parseDisplayQuantity("1,000.5g"), { amount: 1000.5, unit: "g" });
@@ -23,20 +48,21 @@ test("whole and half portions retain their recorded unit including one package a
   }
 });
 
-test("a half preset is unavailable when it would require rounding or fall below the minimum", () => {
-  for (const available of [0.001, 0.003, 0, -1, NaN, Infinity]) assert.equal(halfEventQuantity(available), null);
+test("a half preset is unavailable only when the result cannot be represented as a positive quantity", () => {
+  for (const available of [Number.MIN_VALUE, 0, -1, NaN, Infinity]) assert.equal(halfEventQuantity(available), null);
   assert.equal(isValidEventQuantity(0.001, 0.001), true);
-  assert.equal(isValidEventQuantity(0.0005, 0.001), false);
+  assert.equal(isValidEventQuantity(0.0005, 0.001), true);
+  assert.equal(halfEventQuantity(0.003), 0.0015);
 });
 
-test("invalid, blank, out-of-range, and overly precise input cannot produce a mutation quantity", () => {
-  for (const draft of ["", " ", "0", "-1", "501", "0.0001", "1.2345", "1,5", "NaN", "Infinity", "2e2", "abc"]) {
+test("invalid, blank and out-of-range input cannot produce a mutation quantity", () => {
+  for (const draft of ["", " ", "0", "-1", "501", "1,5", "NaN", "Infinity", "2e2", "abc"]) {
     const result = validateQuantitySelection(draft, 500);
     assert.equal(result.quantity, null, draft);
     assert.equal(result.remaining, null, draft);
     assert.ok(result.error, draft);
   }
-  for (const quantity of [0, -1, 501, 0.0001, 1.2345, NaN, Infinity]) assert.equal(isValidEventQuantity(quantity, 500), false);
+  for (const quantity of [0, -1, 501, NaN, Infinity]) assert.equal(isValidEventQuantity(quantity, 500), false);
 });
 
 test("fractional input and subtraction avoid floating point leftovers", () => {
@@ -65,4 +91,19 @@ test("refresh preserves custom and incomplete drafts while whole-lot selection f
   assert.ok(validateQuantitySelection(reconcileQuantityDraft("250", 500, 200), 200).error);
   assert.equal(reconcileQuantityDraft("", 500, 200), "");
   assert.equal(reconcileQuantityDraft("not a quantity", 500, 200), "not a quantity");
+});
+
+test("API-supported precise portions keep their amount and reject subtraction below numeric resolution", () => {
+  assert.deepEqual(validateQuantitySelection("0.0005", 0.001), { quantity: 0.0005, remaining: 0.0005, error: null });
+  assert.deepEqual(validateQuantitySelection("1.2345", 500), { quantity: 1.2345, remaining: 498.7655, error: null });
+  assert.equal(quantityStep(0.0002, "L"), 0.0001);
+  assert.equal(stepEventQuantity(0.0002, -1, 0.0002, "L"), 0.0001);
+  assert.equal(isValidEventQuantity(1e-30, 500), false);
+  assert.match(validateQuantitySelection("0.000000000000000000000000000001", 500).error, /너무 작아/);
+});
+
+test("small preset quantities remain editable as decimal input instead of invalid exponent notation", () => {
+  const half=halfEventQuantity(0.0000001);
+  assert.equal(quantityDraftValue(half), "0.00000005");
+  assert.equal(validateQuantitySelection(quantityDraftValue(half), 0.0000001).quantity, half);
 });

@@ -45,3 +45,16 @@ test("keeps optimistic state when the readback throws after success", async () =
   assert.equal(result.synced, false);
   assert.equal(result.readbackError, readbackError);
 });
+
+test("a late failure cannot roll an old workspace snapshot into the new workspace", async () => {
+  let owner = "a";
+  let displayed = "a-before";
+  await assert.rejects(runOptimisticMutation({
+    isCurrent: () => owner === "a",
+    applyOptimistic: () => { displayed = "a-optimistic"; },
+    restore: () => { displayed = "a-before"; },
+    mutate: async () => { owner = "b"; displayed = "b-current"; throw new Error("old request failed"); },
+    sync: async () => true,
+  }), { name: "MutationScopeChangedError" });
+  assert.equal(displayed, "b-current");
+});

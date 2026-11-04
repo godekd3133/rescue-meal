@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import {readFileSync} from 'node:fs';
+const source=readFileSync(new URL('../src/AccountSheet.tsx',import.meta.url),'utf8');
+const start=source.indexOf('data-worker-state='),end=source.indexOf('{recentlySucceededOutbox',start);
+const block=source.slice(start,end);
+const badge=block.match(/<span>\{(workerHeartbeat\?\.last_error.*?)\}<\/span>/)?.[1];
+assert.ok(badge);
+const label=new Function('workerHeartbeat','loading',`return ${badge}`);
+const visibility=source.match(/\{(status\?\.configured === true \|\| workerHeartbeat) \? <div className=\{`grocy-worker-card/)?.[1];assert.ok(visibility);
+const shown=new Function('status','workerHeartbeat',`return Boolean(${visibility})`);
+test('no inventory integration or history hides the unnecessary worker card',()=>assert.equal(shown({configured:false},null),false));
+test('a configured service with no processing history is not stuck loading',()=>{assert.equal(shown({configured:true},null),true);assert.equal(label(null,false),'처리 내역 없음');});
+test('a pending first read uses a bounded loading label',()=>assert.equal(label(null,true),'확인 중'));
+test('an inventory processing error asks for review without claiming notification failure',()=>assert.equal(label({last_error:'sync failure'},false),'확인 필요'));
+test('a past heartbeat describes processing history rather than current connection health',()=>assert.equal(label({last_error:null},false),'최근 처리'));

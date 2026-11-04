@@ -1,0 +1,10 @@
+.bottom-sheet .storage-location-type-option {
+  min-height: 44px;
+  font-size: 12px;
+}
+
+.bottom-sheet .storage-location-type-option-active {
+  border-color: var(--atelier-pistachio);
+  background: color-mix(in srgb, var(--atelier-pistachio) 10%, var(--atelier-surface));
+  color: var(--atelier-pistachio-deep);
+}

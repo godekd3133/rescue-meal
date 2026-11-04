@@ -1,0 +1,8 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {mergeNotificationSettingsDraft,notificationSettingsRemoteFields} from '../src/notificationSettingsDraft.ts';
+const saved={in_app_enabled:true,push_enabled:false,lead_days:2,timezone:'Asia/Seoul',quiet_hours_start:null,quiet_hours_end:null};
+test('local period edit does not undo a peer change to the untouched switch',()=>{const incoming={...saved,in_app_enabled:false,lead_days:4};const next=mergeNotificationSettingsDraft(saved,saved,'3',incoming);assert.equal(next.leadDaysText,'3');assert.equal(next.preferences.in_app_enabled,false);assert.deepEqual(notificationSettingsRemoteFields(saved,incoming),['in_app_enabled','lead_days']);});
+test('local timezone edit survives while untouched period follows the server',()=>{const next=mergeNotificationSettingsDraft(saved,{...saved,timezone:'Asia/Tokyo'},'2',{...saved,timezone:'UTC',lead_days:4});assert.equal(next.preferences.timezone,'Asia/Tokyo');assert.equal(next.leadDaysText,'4');});
+test('invalid local period text is preserved',()=>{for(const text of ['', '2.5', '15'])assert.equal(mergeNotificationSettingsDraft(saved,saved,text,{...saved,lead_days:4}).leadDaysText,text);});
+test('edited quiet start is retained while untouched end is refreshed',()=>{const next=mergeNotificationSettingsDraft(saved,{...saved,quiet_hours_start:'20:00'},'2',{...saved,quiet_hours_start:'22:30',quiet_hours_end:'07:30'});assert.equal(next.preferences.quiet_hours_start,'20:00');assert.equal(next.preferences.quiet_hours_end,'07:30');});
+test('unchanged response has no new remote field labels',()=>assert.deepEqual(notificationSettingsRemoteFields(saved,{...saved}),[]));

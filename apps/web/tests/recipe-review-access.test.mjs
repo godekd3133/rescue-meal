@@ -1,0 +1,10 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';import {stripTypeScriptTypes} from 'node:module';
+const s=readFileSync(new URL('../src/RecipeReviewPanel.tsx',import.meta.url),'utf8');const a=s.indexOf('  const loadDrafts ='),b=s.indexOf('\n  useEffect',a);
+function setup(role,token=''){
+ const calls=[];const values={reviewToken:token,queueFilter:'all',mealApi:{isConfigured:true,getAuthMe:async()=>({role,user_id:'actor'}),getRecipeReviewCapabilities:async()=>({can_publish:true}),getRecipeReviewDrafts:async()=>{calls.push(['draft-request']);return[];}},loadSourceStatus:()=>calls.push(['source-request']),rememberObservedCatalogRevision:()=>{},selectedId:null,draftsRef:{current:[]},editorRef:{current:null},errorMessage:()=> 'error',loadAudit:()=>{}};
+ for(const key of ['setLoading','setError','setNotice','setReviewToken','setActorId','setCanPublish','setDrafts','setEditorRefreshRequired','setSelectedId','setEditor','setAuditEvents','setLicenseConfirmed','setReviewerNote'])values[key]=v=>calls.push([key,v]);
+ const fn=new Function(...Object.keys(values),stripTypeScriptTypes(s.slice(a,b))+';return loadDrafts;')(...Object.values(values));return{fn,calls};
+}
+test('unauthorized account cannot request catalog or source configuration',async()=>{const c=setup('user');await c.fn();assert.ok(!c.calls.some(x=>x[0]==='draft-request'||x[0]==='source-request'));assert.ok(c.calls.some(x=>x[0]==='setActorId'&&x[1]===null));});
+test('verified admin loads source status only after catalog access succeeds',async()=>{const c=setup('recipe_admin');await c.fn();assert.ok(c.calls.findIndex(x=>x[0]==='source-request')>c.calls.findIndex(x=>x[0]==='draft-request'));assert.ok(c.calls.some(x=>x[0]==='setActorId'&&x[1]==='actor'));});
+test('legacy code access retains its authorized flow',async()=>{const c=setup('user','test-code');await c.fn();assert.ok(c.calls.some(x=>x[0]==='draft-request'));assert.ok(c.calls.some(x=>x[0]==='setActorId'&&x[1]==='legacy-review-token'));});

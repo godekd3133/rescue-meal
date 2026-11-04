@@ -59,3 +59,41 @@ test("treats an empty mutation response as a mutation failure", async () => {
   assert.equal(applied, false);
   assert.equal(synced, false);
 });
+
+test("does not apply a late write response to a different workspace", async () => {
+  let owner = "a";
+  let finish;
+  const result = runAuthoritativeMutation({
+    operation: "manual-food",
+    isCurrent: () => owner === "a",
+    mutate: () => new Promise((resolve) => { finish = resolve; }),
+    apply: () => assert.fail("old workspace response must not be displayed"),
+    sync: async () => { assert.fail("must not refresh another workspace"); },
+  });
+  owner = "b";
+  finish({ id: "a-food" });
+  await assert.rejects(result, { name: "MutationScopeChangedError" });
+});
+
+test("does not reapply an old snapshot after the workspace changes during readback", async () => {
+  let owner = "a";
+  let displayed = "a-before";
+  await assert.rejects(runAuthoritativeMutation({
+    operation: "food-date",
+    isCurrent: () => owner === "a",
+    mutate: async () => "a-updated",
+    apply: (value) => { displayed = value; },
+    sync: async () => { owner = "b"; displayed = "b-current"; return false; },
+  }), { name: "MutationScopeChangedError" });
+  assert.equal(displayed, "b-current");
+});
+
+test("does not dispatch a departed workspace's retry", async () => {
+  await assert.rejects(runAuthoritativeMutation({
+    operation: "receipt-commit",
+    isCurrent: () => false,
+    mutate: async () => assert.fail("must not send the old receipt"),
+    apply: () => assert.fail("must not replace current inventory"),
+    sync: async () => false,
+  }), { name: "MutationScopeChangedError" });
+});

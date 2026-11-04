@@ -1,0 +1,10 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import {productInfoHistoryChanges} from '../src/productInfoHistoryPresentation.ts';
+const before={canonical_name:'양파',brand:'',category:'기타'};
+test('changed name, brand and category show exact previous and next values as separate fields',()=>assert.deepEqual(productInfoHistoryChanges({before,after:{canonical_name:'국산 양파',brand:'확인 상품',category:'채소'}}),['상품명 양파 → 국산 양파','브랜드 미입력 → 확인 상품','분류 기타 → 채소']));
+test('cleared optional brand remains explicit in the record',()=>assert.deepEqual(productInfoHistoryChanges({before:{...before,brand:'이전 브랜드'},after:before}),['브랜드 이전 브랜드 → 미입력']));
+test('unchanged fields are omitted',()=>assert.deepEqual(productInfoHistoryChanges({before,after:{...before,category:'채소'}}),['분류 기타 → 채소']));
+test('an unchanged audited confirmation remains readable',()=>assert.deepEqual(productInfoHistoryChanges({before,after:before}),['상품 정보를 확인한 기록']));
+test('confirmed pack contents have an explicit before and after history',()=>assert.deepEqual(productInfoHistoryChanges({before,after:{...before,quantity_reference:{amount:1,unit:'개'}}}),['한 단위의 내용량 미입력 → 1개']));
+test('removed pack contents remain readable in history',()=>assert.deepEqual(productInfoHistoryChanges({before:{...before,quantity_reference:{amount:1,unit:'개'}},after:before}),['한 단위의 내용량 1개 → 미입력']));

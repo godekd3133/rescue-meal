@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';import test from 'node:test';import {readFileSync} from 'node:fs';import {stripTypeScriptTypes} from 'node:module';
+const source=readFileSync(new URL('../src/Prototype.tsx',import.meta.url),'utf8');
+function setup(name){const a=source.indexOf('  const '+name+' ='),b=name==='openAdd'?source.indexOf('\n  useEffect(',a):source.indexOf('\n  const ',source.indexOf('\n  };',a)+5);assert.ok(a>=0&&b>a);let resolve,reject,current=true;const promise=new Promise((r,j)=>{resolve=r;reject=j}),calls=[];const values={Promise,HTMLElement:class{},document:{activeElement:null},captureMutationScope:()=>()=>current,sheetOpeningIntentRef:{current:0},addSheetOpenRequestRef:{current:0},mealSheetOpenRequestRef:{current:0},loadAddFoodSheet:()=>promise,loadBottomSheet:()=>Promise.resolve({}),loadMealPlanSheet:()=>promise,keyboard:{hide(){}},mealApi:{isConfigured:false},activeContentNavRef:{current:'home'},navigationIntentRef:{current:'home'},selectedFood:null,sheet:null};for(const key of ['receiptQueueInitialFocusRef','addOriginFocusRef','addReturnSheetRef','mealRelatedSessionReturnRef','addReturnFoodContextRef','mealDetailReturnRef','mealDetailReturnFocusIdRef','mealDetailReturnScrollTopRef','pendingMealCompletionFocusRef','mealReturnSheetRef','shoppingInitialFocusRef','mealSheetOriginNavRef'])values[key]={current:null};const env=new Proxy(values,{has:()=>true,get:(o,k)=>k===Symbol.unscopables?undefined:k in o?o[k]:(...args)=>calls.push([String(k),...args])});const code=stripTypeScriptTypes(source.slice(a,b)),fn=new Function('e',`with(e){${code};return ${name};}`)(env);return{env,fn,calls,resolve,reject,interrupt:()=>{values.sheetOpeningIntentRef.current++;calls.length=0;},changeOwner:()=>{current=false;calls.length=0;},settle:()=>new Promise(r=>setImmediate(r))};}
+for(const name of ['openAdd','openMealPlan']){
+ test(`${name}: another navigation prevents late opening`,async()=>{const c=setup(name);c.fn();c.interrupt();c.resolve({});await c.settle();assert.deepEqual(c.calls,[]);});
+ test(`${name}: owner change suppresses late load failure`,async()=>{const c=setup(name);c.fn();c.changeOwner();c.reject(Error('old failure'));await c.settle();assert.deepEqual(c.calls,[]);});
+ test(`${name}: current request still opens its intended sheet`,async()=>{const c=setup(name);c.fn();c.resolve({});await c.settle();assert.ok(c.calls.some(([k,v])=>k==='changeSheet'&&v===(name==='openAdd'?'add':'meal')));});
+}
+
+for(const [first,second] of [['openAdd','openMealPlan'],['openMealPlan','openAdd']])test(`${first} followed by ${second}: last choice wins even when loads settle together`,async()=>{
+ const c=setup(first),a=source.indexOf('  const '+second+' ='),b=second==='openAdd'?source.indexOf('\n  useEffect(',a):source.indexOf('\n  const ',source.indexOf('\n  };',a)+5);
+ const code=stripTypeScriptTypes(source.slice(a,b)),next=new Function('e',`with(e){${code};return ${second};}`)(c.env);
+ c.fn();next();c.calls.length=0;c.resolve({});await c.settle();
+ assert.deepEqual(c.calls.filter(([k])=>k==='changeSheet'),[['changeSheet',second==='openAdd'?'add':'meal']]);
+});

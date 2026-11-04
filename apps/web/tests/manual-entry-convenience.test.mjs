@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { changeManualQuantityUnit, getManualFoodNameSuggestions, parseManualQuantity } from "../src/manualEntryConvenience.ts";
+import { changeManualQuantityUnit, getManualFoodNameSuggestions, manualQuantityIssue, parseManualQuantity } from "../src/manualEntryConvenience.ts";
 
 test("unit choices preserve typed amounts including decimal precision", () => {
   assert.equal(changeManualQuantityUnit("2개", "팩"), "2팩");
@@ -51,4 +51,13 @@ test("existing-name suggestions match the current normalized query as a substrin
   assert.deepEqual(getManualFoodNameSuggestions(foods, "ｙｏＧ"), ["Greek Yogurt"]);
   assert.deepEqual(getManualFoodNameSuggestions(foods, "  냉동   두부  "), ["냉동 두부"]);
   assert.deepEqual(getManualFoodNameSuggestions(foods, "새 식품"), []);
+});
+
+test("numeric amounts need an explicit unit before saving", () => {
+  for (const value of ["2", "0.5", ".5", "250.125"]) {
+    assert.equal(manualQuantityIssue(value), "unit");
+    assert.equal(manualQuantityIssue(changeManualQuantityUnit(value, "팩")), null);
+  }
+  for (const value of ["", "0개", "-1g", "NaN"]) assert.equal(manualQuantityIssue(value), "amount");
+  for (const value of ["1개", "2팩", "1000g", "2봉(3개)", "1kg"]) assert.equal(manualQuantityIssue(value), null);
 });

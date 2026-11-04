@@ -10,6 +10,13 @@ const selection = {
   memory: null,
 };
 
+test("precise portions are preserved when editing, skipping and restoring", () => {
+  const edited = updateMealConsumptionSelection({...selection,maxQuantity:0.0025},0.0004);
+  assert.equal(edited.quantity,0.0004);
+  const restored=toggleMealConsumptionSelection({...selection,currentQuantity:0,maxQuantity:0.0025,memory:edited.memory},0.0025);
+  assert.equal(restored.quantity,0.0004);
+});
+
 test("skipping a cooking ingredient restores the edited amount instead of all inventory", () => {
   const skipped = toggleMealConsumptionSelection(selection, 1);
   assert.equal(skipped.quantity, 0);

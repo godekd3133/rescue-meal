@@ -33,5 +33,15 @@ test("only a loaded, fully checked list is announced as complete", () => {
   assert.equal(complete.countLabel, "3/3");
   // Checked manual rows may already have been received and remain as history.
   assert.doesNotMatch(complete.title, /추가 전|미등록/);
-  assert.match(complete.description, /아직 기록하지 않은/);
+  assert.equal(complete.description, "");
+  assert.equal(active.description, "");
+});
+
+test("recorded shopping actions use exact lot identity rather than a similar food name", async () => {
+  const {shoppingFoodAction} = await import('../src/shoppingListPresentation.ts');
+  assert.equal(shoppingFoodAction({},[{id:'old'}],true),'receive');
+  assert.equal(shoppingFoodAction({received_food_id:'old'},[{id:'old'}],true),'view');
+  assert.equal(shoppingFoodAction({received_food_id:'old'},[{id:'different'}],true),'recorded');
+  assert.equal(shoppingFoodAction({received_food_id:'old'},[],true),'recorded');
+  assert.equal(shoppingFoodAction({received_food_id:'old'},[{id:'old'}],false),'recorded');
 });

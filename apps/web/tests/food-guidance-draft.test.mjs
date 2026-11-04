@@ -1,0 +1,5 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';import {stripTypeScriptTypes} from 'node:module';
+const s=readFileSync(new URL('../src/FoodDetailSheet.tsx',import.meta.url),'utf8');const a=s.indexOf('function guidanceDraftSource('),b=s.indexOf('\nexport default',a);const source=new Function(stripTypeScriptTypes(s.slice(a,b))+';return guidanceDraftSource;')();
+const food={id:'one',quantity:'500g',storage:'냉장',storageLocationId:null,opened:false};
+test('a readback of the same food retains a stable guidance draft identity',()=>assert.equal(source(food),source({...food})));
+for(const [key,value]of [['id','other'],['quantity','250g'],['storage','냉동'],['storageLocationId','custom'],['opened',true],['openedAt','2026-10-10'],['name','new name'],['brand','new brand'],['category','new category'],['dateKind','actual_printed'],['dateDetail','2026.10.20'],['dateAssertionKind','use_by']])test(`${key} change invalidates an older record draft`,()=>assert.notEqual(source(food),source({...food,[key]:value})));
