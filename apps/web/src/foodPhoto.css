@@ -1,0 +1,30 @@
+.food-photo-placeholder,
+.food-photo-placeholder:is(.food-image,.inventory-image,.detail-image) {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  place-items: center;
+  background: var(--atelier-surface, var(--meal-white));
+  color: var(--atelier-muted, var(--meal-muted));
+}
+
+.food-photo-placeholder > svg {
+  width: 45%;
+  height: 45%;
+  max-width: 36px;
+  max-height: 36px;
+}
+
+.receipt-line-toggle > .food-photo-placeholder {
+  width: 36px;
+  height: 36px;
+  flex: 0 0 auto;
+  border-radius: 9px;
+}
+
+.bottom-sheet .recipe-ingredient-row > .food-photo-placeholder {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  border-radius: 8px;
+}
