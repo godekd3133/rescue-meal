@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime, timedelta, timezone
+from decimal import Decimal
 from copy import deepcopy
 from contextlib import asynccontextmanager, contextmanager
 from functools import partial
@@ -142,7 +143,7 @@ from .product_resolver import (
     resolve_receipt_name,
 )
 from .meal_optimizer import optimize_multi_day_plans, warm_up_cp_sat
-from .planner import MAX_SERVINGS, MIN_SERVINGS, PlannedRecipe, RecipeSpec, load_recipe_specs, normalize_unit, plan_recipe
+from .planner import MAX_SERVINGS, MIN_SERVINGS, PlannedRecipe, RecipeSpec, load_recipe_specs, normalize_unit, plan_recipe, recipe_quantity_review_food_ids
 from .rate_limit import PersistentSlidingWindowRateLimiter, SlidingWindowRateLimiter, opaque_rate_limit_key
 from .recipe_catalog import (
     RecipeDraftIngredient,
@@ -304,6 +305,12 @@ class ProductProvenanceAuditEvent(BaseModel):
     reason: str = Field(min_length=1, max_length=240)
 
 
+class QuantityReference(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    amount: float = Field(gt=0, le=1000000, allow_inf_nan=False)
+    unit: Literal["g", "ml", "개"]
+
+
 class FoodProductInfoSnapshot(BaseModel):
     """User-visible product fields captured by a correction audit."""
 
@@ -311,9 +318,10 @@ class FoodProductInfoSnapshot(BaseModel):
 
     canonical_name: str = Field(min_length=1, max_length=160)
     display_name: str = Field(min_length=1, max_length=160)
-    brand: str = Field(min_length=1, max_length=160)
+    brand: str = Field(max_length=160)
     category: str = Field(min_length=1, max_length=80)
     product_provenance: ProductProvenance | None = None
+    quantity_reference: QuantityReference | None = None
 
 
 class FoodProductInfoAuditEvent(BaseModel):
@@ -343,6 +351,7 @@ class FoodResponse(BaseModel):
     barcode: str | None = Field(default=None, max_length=300)
     barcode_lot: str | None = Field(default=None, max_length=160)
     product_provenance: ProductProvenance | None = None
+    quantity_reference: QuantityReference | None = None
     canonical_name: str
     display_name: str
     brand: str
@@ -363,6 +372,7 @@ class FoodResponse(BaseModel):
 
 def _food_product_info_snapshot(food: FoodResponse) -> FoodProductInfoSnapshot:
     return FoodProductInfoSnapshot(
+        quantity_reference=food.quantity_reference,
         canonical_name=food.canonical_name,
         display_name=food.display_name,
         brand=food.brand,
@@ -1097,7 +1107,30 @@ class MealIngredientResponse(BaseModel):
     allocations: list[MealIngredientAllocationResponse] = Field(default_factory=list)
 
 
+class MealPlanRecovery(BaseModel):
+    kind: Literal["time", "quantity", "ingredients", "allergens", "empty"]
+    minimum_minutes: int | None = Field(default=None, ge=5, le=180)
+    food_ids: list[str] = Field(default_factory=list, max_length=20)
+
+
+class MealPantryItemResponse(BaseModel):
+    """Staple/seasoning assumed to be in the kitchen (never matched or shopped)."""
+
+    name: str
+    amount: float | None = None
+    unit: str = ""
+    optional: bool = False
+
+
+class MealRecipeStepResponse(BaseModel):
+    stage: str
+    text: str
+    heat: str | None = None
+    minutes: int | None = Field(default=None, ge=0)
+
+
 class MealPlanResponse(BaseModel):
+    recovery: MealPlanRecovery | None = None
     id: str
     snapshot_hash: str = ""
     saved_at: datetime | None = None
@@ -1129,6 +1162,13 @@ class MealPlanResponse(BaseModel):
     score: float
     reason: str
     steps: list[str]
+    step_details: list[MealRecipeStepResponse] = Field(default_factory=list)
+    pantry_items: list[MealPantryItemResponse] = Field(default_factory=list)
+    frozen_food_ids: list[str] = Field(default_factory=list)
+    thaw_required: bool = False
+    thaw_food_ids: list[str] = Field(default_factory=list)
+    thaw_minutes: int = Field(default=0, ge=0)
+    total_minutes: int | None = Field(default=None, ge=0)
     safety_note: str
     recipe_source_name: str = "unknown"
     recipe_source_url: str | None = None
@@ -1223,6 +1263,8 @@ class ShoppingListSourceResponse(BaseModel):
 
 
 class ShoppingListItemResponse(BaseModel):
+    purchase_cycle_started_at: datetime | None = None
+    received_food_id: str | None = None
     id: str
     canonical_name: str
     quantity: float = Field(gt=0)
@@ -1487,16 +1529,21 @@ class ProductInfoUpdateRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     canonical_name: str = Field(min_length=1, max_length=160)
-    brand: str = Field(min_length=1, max_length=160)
+    brand: str = Field(max_length=160)
     category: str = Field(min_length=1, max_length=80)
 
-    @field_validator("canonical_name", "brand", "category")
+    @field_validator("canonical_name", "category")
     @classmethod
     def trim_non_empty_text(cls, value: str) -> str:
         normalized = value.strip()
         if not normalized:
             raise ValueError("must not be blank")
         return normalized
+
+    @field_validator("brand")
+    @classmethod
+    def trim_optional_brand(cls, value: str) -> str:
+        return value.strip()
 
 
 class ManualFoodRequest(BaseModel):
@@ -1505,6 +1552,7 @@ class ManualFoodRequest(BaseModel):
     canonical_name: str = Field(min_length=1, max_length=160)
     lot_action: Literal["create", "correct"] | None = None
     target_food_id: str | None = Field(default=None, min_length=1, max_length=160)
+    date_review_correction: bool = False
     quantity: float = Field(default=1, gt=0)
     unit: str = Field(default="개", min_length=1, max_length=30)
     storage_type: StorageCode = "refrigerated"
@@ -1956,16 +2004,17 @@ class InMemoryStore:
                 self._seed_enabled = seed_enabled
 
     def dashboard(self) -> DashboardResponse:
-        foods = self._sorted_foods()
-        rescue = [food.response for food in foods if food.response.priority <= 3]
-        return DashboardResponse(
-            generated_at=datetime.now(timezone.utc),
-            food_count=len(foods),
-            rescue_count=len(rescue),
-            rescue_queue=rescue,
-            inventory=[food.response for food in foods],
-            storage_locations=self.list_storage_locations(),
-        )
+        with self._lock:
+            foods = self._sorted_foods()
+            rescue = [food.response for food in foods if food.response.priority <= 3]
+            return DashboardResponse(
+                generated_at=datetime.now(timezone.utc),
+                food_count=len(foods),
+                rescue_count=len(rescue),
+                rescue_queue=rescue,
+                inventory=[food.response for food in foods],
+                storage_locations=self.list_storage_locations(),
+            ).model_copy(deep=True)
 
     def search_inventory(
         self,
@@ -2716,7 +2765,14 @@ class InMemoryStore:
             ]
         return sorted(
             summaries,
-            key=lambda item: (item.purchased_at or datetime.min.replace(tzinfo=timezone.utc), item.id),
+            # Legacy receipts may carry a wall-clock time without an offset.
+            # Normalize only the comparison key; preserve the recorded value.
+            key=lambda item: (
+                item.purchased_at.replace(tzinfo=timezone.utc)
+                if item.purchased_at is not None and item.purchased_at.tzinfo is None
+                else item.purchased_at or datetime.min.replace(tzinfo=timezone.utc),
+                item.id,
+            ),
             reverse=True,
         )
 
@@ -5626,6 +5682,57 @@ class WorkspaceStoreRouter:
         with self._lock:
             return tuple(self._stores.keys())
 
+    def push_delivery_workspace_ids(self) -> tuple[str, ...]:
+        """Return workspaces with push enabled and at least one subscription.
+
+        The notification worker never opens a database; it asks the API for
+        this list each cycle so a newly signed-up subscriber needs no
+        allowlist change. Reads are side-effect free: SQLite sibling files are
+        opened read-only and are never created, Postgres uses one bounded
+        read query, and process-local in-memory stores are inspected as-is.
+        """
+
+        found: set[str] = set()
+        with self._lock:
+            cached = list(self._stores.items())
+        for workspace_id, active_store in cached:
+            if self._is_evictable_store(active_store):
+                continue
+            preferences = getattr(active_store, "notification_preferences", None)
+            if preferences is not None and preferences.push_enabled and active_store.push_subscriptions:
+                found.add(workspace_id)
+        base = self._base_store
+        if isinstance(base, PostgresStore):
+            with base._lock, _postgres_read_cursor(base._connection) as cursor:
+                cursor.execute(
+                    """
+                    SELECT DISTINCT preferences.workspace_id
+                    FROM rescue_api_notification_preferences AS preferences
+                    JOIN rescue_api_push_subscriptions AS subscriptions
+                      ON subscriptions.workspace_id = preferences.workspace_id
+                    WHERE preferences.id = 'workspace'
+                      AND COALESCE((preferences.payload->>'push_enabled')::boolean, false)
+                    """
+                )
+                found.update(str(row[0]) for row in cursor.fetchall())
+        elif isinstance(base, SqliteStore) and str(base.database_path) != ":memory:":
+            base_path = Path(base.database_path)
+            suffix = base_path.suffix or ".db"
+            candidates: list[tuple[str, Path]] = [(DEFAULT_WORKSPACE_ID, base_path)]
+            prefix = f"{base_path.stem}."
+            if base_path.parent.is_dir():
+                for path in base_path.parent.iterdir():
+                    name = path.name
+                    if not (name.startswith(prefix) and name.endswith(suffix)):
+                        continue
+                    workspace_id = name[len(prefix):len(name) - len(suffix)]
+                    if re.fullmatch(r"[A-Za-z0-9_-]{1,96}", workspace_id):
+                        candidates.append((workspace_id, path))
+            for workspace_id, path in candidates:
+                if _sqlite_workspace_wants_push(path):
+                    found.add(workspace_id)
+        return tuple(sorted(found))
+
     def __getattr__(self, name: str):
         if name == "recipe_drafts":
             return self._recipe_catalog.drafts
@@ -5648,6 +5755,34 @@ class WorkspaceStoreRouter:
             object.__setattr__(self, name, value)
             return
         setattr(self._workspace_store(current_workspace_id()), name, value)
+
+
+def _sqlite_workspace_wants_push(path: Path) -> bool:
+    """Read-only probe of one SQLite workspace file for push delivery."""
+
+    if not path.is_file():
+        return False
+    try:
+        connection = sqlite3.connect(f"{path.resolve().as_uri()}?mode=ro", uri=True, timeout=2.0)
+    except sqlite3.Error:
+        return False
+    try:
+        tables = {
+            row[0]
+            for row in connection.execute(
+                "SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('notification_preferences', 'push_subscriptions')"
+            )
+        }
+        if tables != {"notification_preferences", "push_subscriptions"}:
+            return False
+        row = connection.execute("SELECT payload FROM notification_preferences WHERE id = 'workspace'").fetchone()
+        if row is None or not bool(json.loads(row[0]).get("push_enabled")):
+            return False
+        return connection.execute("SELECT 1 FROM push_subscriptions LIMIT 1").fetchone() is not None
+    except (sqlite3.Error, ValueError, AttributeError):
+        return False
+    finally:
+        connection.close()
 
 
 def _json_payload(payload: object) -> object:
@@ -5698,6 +5833,7 @@ def _food(
     *,
     estimate: tuple[date, date, float] | None = None,
     inference: PriorityInferenceResponse | None = None,
+    estimate_basis: str | None = None,
     opened: bool = False,
     opened_at: datetime | None = None,
     confidence: float = 1.0,
@@ -5726,7 +5862,7 @@ def _food(
         window = DateWindow(
             start_date=start,
             end_date=end,
-            basis=source_detail,
+            basis=estimate_basis if estimate_basis is not None else source_detail,
             confidence=estimate_confidence,
             safety_disclaimer=inference.safety_disclaimer if inference else "안전 판정이 아닌 먼저 확인할 순서입니다.",
             inference_trace=InferenceTrace(
@@ -6097,7 +6233,11 @@ def _manual_food_operation_id(idempotency_key_digest: str) -> str:
 
 
 def _manual_food_payload_fingerprint(request: ManualFoodRequest) -> str:
-    return operation_ledger.fingerprint(request.model_dump(mode="json"))
+    payload = request.model_dump(mode="json")
+    # Default requests keep the fingerprint used by clients before this field.
+    if not request.date_review_correction:
+        payload.pop("date_review_correction", None)
+    return operation_ledger.fingerprint(payload)
 
 
 def _manual_food_replay_response(
@@ -6676,7 +6816,7 @@ async def workspace_context_middleware(request: Request, call_next):
     try:
         active_store = store.acquire_workspace(
             workspace_id,
-            seed=auth_repository.find_by_workspace(workspace_id) is None,
+            seed=workspace_id == DEFAULT_WORKSPACE_ID,
         )
         workspace_acquired = True
         store.refresh_workspace(workspace_id)
@@ -7426,6 +7566,24 @@ def run_internal_grocy_worker_tick(workspace_id: str, request: Request, payload:
     )
     result = worker.tick_workspace(workspace_id)
     return GrocyWorkerTickResponse(**result.as_dict())
+
+
+class NotificationWorkerWorkspacesResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    workspace_ids: list[str]
+
+
+@app.get("/api/internal/notifications/workspaces", response_model=NotificationWorkerWorkspacesResponse)
+def list_internal_notification_worker_workspaces(request: Request) -> NotificationWorkerWorkspacesResponse:
+    """List workspaces the notification worker should tick this cycle.
+
+    Only workspace IDs are returned: no endpoints, fingerprints, or
+    preferences leave the API through this service-token surface.
+    """
+
+    _require_notification_worker_token(request)
+    return NotificationWorkerWorkspacesResponse(workspace_ids=list(store.push_delivery_workspace_ids()))
 
 
 @app.post("/api/internal/notifications/workspaces/{workspace_id}/tick", response_model=NotificationWorkerTickResponse)
@@ -8908,14 +9066,14 @@ def list_recipe_review_events(draft_id: str, request: Request, response: Respons
     return [event for event in store.recipe_review_events if event.draft_id == draft_id]
 
 
-@app.post("/api/auth/guest", response_model=GuestSessionResponse)
+@app.post("/api/auth/guest", response_model=GuestSessionResponse, status_code=status.HTTP_201_CREATED)
 def create_guest_session(http_request: Request) -> GuestSessionResponse:
     _enforce_auth_rate_limit(http_request, "guest")
     workspace_id = create_guest_workspace_id()
     _ensure_auth_secret()
     try:
-        with store.workspace_session(workspace_id):
-            store.provision_workspace(workspace_id)
+        with store.workspace_session(workspace_id, seed=False):
+            store.provision_workspace(workspace_id, seed=False)
     except RuntimeError as exc:
         raise _typed_service_unavailable(
             "workspace_provisioning_unavailable",
@@ -9424,6 +9582,46 @@ def get_product_info_events(
     return events
 
 
+@app.put("/api/foods/{food_id}/quantity-reference", response_model=FoodResponse)
+def update_quantity_reference(food_id: str, request: QuantityReference) -> FoodResponse:
+    return _set_quantity_reference(food_id, request)
+
+
+@app.delete("/api/foods/{food_id}/quantity-reference", response_model=FoodResponse)
+def remove_quantity_reference(food_id: str) -> FoodResponse:
+    return _set_quantity_reference(food_id, None)
+
+
+def _set_quantity_reference(food_id: str, request: QuantityReference | None) -> FoodResponse:
+    with store.mutation_lock():
+        food = store.foods.get(food_id)
+        if food is None:
+            raise HTTPException(status_code=404, detail="식품을 찾을 수 없습니다.")
+        if food.response.quantity_reference == request:
+            return food.response
+        before = _food_product_info_snapshot(food.response)
+        def mutate() -> FoodResponse:
+            food.response.quantity_reference = request.model_copy(deep=True) if request else None
+            store.record_product_info_audit(
+                food_id=food_id, before=before,
+                after=_food_product_info_snapshot(food.response),
+                reason="사용자가 한 단위의 내용량을 입력했습니다." if request else "사용자가 입력한 내용량을 지웠습니다.",
+            )
+            store.reprioritize(persist=False)
+            return food.response
+        try:
+            return workspace_mutation.run(mutate)
+        except (ConcurrentWorkspaceWriteError, HTTPException):
+            raise
+        except Exception as exc:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail={"code": "quantity_reference_persistence_unavailable",
+                        "detail": "내용량을 저장하지 못했습니다. 기존 정보를 유지했어요.",
+                        "retryable": True, "action": "retry_later"},
+            ) from exc
+
+
 @app.patch("/api/foods/{food_id}/product-info", response_model=FoodResponse)
 def update_product_info(food_id: str, request: ProductInfoUpdateRequest) -> FoodResponse:
     with store.mutation_lock():
@@ -9577,8 +9775,8 @@ def _guest_transfer_has_user_records(workspace_store: InMemoryStore) -> bool:
 
 
 def _guest_transfer_serializable(value: object) -> object:
-    if value is None:
-        return None
+    if value is None or isinstance(value, (str, bool, int, float)):
+        return value
     if isinstance(value, BaseModel):
         return value.model_dump(mode="json")
     if isinstance(value, (datetime, date)):
@@ -9871,9 +10069,18 @@ def update_meal_preferences(preferences: MealPreferences) -> MealPreferences:
 
 @app.put("/api/notification-preferences", response_model=NotificationPreferences)
 def update_notification_preferences(preferences: NotificationPreferences) -> NotificationPreferences:
+    changed = False
+
+    def apply_preferences() -> NotificationPreferences:
+        nonlocal changed
+        current = store.get_notification_preferences()
+        changed = current != preferences
+        return store.update_notification_preferences(preferences, persist=False) if changed else current
+
     try:
         return workspace_mutation.run(
-            lambda: store.update_notification_preferences(preferences, persist=False)
+            apply_preferences,
+            persist_when=lambda: changed,
         )
     except ConcurrentWorkspaceWriteError:
         raise
@@ -10428,6 +10635,7 @@ def create_manual_food(http_request: Request, http_response: Response, request: 
             request.note,
             estimate=estimate if request.date_kind in {"unknown", "estimated_use_first"} else None,
             inference=inference if request.date_kind in {"unknown", "estimated_use_first"} else None,
+            estimate_basis=f"상품 유형 + 보관 방식 · {request.storage_type} 보관 기준",
             confidence=1.0 if request.user_confirmed else inference.storage_confidence,
             barcode=request.barcode,
             barcode_lot=request.barcode_lot,
@@ -10496,9 +10704,10 @@ def create_manual_food(http_request: Request, http_response: Response, request: 
             explicit_lot_correction = (
                 request.lot_action == "correct"
                 and request.target_food_id is not None
-                and request.date_source == "label_ocr"
-                and request.brand == "라벨 확인 필요"
-                and request.category == "기타"
+                and (
+                    (request.date_review_correction and request.date_source in {"label_ocr", "user_input"})
+                    or (request.date_source == "label_ocr" and request.brand == "라벨 확인 필요" and request.category == "기타")
+                )
             )
             preserve_product_identity = explicit_lot_correction
             if incoming_date_is_trusted and current_date_is_trusted:
@@ -11316,19 +11525,21 @@ def create_storage_event(http_request: Request, http_response: Response, food_id
 
 @app.patch("/api/foods/{food_id}/date-assertion", response_model=FoodResponse)
 def confirm_food_date(food_id: str, request: DateAssertionUpdateRequest) -> FoodResponse:
-    record = store.foods.get(food_id)
-    if record is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="식품을 찾을 수 없습니다.")
-    current = record.response.date_assertion
-    if current.kind not in {"unknown", "estimated_use_first"}:
-        if current.kind == request.kind and current.value == request.date_value and current.source_detail == request.source_detail:
-            return record.response
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="이미 확인된 표시 날짜는 이 화면에서 덮어쓰지 않습니다.",
-        )
+    changed = False
     try:
         def mutate() -> FoodResponse:
+            nonlocal changed
+            record = store.foods.get(food_id)
+            if record is None:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="식품을 찾을 수 없습니다.")
+            current = record.response.date_assertion
+            if current.kind == request.kind and current.value == request.date_value and current.source_detail == request.source_detail:
+                return record.response
+            if current.kind not in {"unknown", "estimated_use_first", "user_reminder"}:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="이미 확인된 표시 날짜는 이 화면에서 덮어쓰지 않습니다.",
+                )
             record.response.date_assertion_history.append(current.model_copy(deep=True))
             record.response.date_assertion = DateAssertion(
                 kind=request.kind,
@@ -11343,9 +11554,12 @@ def confirm_food_date(food_id: str, request: DateAssertionUpdateRequest) -> Food
             )
             record.response.estimated_use_first_window = None
             store.reprioritize(persist=False)
+            changed = True
             return record.response
 
-        return workspace_mutation.run(mutate)
+        return workspace_mutation.run(mutate, persist_when=lambda: changed)
+    except HTTPException:
+        raise
     except ConcurrentWorkspaceWriteError:
         # The Postgres store has already reloaded the winning workspace
         # snapshot. Restoring this request's stale copy would lose it.
@@ -11413,16 +11627,21 @@ def _build_meal_plan(
             servings=request.servings,
         ) is not None
     if planned is None:
+        recovery = MealPlanRecovery(kind="ingredients")
         if preference_filtered:
+            recovery = MealPlanRecovery(kind="allergens")
             no_match_title = "식단 조건에 맞는 메뉴가 없어요"
             no_match_reason = "현재 재료에 맞는 메뉴는 있지만, 설정한 알레르기 조건을 적용해 제외했어요."
         elif not selected:
+            recovery = MealPlanRecovery(kind="empty")
             no_match_title = "냉장고에 재료를 추가해 주세요"
             no_match_reason = "식품을 먼저 추가하면 냉장고에 있는 재료로 만들 메뉴를 찾아드려요."
         else:
             longer_plan = plan_recipe(
                 selected,
-                max((recipe.minutes for recipe in recipe_specs), default=request.max_minutes),
+                # Frozen lots add quick-thaw time on top of recipe minutes, so
+                # look up to the longest budget a request may carry.
+                180,
                 specs=recipe_specs,
                 exclude_recipe_ids=exclude_recipe_ids,
                 preferred_recipe_id=request.recipe_id,
@@ -11430,12 +11649,23 @@ def _build_meal_plan(
                 servings=request.servings,
             )
             if longer_plan is not None:
+                recovery = MealPlanRecovery(kind="time", minimum_minutes=longer_plan.total_minutes if 5 <= longer_plan.total_minutes <= 180 else None)
                 no_match_title = f"{request.max_minutes}분 안에 만들 메뉴를 찾지 못했어요"
                 no_match_reason = f"현재 재료에 맞는 메뉴는 있지만 {request.max_minutes}분보다 오래 걸려요. 조리 시간을 늘려 다시 찾아보세요."
             else:
-                no_match_title = "현재 재료로 만들 메뉴를 찾지 못했어요"
-                no_match_reason = f"선택한 재료와 수량으로 {request.servings}인분을 만들 메뉴가 없어요. 다른 재료를 함께 고르거나 수량·단위를 확인해 주세요."
+                review_food_ids = recipe_quantity_review_food_ids(
+                    selected, specs=recipe_specs, exclude_recipe_ids=exclude_recipe_ids,
+                    preferred_recipe_id=request.recipe_id, avoid_allergens=avoided_allergens,
+                )
+                if review_food_ids:
+                    recovery = MealPlanRecovery(kind="quantity", food_ids=list(review_food_ids)[:20])
+                    no_match_title = "재료 수량을 비교할 수 없어요"
+                    no_match_reason = "식품 기록의 수량·단위를 확인해 주세요."
+                else:
+                    no_match_title = "이 재료로 제안할 메뉴가 아직 없어요"
+                    no_match_reason = "다른 재료를 함께 등록해 보세요."
         return MealPlanResponse(
+            recovery=recovery,
             id=create_id("meal"),
             recipe_id="no-match",
             saved_at=None,
@@ -11499,6 +11729,19 @@ def _build_meal_plan(
         score=planned.score,
         reason=planned.reason,
         steps=list(planned.steps),
+        step_details=[
+            MealRecipeStepResponse(stage=step.stage, text=step.text, heat=step.heat, minutes=step.minutes)
+            for step in planned.step_details
+        ],
+        pantry_items=[
+            MealPantryItemResponse(name=item.name, amount=item.amount, unit=item.unit, optional=item.optional)
+            for item in planned.pantry
+        ],
+        frozen_food_ids=list(planned.frozen_food_ids),
+        thaw_required=bool(planned.thaw_food_ids),
+        thaw_food_ids=list(planned.thaw_food_ids),
+        thaw_minutes=planned.thaw_minutes,
+        total_minutes=planned.total_minutes,
         safety_note=planned.safety_note,
         recipe_source_name=planned.source_name,
         recipe_source_url=planned.source_url,
@@ -11785,22 +12028,36 @@ def _create_multi_day_meal_plan(request: MultiDayMealPlanSaveRequest) -> MultiDa
     return bundle
 
 
+def _multi_day_with_saved_records(bundle: MultiDayMealPlanResponse) -> MultiDayMealPlanResponse:
+    # Older bundles keep a preview snapshot; read the linked saved record without mutating it.
+    days = []
+    for day in bundle.days:
+        linked = store.meal_plans.get(day.meal_plan_id) if day.meal_plan_id else None
+        if linked is not None and linked.bundle_id == bundle.id and linked.bundle_day_index == day.day_index:
+            days.append(day.model_copy(update={"plan": linked.model_copy(deep=True)}))
+        else:
+            days.append(day)
+    return bundle.model_copy(update={"days": days})
+
+
 @app.get("/api/meal-plans/multi-day/latest", response_model=MultiDayMealPlanResponse | None)
 def get_latest_multi_day_meal_plan() -> MultiDayMealPlanResponse | None:
-    return max(
+    bundle = max(
         store.multi_day_meal_plans.values(),
         key=lambda plan: plan.saved_at or datetime.min.replace(tzinfo=timezone.utc),
         default=None,
     )
+    return _multi_day_with_saved_records(bundle) if bundle is not None else None
 
 
 @app.get("/api/meal-plans/multi-day/history", response_model=list[MultiDayMealPlanResponse])
 def list_multi_day_meal_plan_history(limit: int = Query(default=20, ge=1, le=50)) -> list[MultiDayMealPlanResponse]:
-    return sorted(
+    bundles = sorted(
         store.multi_day_meal_plans.values(),
         key=lambda plan: plan.saved_at or datetime.min.replace(tzinfo=timezone.utc),
         reverse=True,
     )[:limit]
+    return [_multi_day_with_saved_records(bundle) for bundle in bundles]
 
 
 def _resolve_multi_day_link(request: MealPlanRequest) -> MultiDayMealPlanDayResponse | None:
@@ -11843,6 +12100,9 @@ def _update_multi_day_day(
         raise RuntimeError("linked multi-day day belongs to another meal plan")
     day.status = status_value
     day.meal_plan_id = meal_plan_id
+    linked = store.meal_plans.get(meal_plan_id)
+    if linked is not None:
+        day.plan = linked.model_copy(deep=True)
     if completed_at is not None:
         day.completed_at = completed_at
 
@@ -11998,8 +12258,8 @@ def _shopping_shortage(ingredient: MealIngredientResponse) -> float:
     if ingredient.available:
         return 0
     if ingredient.available_quantity is not None and ingredient.available_unit and _same_quantity_unit(ingredient.available_unit, ingredient.unit):
-        return round(max(0, ingredient.amount - ingredient.available_quantity), 3)
-    return round(ingredient.amount, 3)
+        return float(max(Decimal(0), Decimal(str(ingredient.amount)) - Decimal(str(ingredient.available_quantity))))
+    return ingredient.amount
 
 
 def _current_plan_for_shopping(plan: MealPlanResponse, selected_foods: list[FoodResponse] | None = None) -> MealPlanResponse | None:
@@ -12013,8 +12273,10 @@ def _current_plan_for_shopping(plan: MealPlanResponse, selected_foods: list[Food
         MealPlanRequest(
             inventory_ids=inventory_ids,
             # Recheck stock for the already chosen recipe, including legacy
-            # plans whose duration exceeded the original search time limit.
-            max_minutes=max(plan.max_minutes, plan.minutes),
+            # plans whose duration exceeded the original search time limit
+            # and plans whose lots became frozen (thaw time) after saving.
+            # This is a stock recheck, not a new time-limited search.
+            max_minutes=180,
             recipe_id=plan.recipe_id,
             servings=plan.servings,
         ),
@@ -12071,7 +12333,7 @@ def _shopping_candidates(source_type: Literal["meal_plan", "multi_day"], source_
                 existing.sources.append(source)
             else:
                 matching_source.quantity = shortage
-            existing.quantity = round(sum(candidate.quantity for candidate in existing.sources), 3)
+            existing.quantity = float(sum((Decimal(str(candidate.quantity)) for candidate in existing.sources), Decimal(0)))
             existing.updated_at = now
 
     if source_type == "meal_plan":
@@ -12093,16 +12355,27 @@ def _shopping_candidates(source_type: Literal["meal_plan", "multi_day"], source_
             for food_id, quantity, unit in _plan_allocations(ingredient):
                 for index, food in enumerate(working):
                     if food.id == food_id and _same_quantity_unit(food.unit, unit):
-                        working[index] = food.model_copy(update={"quantity": round(max(0, food.quantity - quantity), 3)})
+                        working[index] = food.model_copy(update={"quantity": float(max(Decimal(0), Decimal(str(food.quantity)) - Decimal(str(quantity))))})
                         break
     return candidates
 
 
+def _current_shopping_receive(item: ShoppingListItemResponse) -> ShoppingListReceiveOperation | None:
+    if not item.checked:
+        return None
+    matches = [operation for operation in store.shopping_receive_operations.values()
+               if operation.shopping_item_id == item.id
+               and operation.canonical_name == item.canonical_name and operation.unit == item.unit
+               and operation.occurred_at >= (item.purchase_cycle_started_at or item.updated_at)]
+    return max(matches, key=lambda operation: operation.occurred_at, default=None)
+
+
 def _sorted_shopping_list() -> list[ShoppingListItemResponse]:
-    return sorted(
-        (item.model_copy(deep=True) for item in store.shopping_list.values()),
-        key=lambda item: (item.checked, item.canonical_name, item.unit, item.id),
-    )
+    items = []
+    for item in store.shopping_list.values():
+        operation = _current_shopping_receive(item)
+        items.append(item.model_copy(update={"received_food_id": operation.food_id if operation else None}, deep=True))
+    return sorted(items, key=lambda item: (item.checked, item.canonical_name, item.unit, item.id))
 
 
 def _sync_shopping_list(
@@ -12124,20 +12397,22 @@ def _sync_shopping_list(
             del store.shopping_list[item_id]
             removed_count += 1
             continue
-        new_quantity = round(sum(source.quantity for source in new_sources), 3)
-        if new_sources != current.sources or new_quantity != current.quantity:
+        new_quantity = float(sum((Decimal(str(source.quantity)) for source in new_sources), Decimal(0)))
+        same_sources = sorted(source.model_dump_json() for source in new_sources) == sorted(source.model_dump_json() for source in current.sources)
+        if not same_sources or new_quantity != current.quantity:
             store.shopping_list[item_id] = current.model_copy(
                 update={
                     "quantity": new_quantity,
                     "sources": new_sources,
                     "checked": current.checked if new_quantity == current.quantity else False,
                     "updated_at": now,
+                    "purchase_cycle_started_at": (current.purchase_cycle_started_at or current.updated_at) if new_quantity == current.quantity else now,
                 }
             )
             updated_count += 1
         candidates.pop(item_id, None)
     for item_id, candidate in candidates.items():
-        store.shopping_list[item_id] = candidate.model_copy(update={"updated_at": now})
+        store.shopping_list[item_id] = candidate.model_copy(update={"updated_at": now, "purchase_cycle_started_at": now})
         added_count += 1
     if persist:
         store.flush()
@@ -12163,17 +12438,23 @@ def _reconcile_shopping_list_sources(*, persist: bool = True) -> None:
 @app.get("/api/shopping-list", response_model=list[ShoppingListItemResponse])
 def get_shopping_list() -> list[ShoppingListItemResponse]:
     try:
+        shopping_changed = False
         def reconcile_and_read() -> list[ShoppingListItemResponse]:
+            nonlocal shopping_changed
+            before = _sorted_shopping_list()
             _reconcile_shopping_list_sources(persist=False)
-            return _sorted_shopping_list()
+            after = _sorted_shopping_list()
+            shopping_changed = before != after
+            return after
 
-        # Reconciliation is a derived read that still flushes source changes.
+        # Reconciliation flushes only real source changes. An unchanged read
+        # must not advance the revision and invalidate open food drafts.
         # Two API processes can therefore race while warming the same list. A
         # bounded reload/retry adopts the winner's snapshot; it never merges
         # the stale request or loops indefinitely.
         for attempt in range(2):
             try:
-                return workspace_mutation.run(reconcile_and_read)
+                return workspace_mutation.run(reconcile_and_read, persist_when=lambda: shopping_changed)
             except ConcurrentWorkspaceWriteError:
                 if attempt == 1:
                     raise
@@ -12234,7 +12515,7 @@ def _add_manual_shopping_list_item(
 
     item_id = _shopping_item_id(canonical_name, unit)
     source_id = f"manual:{item_id}"
-    quantity = round(request.quantity, 3)
+    quantity = request.quantity
     now = datetime.now(timezone.utc)
     source = ShoppingListSourceResponse(source_type="manual", source_id=source_id, quantity=quantity)
     current = store.shopping_list.get(item_id)
@@ -12245,6 +12526,7 @@ def _add_manual_shopping_list_item(
             quantity=quantity,
             unit=unit,
             checked=False,
+            purchase_cycle_started_at=now,
             sources=[source],
             created_at=now,
             updated_at=now,
@@ -12254,13 +12536,17 @@ def _add_manual_shopping_list_item(
     else:
         retained_sources = [candidate.model_copy(deep=True) for candidate in current.sources if candidate.source_type != "manual"]
         new_sources = retained_sources + [source]
-        new_quantity = round(sum(candidate.quantity for candidate in new_sources), 3)
+        new_quantity = float(sum((Decimal(str(candidate.quantity)) for candidate in new_sources), Decimal(0)))
+        same_sources = sorted(candidate.model_dump_json() for candidate in new_sources) == sorted(candidate.model_dump_json() for candidate in current.sources)
+        if same_sources and new_quantity == current.quantity:
+            return ShoppingListMutationResponse(items=_sorted_shopping_list(), added_count=0, updated_count=0, removed_count=0)
         store.shopping_list[item_id] = current.model_copy(
             update={
                 "quantity": new_quantity,
                 "sources": new_sources,
                 "checked": current.checked if new_quantity == current.quantity else False,
                 "updated_at": now,
+                "purchase_cycle_started_at": (current.purchase_cycle_started_at or current.updated_at) if new_quantity == current.quantity else now,
             }
         )
         added_count = 0
@@ -12279,9 +12565,12 @@ def _add_manual_shopping_list_item(
 @app.post("/api/shopping-list/manual", response_model=ShoppingListMutationResponse)
 def add_manual_shopping_list_item(request: ShoppingListManualItemRequest) -> ShoppingListMutationResponse:
     try:
-        return workspace_mutation.run(
-            lambda: _add_manual_shopping_list_item(request, persist=False)
-        )
+        result: ShoppingListMutationResponse | None = None
+        def mutate() -> ShoppingListMutationResponse:
+            nonlocal result
+            result = _add_manual_shopping_list_item(request, persist=False)
+            return result
+        return workspace_mutation.run(mutate, persist_when=lambda: result is not None and bool(result.added_count or result.updated_count or result.removed_count))
     except HTTPException:
         raise
     except ConcurrentWorkspaceWriteError:
@@ -12306,6 +12595,12 @@ def _shopping_receive_key_digest(idempotency_key: str) -> str:
     return operation_ledger.key_digest(idempotency_key)
 
 
+def _shopping_receive_quantity_fingerprint(quantity: float) -> str:
+    # Keep existing three-digit operation records replayable without collapsing
+    # distinct quantities that the API also accepts.
+    return f"{quantity:.3f}" if round(quantity, 3) == quantity else str(quantity)
+
+
 def _shopping_receive_request_fingerprint(
     item_id: str,
     quantity: float,
@@ -12316,7 +12611,7 @@ def _shopping_receive_request_fingerprint(
         {
             "workspace_id": current_workspace_id(),
             "shopping_item_id": item_id,
-            "quantity": f"{quantity:.3f}",
+            "quantity": _shopping_receive_quantity_fingerprint(quantity),
             "storage_type": storage_type,
             "storage_location_id": storage_location_id,
         }
@@ -12332,7 +12627,7 @@ def _shopping_receive_payload_fingerprint(
     return operation_ledger.fingerprint(
         {
             "shopping_item_id": item_id,
-            "quantity": f"{quantity:.3f}",
+            "quantity": _shopping_receive_quantity_fingerprint(quantity),
             "storage_type": storage_type,
             "storage_location_id": storage_location_id,
         }
@@ -12444,7 +12739,7 @@ def _shopping_receive_replay_response(
             and operation.request_payload_fingerprint != payload_fingerprint
         )
         or (operation.idempotency_key_digest is not None and operation.idempotency_key_digest != key_digest)
-        or abs(operation.quantity - received_quantity) > 1e-9
+        or operation.quantity != received_quantity
         or operation.storage_type != storage_type
         or operation.storage_location_id != storage_location_id
     ):
@@ -12473,7 +12768,7 @@ def receive_shopping_list_item(
     request: ShoppingListReceiveRequest,
 ) -> ShoppingListReceiveResponse:
     idempotency_key = _request_idempotency_key(http_request)
-    received_quantity = round(request.quantity, 3)
+    received_quantity = request.quantity
     idempotent_lot_id = _shopping_receive_lot_id(item_id, idempotency_key) if idempotency_key else None
     request_fingerprint = (
         _shopping_receive_request_fingerprint(item_id, received_quantity, request.storage_type, request.storage_location_id)
@@ -12517,7 +12812,7 @@ def receive_shopping_list_item(
                 ):
                     raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="같은 Idempotency-Key로 다른 장보기 항목을 반영할 수 없습니다.")
                 if (
-                    abs(existing_lot.response.quantity - received_quantity) > 1e-9
+                    existing_lot.response.quantity != received_quantity
                     or existing_lot.response.storage_type != request.storage_type
                     or existing_lot.response.storage_location_id != request.storage_location_id
                 ):
@@ -12585,6 +12880,13 @@ def receive_shopping_list_item(
         item = store.shopping_list.get(item_id)
         if item is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="장보기 항목을 찾을 수 없습니다.")
+
+        if _current_shopping_receive(item) is not None:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail={
+                "code": "shopping_purchase_already_received",
+                "detail": "이미 식품 목록에 추가한 구매예요. 새 구매라면 구매 완료 표시를 해제해 주세요.",
+                "food_id": _current_shopping_receive(item).food_id,
+            })
 
         planned_sources_before = {
             (source.source_type, source.source_id, source.day_index)
@@ -12693,9 +12995,14 @@ def update_shopping_list_item(item_id: str, request: ShoppingListItemUpdateReque
     if item is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="장보기 항목을 찾을 수 없습니다.")
 
+    if item.checked == request.checked:
+        operation = _current_shopping_receive(item)
+        return item.model_copy(update={"received_food_id": operation.food_id if operation else None}, deep=True)
+
     def mutate() -> ShoppingListItemResponse:
         item.checked = request.checked
         item.updated_at = datetime.now(timezone.utc)
+        item.purchase_cycle_started_at = item.updated_at
         return item.model_copy(deep=True)
 
     try:
@@ -12802,18 +13109,18 @@ def _complete_meal_plan_locked(plan_id: str, request: MealPlanCompletionRequest)
         for consumption in request.consumptions:
             if consumption.food_id in requested_quantities:
                 raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="같은 lot의 사용량을 중복해서 보낼 수 없습니다.")
-            requested_quantities[consumption.food_id] = round(consumption.quantity, 3)
+            requested_quantities[consumption.food_id] = consumption.quantity
         allowed_quantities: dict[str, float] = {}
         for ingredient in plan.ingredients:
             for food_id, allocation_quantity, _ in _plan_allocations(ingredient):
-                allowed_quantities[food_id] = round(allowed_quantities.get(food_id, 0) + allocation_quantity, 3)
+                allowed_quantities[food_id] = float(Decimal(str(allowed_quantities.get(food_id, 0))) + Decimal(str(allocation_quantity)))
         unknown_food_ids = sorted(set(requested_quantities) - set(allowed_quantities))
         if unknown_food_ids:
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="식단에 배정되지 않은 lot의 사용량입니다.")
         exceeding_food_ids = sorted(
             food_id
             for food_id, quantity in requested_quantities.items()
-            if quantity > allowed_quantities[food_id] + 1e-9
+            if quantity > allowed_quantities[food_id]
         )
         if exceeding_food_ids:
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="사용량이 식단 배정량을 초과했습니다.")
@@ -12895,7 +13202,7 @@ def _complete_meal_plan_locked(plan_id: str, request: MealPlanCompletionRequest)
             )
             grocy_sync_statuses.append(storage_event.grocy_sync_status)
             consumed_food_ids.append(food_id)
-            consumed_allocations.append(MealIngredientAllocationResponse(food_id=food_id, quantity=allocation_quantity, unit=allocation_unit))
+            consumed_allocations.append(MealIngredientAllocationResponse(food_id=food_id, quantity=allocation_quantity, unit=mutation.unit))
 
     if not consumed_food_ids:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="현재 재고가 바뀌어 조리 완료를 기록할 수 없습니다.")

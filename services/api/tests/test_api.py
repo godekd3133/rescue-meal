@@ -42,6 +42,66 @@ from app.planner import RecipeIngredient, RecipeSpec
 client = TestClient(app)
 
 
+@pytest.mark.parametrize("quantity", [0.1234, 0.0004])
+def test_cooking_completion_preserves_exact_selected_portion(quantity):
+    saved = client.post("/api/meal-plans", json={"inventory_ids": ["spinach-1", "tofu-1", "chicken-1"], "plan_id": "precise-cooking"})
+    assert saved.status_code == 200
+    completed = client.post("/api/meal-plans/precise-cooking/complete", json={"consumptions": [{"food_id": "chicken-1", "quantity": quantity}]})
+    assert completed.status_code == 200
+    assert completed.json()["consumed_allocations"] == [{"food_id": "chicken-1", "quantity": quantity, "unit": "팩"}]
+    from decimal import Decimal
+    assert Decimal(str(store.foods["chicken-1"].response.quantity)) + Decimal(str(quantity)) == Decimal("2")
+
+
+def test_metric_plan_save_and_completion_keep_a_subgram_allocation(monkeypatch):
+    store.foods["spinach-1"].response.quantity = 0.5
+    store.foods["spinach-1"].response.unit = "kg"
+    spec = RecipeSpec(id="subgram-spinach", title="시금치 수량 검증", minutes=10,
+        ingredients=(RecipeIngredient(canonical_name="시금치", amount=0.4, unit="g"),),
+        steps=("조리합니다.",), safety_note="상태를 확인하세요.")
+    monkeypatch.setattr(main_module, "load_recipe_specs", lambda: (spec,))
+    saved = client.post("/api/meal-plans", json={"inventory_ids": ["spinach-1"], "plan_id": "subgram-plan"})
+    assert saved.status_code == 200
+    assert saved.json()["ingredients"][0]["allocations"][0]["quantity"] == 0.0004
+    overage = client.post("/api/meal-plans/subgram-plan/complete", json={"consumptions": [{"food_id": "spinach-1", "quantity": 0.0004000001}]})
+    assert overage.status_code == 422
+    assert store.foods["spinach-1"].response.quantity == 0.5
+    completed = client.post("/api/meal-plans/subgram-plan/complete", json={"consumptions": [{"food_id": "spinach-1", "quantity": 0.0004}]})
+    assert completed.status_code == 200
+    assert completed.json()["consumed_allocations"][0]["quantity"] == 0.0004
+    assert store.foods["spinach-1"].response.quantity == 0.4996
+
+
+@pytest.mark.parametrize("quantity", [1.1234, 0.0001])
+def test_manual_shopping_and_receive_preserve_requested_quantity_on_retry(quantity) -> None:
+    added = client.post("/api/shopping-list/manual", json={"canonical_name": "수량 보존 우유", "quantity": quantity, "unit": "L"})
+    assert added.status_code == 200
+    item = next(item for item in added.json()["items"] if item["canonical_name"] == "수량 보존 우유")
+    assert item["quantity"] == quantity
+    assert item["sources"][0]["quantity"] == quantity
+    updated = client.post("/api/shopping-list/manual", json={"canonical_name": "수량 보존 우유", "quantity": quantity, "unit": "L"})
+    assert updated.status_code == 200
+    assert updated.json()["updated_count"] == 0
+    readback = client.get("/api/shopping-list")
+    assert readback.status_code == 200
+    assert next(row for row in readback.json() if row["id"] == item["id"])["quantity"] == quantity
+    endpoint = f"/api/shopping-list/{item['id']}/receive"
+    body = {"quantity": quantity, "storage_type": "refrigerated"}
+    first = client.post(endpoint, headers={"Idempotency-Key": "quantity-precision-receive"}, json=body)
+    assert first.status_code == 201
+    assert first.json()["received_quantity"] == quantity
+    assert first.json()["inventory_lot"]["quantity"] == quantity
+    food_id = first.json()["inventory_lot"]["id"]
+    count = len(store.foods)
+    replay = client.post(endpoint, headers={"Idempotency-Key": "quantity-precision-receive"}, json=body)
+    assert replay.status_code == 201
+    assert replay.json()["received_quantity"] == quantity
+    assert replay.json()["inventory_lot"]["id"] == food_id
+    assert len(store.foods) == count
+    changed = client.post(endpoint, headers={"Idempotency-Key": "quantity-precision-receive"}, json={**body, "quantity": quantity + 0.0000000001})
+    assert changed.status_code == 409
+
+
 def test_postgres_unavailable_errors_expose_safe_retry_contract() -> None:
     import asyncio
 
@@ -158,6 +218,18 @@ def test_custom_storage_location_crud_and_lot_assignment_keep_canonical_class() 
             "quantity": 1,
             "unit": "모",
             "storage_type": "ambient",
+            "storage_location_id": location["id"],
+        },
+    )
+    assert food.status_code == 409
+    assert food.json()["detail"]["code"] == "storage_location_type_mismatch"
+    food = client.post(
+        "/api/foods",
+        json={
+            "canonical_name": "김치냉장고 보관 두부",
+            "quantity": 1,
+            "unit": "모",
+            "storage_type": "refrigerated",
             "storage_location_id": location["id"],
         },
     )
@@ -794,6 +866,59 @@ def test_cookrcp_status_is_safe_and_does_not_call_external_service(monkeypatch) 
     assert "test-only-key" not in ready.text
 
 
+def test_new_guest_workspace_starts_empty_while_demo_keeps_examples() -> None:
+    headers = _guest_headers()
+    dashboard = client.get("/api/dashboard", headers=headers)
+    assert dashboard.status_code == 200
+    assert dashboard.json()["food_count"] == 0
+    assert dashboard.json()["inventory"] == []
+    assert dashboard.json()["rescue_queue"] == []
+    assert client.get("/api/shopping-list", headers=headers).json() == []
+    assert client.get("/api/receipts", headers=headers).json() == []
+    assert client.get("/api/dashboard").json()["food_count"] == 7
+
+
+def test_empty_guest_transfer_does_not_offer_demo_food_as_user_records() -> None:
+    guest = client.post("/api/auth/guest").json()
+    account = client.post("/api/auth/register", json={
+        "email": f"empty-guest-{uuid4().hex}@example.com", "password": "correct-horse-battery",
+    })
+    assert account.status_code == 201
+    headers = {"Authorization": f"Bearer {account.json()['access_token']}"}
+    preview = client.post("/api/account/guest-transfer/preview", headers=headers, json={"guest_access_token": guest["access_token"]})
+    assert preview.status_code == 200
+    assert preview.json()["status"] == "empty"
+    assert preview.json()["food_count"] == 0
+    assert client.get("/api/dashboard", headers=headers).json()["food_count"] == 0
+
+
+def test_guest_empty_and_user_food_survive_sqlite_router_reconstruction(tmp_path, monkeypatch) -> None:
+    database_path = str(tmp_path / "first-run.db")
+    first = main_module.WorkspaceStoreRouter(SqliteStore(database_path))
+    monkeypatch.setattr(main_module, "store", first)
+    monkeypatch.setattr(main_module, "workspace_mutation", main_module.WorkspaceMutation(first, main_module.ConcurrentWorkspaceWriteError))
+    empty_headers = _guest_headers()
+    food_headers = _guest_headers()
+    assert client.get("/api/dashboard", headers=empty_headers).json()["food_count"] == 0
+    created = client.post("/api/foods", headers=food_headers, json={
+        "canonical_name": "내가 저장한 양파", "quantity": 2, "unit": "개", "storage_type": "ambient",
+    })
+    assert created.status_code == 201
+    food_id = created.json()["id"]
+    first.close()
+    reopened = main_module.WorkspaceStoreRouter(SqliteStore(database_path))
+    monkeypatch.setattr(main_module, "store", reopened)
+    try:
+        assert client.get("/api/dashboard", headers=empty_headers).json()["inventory"] == []
+        inventory = client.get("/api/dashboard", headers=food_headers).json()["inventory"]
+        assert len(inventory) == 1
+        assert inventory[0]["id"] == food_id
+        assert inventory[0]["quantity"] == 2
+        assert client.get("/api/dashboard").json()["food_count"] == 7
+    finally:
+        reopened.close()
+
+
 def test_guest_workspaces_isolate_inventory_from_demo_and_each_other() -> None:
     guest_one = _guest_headers()
     guest_two = _guest_headers()
@@ -803,8 +928,8 @@ def test_guest_workspaces_isolate_inventory_from_demo_and_each_other() -> None:
         json={"canonical_name": "workspace-one-food", "quantity": 1, "unit": "개", "storage_type": "ambient"},
     )
     assert created.status_code == 201
-    assert len(client.get("/api/dashboard", headers=guest_one).json()["inventory"]) == 8
-    assert len(client.get("/api/dashboard", headers=guest_two).json()["inventory"]) == 7
+    assert len(client.get("/api/dashboard", headers=guest_one).json()["inventory"]) == 1
+    assert len(client.get("/api/dashboard", headers=guest_two).json()["inventory"]) == 0
     assert len(client.get("/api/dashboard").json()["inventory"]) == 7
     assert client.get("/api/inventory/search", headers=guest_one, params={"q": "workspace-one-food"}).json()["total"] == 1
     assert client.get("/api/inventory/search", headers=guest_two, params={"q": "workspace-one-food"}).json()["total"] == 0
@@ -813,7 +938,7 @@ def test_guest_workspaces_isolate_inventory_from_demo_and_each_other() -> None:
 
 def test_account_can_explicitly_transfer_guest_workspace_once_without_deleting_source() -> None:
     guest_session = client.post("/api/auth/guest")
-    assert guest_session.status_code == 200
+    assert guest_session.status_code == 201
     guest_token = guest_session.json()["access_token"]
     guest_headers = {"Authorization": f"Bearer {guest_token}"}
     created = client.post(
@@ -868,7 +993,7 @@ def test_account_can_explicitly_transfer_guest_workspace_once_without_deleting_s
     )
     assert preview.status_code == 200
     assert preview.json()["status"] == "ready"
-    assert preview.json()["food_count"] == 8
+    assert preview.json()["food_count"] == 1
     assert preview.json()["shopping_list_count"] == 0
     assert preview.json()["shopping_receive_operation_count"] == 0
     assert preview.json()["meal_preferences_changed"] is True
@@ -881,13 +1006,13 @@ def test_account_can_explicitly_transfer_guest_workspace_once_without_deleting_s
     )
     assert transferred.status_code == 200
     assert transferred.json()["status"] == "completed"
-    assert transferred.json()["imported_food_count"] == 8
+    assert transferred.json()["imported_food_count"] == 1
     assert transferred.json()["imported_shopping_list_count"] == 0
     assert transferred.json()["imported_shopping_receive_operation_count"] == 0
     assert transferred.json()["imported_meal_preferences"] is True
     assert transferred.json()["imported_notification_preferences"] is True
-    assert client.get("/api/dashboard", headers=account_headers).json()["food_count"] == 8
-    assert client.get("/api/dashboard", headers=guest_headers).json()["food_count"] == 8
+    assert client.get("/api/dashboard", headers=account_headers).json()["food_count"] == 1
+    assert client.get("/api/dashboard", headers=guest_headers).json()["food_count"] == 1
     transferred_food = next(item for item in client.get("/api/dashboard", headers=account_headers).json()["inventory"] if item["id"] == created.json()["id"])
     assert transferred_food["product_provenance"]["source"] == "open_food_facts"
     transferred_history = client.get(f"/api/foods/{created.json()['id']}/product-provenance/events", headers=account_headers)
@@ -920,7 +1045,7 @@ def test_account_can_explicitly_transfer_guest_workspace_once_without_deleting_s
 
 def test_guest_receive_idempotency_survives_guest_to_account_transfer() -> None:
     guest_session = client.post("/api/auth/guest")
-    assert guest_session.status_code == 200
+    assert guest_session.status_code == 201
     guest_token = guest_session.json()["access_token"]
     guest_headers = {"Authorization": f"Bearer {guest_token}"}
 
@@ -986,7 +1111,7 @@ def test_guest_receive_idempotency_survives_guest_to_account_transfer() -> None:
 
 def test_guest_transfer_does_not_overwrite_an_existing_account_workspace() -> None:
     guest_session = client.post("/api/auth/guest")
-    assert guest_session.status_code == 200
+    assert guest_session.status_code == 201
     guest_token = guest_session.json()["access_token"]
     guest_headers = {"Authorization": f"Bearer {guest_token}"}
     created_guest_food = client.post(
@@ -1021,12 +1146,12 @@ def test_guest_transfer_does_not_overwrite_an_existing_account_workspace() -> No
     )
     assert transfer.status_code == 409
     assert client.get("/api/dashboard", headers=account_headers).json()["food_count"] == 1
-    assert client.get("/api/dashboard", headers=guest_headers).json()["food_count"] == 8
+    assert client.get("/api/dashboard", headers=guest_headers).json()["food_count"] == 1
 
 
 def test_guest_transfer_flush_failure_restores_target_and_allows_retry() -> None:
     guest_session = client.post("/api/auth/guest")
-    assert guest_session.status_code == 200
+    assert guest_session.status_code == 201
     guest_token = guest_session.json()["access_token"]
     guest_headers = {"Authorization": f"Bearer {guest_token}"}
     created = client.post(
@@ -1068,12 +1193,12 @@ def test_guest_transfer_flush_failure_restores_target_and_allows_retry() -> None
 
     assert retried.status_code == 200
     assert retried.json()["status"] == "completed"
-    assert retried.json()["imported_food_count"] == 8
+    assert retried.json()["imported_food_count"] == 1
 
 
 def test_guest_transfer_rechecks_target_under_ordered_workspace_locks(monkeypatch) -> None:
     guest_session = client.post("/api/auth/guest")
-    assert guest_session.status_code == 200
+    assert guest_session.status_code == 201
     guest_token = guest_session.json()["access_token"]
     guest_headers = {"Authorization": f"Bearer {guest_token}"}
     created = client.post(
@@ -3976,10 +4101,10 @@ def test_shopping_list_build_and_manual_add_use_workspace_mutation_recovery_seam
     calls = 0
     original_run = main_module.workspace_mutation.run
 
-    def observed_run(mutation):
+    def observed_run(mutation, **kwargs):
         nonlocal calls
         calls += 1
-        return original_run(mutation)
+        return original_run(mutation, **kwargs)
 
     monkeypatch.setattr(main_module.workspace_mutation, "run", observed_run)
 
@@ -4035,10 +4160,10 @@ def test_shopping_list_read_reconciliation_uses_workspace_mutation_recovery_seam
     calls = 0
     original_run = main_module.workspace_mutation.run
 
-    def observed_run(mutation):
+    def observed_run(mutation, **kwargs):
         nonlocal calls
         calls += 1
-        return original_run(mutation)
+        return original_run(mutation, **kwargs)
 
     monkeypatch.setattr(main_module.workspace_mutation, "run", observed_run)
 
@@ -4053,12 +4178,12 @@ def test_shopping_list_read_reconciliation_retries_after_concurrent_workspace_co
     calls = 0
     original_run = main_module.workspace_mutation.run
 
-    def raise_once(mutation):
+    def raise_once(mutation, **kwargs):
         nonlocal calls
         calls += 1
         if calls == 1:
             raise ConcurrentWorkspaceWriteError("shopping list read lost a concurrent reconciliation race")
-        return original_run(mutation)
+        return original_run(mutation, **kwargs)
 
     monkeypatch.setattr(main_module.workspace_mutation, "run", raise_once)
 
@@ -4164,6 +4289,10 @@ def test_legacy_saved_plan_shopping_shortage_updates_after_partial_and_full_rece
     recipe = main_module.load_recipe_specs()[0]
     monkeypatch.setattr(main_module, "load_recipe_specs", lambda: (recipe,))
     store.foods.pop("tofu-1")
+    # The seed chicken lot is frozen; its quick thaw would push this 15-minute
+    # recipe past the 15-minute limit. This test is about legacy shortage
+    # recomputation, so use a refrigerated lot.
+    store.foods["chicken-1"].response.storage_type = "refrigerated"
     source_id = f"legacy-time-limit-{source_type}"
     plan_request = {"inventory_ids": ["spinach-1", "chicken-1"], "max_minutes": 15}
     if source_type == "meal_plan":
@@ -4566,6 +4695,7 @@ def test_meal_plan_no_match_copy_covers_known_allergen_exclusions(monkeypatch) -
     payload = filtered.json()
     assert payload["preference_filtered"] is True
     assert payload["title"] == "식단 조건에 맞는 메뉴가 없어요"
+    assert payload["recovery"]["kind"] == "allergens"
     assert payload["reason"] == "현재 재료에 맞는 메뉴는 있지만, 설정한 알레르기 조건을 적용해 제외했어요."
     assert payload["preference_note"] == "피하도록 설정한 알레르기가 있거나, 알레르기 정보를 확인할 수 없는 메뉴는 제외했어요."
 
@@ -4594,6 +4724,11 @@ def test_meal_plan_no_match_explains_a_time_limit_without_requesting_new_stock(m
     payload = response.json()
     assert payload["recipe_id"] == "no-match"
     assert payload["title"] == "10분 안에 만들 메뉴를 찾지 못했어요"
+    # chicken-1 is a frozen seed lot, so the smallest workable budget includes
+    # the planner's quick-thaw estimate.
+    from app.planner import DEFAULT_THAW_MINUTES
+
+    assert payload["recovery"] == {"kind": "time", "minimum_minutes": recipe.minutes + DEFAULT_THAW_MINUTES, "food_ids": []}
     assert "조리 시간을 늘려" in payload["reason"]
     assert "식품을 먼저 추가" not in payload["reason"]
     assert payload["preference_filtered"] is False
@@ -4607,6 +4742,7 @@ def test_meal_plan_no_match_explains_empty_inventory() -> None:
     payload = response.json()
     assert payload["recipe_id"] == "no-match"
     assert payload["title"] == "냉장고에 재료를 추가해 주세요"
+    assert payload["recovery"]["kind"] == "empty"
     assert "식품을 먼저 추가" in payload["reason"]
     assert payload["preference_filtered"] is False
 
@@ -4622,9 +4758,9 @@ def test_meal_plan_no_match_with_stock_explains_ingredient_or_quantity_mismatch(
     assert response.status_code == 200
     payload = response.json()
     assert payload["recipe_id"] == "no-match"
-    assert payload["title"] == "현재 재료로 만들 메뉴를 찾지 못했어요"
-    assert "2인분" in payload["reason"]
-    assert "수량·단위" in payload["reason"]
+    assert payload["title"] == "이 재료로 제안할 메뉴가 아직 없어요"
+    assert payload["recovery"]["kind"] == "ingredients"
+    assert "수량·단위" not in payload["reason"]
     assert "식품을 먼저 추가" not in payload["reason"]
 
 
@@ -5394,6 +5530,39 @@ def test_product_info_correction_clears_source_and_preserves_date_and_storage() 
     assert len(client.get(f"/api/foods/{food_id}/product-info/events").json()) == 1
 
 
+@pytest.mark.parametrize("original_brand", ["", "기존 브랜드"])
+@pytest.mark.parametrize("next_brand", ["", "   "])
+def test_product_info_update_allows_unknown_brand_and_records_it(original_brand, next_brand) -> None:
+    created = client.post("/api/foods", json={
+        "canonical_name": "이름 수정 전 채소", "brand": original_brand,
+        "quantity": 2, "unit": "팩", "storage_type": "refrigerated", "category": "채소",
+    })
+    assert created.status_code == 201
+    food_id = created.json()["id"]
+    updated = client.patch(f"/api/foods/{food_id}/product-info", json={
+        "canonical_name": "이름 수정 후 채소", "brand": next_brand, "category": "채소",
+    })
+    assert updated.status_code == 200
+    assert updated.json()["brand"] == ""
+    assert updated.json()["quantity"] == 2
+    assert updated.json()["storage_type"] == "refrigerated"
+    assert updated.json()["date_assertion"] == created.json()["date_assertion"]
+    events = client.get(f"/api/foods/{food_id}/product-info/events")
+    assert events.status_code == 200
+    assert events.json()[0]["before"]["brand"] == original_brand
+    assert events.json()[0]["after"]["brand"] == ""
+    inventory = client.get("/api/inventory/search", params={"q": "이름 수정 후 채소"}).json()["items"]
+    assert next(food for food in inventory if food["id"] == food_id)["brand"] == ""
+
+
+@pytest.mark.parametrize("field", ["canonical_name", "category"])
+def test_product_info_update_still_requires_name_and_category(field) -> None:
+    payload = {"canonical_name": "시금치", "brand": "", "category": "채소"}
+    payload[field] = "   "
+    response = client.patch("/api/foods/spinach-1/product-info", json=payload)
+    assert response.status_code == 422
+
+
 def test_product_info_update_uses_workspace_mutation_recovery_seam(monkeypatch) -> None:
     calls = 0
     original_run = main_module.workspace_mutation.run
@@ -5525,7 +5694,8 @@ def test_confirmed_label_date_updates_existing_food_without_duplicate() -> None:
     assert len(client.get("/api/dashboard").json()["inventory"]) == 7
 
 
-def test_explicit_label_lot_correction_replaces_confirmed_date_and_keeps_history() -> None:
+@pytest.mark.parametrize("brand, explicit_review, date_source", [("라벨 확인 필요", False, "label_ocr"), ("", True, "label_ocr"), ("", True, "user_input")])
+def test_explicit_label_lot_correction_replaces_confirmed_date_and_keeps_history(brand: str, explicit_review: bool, date_source: str) -> None:
     response = client.post(
         "/api/foods",
         json={
@@ -5536,11 +5706,12 @@ def test_explicit_label_lot_correction_replaces_confirmed_date_and_keeps_history
             "unit": "팩",
             "storage_type": "ambient",
             "category": "기타",
-            "brand": "라벨 확인 필요",
+            "brand": brand,
+            "date_review_correction": explicit_review,
             "image_path": "/assets/food/tomato-photo.jpg",
             "date_kind": "sell_by",
             "date_value": "2026-09-13",
-            "date_source": "label_ocr",
+            "date_source": date_source,
             "date_source_detail": "포장지 유통기한",
             "applicable_storage_type": "ambient",
             "storage_condition_text": "직사광선을 피해 실온보관",
@@ -5554,7 +5725,7 @@ def test_explicit_label_lot_correction_replaces_confirmed_date_and_keeps_history
     assert payload["unit"] == "팩"
     assert payload["date_assertion"]["kind"] == "sell_by"
     assert payload["date_assertion"]["value"] == "2026-09-13"
-    assert payload["date_assertion"]["source"] == "label_ocr"
+    assert payload["date_assertion"]["source"] == date_source
     assert payload["date_assertion"]["applicable_storage_type"] == "ambient"
     assert payload["storage_type"] == "ambient"
     assert payload["brand"] == "국내산 시금치"
@@ -5808,10 +5979,10 @@ def test_parse_text_endpoint_creates_review_draft_without_stock_side_effect() ->
 
 
 def test_image_upload_is_explicit_when_optional_ocr_runtime_is_missing() -> None:
-    asset = Path(__file__).resolve().parents[3] / "apps" / "web" / "public" / "assets" / "food" / "spinach.png"
+    asset = Path(__file__).resolve().parents[3] / "apps" / "web" / "public" / "assets" / "food" / "spinach-photo.jpg"
     response = client.post(
         "/api/receipts/intake",
-        files={"file": ("spinach.png", asset.read_bytes(), "image/png")},
+        files={"file": ("spinach-photo.jpg", asset.read_bytes(), "image/jpeg")},
     )
     assert response.status_code == 200
     payload = response.json()
@@ -5823,7 +5994,7 @@ def test_image_upload_is_explicit_when_optional_ocr_runtime_is_missing() -> None
 
 
 def test_image_intake_exposes_safe_bbox_links_without_returning_ocr_text(monkeypatch) -> None:
-    asset = Path(__file__).resolve().parents[3] / "apps" / "web" / "public" / "assets" / "food" / "spinach.png"
+    asset = Path(__file__).resolve().parents[3] / "apps" / "web" / "public" / "assets" / "food" / "spinach-photo.jpg"
 
     class CapturingOcr:
         def extract(self, image_bytes: bytes, filename: str = "upload.jpg") -> OcrRun:
@@ -5855,7 +6026,7 @@ def test_image_intake_exposes_safe_bbox_links_without_returning_ocr_text(monkeyp
 
 
 def test_label_intake_exposes_date_bbox_links_without_returning_observation_text(monkeypatch) -> None:
-    asset = Path(__file__).resolve().parents[3] / "apps" / "web" / "public" / "assets" / "food" / "spinach.png"
+    asset = Path(__file__).resolve().parents[3] / "apps" / "web" / "public" / "assets" / "food" / "spinach-photo.jpg"
 
     class CapturingOcr:
         def extract(self, image_bytes: bytes, filename: str = "upload.jpg") -> OcrRun:
@@ -5962,3 +6133,432 @@ def test_image_intake_reports_low_contrast_ocr_preprocessing_profile(monkeypatch
     with Image.open(BytesIO(captured["image"])) as prepared:
         assert prepared.format == "PNG"
         assert prepared.size == (800, 600)
+
+
+def test_manual_estimate_basis_is_separate_from_pending_printed_date_source() -> None:
+    response = client.post("/api/foods", json={"canonical_name": "양파", "storage_type": "ambient"})
+    assert response.status_code == 201
+    food = response.json()
+    assert food["date_assertion"]["source_detail"] == "사용자 입력 대기"
+    assert food["estimated_use_first_window"]["basis"] == "상품 유형 + 보관 방식 · ambient 보관 기준"
+
+
+def test_ordinary_user_date_input_cannot_overwrite_confirmed_date_without_review_intent() -> None:
+    response = client.post("/api/foods", json={"canonical_name":"시금치", "lot_action":"correct", "target_food_id":"spinach-1", "date_kind":"sell_by", "date_value":"2026-09-13", "date_source":"user_input", "user_confirmed":True})
+    assert response.status_code == 409
+    food = next(row for row in client.get("/api/dashboard").json()["inventory"] if row["id"] == "spinach-1")
+    assert food["date_assertion"]["value"] == "2026-09-02"
+
+
+def test_receipt_summary_sort_accepts_mixed_naive_aware_and_missing_purchase_times() -> None:
+    receipts=[]
+    for index, purchased_at in enumerate([None, "2026-10-10T11:00:00", "2026-10-10T10:00:00+09:00"]):
+        response=client.post("/api/receipts/drafts",json={"source_filename":f"mixed-time-{index}.txt","purchased_at":purchased_at,"lines":[{"raw_name":"양파","quantity":1,"unit":"개"}]})
+        assert response.status_code==201
+        receipts.append(response.json()["id"])
+    listing=client.get("/api/receipts")
+    assert listing.status_code==200
+    selected=[row for row in listing.json() if row["id"] in receipts]
+    assert [row["id"] for row in selected]==[receipts[1],receipts[2],receipts[0]]
+    assert next(row for row in selected if row["id"]==receipts[1])["purchased_at"]=="2026-10-10T11:00:00"
+
+
+def test_guest_transfer_fingerprint_accepts_nested_receipt_commit_scalars() -> None:
+    from types import SimpleNamespace
+    commit = SimpleNamespace(stock_created=True, receipt_id="receipt-qa", quantities=[1, 2.5], missing=None)
+    assert main_module._guest_transfer_serializable({"commit": commit}) == {
+        "commit": {"missing": None, "quantities": [1, 2.5], "receipt_id": "receipt-qa", "stock_created": True}
+    }
+
+
+def test_guest_transfer_comparison_with_receipt_commit_record_returns_conflict() -> None:
+    from types import SimpleNamespace
+    source = main_module.InMemoryStore(seed=False)
+    target = main_module.InMemoryStore(seed=False)
+    source.commit_transactions["source-commit"] = SimpleNamespace(stock_created=True, receipt_id="source", quantity=1)
+    target.commit_transactions["target-commit"] = SimpleNamespace(stock_created=False, receipt_id="target", quantity=2.5)
+    assert main_module._guest_transfer_state(source, target) == "conflict"
+
+
+def test_multi_day_completed_history_contains_linked_consumption_without_mutating_legacy_preview() -> None:
+    payload = {"inventory_ids": ["spinach-1", "tofu-1", "chicken-1", "mushroom-1", "egg-1", "milk-1", "tomato-1"], "max_minutes": 30}
+    preview = client.post("/api/meal-plans/multi-day-preview", json=payload)
+    assert preview.status_code == 200
+    data = preview.json()
+    bundle_id = "multi-day-linked-consumption-history"
+    bundle = client.post("/api/meal-plans/multi-day", json={**payload, "bundle_id": bundle_id, "snapshot_hash": data["snapshot_hash"]})
+    assert bundle.status_code == 200
+    day = bundle.json()["days"][1]
+    candidate = day["plan"]
+    plan_id = "meal-linked-consumption-history"
+    saved = client.post("/api/meal-plans", json={"inventory_ids": candidate["inventory_ids"], "max_minutes": candidate["max_minutes"], "recipe_id": candidate["recipe_id"], "plan_id": plan_id, "snapshot_hash": candidate["snapshot_hash"], "bundle_id": bundle_id, "bundle_day_index": day["day_index"]})
+    assert saved.status_code == 200
+    completed = client.post(f"/api/meal-plans/{plan_id}/complete", json={})
+    assert completed.status_code == 200
+    expected = completed.json()["consumed_allocations"]
+    assert expected
+    stored_bundle = store.multi_day_meal_plans[bundle_id]
+    stored_day = next(item for item in stored_bundle.days if item.day_index == day["day_index"])
+    assert [item.model_dump() for item in stored_day.plan.consumed_allocations] == expected
+    # A bundle saved by an older release still has a preview in its embedded plan.
+    stored_day.plan = main_module.MealPlanResponse.model_validate(candidate)
+    assert stored_day.plan.consumed_allocations == []
+    for response in [client.get("/api/meal-plans/multi-day/latest"), client.get("/api/meal-plans/multi-day/history")]:
+        assert response.status_code == 200
+        result = response.json()[0] if isinstance(response.json(), list) else response.json()
+        restored = next(item for item in result["days"] if item["day_index"] == day["day_index"])
+        assert restored["status"] == "completed"
+        assert restored["plan"]["consumed_allocations"] == expected
+        assert restored["plan"]["completed_at"] == completed.json()["completed_at"]
+    assert stored_day.plan.consumed_allocations == []
+
+
+def test_unchanged_shopping_reads_do_not_advance_workspace_revision() -> None:
+    for initial_item in [False, True]:
+        store.reset()
+        if initial_item:
+            added = client.post("/api/shopping-list/manual", json={"canonical_name": "버전 검증", "quantity": 2, "unit": "개"})
+            assert added.status_code == 200
+        before = client.get("/api/shopping-list").json()
+        revision = client.get("/api/dashboard/revision").json()["revision"]
+        for _ in range(3):
+            assert client.get("/api/shopping-list").json() == before
+            assert client.get("/api/dashboard/revision").json()["revision"] == revision
+
+
+def test_multiple_shopping_sources_remain_stable_until_inventory_changes() -> None:
+    store.foods.pop("tofu-1")
+    for plan_id in ["shopping-stable-a", "shopping-stable-b"]:
+        assert client.post("/api/meal-plans", json={"inventory_ids": ["spinach-1", "chicken-1"], "plan_id": plan_id}).status_code == 200
+        assert client.post("/api/shopping-list", json={"source_type": "meal_plan", "source_id": plan_id}).status_code == 200
+    before = client.get("/api/shopping-list").json()
+    assert len(before[0]["sources"]) == 2
+    revision = client.get("/api/dashboard/revision").json()["revision"]
+    for _ in range(3):
+        assert client.get("/api/shopping-list").json() == before
+        assert client.get("/api/dashboard/revision").json()["revision"] == revision
+    assert client.post("/api/foods", json={"canonical_name": "국산콩 두부", "quantity": 2, "unit": "모", "storage_type": "refrigerated"}).status_code == 201
+    before_reconcile = client.get("/api/dashboard/revision").json()["revision"]
+    assert client.get("/api/shopping-list").json() == []
+    assert client.get("/api/dashboard/revision").json()["revision"] > before_reconcile
+
+
+def test_meal_no_match_quantity_recovery_targets_existing_food(monkeypatch) -> None:
+    recipe = RecipeSpec(id="spinach-grams-review", title="시금치", minutes=10,
+        ingredients=(RecipeIngredient(canonical_name="시금치", amount=500, unit="g"),),
+        steps=("조리합니다.",), safety_note="상태를 확인해 주세요.")
+    monkeypatch.setattr(main_module, "load_recipe_specs", lambda: (recipe,))
+    response = client.post("/api/meal-plans/preview", json={"inventory_ids":["spinach-1"],"max_minutes":30})
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["recipe_id"] == "no-match"
+    assert payload["recovery"] == {"kind":"quantity","minimum_minutes":None,"food_ids":["spinach-1"]}
+    assert "수량·단위" in payload["reason"]
+
+
+def test_quantity_reference_preserves_lot_and_records_changes():
+    food = client.post("/api/foods", json={"canonical_name": "중량 확인 브로콜리", "quantity": 1, "unit": "팩", "storage_type": "refrigerated", "category": "채소", "brand": ""}).json()
+    endpoint = f"/api/foods/{food['id']}/quantity-reference"
+    result = client.put(endpoint, json={"amount": 500, "unit": "g"})
+    assert result.status_code == 200
+    updated = result.json()
+    assert updated["quantity_reference"] == {"amount": 500, "unit": "g"}
+    for key in ("quantity", "unit", "date_assertion", "date_assertion_history", "storage_type", "storage_location_id", "product_provenance"):
+        assert updated[key] == food[key]
+    events = client.get(f"/api/foods/{food['id']}/product-info/events").json()
+    assert events[0]["after"]["quantity_reference"] == updated["quantity_reference"]
+    assert client.put(endpoint, json={"amount": 500, "unit": "g"}).status_code == 200
+    assert len(client.get(f"/api/foods/{food['id']}/product-info/events").json()) == len(events)
+    assert client.put(endpoint, json={"amount": 0, "unit": "g"}).status_code == 422
+    assert client.put(endpoint, json={"amount": 10, "unit": "팩"}).status_code == 422
+
+
+def test_quantity_reference_removal_preserves_food_and_keeps_history():
+    endpoint = "/api/foods/spinach-1/quantity-reference"
+    original = store.foods["spinach-1"].response.model_copy(deep=True)
+    assert client.put(endpoint, json={"amount": 2, "unit": "개"}).status_code == 200
+    removed = client.delete(endpoint)
+    assert removed.status_code == 200
+    assert removed.json()["quantity_reference"] is None
+    assert store.foods["spinach-1"].response == original
+    history = client.get("/api/foods/spinach-1/product-info/events").json()
+    assert len(history) == 2
+    assert history[0]["before"]["quantity_reference"] == {"amount": 2, "unit": "개"}
+    assert history[0]["after"]["quantity_reference"] is None
+    assert client.delete(endpoint).status_code == 200
+    assert len(client.get("/api/foods/spinach-1/product-info/events").json()) == 2
+
+
+def test_quantity_reference_remove_failure_restores_reference_and_allows_retry():
+    endpoint = "/api/foods/spinach-1/quantity-reference"
+    assert client.put(endpoint, json={"amount": 500, "unit": "g"}).status_code == 200
+    original = store.foods["spinach-1"].response.model_copy(deep=True)
+    def fail_flush(_store):
+        raise RuntimeError("simulated quantity-reference persistence outage")
+    with patch.object(type(store), "flush", fail_flush):
+        failed = client.delete(endpoint)
+    assert failed.status_code == 503
+    assert failed.json()["detail"]["code"] == "quantity_reference_persistence_unavailable"
+    assert store.foods["spinach-1"].response == original
+    assert len(client.get("/api/foods/spinach-1/product-info/events").json()) == 1
+    assert client.delete(endpoint).status_code == 200
+    assert store.foods["spinach-1"].response.quantity_reference is None
+    assert len(client.get("/api/foods/spinach-1/product-info/events").json()) == 2
+
+
+def test_received_manual_purchase_is_linked_and_cannot_be_added_twice_with_a_new_key():
+    item = client.post('/api/shopping-list/manual', json={'canonical_name':'중복 확인 우유','quantity':2,'unit':'개'}).json()['items'][0]
+    endpoint = f"/api/shopping-list/{item['id']}/receive"
+    body = {'quantity':2,'storage_type':'refrigerated'}
+    first = client.post(endpoint, headers={'Idempotency-Key':'receive-cycle-one'}, json=body)
+    assert first.status_code == 201
+    food_id = first.json()['inventory_lot']['id']
+    count = len(store.foods)
+    assert first.json()['items'][0]['received_food_id'] == food_id
+    linked = next(row for row in client.get('/api/shopping-list').json() if row['id'] == item['id'])
+    assert linked['received_food_id'] == food_id
+    assert client.post(endpoint, headers={'Idempotency-Key':'receive-cycle-one'}, json=body).status_code == 201
+    client.patch(f"/api/shopping-list/{item['id']}", json={'checked':True})
+    repeated = client.post(endpoint, headers={'Idempotency-Key':'receive-cycle-different-key'}, json=body)
+    assert repeated.status_code == 409
+    assert repeated.json()['detail']['code'] == 'shopping_purchase_already_received'
+    assert len(store.foods) == count
+    reset = client.patch(f"/api/shopping-list/{item['id']}", json={'checked':False})
+    assert reset.status_code == 200
+    assert reset.json()['received_food_id'] is None
+    client.patch(f"/api/shopping-list/{item['id']}", json={'checked':True})
+    second = client.post(endpoint, headers={'Idempotency-Key':'receive-new-purchase'}, json=body)
+    assert second.status_code == 201
+    assert second.json()['inventory_lot']['id'] != food_id
+    assert len(store.foods) == count + 1
+
+
+def test_two_different_receive_keys_for_same_purchase_create_only_one_lot():
+    item = client.post('/api/shopping-list/manual', json={'canonical_name':'동시 구매 방지 우유','quantity':2,'unit':'개'}).json()['items'][0]
+    count = len(store.foods)
+    def receive(key):
+        return client.post(f"/api/shopping-list/{item['id']}/receive", headers={'Idempotency-Key':key}, json={'quantity':2,'storage_type':'refrigerated'}).status_code
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        results = list(pool.map(receive, ['parallel-purchase-a','parallel-purchase-b']))
+    assert sorted(results) == [201,409]
+    assert len(store.foods) == count + 1
+
+
+def test_saving_same_manual_quantity_keeps_recorded_purchase_and_revision():
+    request = {'canonical_name':'보관 구매 기록 우유','quantity':2,'unit':'개'}
+    item = client.post('/api/shopping-list/manual', json=request).json()['items'][0]
+    endpoint = f"/api/shopping-list/{item['id']}/receive"
+    body = {'quantity':2,'storage_type':'refrigerated'}
+    received = client.post(endpoint, headers={'Idempotency-Key':'same-manual-original'}, json=body)
+    assert received.status_code == 201
+    recorded = received.json()['items'][0]
+    revision = store.workspace_revision
+    repeated = client.post('/api/shopping-list/manual', json=request)
+    assert repeated.status_code == 200
+    result = repeated.json()
+    assert result['updated_count'] == 0
+    assert result['items'][0]['updated_at'] == recorded['updated_at']
+    assert result['items'][0]['received_food_id'] == recorded['received_food_id']
+    assert store.workspace_revision == revision
+    assert client.post(endpoint, headers={'Idempotency-Key':'same-manual-duplicate'}, json=body).status_code == 409
+
+
+def test_source_metadata_change_without_quantity_change_keeps_purchase_cycle():
+    request = {'canonical_name':'구매 연결 유지 우유','quantity':2,'unit':'개'}
+    item = client.post('/api/shopping-list/manual', json=request).json()['items'][0]
+    received = client.post(f"/api/shopping-list/{item['id']}/receive", headers={'Idempotency-Key':'metadata-purchase'}, json={'quantity':2,'storage_type':'refrigerated'})
+    assert received.status_code == 201
+    food_id = received.json()['inventory_lot']['id']
+    cycle = store.shopping_list[item['id']].purchase_cycle_started_at
+    store.shopping_list[item['id']].sources[0].source_id = 'legacy-manual-source'
+    corrected = client.post('/api/shopping-list/manual', json=request)
+    assert corrected.status_code == 200
+    row = corrected.json()['items'][0]
+    assert row['received_food_id'] == food_id
+    assert store.shopping_list[item['id']].purchase_cycle_started_at == cycle
+    assert client.post(f"/api/shopping-list/{item['id']}/receive", headers={'Idempotency-Key':'metadata-repeat'}, json={'quantity':2,'storage_type':'refrigerated'}).status_code == 409
+
+
+def test_consumed_received_lot_keeps_purchase_record_and_blocks_duplicate_receive():
+    item = client.post('/api/shopping-list/manual', json={'canonical_name':'소비 후 구매 기록 우유','quantity':2,'unit':'개'}).json()['items'][0]
+    endpoint = f"/api/shopping-list/{item['id']}/receive"
+    received = client.post(endpoint, headers={'Idempotency-Key':'consumed-record-original'}, json={'quantity':2,'storage_type':'refrigerated'})
+    assert received.status_code == 201
+    food_id = received.json()['inventory_lot']['id']
+    consumed = client.post(f'/api/foods/{food_id}/storage-events', json={'event_type':'consumed'})
+    assert consumed.status_code == 200
+    assert food_id not in store.foods
+    current = next(row for row in client.get('/api/shopping-list').json() if row['id'] == item['id'])
+    assert current['checked'] is True
+    assert current['received_food_id'] == food_id
+    assert client.post(endpoint, headers={'Idempotency-Key':'consumed-record-repeat'}, json={'quantity':2,'storage_type':'refrigerated'}).status_code == 409
+
+
+def test_saved_recipe_stock_recheck_is_a_readonly_preview_with_original_servings():
+    for food_id in list(store.foods):
+        if food_id != 'mushroom-1': store.foods.pop(food_id)
+    saved = client.post('/api/meal-plans', json={'inventory_ids':['mushroom-1'],'max_minutes':30,'servings':2,'recipe_id':'mushroom-egg-stir-fry','plan_id':'saved-stock-recheck'})
+    assert saved.status_code == 200
+    original = store.meal_plans['saved-stock-recheck'].model_copy(deep=True)
+    egg = client.post('/api/foods', json={'canonical_name':'동물복지 달걀','quantity':2,'unit':'개','storage_type':'refrigerated','category':'달걀','brand':''})
+    assert egg.status_code == 201
+    before_foods = {key:record.response.model_dump() for key,record in store.foods.items()}
+    revision = store.workspace_revision
+    checked = client.post('/api/meal-plans/preview', json={'inventory_ids':list(store.foods),'max_minutes':30,'servings':2,'recipe_id':original.recipe_id})
+    assert checked.status_code == 200
+    preview = checked.json()
+    assert preview['recipe_id'] == original.recipe_id
+    assert preview['servings'] == 2
+    assert preview['saved_at'] is None
+    matched = next(ingredient for ingredient in preview['ingredients'] if '달걀' in ingredient['canonical_name'])
+    assert matched['available_quantity'] == 2
+    assert store.meal_plans['saved-stock-recheck'] == original
+    assert {key:record.response.model_dump() for key,record in store.foods.items()} == before_foods
+    assert store.workspace_revision == revision
+
+
+def test_known_weight_can_supply_recipe_without_confirming_another_unknown_pack(monkeypatch):
+    known = client.post("/api/foods", json={
+        "canonical_name": "시금치", "quantity": 200, "unit": "g",
+        "storage_type": "refrigerated", "category": "채소", "brand": "",
+    })
+    assert known.status_code == 201
+    known_id = known.json()["id"]
+    recipe = RecipeSpec(id="known-weight-only", title="수량 비교 검증", minutes=10,
+        ingredients=(RecipeIngredient(canonical_name="시금치", amount=200, unit="g"),),
+        steps=("검증용 조리 단계",), safety_note="검증용 식단")
+    monkeypatch.setattr(main_module, "load_recipe_specs", lambda: (recipe,))
+    response = client.post("/api/meal-plans/preview", json={
+        "inventory_ids": [known_id, "spinach-1"], "max_minutes": 30,
+    })
+    assert response.status_code == 200
+    plan = response.json()
+    assert plan["recipe_id"] == recipe.id
+    assert plan.get("recovery") is None
+    assert plan["ingredients"][0]["allocations"] == [{"food_id": known_id, "quantity": 200, "unit": "g"}]
+    assert store.foods["spinach-1"].response.quantity == 1
+    assert store.foods["spinach-1"].response.quantity_reference is None
+    assert store.foods[known_id].response.quantity == 200
+
+
+@pytest.mark.parametrize("explicit_consumptions", [False, True])
+def test_quantity_reference_recovery_to_cooking_preserves_each_original_lot_unit(monkeypatch, explicit_consumptions):
+    known = client.post("/api/foods", json={
+        "canonical_name": "시금치", "quantity": 100, "unit": "g",
+        "storage_type": "refrigerated", "category": "채소", "brand": "",
+    })
+    assert known.status_code == 201
+    known_id = known.json()["id"]
+    recipe = RecipeSpec(id="pack-reference-flow", title="포장 수량 복구 검증", minutes=10,
+        ingredients=(RecipeIngredient(canonical_name="시금치", amount=200, unit="g"),),
+        steps=("검증용 조리 단계",), safety_note="검증용 식단")
+    monkeypatch.setattr(main_module, "load_recipe_specs", lambda: (recipe,))
+    request = {"inventory_ids": [known_id, "spinach-1"], "max_minutes": 30}
+    blocked = client.post("/api/meal-plans/preview", json=request)
+    assert blocked.status_code == 200
+    assert blocked.json()["recipe_id"] == "no-match"
+    # The measured lot cannot supply the whole recipe. Only the unresolved pack
+    # is requested for review; its mass is never guessed from the pack count.
+    assert blocked.json()["recovery"]["kind"] == "quantity"
+    assert blocked.json()["recovery"]["food_ids"] == ["spinach-1"]
+    before = store.foods["spinach-1"].response.model_dump(mode="json")
+    updated = client.put("/api/foods/spinach-1/quantity-reference", json={"amount": 500, "unit": "g"})
+    assert updated.status_code == 200
+    for field in ("quantity", "unit", "date_assertion", "storage_type"):
+        assert updated.json()[field] == before[field]
+    saved = client.post("/api/meal-plans", json={**request, "plan_id": "quantity-reference-cooking"})
+    assert saved.status_code == 200
+    expected = [
+        {"food_id": known_id, "quantity": 100, "unit": "g"},
+        {"food_id": "spinach-1", "quantity": 0.2, "unit": "팩"},
+    ]
+    assert saved.json()["ingredients"][0]["allocations"] == expected
+    completion_request = {"consumptions": [{"food_id": row["food_id"], "quantity": row["quantity"]} for row in expected]} if explicit_consumptions else {}
+    completed = client.post("/api/meal-plans/quantity-reference-cooking/complete", json=completion_request)
+    assert completed.status_code == 200
+    assert completed.json()["consumed_allocations"] == expected
+    assert store.foods["spinach-1"].response.quantity == 0.8
+    assert known_id not in store.foods
+    replay = client.post("/api/meal-plans/quantity-reference-cooking/complete", json=completion_request)
+    assert replay.status_code == 200
+    assert replay.json()["status"] == "already_completed"
+    assert store.foods["spinach-1"].response.quantity == 0.8
+
+
+def test_personal_reminder_date_can_change_and_keeps_the_previous_meaning() -> None:
+    first = client.patch('/api/foods/tofu-1/date-assertion', json={'kind': 'user_reminder', 'date_value': '2026-10-13', 'source_detail': '사용자 알림 설정'})
+    assert first.status_code == 200
+    changed = client.patch('/api/foods/tofu-1/date-assertion', json={'kind': 'user_reminder', 'date_value': '2026-10-20', 'source_detail': '사용자 알림 설정'})
+    assert changed.status_code == 200
+    payload = changed.json()
+    assert payload['date_assertion']['kind'] == 'user_reminder'
+    assert payload['date_assertion']['value'] == '2026-10-20'
+    assert [(item['kind'], item['value']) for item in payload['date_assertion_history']] == [('unknown', None), ('user_reminder', '2026-10-13')]
+
+
+def test_personal_reminder_date_can_be_replaced_by_a_verified_package_date() -> None:
+    assert client.patch('/api/foods/tofu-1/date-assertion', json={'kind': 'user_reminder', 'date_value': '2026-10-13'}).status_code == 200
+    printed = client.patch('/api/foods/tofu-1/date-assertion', json={'kind': 'use_by', 'date_value': '2026-10-25'})
+    assert printed.status_code == 200
+    rejected = client.patch('/api/foods/tofu-1/date-assertion', json={'kind': 'user_reminder', 'date_value': '2026-10-30'})
+    assert rejected.status_code == 409
+    assert store.foods['tofu-1'].response.date_assertion.kind == 'use_by'
+    assert store.foods['tofu-1'].response.date_assertion.value == date(2026, 10, 25)
+    assert len(store.foods['tofu-1'].response.date_assertion_history) == 2
+
+
+def test_repeated_personal_reminder_date_edit_does_not_add_history_or_revision() -> None:
+    assert client.patch('/api/foods/tofu-1/date-assertion', json={'kind': 'user_reminder', 'date_value': '2026-10-13'}).status_code == 200
+    payload = {'kind': 'user_reminder', 'date_value': '2026-10-20'}
+    edited = client.patch('/api/foods/tofu-1/date-assertion', json=payload)
+    assert edited.status_code == 200
+    before = client.get('/api/dashboard/revision').json()['revision']
+    replay = client.patch('/api/foods/tofu-1/date-assertion', json=payload)
+    assert replay.status_code == 200
+    assert replay.json() == edited.json()
+    assert client.get('/api/dashboard/revision').json()['revision'] == before
+
+
+def test_personal_reminder_date_persistence_failure_restores_date_and_history() -> None:
+    assert client.patch('/api/foods/tofu-1/date-assertion', json={'kind': 'user_reminder', 'date_value': '2026-10-13'}).status_code == 200
+    before = store.foods['tofu-1'].response.model_dump(mode='json')
+    def fail_flush(_store):
+        raise RuntimeError('simulated reminder persistence outage')
+    with patch.object(type(store), 'flush', fail_flush):
+        response = client.patch('/api/foods/tofu-1/date-assertion', json={'kind': 'user_reminder', 'date_value': '2026-10-20'})
+    assert response.status_code == 503
+    assert response.json()['detail']['code'] == 'food_date_persistence_unavailable'
+    assert store.foods['tofu-1'].response.model_dump(mode='json') == before
+
+
+def test_dashboard_read_model_is_detached_from_later_date_changes() -> None:
+    assert client.patch('/api/foods/tofu-1/date-assertion', json={'kind':'user_reminder','date_value':'2026-10-13'}).status_code == 200
+    snapshot = store.dashboard()
+    store.foods['tofu-1'].response.date_assertion.value = date(2026,10,20)
+    assert next(food for food in snapshot.inventory if food.id == 'tofu-1').date_assertion.value == date(2026,10,13)
+
+
+def test_dashboard_does_not_expose_date_from_a_write_that_later_rolls_back() -> None:
+    assert client.patch('/api/foods/tofu-1/date-assertion', json={'kind':'user_reminder','date_value':'2026-10-13'}).status_code == 200
+    flush_started, release_flush, read_started = Event(), Event(), Event()
+    original_dashboard = store.dashboard
+    def paused_failure(_store):
+        flush_started.set()
+        assert release_flush.wait(3)
+        raise RuntimeError('simulated failed date commit')
+    def observed_dashboard(_store):
+        read_started.set()
+        return original_dashboard()
+    with patch.object(type(store),'flush',paused_failure), patch.object(type(store),'dashboard',observed_dashboard,create=True), ThreadPoolExecutor(max_workers=2) as executor:
+        write = executor.submit(client.patch,'/api/foods/tofu-1/date-assertion',json={'kind':'user_reminder','date_value':'2026-10-20'})
+        assert flush_started.wait(3)
+        read = executor.submit(client.get,'/api/dashboard')
+        assert read_started.wait(3)
+        try:
+            with pytest.raises(TimeoutError):
+                read.result(timeout=0.2)
+        finally:
+            release_flush.set()
+        assert write.result(timeout=3).status_code == 503
+        payload = read.result(timeout=3).json()
+    assert next(food for food in payload['inventory'] if food['id']=='tofu-1')['date_assertion']['value']=='2026-10-13'
