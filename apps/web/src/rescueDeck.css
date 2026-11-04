@@ -1,0 +1,168 @@
+/*
+ * Rescue deck: photo cards dealt across the dark "inside the fridge" panel.
+ * The card is the only bright surface in the panel, so the food photo leads.
+ */
+
+html[data-rescue-theme] .kitchen-hero .rescue-deck {
+  width: calc(100% + 2 * var(--kitchen-gutter, 20px)) !important;
+  max-width: none !important;
+  margin: 18px calc(-1 * var(--kitchen-gutter, 20px)) 0;
+}
+
+.rescue-deck-track {
+  display: flex;
+  gap: 12px;
+  padding: 4px var(--kitchen-gutter, 20px) 6px;
+}
+
+.rescue-card {
+  position: relative;
+  display: grid;
+  flex: 0 0 auto;
+  gap: 8px;
+  width: 168px;
+  padding: 8px 8px 10px;
+  border-radius: 26px;
+  background: var(--fresh-surface);
+  color: var(--fresh-ink);
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.22);
+}
+
+.rescue-card-photo {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 132px;
+  padding: 0;
+  /* No overflow clipping here: the image rounds itself so the shared ::after focus ring stays visible. */
+  border: 0;
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--fresh-primary) 10%, var(--fresh-surface));
+  cursor: pointer;
+}
+
+.rescue-card-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+}
+
+/* Focus: the device screen strips outlines, so the photo relies on the shared leek-green
+   ::after ring, which reads on the card surface (yolk would not). */
+
+.rescue-card-chip {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--fresh-bucket, var(--fresh-unknown));
+  color: #10170f;
+  font-family: var(--fresh-display);
+  font-size: 0.875rem;
+  line-height: 1.4;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+}
+
+.rescue-card-chip[data-estimated="true"] {
+  background: var(--fresh-surface);
+  color: var(--fresh-ink);
+  box-shadow: inset 0 0 0 2px var(--fresh-bucket, var(--fresh-unknown)), 0 2px 8px rgba(0, 0, 0, 0.18);
+}
+
+.rescue-card-body {
+  display: grid;
+  gap: 1px;
+  padding: 0 4px;
+}
+
+.rescue-card-name {
+  overflow: hidden;
+  font-family: var(--fresh-display);
+  font-size: 1.125rem;
+  font-weight: 400;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rescue-card-qty {
+  color: var(--fresh-muted);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.rescue-card-actions {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px;
+}
+
+html[data-rescue-theme][data-rescue-theme] .meal-home .rescue-card-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 140ms ease, background-color 160ms ease;
+}
+
+html[data-rescue-theme][data-rescue-theme] .meal-home .rescue-card-action:active {
+  transform: scale(0.96);
+}
+
+html[data-rescue-theme][data-rescue-theme] .meal-home .rescue-card-action:focus-visible {
+  outline: 3px solid var(--fresh-primary-strong);
+  outline-offset: 2px;
+}
+
+html[data-rescue-theme][data-rescue-theme] .meal-home .rescue-card-action-ate {
+  background: var(--fresh-primary-strong);
+  color: var(--fresh-primary-ink);
+}
+
+html[data-rescue-theme][data-rescue-theme] .meal-home .rescue-card-action-ate.is-confirming {
+  background: var(--kitchen-yolk);
+  color: #1b1a10;
+}
+
+html[data-rescue-theme][data-rescue-theme] .meal-home .rescue-card-action-check {
+  background: color-mix(in srgb, var(--fresh-past) 14%, var(--fresh-surface));
+  color: color-mix(in srgb, var(--fresh-past) 72%, var(--fresh-ink));
+}
+
+html[data-rescue-theme][data-rescue-theme] .meal-home .rescue-card-action-cook {
+  background: color-mix(in srgb, var(--fresh-ink) 7%, var(--fresh-surface));
+  color: var(--fresh-ink);
+}
+
+.rescue-deck-clear {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+  padding: 14px 16px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--kitchen-hero-ink);
+  font-weight: 700;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-rescue-theme][data-rescue-theme] .meal-home .rescue-card-action {
+    transition: none;
+  }
+}
+
+html[data-rescue-theme][data-rescue-theme] .meal-home .rescue-card-action {
+  white-space: nowrap;
+}

@@ -64,6 +64,8 @@ import "@fontsource/jua/korean-400.css";
 import "@fontsource/jua/latin-400.css";
 import "./freshness.css";
 import FridgeShelves from "./FridgeShelves";
+import RescueDeck from "./RescueDeck";
+import "./kitchen.css";
 import { foodFreshness, freshnessChipLabel, freshnessSpokenLabel } from "./freshness";
 import { getHomeReviewTopicLabel, shouldShowHomeDateGuide } from "./homeReviewSummary";
 import { demoCalendarDate } from "./demoCalendarDate";
@@ -1004,8 +1006,10 @@ function PrototypeContent() {
 
     document.documentElement.dataset.rescueTheme = themeMode;
     document.documentElement.style.colorScheme = themeMode;
-    const themeColor = themeMode === "dark" ? "#141b16" : "#f4f0e7";
-    document.documentElement.style.setProperty("--rescue-app-background", themeColor);
+    // Browser chrome matches the top of Home (the fridge-interior panel, --kitchen-hero);
+    // the page itself uses the paper background (--fresh-bg).
+    const themeColor = themeMode === "dark" ? "#10291e" : "#15392a";
+    document.documentElement.style.setProperty("--rescue-app-background", themeMode === "dark" ? "#0c1210" : "#f3f5f0");
     document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')?.setAttribute("content", themeColor);
 
     try {
@@ -5567,11 +5571,6 @@ function PrototypeContent() {
   };
 
   const detailSheetSnap = Math.min(0.993, Math.max(0.78, (viewportHeight - 6) / Math.max(1, viewportHeight)));
-  const homeAddFoodAction = foods.length ? <button className="add-food-button" style={!IS_WEB_SURFACE ? { marginTop: 0, minHeight: 53, gap: 4, justifyContent: "center", padding: "0 8px", border: "1px solid var(--atelier-border-strong)", borderRadius: 13, background: "color-mix(in srgb, var(--atelier-surface) 82%, transparent)", textAlign: "center" } : undefined} type="button" aria-label="식품 추가하기" onClick={() => openAdd("receipt")}>
-    <span className="add-food-plus"><PlusIcon width={20} height={20} /></span>
-    <span><strong><span className="add-food-label-prefix">식품 </span>추가</strong></span>
-    <ArrowRightIcon width={18} height={18} />
-  </button> : null;
   const singleHomeReviewFood = inventoryNeedsReviewFoods.length === 1 ? inventoryNeedsReviewFoods[0] : null;
   const homeTrustCard = (
     <button
@@ -5594,6 +5593,7 @@ function PrototypeContent() {
     <>
       <MobileScroll className={`app-screen rescue-theme-${themeMode}`}>
         <main className={`screen-content meal-home${inventoryDataUnknown ? " meal-home-data-unknown" : ""}`} aria-label="Rescue Meal 홈">
+          <div className="kitchen-hero" data-has-foods={!inventoryDataUnknown && foods.length > 0}>
           <header className="app-header">
             <div className="brand-lockup" role="img" aria-label="Rescue Meal">
               <span className="brand-mark" aria-hidden="true">r</span>
@@ -5659,21 +5659,32 @@ function PrototypeContent() {
 
               </div>
             </section>
-
-            {!inventoryDataUnknown && foods.length > 0 ? <FridgeShelves foods={foods} referenceDate={currentDate} onOpenStorage={openStorageInventory} onOpenFood={(food) => openDetail(food, "home")} /> : null}
-            {!mealApi.isConfigured ? <p className="home-demo-note"><InfoCircledIcon width={14} height={14} aria-hidden="true" />예시 식품으로 체험 중이에요. 변경 내용은 새로고침하면 사라져요.</p> : null}
+            {/* Offline snapshots are read-only: no one-tap records until the list reloads. */}
+            {!inventoryDataUnknown && foods.length > 0 && connectionState !== "offline" ? (
+              <RescueDeck
+                foods={foods}
+                referenceDate={currentDate}
+                needsDateCheck={(food) => Boolean(dateReviewReason(food, currentDate))}
+                onOpen={(food, intent) => openDetail(food, "home", intent === "date-review" ? "date-review" : null)}
+                onConsume={(food) => consumeFood(food.id)}
+                onCook={() => openMealPlan()}
+              />
+            ) : null}
           </div>
+          </div>
+
+          {!inventoryDataUnknown && foods.length > 0 ? <FridgeShelves foods={foods} referenceDate={currentDate} onOpenStorage={openStorageInventory} onOpenFood={(food) => openDetail(food, "home")} /> : null}
+            {!mealApi.isConfigured ? <p className="home-demo-note"><InfoCircledIcon width={14} height={14} aria-hidden="true" />예시 식품으로 체험 중이에요. 변경 내용은 새로고침하면 사라져요.</p> : null}
 
           {!inventoryDataUnknown ? <section className="priority-section" aria-labelledby={hasKnownEmptyInventory ? undefined : "priority-title"} aria-label={hasKnownEmptyInventory ? "식품 기록 시작" : undefined}>
             {homeTrustBeforeActions && showHomeTrustCard && !foods.length ? homeTrustCard : null}
 
-            <div className={`home-action-row${foods.length ? " home-action-row-with-add" : ""}`}>
+            <div className="home-action-row">
               <button className="meal-plan-button" type="button" aria-label={hasKnownEmptyInventory ? "첫 식품 직접 추가" : undefined} disabled={inventoryDataUnknown && connectionState === "checking"} onClick={() => inventoryDataUnknown ? connectionState === "auth_required" ? changeSheet("account") : retryConnection() : connectionState === "auth_required" ? changeSheet("account") : connectionState === "offline" ? retryConnection() : foods.length ? openMealPlan() : openAdd("manual")}>
                 <span className="meal-plan-icon">{connectionState === "offline" ? <ReloadIcon width={17} height={17} /> : <LightningBoltIcon width={17} height={17} />}</span>
                 <span><strong>{inventoryDataUnknown ? connectionState === "auth_required" ? "다시 로그인하기" : connectionState === "checking" ? "기록을 불러오는 중" : "다시 연결하기" : connectionState === "auth_required" ? "다시 로그인하기" : connectionState === "offline" ? "식품 목록 다시 불러오기" : foods.length ? "오늘 식단 만들기" : "직접 입력"}</strong>{!hasKnownEmptyInventory ? <small>{inventoryDataUnknown ? mealPlanStatusDescription : connectionState === "auth_required" ? "기록을 이어서 볼 수 있어요." : connectionState === "offline" ? mealPlanStatusDescription : currentMealPlanHint}</small> : null}</span>
                 <ArrowRightIcon width={18} height={18} />
               </button>
-              {homeAddFoodAction}
             </div>
 
             {!inventoryDataUnknown && !foods.length ? <button className="first-food-receipt" type="button" onClick={() => openAdd("receipt")}><ReaderIcon width={16} height={16} aria-hidden="true" /><span>영수증으로 추가</span><ChevronRightIcon width={14} height={14} aria-hidden="true" /></button> : null}
@@ -5887,6 +5898,9 @@ function PrototypeContent() {
         <button className={`app-bottom-nav-item${sheet !== "shopping" && activeNav === "food" ? " app-bottom-nav-item-active" : ""}`} type="button" aria-current={sheet !== "shopping" && activeNav === "food" ? "page" : undefined} onClick={() => navigateFromBottom("food")}>
           <ArchiveIcon width={19} height={19} aria-hidden="true" />
           <span>식품</span>
+        </button>
+        <button className="app-bottom-nav-add" type="button" data-testid="nav-add-food" aria-label="식품 추가하기" disabled={connectionState === "checking"} onClick={() => openAdd("receipt")}>
+          <PlusIcon width={24} height={24} aria-hidden="true" />
         </button>
         <button className={`app-bottom-nav-item${sheet !== "shopping" && activeNav === "meal" ? " app-bottom-nav-item-active" : ""}`} type="button" aria-current={sheet !== "shopping" && activeNav === "meal" ? "page" : undefined} onClick={openMealPlan}>
           <CalendarIcon width={19} height={19} aria-hidden="true" />
