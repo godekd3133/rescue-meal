@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, MutableMapping
 from dataclasses import dataclass
+from decimal import Decimal
 from datetime import datetime, timezone
 from typing import Any, Literal
 
@@ -168,7 +169,7 @@ class InventoryRepository:
                 self._recalculate_window(response)
         elif event_type in {"consumed", "discarded"}:
             if quantity is not None and quantity < current_quantity:
-                response.quantity = round(current_quantity - quantity, 3)
+                response.quantity = float(Decimal(str(current_quantity)) - Decimal(str(quantity)))
                 self._recalculate_window(response)
             else:
                 del foods[food_id]
@@ -215,7 +216,7 @@ class InventoryRepository:
         if opened_at is not None:
             child.opened_at = opened_at
         self._recalculate_window(child)
-        source.quantity = round(source.quantity - quantity, 3)
+        source.quantity = float(Decimal(str(source.quantity)) - Decimal(str(quantity)))
         self._recalculate_window(source)
         foods[child.id] = self._record_factory(child, record.purchased_at)
         return child.id

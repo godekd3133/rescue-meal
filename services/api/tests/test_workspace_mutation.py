@@ -82,3 +82,24 @@ def test_workspace_mutation_holds_the_store_lock_across_snapshot_mutation_and_fl
 
     assert observed_lock_depth == [1]
     assert store.lock_depth == 0
+
+
+def test_derived_no_change_read_skips_flush_but_keeps_lock() -> None:
+    store = FakeStore()
+    store.flush_error = RuntimeError("must not flush an unchanged read")
+    mutation = WorkspaceMutation(store, ConcurrentWrite)
+    def unchanged() -> bool:
+        assert store.lock_depth == 1
+        return False
+    assert mutation.run(lambda: dict(store.value), persist_when=unchanged) == {"count": 0}
+    assert store.restores == 0
+
+
+def test_changed_derived_read_still_restores_after_persistence_failure() -> None:
+    store = FakeStore()
+    store.flush_error = RuntimeError("write failed")
+    mutation = WorkspaceMutation(store, ConcurrentWrite)
+    with pytest.raises(RuntimeError, match="write failed"):
+        mutation.run(lambda: store.value.update(count=1), persist_when=lambda: True)
+    assert store.value == {"count": 0}
+    assert store.restores == 1

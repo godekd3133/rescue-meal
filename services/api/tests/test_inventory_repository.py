@@ -117,3 +117,30 @@ def test_partial_open_creates_an_opened_child_without_marking_the_source() -> No
     assert foods["source"].response.opened_at is None
     assert child.opened is True
     assert child.opened_at == opened_at
+
+
+@pytest.mark.parametrize('event_type', ['consumed','discarded','moved','opened'])
+def test_partial_event_preserves_input_precision_and_quantity_conservation(event_type):
+    from decimal import Decimal
+    foods = {'source': _food_record('source', 1.1234)}
+    repository = _repository(foods)
+    mutation = repository.apply_storage_event(food_id='source',event_type=event_type,to_storage_type='refrigerated' if event_type=='moved' else None,quantity=0.1)
+    remaining = foods['source'].response.quantity
+    assert remaining == 1.0234
+    recorded = foods[mutation.created_child_food_id].response.quantity if mutation.created_child_food_id else mutation.event_quantity
+    assert Decimal(str(remaining)) + Decimal(str(recorded)) == Decimal('1.1234')
+
+
+def test_partial_quantity_precision_survives_sqlite_reconstruction(tmp_path):
+    from app.main import SqliteStore
+    path = str(tmp_path / 'precise-inventory.db')
+    first = SqliteStore(path, seed=False)
+    first.foods['source'] = _food_record('source', 1.1234)
+    _repository(first.foods).apply_storage_event(food_id='source', event_type='consumed', quantity=0.1)
+    first.flush()
+    first.close()
+    reopened = SqliteStore(path, seed=False)
+    try:
+        assert reopened.foods['source'].response.quantity == 1.0234
+    finally:
+        reopened.close()

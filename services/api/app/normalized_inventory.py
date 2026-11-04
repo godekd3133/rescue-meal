@@ -160,8 +160,8 @@ class NormalizedInventoryAdapter:
                 (workspace_id, lot_id, product_key, parent_lot_id, source_receipt_id,
                  source_receipt_line_id, quantity, unit, storage_type, storage_location_id, opened, opened_at, priority,
                  category, display_name, brand, image_path, note, purchased_at,
-                 barcode, barcode_lot, product_provenance)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                 barcode, barcode_lot, product_provenance, quantity_reference)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """,
             [
                 (
@@ -187,6 +187,7 @@ class NormalizedInventoryAdapter:
                     response.barcode,
                     response.barcode_lot,
                     _jsonb(response.product_provenance.model_dump(mode="json")) if response.product_provenance else None,
+                    _jsonb(response.quantity_reference.model_dump(mode="json")) if response.quantity_reference else None,
                 )
                 for record in foods.values()
                 for response in (record.response,)
@@ -343,7 +344,7 @@ class NormalizedInventoryAdapter:
             """
             SELECT lot_id, product_key, parent_lot_id, source_receipt_id, source_receipt_line_id,
                    quantity, unit, storage_type, storage_location_id, opened, opened_at, priority, category, display_name,
-                   brand, image_path, note, purchased_at, barcode, barcode_lot, product_provenance
+                   brand, image_path, note, purchased_at, barcode, barcode_lot, product_provenance, quantity_reference
             FROM rescue_inventory_lots
             WHERE workspace_id = %s
             """,
@@ -413,7 +414,11 @@ class NormalizedInventoryAdapter:
             product_provenance_payload = row[20] if len(row) > 20 else None
             if isinstance(product_provenance_payload, (str, bytes, bytearray)):
                 product_provenance_payload = json.loads(product_provenance_payload)
+            quantity_reference = row[21] if len(row) > 21 else None
+            if isinstance(quantity_reference, (str, bytes, bytearray)):
+                quantity_reference = json.loads(quantity_reference)
             response = FoodResponse(
+                quantity_reference=quantity_reference,
                 id=lot_id,
                 parent_lot_id=row[2],
                 source_receipt_id=row[3],

@@ -35,6 +35,8 @@ MIGRATION_BASELINE_NAMES = (
     "024_recipe_catalog_revision.sql",
     "025_storage_locations.sql",
     "026_export_audit.sql",
+    "027_quantity_reference.sql",
+    "028_quantity_precision.sql",
 )
 
 
@@ -168,7 +170,7 @@ _REQUIRED_COLUMNS = {
     "rescue_product_name_lookup_leases": {"cache_key", "owner_id", "lease_until", "acquired_at"},
     "rescue_api_product_provenance_audit_events": {"workspace_id", "id", "food_id", "action", "occurred_at", "payload"},
     "rescue_api_product_info_audit_events": {"workspace_id", "id", "food_id", "action", "occurred_at", "payload"},
-    "rescue_inventory_lots": {"workspace_id", "lot_id", "quantity", "storage_type", "storage_location_id", "opened_at", "product_provenance"},
+    "rescue_inventory_lots": {"workspace_id", "lot_id", "quantity", "storage_type", "storage_location_id", "opened_at", "product_provenance", "quantity_reference"},
     "rescue_inventory_receipts": {
         "workspace_id",
         "receipt_id",

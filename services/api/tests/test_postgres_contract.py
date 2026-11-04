@@ -12,6 +12,7 @@ from app.main import (
     GrocyProductMappingResponse,
     PostgresStore,
     ProductProvenance,
+    QuantityReference,
     ProductEnrichmentWorkerHeartbeatRecord,
     ReceiptDraftResponse,
     ReceiptLineDraft,
@@ -658,6 +659,7 @@ def test_postgres_store_explicit_normalized_mode_dual_writes_inventory_tables(mo
 
     repository.foods["gs1-lot"] = _FoodRecord(_seed_foods()[0].model_copy(update={
         "id": "gs1-lot",
+        "quantity_reference": QuantityReference(amount=2, unit="개"),
         "barcode": "(01)08801114167523(17)260902(10)LOT-7",
         "barcode_lot": "LOT-7",
         "product_provenance": ProductProvenance(
@@ -680,9 +682,11 @@ def test_postgres_store_explicit_normalized_mode_dual_writes_inventory_tables(mo
         rows for query, rows in connection.queries
         if "INSERT INTO rescue_inventory_lots" in query and rows
     )
-    assert lot_rows[0][-3:-1] == ("(01)08801114167523(17)260902(10)LOT-7", "LOT-7")
-    provenance_payload = getattr(lot_rows[0][-1], "obj", lot_rows[0][-1])
+    assert lot_rows[0][19:21] == ("(01)08801114167523(17)260902(10)LOT-7", "LOT-7")
+    provenance_payload = getattr(lot_rows[0][21], "obj", lot_rows[0][21])
     assert provenance_payload["source"] == "open_food_facts"
+    reference_payload = getattr(lot_rows[0][22], "obj", lot_rows[0][22])
+    assert reference_payload == {"amount": 2, "unit": "개"}
     audit_rows = next(rows for query, rows in connection.queries if query.lstrip().startswith("INSERT INTO rescue_api_product_provenance_audit_events") and rows)
     assert audit_rows[0][0] == "account-one"
     assert audit_rows[0][2] == "gs1-lot"
@@ -1357,3 +1361,13 @@ def test_postgres_readiness_rejects_missing_inventory_search_indexes() -> None:
 
     with pytest.raises(PostgresSchemaError):
         check_postgres_schema(SchemaConnection(tables, columns, indexes), inventory_mode="projection")
+
+
+def test_quantity_precision_migration_is_in_release_baseline_without_narrowing_values():
+    migration = Path(__file__).resolve().parents[3] / 'infra/postgres/028_quantity_precision.sql'
+    sql = migration.read_text()
+    assert '028_quantity_precision.sql' in MIGRATION_BASELINE_NAMES
+    for table, column in [('rescue_inventory_receipt_lines','quantity'),('rescue_inventory_lots','quantity'),('rescue_inventory_storage_events','quantity'),('receipt_lines','quantity'),('receipt_lines','weight'),('stock_lots','quantity'),('storage_events','quantity')]:
+        assert f'ALTER TABLE {table} ALTER COLUMN {column} TYPE numeric;' in sql
+    assert 'numeric(' not in sql
+    assert 'DROP CONSTRAINT' not in sql

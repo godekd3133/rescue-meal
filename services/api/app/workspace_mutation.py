@@ -40,14 +40,15 @@ class WorkspaceMutation(Generic[T, Snapshot]):
         self._store = store
         self._concurrent_error = concurrent_error
 
-    def run(self, mutation: Callable[[], T]) -> T:
+    def run(self, mutation: Callable[[], T], *, persist_when: Callable[[], bool] | None = None) -> T:
         lock_factory = getattr(self._store, "mutation_lock", None)
         lock = lock_factory() if callable(lock_factory) else nullcontext()
         with lock:
             snapshot = self._store.snapshot()
             try:
                 result = mutation()
-                self._store.flush()
+                if persist_when is None or persist_when():
+                    self._store.flush()
                 return result
             except self._concurrent_error:
                 raise
