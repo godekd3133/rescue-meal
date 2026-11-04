@@ -1,0 +1,18 @@
+{
+  "scope": "Separate new local QA guest; credentials kept only in process memory",
+  "created_count": 1,
+  "created_food_id": "food-79f3ebc96670",
+  "first_reminder": "2026-10-13",
+  "edited_reminder": "2026-10-20",
+  "readback": "2026-10-20",
+  "history_kinds": [
+    "unknown",
+    "user_reminder"
+  ],
+  "history_dates": [
+    null,
+    "2026-10-13"
+  ],
+  "replay_revision_unchanged": true,
+  "replayed_response_equal": true
+}

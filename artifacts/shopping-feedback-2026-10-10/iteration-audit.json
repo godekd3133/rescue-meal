@@ -1,0 +1,28 @@
+{
+  "changes": [
+    "Remove generic modal description",
+    "Only show purchase progress when rows exist, avoiding duplicate empty read/error statuses",
+    "Remove repeated loading description",
+    "Suppress duplicate receipt toast when shopping result card is visible; retain background and failed-readback recovery actions"
+  ],
+  "validation": {
+    "build": "passed",
+    "runtime_files": 28,
+    "node_regression_tests": 289,
+    "diff_check": "passed",
+    "IAB_demo": [
+      "Added carrot 2 units",
+      "Marked purchased",
+      "Received carrot 2 units chilled",
+      "Added and received potato 1 unit ambient",
+      "Success card exists, toast absent"
+    ],
+    "connected_receive": "not-run this iteration"
+  },
+  "goal": "active",
+  "remaining": [
+    "Connected browser regression",
+    "CSS budget",
+    "Full journey acceptance"
+  ]
+}

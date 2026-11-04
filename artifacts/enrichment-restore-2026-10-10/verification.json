@@ -1,0 +1,29 @@
+{
+  "scope": "Resume server-side product enrichment status when reopening a receipt",
+  "validation": {
+    "frontend_tests": 624,
+    "failures": 0,
+    "build": "passed",
+    "protected_runtime_files": 28,
+    "diff_check": "passed",
+    "browser": "Closed receipt, reopened through home receipt queue, existing queued job displayed as finding; food-save action remains available",
+    "status_read_failures": "Controlled tests: 404 no job; 503 explicit read recovery; late response and failure discarded after identity change",
+    "external_provider_completion": "not-run",
+    "physical_device": "not-run"
+  },
+  "css_audit": {
+    "source": "apps/web/src/prototype.css",
+    "rules": 2400,
+    "exact_duplicate_declarations_same_selector": 0,
+    "exact_duplicate_declarations_all_selector_members": 0,
+    "adjacent_equivalent_rules": 2,
+    "potential_source_reduction_bytes": 49,
+    "decision": "No CSS mutation; trivial consolidation does not resolve 31.3KB overage, broader rule movement requires cascade evidence",
+    "budget": "last check failed:291.3KB versus260KB"
+  },
+  "sha256": {
+    "apps/web/src/AddFoodSheet.tsx": "bbf7d15c34071d126f80803d7bbcf31ce7c8f1104ce454eb1f18932af21ac22d",
+    "apps/web/tests/receipt-enrichment-restore.test.mjs": "67c243ffdfcdde39285ed2c9c7a0524f9fe928d6bf9f76de6dec0a298e543190",
+    "apps/web/tests/receipt-lookup-lifecycle.test.mjs": "291625fadae99d1bbbef0eb9307a301ef3d9fcc392b081d2733a4c81343e698c"
+  }
+}

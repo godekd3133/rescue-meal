@@ -1,0 +1,23 @@
+{
+  "previous_goal_turn": "progress",
+  "goal_status": "active",
+  "changes": [
+    "Foregroundmeal saveuses savedbuttonstate insteadofduplicate toast andgreenresultcard",
+    "Keepconfirmed live-status announcement forassistive technology",
+    "Backgroundsave stillannounces andoffersmissingingredient followup",
+    "Remove metadata-style separators frombackgroundmessages"
+  ],
+  "validation": {
+    "all_node_tests": "265 passed",
+    "feedback_scope_tests": "3 passed",
+    "build": "pass",
+    "runtime": "28 protected files pass",
+    "diff": "pass",
+    "browser_demo": "2servings -> savedbutton1,toast0,clippedlivestatusconfirmed; missingingredientaction1 -> tofu1모 andspinach1팩 in2shoppingrows",
+    "persistence_scope": "Temporarynote remainsvisible; nomaterial date/safety guidance removed"
+  },
+  "remaining": [
+    "CSSbudget andbroadbrowser/device verification",
+    "PlaywrightCLI humanpermission pending"
+  ]
+}

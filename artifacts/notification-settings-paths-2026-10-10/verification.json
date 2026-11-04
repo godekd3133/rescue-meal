@@ -1,0 +1,40 @@
+{
+  "scope": "Connected account notification settings entry, cross-entry draft preservation, narrow layout",
+  "finding": "At actual320px viewport, panel240px had scrollWidth262px; side-by-side quiet time inputs forced explanation into vertical text and card overflow",
+  "changes": [
+    "Panel-based420px container breakpoint stacks preference labels and controls",
+    "Time inputs use equal columns and stay within row",
+    "Narrow numeric, timezone and time inputs have44px height",
+    "Cards constrained to panel width"
+  ],
+  "validation": {
+    "frontend_tests": 643,
+    "failures": 0,
+    "build": "passed",
+    "protected_runtime_files": 28,
+    "diff_check": "passed",
+    "actual_viewport_width": 320,
+    "panel_width_before": 240,
+    "panel_scroll_width_before": 262,
+    "panel_width_after": 240,
+    "panel_scroll_width_after": 238,
+    "time_row_width_after": 186,
+    "time_row_scroll_width_after": 186,
+    "input_heights_after": [
+      44,
+      44,
+      44,
+      44
+    ],
+    "logged_account_route": "Local test account notification list -> settings-only view verified",
+    "cross_entry_draft": "Edited lead days8->9 from notification route, closed through home, opened regular account disclosure:9 and dirty status retained; cancel restored saved8; server settings unchanged",
+    "physical_device": "not-run",
+    "native_keyboard": "not-run",
+    "viewport_override": "reset after validation",
+    "css_budget": "failed:292.1KB versus260KB"
+  },
+  "sha256": {
+    "apps/web/src/AccountSheet.tsx": "3d7a3573c66f69d9cd95cc9053feb1dce9593465589b799b5200cd8cf5b41e27",
+    "apps/web/src/notificationSettingsLayout.css": "3fe028948618c32959cca3cce79e54746a9afc2610fa3971acbd73e3f7b9aefe"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "matching_records": 1,
+  "same_food_id": true,
+  "quantity": 2.5,
+  "unit": "팩",
+  "brand": "검증 원래상품",
+  "category": "채소",
+  "storage_type": "refrigerated",
+  "date": "2026-01-01",
+  "date_source": "user_input",
+  "prior_dates": [
+    "2026-10-14"
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "goal_status": "active",
+  "previous_turn": "progress",
+  "observed": [
+    "Servingcountabsentfromhistoryrow",
+    "Completedquantitysumjoinedunrelatedfoodunitswithoutnames",
+    "Savedingredientavailabilitysnapshotlookedlikecurrentstock"
+  ],
+  "changes": [
+    "Historyrow showsstatus,storedservings,localday/time",
+    "Prior-yearrecordsinclude year;invalidmetadata staysunknown",
+    "Removeunit-onlyconsumptionmathfromcompactrow;detailretained",
+    "Savedrecordingredients labeledsaved-timecontext"
+  ],
+  "runtime": {
+    "surface": "4182existingactualAPIQAworkspace",
+    "record": "mushroom-egg stirfry,2servings,savedyesterday19:41",
+    "read_only": true,
+    "opened_record": "2servingsandsavedstate restored",
+    "no_save_or_completion": true
+  },
+  "checks": {
+    "web": "713passed beforefinalheadingcopychange",
+    "build": "passed afterfinalchange",
+    "runtime_integrity": "28protectedfilespassed",
+    "diff": "passed"
+  },
+  "not_run": [
+    "Completedrecordinlivebrowser",
+    "Physicaldevice",
+    "FullPlaywrightCLI/MCPsuite"
+  ],
+  "sha256": {
+    "apps/web/src/mealHistoryPresentation.ts": "6a123426b8d41069e862eec4075191696f59dcc14d3bdfc3764df61fe7669937",
+    "apps/web/src/MealPlanSheet.tsx": "aa6520b309055911feced0ab6ba2ec1a024266cab1cfa7c76b761133de2c4c67",
+    "apps/web/tests/meal-history-presentation.test.mjs": "dae956c82d18106765a0a9e4edb967e156b2949713855aa0b35b25933bfa3a58"
+  }
+}

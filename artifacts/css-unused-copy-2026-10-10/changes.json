@@ -1,0 +1,70 @@
+[
+  {
+    "line": 6002,
+    "removed": [
+      ".recipe-review-source-disabled"
+    ]
+  },
+  {
+    "line": 6092,
+    "removed": [
+      ".recipe-review-source-disabled"
+    ]
+  },
+  {
+    "line": 6137,
+    "removed": [
+      ".recipe-review-sync-hint"
+    ]
+  },
+  {
+    "line": 7282,
+    "removed": [
+      ".hero-description"
+    ]
+  },
+  {
+    "line": 9393,
+    "removed": [
+      ".status-dot-warning"
+    ]
+  },
+  {
+    "line": 10097,
+    "removed": [
+      ".app-shell-preview .hero-description"
+    ]
+  },
+  {
+    "line": 10174,
+    "removed": [
+      ".app-shell-native .hero-description"
+    ]
+  },
+  {
+    "line": 10647,
+    "removed": [
+      ":is(.app-shell-preview,.app-shell-native) .hero-description"
+    ]
+  },
+  {
+    "line": 10698,
+    "removed": [
+      ":is(.app-shell-preview,.app-shell-native) .hero-description"
+    ]
+  },
+  {
+    "line": 13610,
+    "removed": [
+      ".hero-description",
+      ".app-shell-web .hero-description"
+    ]
+  },
+  {
+    "line": 14559,
+    "removed": [
+      ".hero-description",
+      ".app-shell-web .hero-description"
+    ]
+  }
+]

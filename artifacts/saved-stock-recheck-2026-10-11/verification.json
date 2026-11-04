@@ -1,0 +1,38 @@
+{
+  "goal_status": "active",
+  "previous_turn": "progress",
+  "changes": [
+    "Savedrecord offers same-recipe/current-stock readonly recheck",
+    "Storedservings and recipepinned;currentlotIDs used",
+    "Freshresultshownasunsavedpreviewwithoutoverwritingoriginal",
+    "Late/wrong-menu results do notreplaceview",
+    "Completionblockedwhilechecking"
+  ],
+  "runtime": {
+    "surface": "4182existingQAworkspace",
+    "stored": "Mushroom-egg2servings;eggnotavailableinsavedsnapshot",
+    "fresh": "Same title2servings;eggneed4have2short2",
+    "save_button": "requires explicitnewsave",
+    "stock_consumed": false,
+    "original_overwritten": false
+  },
+  "checks": {
+    "web": "718passed",
+    "api_readonlypreview": "1passed:originalplan,foods,revisionunchanged",
+    "build": "passed",
+    "runtime_integrity": "28protectedfilespassed",
+    "diff": "passed",
+    "bundle_log": "> web@0.1.0 check:bundle\n> node scripts/check-bundle-size.mjs\n\nbundle budget exceeded:\n  - total CSS is 293.4KB (budget 260KB)"
+  },
+  "not_run": [
+    "Physicaldevice",
+    "Actualcookingcompletion",
+    "FullPlaywrightCLI/MCPsuite"
+  ],
+  "sha256": {
+    "apps/web/src/MealPlanSheet.tsx": "96c6b48af579bde121c588694a92a228bdccfdd12963a7ea1a0b2c2b14e258a0",
+    "apps/web/src/mealApi.ts": "d5fd19a0b658b12585f5d751980298d63b9b33f4efbb8ebede3d19725a35be23",
+    "apps/web/tests/saved-stock-readback.test.mjs": "67098c37d8c42d03a36890d022a176275d9920681639914e2b9924019bf0f058",
+    "apps/web/tests/planner-mutation-handlers.test.mjs": "bc07cc8eff111397ed01e0f4691a24300ef107e80e05926148f49dbe3d1213e4"
+  }
+}

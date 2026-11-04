@@ -1,0 +1,39 @@
+{
+  "status": "partial",
+  "issues": [
+    "Shared removal progress state allowed overlapping connection operations and duplicate requests",
+    "Connection success copy claimed receiving setup while push-enabled preference could remain unsaved"
+  ],
+  "changes": [
+    "Synchronous shared ref prevents concurrent connect/remove calls before React state updates",
+    "All connection action buttons disabled while one connection mutation is pending",
+    "Finally releases guard after success/failure",
+    "Unsaved push activation requests settings save; already saved push preference reports connection only"
+  ],
+  "validation": {
+    "frontend_suite": 832,
+    "new_real_handler_regressions": 4,
+    "build": "passed",
+    "runtime_files": 28,
+    "diff_check": "passed",
+    "cases": [
+      "Duplicate subscribe and remove blocked during connection",
+      "Other connection operations blocked during removal",
+      "Failure releases operation guard",
+      "Unsaved settings preserved and successful connection copy matches persisted state"
+    ],
+    "CSS_budget": {
+      "status": "failed",
+      "actual_KB": 291.5,
+      "limit_KB": 260
+    }
+  },
+  "limits": [
+    "Actual AccountSheet handlers run in isolated mocked browser/API environment",
+    "No actual connection, permission request, unsubscribe or preference save"
+  ],
+  "source": [
+    "apps/web/src/AccountSheet.tsx",
+    "apps/web/tests/push-operation-serialization.test.mjs"
+  ]
+}

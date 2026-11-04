@@ -1,0 +1,18 @@
+{
+  "count": 2,
+  "bytes": 52,
+  "sample": [
+    {
+      "line": 8377,
+      "selector": ".bottom-sheet .recipe-consumption-row small",
+      "prop": "color",
+      "value": "var(--atelier-muted)"
+    },
+    {
+      "line": 8372,
+      "selector": ".bottom-sheet .recipe-consumption-row strong",
+      "prop": "color",
+      "value": "var(--atelier-ink)"
+    }
+  ]
+}

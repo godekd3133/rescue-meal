@@ -1,0 +1,47 @@
+{
+  "settings": {
+    "beforeElements": 117,
+    "afterElements": 117,
+    "differences": []
+  },
+  "account": {
+    "beforeElements": 61,
+    "afterElements": 61,
+    "differences": []
+  },
+  "home": {
+    "beforeElements": 308,
+    "afterElements": 308,
+    "differences": []
+  },
+  "shopping": {
+    "beforeElements": 35,
+    "afterElements": 35,
+    "differences": []
+  },
+  "meal": {
+    "beforeElements": 130,
+    "afterElements": 130,
+    "differences": []
+  },
+  "detail": {
+    "beforeElements": 112,
+    "afterElements": 112,
+    "differences": []
+  },
+  "guidance": {
+    "beforeElements": 39,
+    "afterElements": 39,
+    "differences": []
+  },
+  "darkDetail": {
+    "beforeElements": 112,
+    "afterElements": 112,
+    "differences": []
+  },
+  "darkHome": {
+    "beforeElements": 308,
+    "afterElements": 308,
+    "differences": []
+  }
+}

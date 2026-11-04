@@ -1,0 +1,34 @@
+{
+  "status": "partial",
+  "finding": "Healthy backend state labeled connected in account-entry control, which can be mistaken for authenticated account state even in guest mode",
+  "change": "Connected state displays account icon and 계정; accessible label is account action only. Degraded, authentication and demo meanings retained.",
+  "validation": {
+    "frontend_suite": 853,
+    "build": "passed",
+    "runtime_files": 28,
+    "diff_check": "passed",
+    "live_account_path": "Home account control -> login and guest-settings panel -> Home",
+    "live_label": "계정 열기",
+    "live_text": "계정",
+    "live_person_icons": 1,
+    "live_status_dots": 0,
+    "live_touch_height": 44,
+    "device_scroll": 0,
+    "rendered_states": [
+      "connected",
+      "checking",
+      "offline-cached",
+      "auth_required",
+      "fixture"
+    ],
+    "offline_render": "최근 기록 5분 전; explicit cached-data accessibility warning",
+    "fixture_render": "체험 중; reload-loss accessibility warning",
+    "record_writes": "none"
+  },
+  "proof": "home.png",
+  "limits": [
+    "Current iPhone light connected state verified live; other states verified by static rendering",
+    "Affected browser expectations updated; CLI browser suites not-run",
+    "Full journey acceptance and CSS size gate remain open"
+  ]
+}

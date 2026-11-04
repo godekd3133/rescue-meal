@@ -1,0 +1,36 @@
+{
+  "scope": "multi-day partial preview, save, day completion and reopen",
+  "changes": [
+    "use actual generated day count for partial notice and save label",
+    "show planned days as 예정 after bundle save",
+    "allow completed day readback without save/complete actions",
+    "link embedded day plan to saved completion data",
+    "hydrate legacy bundles from owner-local linked plan without mutating stored preview",
+    "avoid counting separate food lots as different ingredient types in completion toast"
+  ],
+  "runtime": {
+    "environment": "isolated local SQLite synthetic account, IAB",
+    "partial": "1-day result truthfully labelled 1일치 식단 저장",
+    "full": "three dates 10/10,10/11,10/12",
+    "save": "three-day bundle saved",
+    "completion": "second day complete, first and third 예정 after reload",
+    "consumptions": [
+      "달걀 2개",
+      "감자 0.5개 + 1.5개",
+      "양파 1개"
+    ],
+    "completed_day_open": "actual quantities shown; save/complete controls absent"
+  },
+  "verification": {
+    "node_passed": 447,
+    "api_passed": 543,
+    "build": "passed",
+    "protected_files": 28,
+    "diff_check": "passed"
+  },
+  "limits": [
+    "synthetic completion, not physical cooking acceptance",
+    "not every multi-day interrupted transport combination covered",
+    "CSS size gate remains failed"
+  ]
+}

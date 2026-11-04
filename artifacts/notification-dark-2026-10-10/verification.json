@@ -1,0 +1,35 @@
+{
+  "goal": "active",
+  "source_change": "none; validate prior read-row opacity removal",
+  "GUI": {
+    "environment": "Explicit demo web preview, dark theme",
+    "read_rows": 3,
+    "row_and_ancestor_opacity": 1,
+    "background_RGB": [
+      16,
+      20,
+      25
+    ],
+    "title_RGB": [
+      241,
+      236,
+      223
+    ],
+    "body_time_RGB": [
+      180,
+      187,
+      174
+    ],
+    "title_contrast": 15.67,
+    "body_time_contrast": 9.38,
+    "title_font_px": 13,
+    "body_time_font_px": 12,
+    "navigation": "Read spinach alert opens correct detail; printed expiry 2026-10-09, quantity1pack and review warning remain; close returns to three read alerts",
+    "restored": "Light mode and demo state reloaded"
+  },
+  "scope_remaining": [
+    "Connected account with nonempty alerts",
+    "Actual native/device font-size variations"
+  ],
+  "source_sha256": "3ade5196d323f085269607fc5ab5b6981763e1c3630adb499cd6bae5401feea1"
+}

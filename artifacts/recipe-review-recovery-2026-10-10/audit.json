@@ -1,0 +1,29 @@
+{
+  "scope": "recipe draft save rejection and current-input retry",
+  "changes": [
+    "reveal and focus retry action on error; focus alert container if no action"
+  ],
+  "runtime": {
+    "environment": "local isolated shared catalog, synthetic draft, IAB",
+    "rejection": "proxy structured 503 before forwarding PATCH",
+    "preserved_title": "검증 초안 실패 후 복구",
+    "preserved_note": "실패 시 입력 보존 검증",
+    "error_focus": "다시 시도",
+    "updated_title_before_retry": "검증 최신 초안 저장",
+    "retry_result": "latest title and note saved, error cleared",
+    "claim_expiry": "expired claim reacquired during test",
+    "claim_release": true,
+    "durable_status": "pending; no publication"
+  },
+  "verification": {
+    "node_passed": 548,
+    "build": "passed",
+    "protected_files": 28,
+    "diff_check": "passed"
+  },
+  "limits": [
+    "controlled local rejection, not production failure",
+    "post-commit recipe response loss and multi-reviewer GUI not exercised",
+    "full goal and CSS gate remain open"
+  ]
+}

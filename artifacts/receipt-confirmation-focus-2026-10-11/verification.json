@@ -1,0 +1,41 @@
+{
+  "status": "partial",
+  "before": {
+    "last_keyboard_confirmation_focus": "dialog",
+    "duplicate_visible_confirmation": [
+      "확인했어요",
+      "맞아요"
+    ]
+  },
+  "after": {
+    "last_keyboard_confirmation_focus": "confirmed product toggle",
+    "next_pending_product_focus": "retained; regression tested selected/pending ordering",
+    "visible_confirmation": "확인했어요, once",
+    "screen_reader_status": "polite and atomic, preserved",
+    "final_device_scroll": 0
+  },
+  "mutation": "No inventory commit; only client review confirmation",
+  "validation": {
+    "web_tests": 765,
+    "focused_confirmation_tests": 9,
+    "build": "passed",
+    "protected_runtime_files": 28,
+    "diff_check": "passed",
+    "cli_browser_suites": "not-run; permission pending",
+    "css_budget": {
+      "status": "failed",
+      "actual_KB": 291.6,
+      "limit_KB": 260
+    }
+  },
+  "evidence": [
+    "confirmed.png",
+    "dom-observation.json"
+  ],
+  "scope_limits": [
+    "Current light iPhone connected receipt review",
+    "Keyboard focused-target automation scroll was 105; final native pointer proof refreshed and device scroll 0",
+    "Screen-reader announcement markup checked; actual VoiceOver audio not run",
+    "Full journey acceptance remains partial"
+  ]
+}

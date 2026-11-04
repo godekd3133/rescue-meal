@@ -1,0 +1,51 @@
+{
+  "scope": "food-specific real photos and shared selection",
+  "changes": [
+    "add kimchi potato onion green onion real photography",
+    "use one photo mapping across home intake detail and recipe ingredients",
+    "replace known foods existing generic local app photo",
+    "preserve supplied non-app product photos"
+  ],
+  "sources": {
+    "kimchi": {
+      "pexels_id": 8956780,
+      "photographer": "makafood"
+    },
+    "potato": {
+      "pexels_id": 10112133,
+      "photographer": "Engin Akyurt"
+    },
+    "onion": {
+      "pexels_id": 6316541,
+      "photographer": "Arina Krasnikova"
+    },
+    "green-onion": {
+      "pexels_id": 7456538,
+      "photographer": "Kindel Media"
+    }
+  },
+  "runtime": {
+    "environment": "IAB local actual API record reload",
+    "inventory": "four food-specific sources loaded with natural width 640",
+    "detail": "kimchi-photo.jpg loaded at width640",
+    "visual": "four source photos and rendered kimchi detail inspected"
+  },
+  "asset_bytes": {
+    "kimchi": 34934,
+    "potato": 45371,
+    "onion": 38050,
+    "green-onion": 107448
+  },
+  "verification": {
+    "node_passed": 475,
+    "photo_cases": 10,
+    "build": "passed",
+    "protected_runtime_files": 28,
+    "diff_check": "passed"
+  },
+  "limits": [
+    "representative stock photos, not user product photographs",
+    "unmapped foods retain generic photo",
+    "CSS budget and full journey acceptance remain open"
+  ]
+}

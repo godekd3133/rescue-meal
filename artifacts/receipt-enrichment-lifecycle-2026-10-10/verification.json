@@ -1,0 +1,21 @@
+{
+  "scope": "Receipt enrichment enqueue, retry and polling lifecycle; barcode date copy without dot separator",
+  "validation": {
+    "targeted_tests": 14,
+    "frontend_tests": 618,
+    "frontend_failures": 0,
+    "build": "passed",
+    "protected_runtime_files": 28,
+    "diff_check": "passed",
+    "css_budget": "failed: 291.3KB versus 260KB",
+    "browser": "Current receipt queued state and manual-tab round trip verified in Codex IAB",
+    "late_response": "Controlled deferred-promise tests against actual source functions",
+    "external_provider_completion": "not-run",
+    "physical_device": "not-run",
+    "deployment": "not-run"
+  },
+  "sha256": {
+    "apps/web/src/AddFoodSheet.tsx": "06892170d0b2f53704c217899d017ce9ddd418679d8d47a23296e2624e898991",
+    "apps/web/tests/receipt-enrichment-lifecycle.test.mjs": "126b75494a03818579c15e31de136006171da21ee480eb7864ab525b3a44a67c"
+  }
+}

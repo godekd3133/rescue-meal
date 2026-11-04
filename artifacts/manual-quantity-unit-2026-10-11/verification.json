@@ -1,0 +1,37 @@
+{
+  "goal_status": "active",
+  "previous_turn": "progress",
+  "observed": "Manual quantity2withoutunit had enabled save and summary2; downstream can defaultunit",
+  "changes": [
+    "Require explicit unit for manual submission",
+    "Distinguish invalid numeric amount from missingunit",
+    "Keep unitpicker usable for valid bare numeric amount"
+  ],
+  "runtime": {
+    "surface": "explicit demo4181",
+    "verified": [
+      "2withoutunit blocks save and shows chooseunit",
+      "Keyboard-open one tap pack preserves2 and shows2packs in summary",
+      "One tap add shows cabbage2packs in food list",
+      "Date remains unknown"
+    ],
+    "new_demo_food": "cabbage2packs;ephemeral",
+    "durable_api_write": false
+  },
+  "checks": {
+    "web": "693passed",
+    "build": "passed",
+    "runtime": "28protectedfilespassed",
+    "diff": "passed"
+  },
+  "not_run": [
+    "Physicaldevice",
+    "ActualAPI manual-save lane for this change",
+    "PlaywrightCLI/MCP full suite"
+  ],
+  "sha256": {
+    "apps/web/src/manualEntryConvenience.ts": "e76e8188a3f6f7a8de8efc31e2b89401cdb979644120bfa359e9c043ef82ddaa",
+    "apps/web/src/AddFoodSheet.tsx": "135225a3340084680dfbc74d21788b8c2dea53a6766a0f731a5a1d012cfec828",
+    "apps/web/tests/manual-entry-convenience.test.mjs": "961a4615da0b1fae4a96b9725976877f602c425e2b7310d6a384d59d6f938109"
+  }
+}

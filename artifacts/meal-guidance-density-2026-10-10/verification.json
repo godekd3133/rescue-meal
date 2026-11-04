@@ -1,0 +1,25 @@
+{
+  "goal": "active",
+  "changes": [
+    "Only known standard date warnings omit repeated target names; target actions remain separate",
+    "Custom date caution preserved",
+    "Allergen entries use separate Metadata parts"
+  ],
+  "verification": {
+    "presentation_tests": 15,
+    "build": "passed",
+    "runtime_protected": 28,
+    "diff_check": "passed",
+    "GUI": [
+      "Connected date review warning shortened",
+      "Potato target opened correct food with 3 units",
+      "Return briefly refreshed then restored same soup recipe and 1 serving"
+    ],
+    "saved_or_consumed": false,
+    "multi_allergen_GUI": "not-run"
+  },
+  "source_snapshot": {
+    "apps/web/src/MealPlanSheet.tsx": "d5c99023b2c5d9258dfb5310df5b337871d127f4edff3a008e9c45678bfdcbcf",
+    "apps/web/src/mealPlanPresentation.ts": "36f718fa3ac8ac1999e1697c2f1c5d42645b2c4ba9dafc95adaeb095cafc542d"
+  }
+}

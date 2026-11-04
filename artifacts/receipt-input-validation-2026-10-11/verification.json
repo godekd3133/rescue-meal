@@ -1,0 +1,46 @@
+{
+  "status": "partial",
+  "findings": [
+    "Receipt input min/step rejected browser-validity for API-supported quantities below0.001",
+    "Field errors appeared at bottom after unrelated controls",
+    "Sticky commit panel covered the focused quantity field while simulated keyboard visible",
+    "Name recovery used a field label that did not match the name input"
+  ],
+  "changes": [
+    "Numeric input min0 and stepany align precision with positive application validation",
+    "Field-specific aria-invalid/described-by and inline error under name/quantity/unit",
+    "Duplicate detailed error in summary omitted while target is expanded",
+    "Keyboard-visible receipt commit panel follows document flow; sticky restored on keyboard close",
+    "Name recovery targets 식품 이름 input"
+  ],
+  "validation": {
+    "frontend_suite": 846,
+    "build": "passed",
+    "runtime_files": 28,
+    "diff_check": "passed",
+    "tiny_quantity": "0.0004",
+    "native_range_underflow": false,
+    "native_step_mismatch": false,
+    "tiny_aria_invalid": false,
+    "blank_quantity": "",
+    "blank_aria_invalid": true,
+    "error_instances": 1,
+    "inline_gap_pixels": 2.78,
+    "keyboard_open_footer_position": "static",
+    "keyboard_open_field_top": 338.87,
+    "keyboard_open_field_bottom": 369.42,
+    "keyboard_open_footer_top": 614.86,
+    "keyboard_closed_footer_position": "sticky",
+    "name_recovery": "Focus quantity, then press 수정하기 -> food name input focused",
+    "restored_name": "국산콩 두부",
+    "restored_quantity": "1",
+    "device_scroll": 0,
+    "record_writes": "none"
+  },
+  "proof": "quantity-error.png",
+  "limits": [
+    "Live connected resumed synthetic receipt on iPhone/light tested",
+    "No receipt confirmation or commit; physical-device and web-native keyboard not exercised",
+    "Full journey acceptance and CSS gate remain open"
+  ]
+}

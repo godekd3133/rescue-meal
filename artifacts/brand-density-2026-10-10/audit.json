@@ -1,0 +1,33 @@
+{
+  "scope": "separate genuine brand and input/purchase origin",
+  "changes": [
+    "hide exact known placeholder brands in presentation",
+    "keep genuine brands including similar words",
+    "render brand, purchase source and quantity as separate metadata parts",
+    "start brand editor empty for placeholder-only data",
+    "create new manual foods with empty optional brand"
+  ],
+  "runtime": {
+    "environment": "local isolated account IAB",
+    "placeholder_label_count": 0,
+    "actual_brand_visible": true,
+    "existing_brand_editor_value": "",
+    "new_manual_record": {
+      "name": "브랜드 미입력 검증",
+      "brand": "",
+      "quantity": 1
+    },
+    "existing_raw_brand": "직접 추가한 식품; retained in storage"
+  },
+  "verification": {
+    "node_passed": 510,
+    "brand_cases": 7,
+    "build": "passed",
+    "protected_files": 28,
+    "diff_check": "passed"
+  },
+  "limits": [
+    "brand with purchase origin covered by presentation tests, not a new purchase flow in this loop",
+    "full goal and CSS budget remain open"
+  ]
+}

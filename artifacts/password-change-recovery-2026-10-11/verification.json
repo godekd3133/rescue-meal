@@ -1,0 +1,36 @@
+{
+  "goal_status": "active",
+  "previous_turn": "progress",
+  "source_findings": [
+    "Password-change errors were not linked to their inputs and did not move focus to the correction field",
+    "Explicit close kept the three password drafts for subsequent reopening",
+    "The password panel used a div with button-only submission rather than a form",
+    "The other-device authentication consequence used 9px text"
+  ],
+  "changes": [
+    "Classify local validation by current, new or confirm field and link errors with aria-invalid and aria-describedby",
+    "Reveal and focus the correction field inside the nearest app-owned scroll region; service errors focus the alert",
+    "Keep drafts after failures, clear all three on explicit close or successful change",
+    "Prevent closing, editing and duplicate submission while busy",
+    "Use native form submission and restore focus to the opener after close",
+    "Increase the security consequence copy to 12px without adding copy"
+  ],
+  "verification": {
+    "password_recovery_tests": "10 passed",
+    "password_recovery_log": "/tmp/rescue-password-change-targeted-final.log",
+    "coverage": "No API request on invalid fields; exact password payload without trimming; 401/429/503 preserve drafts; success/close clear secrets; busy guard; field and service-error focus targets",
+    "web_tests": "738 passed",
+    "web_log": "/tmp/rescue-password-change-web-final.log",
+    "typescript_and_production_build": "passed",
+    "build_log": "/tmp/rescue-password-change-build-final.log",
+    "protected_runtime_integrity": "28 passed",
+    "git_diff_check": "passed",
+    "bundle_budget": "failed: total CSS 293.4KB exceeds 260KB",
+    "bundle_log": "/tmp/rescue-password-change-bundle.log",
+    "browser_interaction_and_visual_validation": "not-run: browser tools unavailable",
+    "physical_keyboard_and_screen_reader": "not-run",
+    "real_account_password_change": "not-run",
+    "deployment": "not-run"
+  },
+  "remaining_scope": "Full journey acceptance and existing CSS budget failure remain open"
+}

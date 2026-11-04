@@ -1,0 +1,57 @@
+[
+  {
+    "line": 6,
+    "prop": "--meal-soft",
+    "value": "#a5ad9b"
+  },
+  {
+    "line": 14,
+    "prop": "--meal-shadow",
+    "value": "0 10px 28px rgba(75, 82, 63, 0.08)"
+  },
+  {
+    "line": 9140,
+    "prop": "--atelier-shadow",
+    "value": "0 16px 40px color-mix(in srgb, var(--atelier-ink) 10%, transparent)"
+  },
+  {
+    "line": 9143,
+    "prop": "--meal-soft",
+    "value": "var(--atelier-dim)"
+  },
+  {
+    "line": 9151,
+    "prop": "--meal-shadow",
+    "value": "var(--atelier-shadow)"
+  },
+  {
+    "line": 10885,
+    "prop": "--meal-soft",
+    "value": "var(--atelier-dim)"
+  },
+  {
+    "line": 10893,
+    "prop": "--meal-shadow",
+    "value": "var(--atelier-shadow)"
+  },
+  {
+    "line": 10900,
+    "prop": "--meal-soft",
+    "value": "var(--atelier-dim)"
+  },
+  {
+    "line": 10908,
+    "prop": "--meal-shadow",
+    "value": "var(--atelier-shadow)"
+  },
+  {
+    "line": 13317,
+    "prop": "--atelier-shadow",
+    "value": "none"
+  },
+  {
+    "line": 13340,
+    "prop": "--atelier-shadow",
+    "value": "none"
+  }
+]

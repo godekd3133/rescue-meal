@@ -1,0 +1,29 @@
+{
+  "goal": "active",
+  "changes": [
+    "Legacy AI consumption priority shown as inspection order rather than eating order",
+    "Remove opacity0.62 from read notification rows so clickable history remains readable"
+  ],
+  "validation": {
+    "notification_presentation_tests": 10,
+    "build": "passed",
+    "runtime_protected": 28,
+    "diff_check": "passed",
+    "GUI": {
+      "connected_API": "Empty notification read confirmed",
+      "demo": [
+        "Unread3; opening spinach marks only its notification read",
+        "Food expiry warning and quantity1pack remain",
+        "Return shows unread2 and read1",
+        "Mark-all read retains3 history rows and safety note",
+        "All read rows computed opacity1, title rgb36,49,40 and body rgb98,111,100"
+      ],
+      "dark_history": "Verified current source; see artifacts/notification-dark-2026-10-10/verification.json"
+    },
+    "food_mutation": false
+  },
+  "source_snapshot": {
+    "apps/web/src/notificationPresentation.ts": "4cbf1a44fc3b5e4141cbb96a6decf871de6d8d37a7b735eb18ff03e533ce1096",
+    "apps/web/src/prototype.css": "3ade5196d323f085269607fc5ab5b6981763e1c3630adb499cd6bae5401feea1"
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "goal_status": "active",
+  "previous_turn": "progress",
+  "reproduced": "Same manual quantity was reported updated and advancedupdated_at,invalidating recorded purchase linkage",
+  "changes": [
+    "Separatepurchase-cycle start fromgeneralupdated_at",
+    "No-op manualsave preservesrevision,timestamp,receiptlink",
+    "Source metadata changes withsamequantitypreservepurchasecycle",
+    "Unchanged UI quantity blocks submit andEnter withoutclearingdraft",
+    "Success notice only describesrealaddorupdate",
+    "Mixed-source explanation shownonlywithplannedsource"
+  ],
+  "checks": {
+    "before_fix": "newAPIregressionfailed",
+    "api": "566passed,8existingwarnings",
+    "web": "705passed",
+    "build": "passed",
+    "runtime": "28protectedfilespassed",
+    "diff": "passed"
+  },
+  "runtime": [
+    "Milkname autofillsstored2counts;updatebuttondisabled",
+    "Changingquantityto3 enablesupdate",
+    "Restoring2 andEnterdoesnotclearfields",
+    "Recordedfoodlinkremainsavailable"
+  ],
+  "qa_mutated_quantity": false,
+  "not_run": [
+    "Physicaldevice",
+    "FullPlaywrightCLI/MCPsuite"
+  ],
+  "api": {
+    "pid": 91896,
+    "session": 52126,
+    "same_db_flags": true
+  },
+  "sha256": {
+    "services/api/app/main.py": "fa909d872b2fd601ed0cbbf96bfe807b4173d3a48795028ce1efa2256e4b422e",
+    "apps/web/src/ShoppingListSheet.tsx": "1e87169365d3c2e7071a97115cae85a6c47579cc71cdcf9359bfb0f269890709",
+    "apps/web/src/Prototype.tsx": "83697e398d6c6c5d48844a101083504582ce071ec4c5e083c0f4bd9a8f4fb6a3",
+    "services/api/tests/test_api.py": "bc969e796b5ad85a8c988ef0777cc577998c4a918036eca1ed9545f57d3e5075",
+    "apps/web/tests/shopping-manual-readback.test.mjs": "d78156d61e2b9940f316945eae51edfaa2fbb8c70277a38d319d24e6448b630f"
+  }
+}

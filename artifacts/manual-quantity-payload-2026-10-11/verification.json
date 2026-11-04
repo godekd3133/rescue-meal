@@ -1,0 +1,35 @@
+{
+  "goal_status": "active",
+  "previous_turn": "progress",
+  "source_findings": [
+    "Manual food serialization used parseFloat independently of unit extraction",
+    "3 packs with unit pack(200g) became pack(g)",
+    "1,000g became quantity 1 and unit ,g",
+    "Malformed quantity strings could silently default to one item"
+  ],
+  "changes": [
+    "Parse the displayed quantity once before saving and preserve the full unit",
+    "Use parsed quantity and unit for both direct-input and existing-lot label correction requests",
+    "Return an editable save failure before pending mutation registration for unreadable quantities"
+  ],
+  "verification": {
+    "before_regression": "4 failed, 1 passed",
+    "before_log": "/tmp/rescue-manual-payload-before.log",
+    "targeted_tests": "6 passed",
+    "targeted_log": "/tmp/rescue-manual-payload-targeted-final.log",
+    "quantity_cases": ["3팩(200g)", "1.5팩(500 g)", "1,000g", "1,000.5ml", "0.0001kg"],
+    "invalid_cases": ["", "수량 확인", "0팩", "1,00g", "1.2.3g"],
+    "web_tests": "744 passed",
+    "web_log": "/tmp/rescue-manual-payload-web-final.log",
+    "typescript_and_production_build": "passed",
+    "build_log": "/tmp/rescue-manual-payload-build.log",
+    "protected_runtime_integrity": "28 passed",
+    "git_diff_check": "passed",
+    "bundle_budget": "failed: CSS 293.4KB exceeds 260KB",
+    "bundle_log": "/tmp/rescue-manual-payload-bundle.log",
+    "live_browser_save_and_readback": "not-run: browser tools unavailable",
+    "api_suite": "not-run this frontend-only iteration",
+    "deployment": "not-run"
+  },
+  "scope": "Tests execute the current API payload expressions and early save guard; they do not establish browser interaction or live server readback. Full journey acceptance remains partial."
+}

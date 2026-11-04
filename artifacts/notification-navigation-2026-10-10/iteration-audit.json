@@ -1,0 +1,22 @@
+{
+  "changes": [
+    "Invalidate notification target recovery on leaving/reopening center or selecting another target",
+    "Clear old target issue on leaving notification view",
+    "Check owner and current notification work before dispatch/readback navigation"
+  ],
+  "verification": {
+    "new_navigation_cases": 4,
+    "node_tests": 394,
+    "build": "passed",
+    "runtime_files": 28,
+    "diff_check": "passed",
+    "IAB": "3second dashboarddelay, refreshbusy observed, close alertcenter, openmeal, waitresponse; meal kept, issue0, unexpectedtoast0",
+    "fixture": "local fabricated missing alert/read response; real isolated dashboard API"
+  },
+  "remaining": [
+    "Broader same-owner navigation/owner transitions",
+    "CSS budget",
+    "Real device/OCR and remaining journeys"
+  ],
+  "goal": "active"
+}

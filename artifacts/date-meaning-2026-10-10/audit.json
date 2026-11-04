@@ -1,0 +1,28 @@
+{
+  "scope": "date editor distinguishes personally chosen reminder from package evidence",
+  "changes": [
+    "reminder-specific title and description",
+    "reminder-specific empty-input and save hints",
+    "reminder-specific save action",
+    "switch existing-reminder heading back to package meaning when package kind selected"
+  ],
+  "runtime": {
+    "environment": "IAB isolated account",
+    "reminder_heading": "다시 살펴볼 날짜",
+    "reminder_save": "알림 날짜 저장",
+    "reminder_hint": "내가 정한 날짜로 저장돼요.",
+    "switch_to_use_by": "포장지에서 확인한 날짜 / 확인 후 저장",
+    "actual_save": "not-run; cancelled"
+  },
+  "verification": {
+    "node_passed": 542,
+    "new_meaning_cases": 6,
+    "build": "passed",
+    "protected_files": 28,
+    "diff_check": "passed"
+  },
+  "limits": [
+    "existing saved reminder edit mode checked by helper test, not new GUI record",
+    "full goal and CSS budget remain open"
+  ]
+}

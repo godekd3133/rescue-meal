@@ -1,0 +1,52 @@
+{
+  "scope": "Custom storage creation -> manual food intake -> inventory/detail -> reload; keyboard-safe location form",
+  "findings": [
+    "Manual save summary omitted selected custom location name",
+    "Location form name and create action were clipped by keyboard",
+    "Redundant location explanation and old green active selection"
+  ],
+  "changes": [
+    "Shared display summary includes actual method for unnamed/conflicting/ambiguous method names, avoids repeating a single matching method",
+    "Manual readback names exact selected location",
+    "Consistent custom picker/home/detail labels",
+    "Storage panel copy shortened; method label made consumer-facing; history deletion boundary retained",
+    "Focused create/edit names revealed after actual keyboard insets change",
+    "Method targets44px with12px type and established blue active theme"
+  ],
+  "validation": {
+    "frontend_tests": 667,
+    "failures": 0,
+    "build": "passed",
+    "protected_runtime_files": 28,
+    "diff_check": "passed",
+    "actual_api_journey": "Created refrigerator top shelf custom location with refrigerated method; immediately available in manual intake; saved broccoli1 pack to exact custom location; home and detail show location and unknown printed date; reload retained1 food and custom location filter",
+    "location_creation_device": "Pixel before keyboard fix; final keyboard geometry measured calibrated iPhone",
+    "keyboard_geometry_after": {
+      "input_bottom": 308.3786,
+      "create_bottom": 390.9902,
+      "keyboard_top": 421.7851,
+      "device_scroll_top": 0,
+      "method_outer_height": 44,
+      "method_font": "12px",
+      "method_border": "rgb(49,130,246)"
+    },
+    "temporary_unsaved_input": "Kimchi-shelf input cleared; not saved",
+    "test_records_retained": [
+      "냉장고 윗칸 refrigerated location",
+      "브로콜리1팩 unknown date"
+    ],
+    "rename_and_filter_selection": "not-run in this loop; custom filter option presence verified",
+    "physical_device": "not-run",
+    "css_budget": "failed:293.0KB versus260KB",
+    "test_execution": "Final full suite executed from apps/web package; earlier repository-root invocation failed relative-script runner tests and was corrected"
+  },
+  "sha256": {
+    "apps/web/src/AccountSheet.tsx": "da339b5994873158893e27ca5d58b8974f9d54c4d40f5017035dd272640a64bc",
+    "apps/web/src/AddFoodSheet.tsx": "4f9d9f94ff91bc9d4d182707008e37e9fbc3455b1b1abfc0169e9c14d78fcd79",
+    "apps/web/src/FoodDetailSheet.tsx": "6675d8cac8f1495d967a4feca4adfc15d75589caa06a100de9d7790fef04d780",
+    "apps/web/src/Prototype.tsx": "387f3f15a2af183d4d039331663d543f12d8a4031b5d3cc1b5c2145485bf2397",
+    "apps/web/src/storageLocationPresentation.ts": "90e97d4d022a158c9f78dc27b304fbb8b1bb80394befcd10a8b4409869407606",
+    "apps/web/src/storageLocationLayout.css": "856338dedba8dcb57004f20e8ed71ddaa24f21b673006a3b84b3e66d051aed88",
+    "apps/web/tests/storage-location-presentation.test.mjs": "e9d4897c910da090ebc222757e5e6312fe9c33891f63a0b800af79d42d1e4b1c"
+  }
+}

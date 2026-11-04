@@ -1,0 +1,26 @@
+{
+  "changes": [
+    "Planner generic reason no longer repeats counts or urges first-eating priority; ranking/allocations unchanged",
+    "UI omits exact generic and legacy generated reasons while preserving material causes",
+    "Safety copy states app cannot judge edibility without redefining printed date meaning"
+  ],
+  "verification": {
+    "IAB_connected_descriptions": 0,
+    "IAB_old_ranking_copy": 0,
+    "IAB_availability": "재료2가지는 있고1가지는 더 필요",
+    "IAB_date_review": "printed date/storage instruction remains, edibility boundary explicit",
+    "IAB_no_match": "10-minute cause remains visible",
+    "node_tests": 384,
+    "API_tests": 539,
+    "API_other": 0,
+    "build": "passed",
+    "runtime_files": 28,
+    "diff_check": "passed"
+  },
+  "remaining": [
+    "CSS budget",
+    "Real device/OCR and remaining journey acceptance",
+    "Browser regression migration"
+  ],
+  "goal": "active"
+}

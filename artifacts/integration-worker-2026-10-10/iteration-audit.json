@@ -1,0 +1,29 @@
+{
+  "changes": [
+    "Hide worker summary for unconfigured integration without history",
+    "Loaded empty processing history uses empty state rather than perpetual loading",
+    "Inventory processing error no longer says notification issue",
+    "Past heartbeat does not imply current connection health"
+  ],
+  "verification": {
+    "actual_source_worker_expression_cases": 5,
+    "node_tests": 307,
+    "build": "passed",
+    "runtime_files": 28,
+    "diff_check": "passed",
+    "runtime_browser": "not-run this iteration; issue observed in previous authenticated integration audit"
+  },
+  "CSS_audit": {
+    "overwritten_declarations": 4,
+    "source_absent_selectors_rules": 9,
+    "unreferenced_custom_declarations": 8,
+    "applied": false,
+    "reason": "Safe simple redundancy insufficient to resolve total budget; retain current CSS instead of broad speculative removal"
+  },
+  "remaining": [
+    "CSS budget",
+    "Configured integration and notification autoopen browser acceptance",
+    "Guest transfer and full journey/device acceptance"
+  ],
+  "goal": "active"
+}

@@ -1,0 +1,20 @@
+{
+  "scope": "Home priority and inventory row density; inventory load-more separator",
+  "changes": [
+    "Removed repeated use-first action label from rows without a date/storage review reason",
+    "Kept printed, user-confirmed and estimated date meanings beside food metadata",
+    "Separated load-more action and remaining count into Metadata fields"
+  ],
+  "validation": {
+    "frontend_tests": 624,
+    "failed_tests": 0,
+    "build": "passed",
+    "runtime_integrity": "28 protected files passed",
+    "diff_check": "passed",
+    "css_budget": "failed:291.3KB versus260KB",
+    "browser": "Actual API food rows checked; calibrated iPhone light/dark demo rows checked; overdue spinach retained date-check action and opened detail showing printed date and pre-cooking review guidance",
+    "load_more_runtime": "not-run: current test inventory has no second page",
+    "physical_device": "not-run"
+  },
+  "source_sha256": "073efafb6c04bee2735e51af4a437ddcef628b70755fcac0f96f63edcfbb78c0"
+}

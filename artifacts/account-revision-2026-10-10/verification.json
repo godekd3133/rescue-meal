@@ -1,0 +1,42 @@
+{
+  "scope": "Account revision advisory differentiates successful own mutations from read observations and rechecks acknowledgments after a probe",
+  "changes": [
+    "Successful parsed same-session mutation responses record a separate workspaceMutationRevision",
+    "Read responses and failed writes do not advance own mutation revision; auth persistence and clear reset it",
+    "Account polling compares observed revision with latest own mutation after request settles",
+    "Settings-only view includes remote-refresh advisory when required",
+    "Session test fixture now uses actual X-Rescue-Meal-Workspace-Revision header"
+  ],
+  "validation": {
+    "targeted_tests": 15,
+    "frontend_tests": 650,
+    "failures": 0,
+    "build": "passed",
+    "protected_runtime_files": 28,
+    "diff_check": "passed",
+    "controlled_cases": [
+      "Own save while probe pending does not warn",
+      "Older probe cannot regress own acknowledgment",
+      "Newer revision than own save still warns",
+      "Read observation is not own save",
+      "Failed write is not acknowledgment",
+      "Session change clears acknowledgment and rejects late old response"
+    ],
+    "actual_browser": "Connected Pixel preview with corrected proxy: saved baseline2; visible settings observed immediately and after35-second wait; no remote-refresh notice, saved notice retained and period2. Settings initial false notice from test proxy missing exposed revision headers was cleared by explicit refresh.",
+    "actual_external_device_change": "not-run",
+    "physical_device": "not-run",
+    "proxy_fix": "Mapped upstream origin to approved4182 so its normal Access-Control-Expose-Headers are forwarded; local4183-only CORS remains, upstream config unchanged",
+    "proxy_session": 26713,
+    "frontend_session": 90516,
+    "css_budget": "last check failed:292.7KB versus260KB"
+  },
+  "sha256": {
+    "apps/web/src/accountRevision.ts": "2d9b253487ec9b4868250c8e8a48f12c75ca3e3f11b64a3197bd0beb9850eede",
+    "apps/web/src/Prototype.tsx": "91a80dee3c04b58087207f543f011a78ce679d0c223c49877738fa0d483403d8",
+    "apps/web/src/AccountSheet.tsx": "763eecb981eafeb72a054bf470ef2acb066705bf25603e2cc0b721f9e3eb0054",
+    "apps/web/src/mealApi.ts": "fc33a51573933c538ff1410ce576b0a1e8f071e2fb88efbb1e1e08a04121bf3d",
+    "apps/web/tests/account-revision.test.mjs": "d30f25e2033f9fe5418f3f4350bb848e6de4ae2db80a72fadf6e7daf86e28613",
+    "apps/web/tests/meal-api-session.test.mjs": "dbb7be1940d343af2c26a6acfca606a9b5fa001ac0d92faffb061fdc34ad6849",
+    "artifacts/connected-mobile-settings-2026-10-10/proxy.py": "ea27d16675e27740af340de2d642dfc33a698d0bcae085ad64d226b332a4e735"
+  }
+}

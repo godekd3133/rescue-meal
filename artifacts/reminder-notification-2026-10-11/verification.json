@@ -1,0 +1,46 @@
+{
+  "goal_status": "active",
+  "previous_turn": "progress",
+  "observed": [
+    "Current-state notifications already replaceunknown-date prompt after reminder saved",
+    "Personalreminder usedgeneric package-date title/body",
+    "Food reminder created_at is regenerated onread;visibletime impliedevent",
+    "Read future reminders labeledPastnotifications"
+  ],
+  "changes": [
+    "Personalreminder titles differentiatepasttodayupcoming without package-expirycopy",
+    "Keep severitydue_dateidentityandreadstatecontracts",
+    "Remove readtimefromderivedfoodreminder UI;keepGrocy eventtime",
+    "Readnotifications label describes readstate"
+  ],
+  "runtime": [
+    "ActualQAworkspace notification showscabbageMyreminderdateapproaching andchosenOct13",
+    "Openmatchingfooddetailswith2packsanduser_reminderdate",
+    "Close returns to same notification focus andreadstate",
+    "No automaticexpirydateinference"
+  ],
+  "checks": {
+    "api": "562passed,8existingwarnings",
+    "web": "703passed before final heading copy change",
+    "build": "passed after finalchange",
+    "runtime_integrity": "28protectedfilespassed",
+    "diff": "passed"
+  },
+  "not_run": [
+    "Physicaldevice",
+    "FullPlaywrightCLI/MCPsuite",
+    "Actualpushdelivery"
+  ],
+  "api_process": {
+    "pid": 61316,
+    "session": 74196,
+    "same_db_and_flags": true
+  },
+  "sha256": {
+    "services/api/app/notifications.py": "6288fe38d2b452b9a13af1fc9d922bc9e8bb0535b24ea0d793fe48970d1282f0",
+    "apps/web/src/NotificationSheet.tsx": "21e54085b105574b55556bfb7a8dbe1f1f596b00948542b498bc727ee7e15ee5",
+    "apps/web/src/notificationPresentation.ts": "77c78d470a347e7ce78b4afd9211d707c2f848d8a18f1387f3d7621ed61d5a48",
+    "services/api/tests/test_notifications.py": "2f4ab95f75f8e2e4241691684e01ad8bcdc628a2ffbbb78a47318f3a33f12ee7",
+    "apps/web/tests/notification-presentation.test.mjs": "6823dd4710b89a251572b626f5b08dd9af0d698e616f5181845b628d05f10950"
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "status": "partial",
+  "findings": [
+    "UI exposed personal-reminder editing but API rejected existing user_reminder with409 as if it were protected printed date",
+    "Editor initialKind followed changing draft props, causing saved-meaning conversion guidance to disappear"
+  ],
+  "changes": [
+    "Personal reminder can be edited or replaced by user-confirmed package date; previously confirmed printed dates remain protected",
+    "Date validation and latest record lookup run under workspace mutation lock",
+    "Exact replay skips history and revision persistence",
+    "Date original meaning is passed separately from editable draft kind",
+    "Existing reminder edit omits repeated copy; converting to package date has explicit pre-save guidance"
+  ],
+  "validation": {
+    "api_suite": 596,
+    "api_new_cases": 4,
+    "focused_api": 7,
+    "frontend_suite": 861,
+    "new_frontend_cases": 4,
+    "build": "passed",
+    "runtime_files": 28,
+    "diff_check": "passed",
+    "before_fix": "4 reminder endpoint tests failed; edits409",
+    "live_qa": "Separate guest: create1 QA food, reminder13 -> edit20 -> dashboard20 -> replay no revision/history growth",
+    "live_ui": "Existing cabbage: date20/typeuse_by preview with explicit meaning guidance; cancel returns to saved13",
+    "existing_food_payloads_unchanged": 19,
+    "private_backups_databases": 8,
+    "api_refresh": "Owned local API7058 on8088; proxy8091 health200; existing auth/CORS/settings retained",
+    "device_scroll": 0
+  },
+  "proof": [
+    "date-meaning.png",
+    "live-qa.json",
+    "before-tests.log"
+  ],
+  "limits": [
+    "Actual existing-user date was not changed; live write used separate QA guest and one retained QA record",
+    "Current iPhone/light, nonempty guest preview only",
+    "Full journey acceptance and CSS budget remain open"
+  ]
+}

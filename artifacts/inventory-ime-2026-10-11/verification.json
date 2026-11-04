@@ -1,0 +1,32 @@
+{
+  "goal_status": "active",
+  "previous_turn": "progress",
+  "changes": [
+    "Compositionstart invalidatespriorserverquery andholdsscheduling",
+    "Compositionendsearchesfinalinputusingexisting180msdebounce",
+    "Unfinishedtextdoesnotshowemptyresultsorconfirmedcounts",
+    "No misleadingnetworkloadingmessagewhilecomposing",
+    "Clear/blur/workspaceresetendcompositionstate"
+  ],
+  "checks": {
+    "web": "721passed",
+    "composition_request_tests": "2passed",
+    "phase_test": "compositiondoesnotclaimready/error/networkwait",
+    "build": "passed",
+    "runtime_integrity": "28protectedfilespassed",
+    "diff": "passed",
+    "bundle_log": "> web@0.1.0 check:bundle\n> node scripts/check-bundle-size.mjs\n\nbundle budget exceeded:\n  - total CSS is 293.4KB (budget 260KB)"
+  },
+  "runtime": "CompletedKoreanquerymilkreturns2existingrecords,cold2countsandfrozen250ml",
+  "not_run": [
+    "ActualOSKoreanIMEcomposition",
+    "Physicaldevice",
+    "FullPlaywrightCLI/MCPsuite"
+  ],
+  "sha256": {
+    "apps/web/src/Prototype.tsx": "21e9f6b8671e64a17668f3347b7174020928c9405b6365676fdc3fe69c6ffca1",
+    "apps/web/src/inventorySearchPhase.ts": "250b2525b303272180e79231bbd7f95bc9fad66fbb5a5cf0d7485b59f24702bf",
+    "apps/web/tests/inventory-ime-request.test.mjs": "aed68d5798c2baf14dd691de9addfd9219aba707d1251d7593fa8d89274d1568",
+    "apps/web/tests/inventory-search-phase.test.mjs": "bbbf3db32b4a993d0f049ffd211c2e07f72bc46f70aba6689537f73fc9cdde42"
+  }
+}

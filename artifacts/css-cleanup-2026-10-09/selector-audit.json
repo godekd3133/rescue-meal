@@ -1,0 +1,477 @@
+{
+  "method": "Identical ancestor and single-class tails: same matched elements and specificity",
+  "groups": [
+    {
+      "before": ".app-shell-native .device-menu-bar,\n.app-shell-native .phone-bezel,\n.app-shell-native .device-camera,\n.app-shell-native .status-bar,\n.app-shell-native .home-indicator-svg,\n.app-shell-native .android-navigation-bar,\n.app-shell-native .keyboard-dock,\n.app-shell-native .mobile-cursor",
+      "after": ".app-shell-native :is(.device-menu-bar,.phone-bezel,.device-camera,.status-bar,.home-indicator-svg,.android-navigation-bar,.keyboard-dock,.mobile-cursor)"
+    },
+    {
+      "before": ".app-shell-native .phone-scale-box,\n.app-shell-native .phone-device,\n.app-shell-native .device-screen",
+      "after": ".app-shell-native :is(.phone-scale-box,.phone-device,.device-screen)"
+    },
+    {
+      "before": ".app-shell-native .meal-home,\n.app-shell-native .runtime-configuration-screen,\n.app-shell-native .runtime-error-screen",
+      "after": ".app-shell-native :is(.meal-home,.runtime-configuration-screen,.runtime-error-screen)"
+    },
+    {
+      "before": ".capture-intro .primary-sheet-button,\n.capture-intro .secondary-sheet-button",
+      "after": ".capture-intro :is(.primary-sheet-button,.secondary-sheet-button)"
+    },
+    {
+      "before": ".guest-transfer-actions .primary-sheet-button,\n.guest-transfer-actions .secondary-sheet-button",
+      "after": ".guest-transfer-actions :is(.primary-sheet-button,.secondary-sheet-button)"
+    },
+    {
+      "before": ".receipt-privacy-confirm .secondary-sheet-button,\n.receipt-privacy-confirm .danger-sheet-button",
+      "after": ".receipt-privacy-confirm :is(.secondary-sheet-button,.danger-sheet-button)"
+    },
+    {
+      "before": ".date-editor-actions .secondary-sheet-button,\n.date-editor-actions .primary-sheet-button",
+      "after": ".date-editor-actions :is(.secondary-sheet-button,.primary-sheet-button)"
+    },
+    {
+      "before": ".discard-confirm-actions .secondary-sheet-button,\n.discard-confirm-actions .danger-sheet-button",
+      "after": ".discard-confirm-actions :is(.secondary-sheet-button,.danger-sheet-button)"
+    },
+    {
+      "before": "html[data-rescue-theme=\"light\"] .runtime-error-screen,\nhtml[data-rescue-theme=\"light\"] .runtime-configuration-screen",
+      "after": "html[data-rescue-theme=\"light\"] :is(.runtime-error-screen,.runtime-configuration-screen)"
+    },
+    {
+      "before": "html[data-rescue-theme=\"dark\"] .runtime-error-screen,\nhtml[data-rescue-theme=\"dark\"] .runtime-configuration-screen",
+      "after": "html[data-rescue-theme=\"dark\"] :is(.runtime-error-screen,.runtime-configuration-screen)"
+    },
+    {
+      "before": ".bottom-sheet .mode-tabs,\n.bottom-sheet .account-tabs,\n.bottom-sheet .recipe-review-filter-bar",
+      "after": ".bottom-sheet :is(.mode-tabs,.account-tabs,.recipe-review-filter-bar)"
+    },
+    {
+      "before": ".bottom-sheet .primary-sheet-button,\n.bottom-sheet .manual-submit,\n.bottom-sheet .shopping-sheet-manual-submit,\n.bottom-sheet .recipe-multi-day-save,\n.bottom-sheet .recipe-complete-button",
+      "after": ".bottom-sheet :is(.primary-sheet-button,.manual-submit,.shopping-sheet-manual-submit,.recipe-multi-day-save,.recipe-complete-button)"
+    },
+    {
+      "before": ".bottom-sheet .secondary-sheet-button,\n.bottom-sheet .date-edit-button,\n.bottom-sheet .product-info-edit-button,\n.bottom-sheet .recipe-alternatives-toggle,\n.bottom-sheet .recipe-history-toggle,\n.bottom-sheet .recipe-multi-day-toggle",
+      "after": ".bottom-sheet :is(.secondary-sheet-button,.date-edit-button,.product-info-edit-button,.recipe-alternatives-toggle,.recipe-history-toggle,.recipe-multi-day-toggle)"
+    },
+    {
+      "before": ".bottom-sheet .app-input-label,\n.bottom-sheet .date-input-label,\n.bottom-sheet .receipt-line-editor-heading,\n.bottom-sheet .storage-custom-heading,\n.bottom-sheet .section-kicker,\n.bottom-sheet .recipe-review-section-label",
+      "after": ".bottom-sheet :is(.app-input-label,.date-input-label,.receipt-line-editor-heading,.storage-custom-heading,.section-kicker,.recipe-review-section-label)"
+    },
+    {
+      "before": ".bottom-sheet .capture-visual,\n.bottom-sheet .camera-capture-heading-icon,\n.bottom-sheet .guidance-icon,\n.bottom-sheet .history-icon,\n.bottom-sheet .proof-icon,\n.bottom-sheet .account-profile-icon",
+      "after": ".bottom-sheet :is(.capture-visual,.camera-capture-heading-icon,.guidance-icon,.history-icon,.proof-icon,.account-profile-icon)"
+    },
+    {
+      "before": ".bottom-sheet .receipt-line,\n.bottom-sheet .receipt-line-card,\n.bottom-sheet .receipt-product-candidate,\n.bottom-sheet .barcode-candidate-card,\n.bottom-sheet .label-result-card,\n.bottom-sheet .date-editor,\n.bottom-sheet .detail-section,\n.bottom-sheet .history-row,\n.bottom-sheet .guidance-row,\n.bottom-sheet .shopping-sheet-item,\n.bottom-sheet .shopping-sheet-manual,\n.bottom-sheet .recipe-alternative-row,\n.bottom-sheet .recipe-shopping-row,\n.bottom-sheet .notification-row,\n.bottom-sheet .account-profile,\n.bottom-sheet .account-lead,\n.bottom-sheet .account-remote-refresh,\n.bottom-sheet .storage-location-row,\n.bottom-sheet .notification-preferences-card,\n.bottom-sheet .privacy-policy-card,\n.bottom-sheet .workspace-export-panel,\n.bottom-sheet .recipe-details,\n.bottom-sheet .recipe-preferences,\n.bottom-sheet .recipe-history,\n.bottom-sheet .recipe-multi-day",
+      "after": ".bottom-sheet :is(.receipt-line,.receipt-line-card,.receipt-product-candidate,.barcode-candidate-card,.label-result-card,.date-editor,.detail-section,.history-row,.guidance-row,.shopping-sheet-item,.shopping-sheet-manual,.recipe-alternative-row,.recipe-shopping-row,.notification-row,.account-profile,.account-lead,.account-remote-refresh,.storage-location-row,.notification-preferences-card,.privacy-policy-card,.workspace-export-panel,.recipe-details,.recipe-preferences,.recipe-history,.recipe-multi-day)"
+    },
+    {
+      "before": ".bottom-sheet .receipt-line-card,\n.bottom-sheet .label-result-card,\n.bottom-sheet .shopping-sheet-item,\n.bottom-sheet .notification-row,\n.bottom-sheet .account-profile,\n.bottom-sheet .storage-location-row",
+      "after": ".bottom-sheet :is(.receipt-line-card,.label-result-card,.shopping-sheet-item,.notification-row,.account-profile,.storage-location-row)"
+    },
+    {
+      "before": ".bottom-sheet .receipt-line-card-checked,\n.bottom-sheet .label-result-card-ambiguous,\n.bottom-sheet .notification-row-read,\n.bottom-sheet .shopping-sheet-row-checked,\n.bottom-sheet .recipe-shopping-row-checked",
+      "after": ".bottom-sheet :is(.receipt-line-card-checked,.label-result-card-ambiguous,.notification-row-read,.shopping-sheet-row-checked,.recipe-shopping-row-checked)"
+    },
+    {
+      "before": ".bottom-sheet .label-date-kind-option,\n.bottom-sheet .label-lot-target-option",
+      "after": ".bottom-sheet :is(.label-date-kind-option,.label-lot-target-option)"
+    },
+    {
+      "before": ".bottom-sheet .storage-pill,\n.bottom-sheet .confirmed-badge,\n.bottom-sheet .review-badge",
+      "after": ".bottom-sheet :is(.storage-pill,.confirmed-badge,.review-badge)"
+    },
+    {
+      "before": ".bottom-sheet .recipe-safety,.bottom-sheet .date-review-callout,.bottom-sheet .quality-callout,.bottom-sheet .receipt-validation-callout,.bottom-sheet .guidance-warning,.bottom-sheet .storage-mismatch-callout,.bottom-sheet .receipt-enrichment-callout-error,.bottom-sheet .account-error,.bottom-sheet .notification-error,.bottom-sheet .shopping-sheet-error",
+      "after": ".bottom-sheet :is(.recipe-safety,.date-review-callout,.quality-callout,.receipt-validation-callout,.guidance-warning,.storage-mismatch-callout,.receipt-enrichment-callout-error,.account-error,.notification-error,.shopping-sheet-error)"
+    },
+    {
+      "before": ".bottom-sheet .scanner-preview,\n.bottom-sheet .scanner-unavailable,\n.bottom-sheet .camera-capture-viewfinder,\n.bottom-sheet .receipt-source-preview-frame,\n.bottom-sheet .label-source-preview-frame",
+      "after": ".bottom-sheet :is(.scanner-preview,.scanner-unavailable,.camera-capture-viewfinder,.receipt-source-preview-frame,.label-source-preview-frame)"
+    },
+    {
+      "before": ".bottom-sheet .capture-actions,\n.bottom-sheet .camera-capture-actions,\n.bottom-sheet .camera-capture-fallback-actions,\n.bottom-sheet .detail-actions,\n.bottom-sheet .recipe-actions,\n.bottom-sheet .recipe-complete-actions,\n.bottom-sheet .shopping-sheet-actions,\n.bottom-sheet .guest-transfer-actions,\n.bottom-sheet .product-info-editor-actions,\n.bottom-sheet .date-editor-actions",
+      "after": ".bottom-sheet :is(.capture-actions,.camera-capture-actions,.camera-capture-fallback-actions,.detail-actions,.recipe-actions,.recipe-complete-actions,.shopping-sheet-actions,.guest-transfer-actions,.product-info-editor-actions,.date-editor-actions)"
+    },
+    {
+      "before": ".bottom-sheet .danger-sheet-button,\n.bottom-sheet .danger-text-button,\n.bottom-sheet .product-provenance-remove-button,\n.bottom-sheet .shopping-sheet-delete,\n.bottom-sheet .account-danger-button,\n.bottom-sheet .account-delete-submit",
+      "after": ".bottom-sheet :is(.danger-sheet-button,.danger-text-button,.product-provenance-remove-button,.shopping-sheet-delete,.account-danger-button,.account-delete-submit)"
+    },
+    {
+      "before": ".bottom-sheet .recipe-title-row,\n.bottom-sheet .detail-hero",
+      "after": ".bottom-sheet :is(.recipe-title-row,.detail-hero)"
+    },
+    {
+      "before": ".bottom-sheet .account-form,\n.bottom-sheet .login,\n.bottom-sheet .register,\n.bottom-sheet .password-change-form,\n.bottom-sheet .account-delete-form",
+      "after": ".bottom-sheet :is(.account-form,.login,.register,.password-change-form,.account-delete-form)"
+    },
+    {
+      "before": ".bottom-sheet .account-lead,\n.bottom-sheet .account-profile,\n.bottom-sheet .notification-preferences-panel,\n.bottom-sheet .grocy-integration,\n.bottom-sheet .storage-location-panel,\n.bottom-sheet .workspace-export-panel,\n.bottom-sheet .guest-transfer-panel,\n.bottom-sheet .account-delete-panel,\n.bottom-sheet .password-change-panel,\n.bottom-sheet .password-recovery-panel",
+      "after": ".bottom-sheet :is(.account-lead,.account-profile,.notification-preferences-panel,.grocy-integration,.storage-location-panel,.workspace-export-panel,.guest-transfer-panel,.account-delete-panel,.password-change-panel,.password-recovery-panel)"
+    },
+    {
+      "before": ".bottom-sheet .account-security-button,\n.bottom-sheet .account-danger-button,\n.bottom-sheet .grocy-refresh-button,\n.bottom-sheet .storage-location-create-button,\n.bottom-sheet .workspace-export-button,\n.bottom-sheet .push-subscribe-button",
+      "after": ".bottom-sheet :is(.account-security-button,.account-danger-button,.grocy-refresh-button,.storage-location-create-button,.workspace-export-button,.push-subscribe-button)"
+    },
+    {
+      "before": ".bottom-sheet .account-security-button,\n.bottom-sheet .account-danger-button",
+      "after": ".bottom-sheet :is(.account-security-button,.account-danger-button)"
+    },
+    {
+      "before": ".bottom-sheet .account-danger-button,\n.bottom-sheet .account-delete-panel",
+      "after": ".bottom-sheet :is(.account-danger-button,.account-delete-panel)"
+    },
+    {
+      "before": ".bottom-sheet .notification-preference-row,\n.bottom-sheet .notification-preference-toggle-row,\n.bottom-sheet .notification-delivery-status,\n.bottom-sheet .push-subscription-heading,\n.bottom-sheet .push-subscription-row,\n.bottom-sheet .grocy-status-card,\n.bottom-sheet .grocy-worker-card,\n.bottom-sheet .storage-location-row,\n.bottom-sheet .guest-transfer-summary",
+      "after": ".bottom-sheet :is(.notification-preference-row,.notification-preference-toggle-row,.notification-delivery-status,.push-subscription-heading,.push-subscription-row,.grocy-status-card,.grocy-worker-card,.storage-location-row,.guest-transfer-summary)"
+    },
+    {
+      "before": ".bottom-sheet .notification-preference-row,\n.bottom-sheet .notification-preference-toggle-row,\n.bottom-sheet .notification-delivery-status,\n.bottom-sheet .push-subscription-heading,\n.bottom-sheet .push-subscription-row",
+      "after": ".bottom-sheet :is(.notification-preference-row,.notification-preference-toggle-row,.notification-delivery-status,.push-subscription-heading,.push-subscription-row)"
+    },
+    {
+      "before": ".bottom-sheet .notification-time-inputs,\n.bottom-sheet .notification-days-input,\n.bottom-sheet .notification-timezone-control",
+      "after": ".bottom-sheet :is(.notification-time-inputs,.notification-days-input,.notification-timezone-control)"
+    },
+    {
+      "before": ".bottom-sheet .grocy-number-input,\n.bottom-sheet .notification-timezone-select",
+      "after": ".bottom-sheet :is(.grocy-number-input,.notification-timezone-select)"
+    },
+    {
+      "before": ".bottom-sheet .shopping-sheet-receive,\n.bottom-sheet .shopping-sheet-delete,\n.bottom-sheet .shopping-sheet-check",
+      "after": ".bottom-sheet :is(.shopping-sheet-receive,.shopping-sheet-delete,.shopping-sheet-check)"
+    },
+    {
+      "before": ".bottom-sheet .shopping-sheet-receive-panel,\n.bottom-sheet .shopping-sheet-manual,\n.bottom-sheet .recipe-preferences,\n.bottom-sheet .recipe-details,\n.bottom-sheet .recipe-alternatives,\n.bottom-sheet .recipe-history,\n.bottom-sheet .recipe-multi-day",
+      "after": ".bottom-sheet :is(.shopping-sheet-receive-panel,.shopping-sheet-manual,.recipe-preferences,.recipe-details,.recipe-alternatives,.recipe-history,.recipe-multi-day)"
+    },
+    {
+      "before": ".bottom-sheet .recipe-ingredients,\n.bottom-sheet .recipe-shopping-list,\n.bottom-sheet .recipe-alternatives-list,\n.bottom-sheet .recipe-history-list,\n.bottom-sheet .recipe-multi-day-list,\n.bottom-sheet .notification-list,\n.bottom-sheet .guidance-list,\n.bottom-sheet .history-list,\n.bottom-sheet .push-subscription-list",
+      "after": ".bottom-sheet :is(.recipe-ingredients,.recipe-shopping-list,.recipe-alternatives-list,.recipe-history-list,.recipe-multi-day-list,.notification-list,.guidance-list,.history-list,.push-subscription-list)"
+    },
+    {
+      "before": ".bottom-sheet .recipe-time-picker,\n.bottom-sheet .recipe-serving-picker",
+      "after": ".bottom-sheet :is(.recipe-time-picker,.recipe-serving-picker)"
+    },
+    {
+      "before": ".bottom-sheet .recipe-loading,\n.bottom-sheet .recipe-empty-art",
+      "after": ".bottom-sheet :is(.recipe-loading,.recipe-empty-art)"
+    },
+    {
+      "before": ".bottom-sheet .recipe-missing-callout,\n.bottom-sheet .recipe-preference-callout,\n.bottom-sheet .recipe-date-review-callout",
+      "after": ".bottom-sheet :is(.recipe-missing-callout,.recipe-preference-callout,.recipe-date-review-callout)"
+    },
+    {
+      "before": ".bottom-sheet .recipe-preference-callout,\n.bottom-sheet .recipe-date-review-callout",
+      "after": ".bottom-sheet :is(.recipe-preference-callout,.recipe-date-review-callout)"
+    },
+    {
+      "before": ".bottom-sheet .recipe-actions,\n.bottom-sheet .recipe-complete-actions",
+      "after": ".bottom-sheet :is(.recipe-actions,.recipe-complete-actions)"
+    },
+    {
+      "before": ".bottom-sheet .input-flow,\n.bottom-sheet .receipt-review,\n.bottom-sheet .ocr-review,\n.bottom-sheet .manual-flow",
+      "after": ".bottom-sheet :is(.input-flow,.receipt-review,.ocr-review,.manual-flow)"
+    },
+    {
+      "before": ".bottom-sheet .capture-action,\n.bottom-sheet .file-button",
+      "after": ".bottom-sheet :is(.capture-action,.file-button)"
+    },
+    {
+      "before": ".bottom-sheet .capture-hint,\n.bottom-sheet .manual-lot-note",
+      "after": ".bottom-sheet :is(.capture-hint,.manual-lot-note)"
+    },
+    {
+      "before": ".bottom-sheet .receipt-review,\n.bottom-sheet .ocr-review",
+      "after": ".bottom-sheet :is(.receipt-review,.ocr-review)"
+    },
+    {
+      "before": ".bottom-sheet .review-summary,.bottom-sheet .receipt-enrichment-callout,.bottom-sheet .receipt-validation-callout,.bottom-sheet .quality-callout,.bottom-sheet .receipt-resume-callout",
+      "after": ".bottom-sheet :is(.review-summary,.receipt-enrichment-callout,.receipt-validation-callout,.quality-callout,.receipt-resume-callout)"
+    },
+    {
+      "before": ".bottom-sheet .receipt-source-preview,\n.bottom-sheet .label-source-preview",
+      "after": ".bottom-sheet :is(.receipt-source-preview,.label-source-preview)"
+    },
+    {
+      "before": ".bottom-sheet .receipt-source-preview-heading,\n.bottom-sheet .label-source-preview-heading",
+      "after": ".bottom-sheet :is(.receipt-source-preview-heading,.label-source-preview-heading)"
+    },
+    {
+      "before": ".bottom-sheet .receipt-source-preview-frame,\n.bottom-sheet .label-source-preview-frame",
+      "after": ".bottom-sheet :is(.receipt-source-preview-frame,.label-source-preview-frame)"
+    },
+    {
+      "before": ".bottom-sheet .receipt-lines,\n.bottom-sheet .label-result-fields,\n.bottom-sheet .receipt-line-editor-grid",
+      "after": ".bottom-sheet :is(.receipt-lines,.label-result-fields,.receipt-line-editor-grid)"
+    },
+    {
+      "before": ".bottom-sheet .receipt-line-card,\n.bottom-sheet .label-result-card",
+      "after": ".bottom-sheet :is(.receipt-line-card,.label-result-card)"
+    },
+    {
+      "before": ".bottom-sheet .receipt-line-copy,\n.bottom-sheet .barcode-candidate-copy",
+      "after": ".bottom-sheet :is(.receipt-line-copy,.barcode-candidate-copy)"
+    },
+    {
+      "before": ".bottom-sheet .receipt-line-match-source,\n.bottom-sheet .ocr-confidence,\n.bottom-sheet .review-badge,\n.bottom-sheet .confirmed-badge",
+      "after": ".bottom-sheet :is(.receipt-line-match-source,.ocr-confidence,.review-badge,.confirmed-badge)"
+    },
+    {
+      "before": ".bottom-sheet .manual-note,\n.bottom-sheet .manual-product-provenance,\n.bottom-sheet .manual-date-candidate,\n.bottom-sheet .manual-lot-note,\n.bottom-sheet .label-storage-condition-note,\n.bottom-sheet .label-storage-required",
+      "after": ".bottom-sheet :is(.manual-note,.manual-product-provenance,.manual-date-candidate,.manual-lot-note,.label-storage-condition-note,.label-storage-required)"
+    },
+    {
+      "before": ".bottom-sheet .manual-note,\n.bottom-sheet .manual-product-provenance,\n.bottom-sheet .manual-date-candidate",
+      "after": ".bottom-sheet :is(.manual-note,.manual-product-provenance,.manual-date-candidate)"
+    },
+    {
+      "before": ".bottom-sheet .detail-remote-refresh,\n.bottom-sheet .storage-mismatch-callout",
+      "after": ".bottom-sheet :is(.detail-remote-refresh,.storage-mismatch-callout)"
+    },
+    {
+      "before": ".bottom-sheet .date-proof-card,\n.bottom-sheet .food-provenance-card,\n.bottom-sheet .opened-row,\n.bottom-sheet .detail-note",
+      "after": ".bottom-sheet :is(.date-proof-card,.food-provenance-card,.opened-row,.detail-note)"
+    },
+    {
+      "before": ".bottom-sheet .recipe-shopping-row,.bottom-sheet .recipe-history-row,.bottom-sheet .recipe-multi-day-row,.bottom-sheet .guidance-row,.bottom-sheet .history-row",
+      "after": ".bottom-sheet :is(.recipe-shopping-row,.recipe-history-row,.recipe-multi-day-row,.guidance-row,.history-row)"
+    },
+    {
+      "before": ".bottom-sheet .guidance-row,\n.bottom-sheet .history-row",
+      "after": ".bottom-sheet :is(.guidance-row,.history-row)"
+    },
+    {
+      "before": ".shopping-summary-card[data-sync-focus=\"action_required\"] .shopping-summary-icon,\n.shopping-summary-card[data-sync-focus=\"action_required\"] .shopping-summary-kicker",
+      "after": ".shopping-summary-card[data-sync-focus=\"action_required\"] :is(.shopping-summary-icon,.shopping-summary-kicker)"
+    },
+    {
+      "before": ".shopping-summary-card[data-sync-focus=\"processing\"] .shopping-summary-icon,\n.shopping-summary-card[data-sync-focus=\"processing\"] .shopping-summary-kicker",
+      "after": ".shopping-summary-card[data-sync-focus=\"processing\"] :is(.shopping-summary-icon,.shopping-summary-kicker)"
+    },
+    {
+      "before": ".bottom-sheet .mode-tabs,\n.bottom-sheet .account-tabs",
+      "after": ".bottom-sheet :is(.mode-tabs,.account-tabs)"
+    },
+    {
+      "before": ".bottom-sheet .mode-tab,\n.bottom-sheet .account-tab",
+      "after": ".bottom-sheet :is(.mode-tab,.account-tab)"
+    },
+    {
+      "before": ".bottom-sheet .mode-tab-active,\n.bottom-sheet .account-tab-active",
+      "after": ".bottom-sheet :is(.mode-tab-active,.account-tab-active)"
+    },
+    {
+      "before": ".bottom-sheet .capture-visual,\n.bottom-sheet .camera-capture-heading-icon,\n.bottom-sheet .guidance-icon,\n.bottom-sheet .history-icon,\n.bottom-sheet .proof-icon",
+      "after": ".bottom-sheet :is(.capture-visual,.camera-capture-heading-icon,.guidance-icon,.history-icon,.proof-icon)"
+    },
+    {
+      "before": ".bottom-sheet .recipe-safety,.bottom-sheet .date-review-callout,.bottom-sheet .quality-callout,.bottom-sheet .receipt-validation-callout,.bottom-sheet .guidance-warning",
+      "after": ".bottom-sheet :is(.recipe-safety,.date-review-callout,.quality-callout,.receipt-validation-callout,.guidance-warning)"
+    },
+    {
+      "before": ".bottom-sheet .scanner-preview,\n.bottom-sheet .scanner-unavailable,\n.bottom-sheet .account-lead,\n.bottom-sheet .account-profile,\n.bottom-sheet .account-remote-refresh,\n.bottom-sheet .notification-delivery-status,\n.bottom-sheet .shopping-sheet-manual,\n.bottom-sheet .recipe-preferences,\n.bottom-sheet .recipe-details,\n.bottom-sheet .recipe-alternatives,\n.bottom-sheet .recipe-history,\n.bottom-sheet .recipe-multi-day,\n.bottom-sheet .manual-note,\n.bottom-sheet .manual-lot-note,\n.bottom-sheet .manual-product-provenance,\n.bottom-sheet .label-date-meaning-review,\n.bottom-sheet .label-lot-target,\n.bottom-sheet .date-edit-button,\n.bottom-sheet .date-editor,\n.bottom-sheet .product-info-edit-button,\n.bottom-sheet .product-info-editor,\n.bottom-sheet .detail-hero",
+      "after": ".bottom-sheet :is(.scanner-preview,.scanner-unavailable,.account-lead,.account-profile,.account-remote-refresh,.notification-delivery-status,.shopping-sheet-manual,.recipe-preferences,.recipe-details,.recipe-alternatives,.recipe-history,.recipe-multi-day,.manual-note,.manual-lot-note,.manual-product-provenance,.label-date-meaning-review,.label-lot-target,.date-edit-button,.date-editor,.product-info-edit-button,.product-info-editor,.detail-hero)"
+    },
+    {
+      "before": ".bottom-sheet .camera-capture-viewfinder,\n.bottom-sheet .scanner-frame,\n.bottom-sheet .receipt-source-preview-frame,\n.bottom-sheet .label-source-preview-frame",
+      "after": ".bottom-sheet :is(.camera-capture-viewfinder,.scanner-frame,.receipt-source-preview-frame,.label-source-preview-frame)"
+    },
+    {
+      "before": ".bottom-sheet .receipt-line,\n.bottom-sheet .receipt-product-candidate,\n.bottom-sheet .barcode-candidate-card,\n.bottom-sheet .label-result-card,\n.bottom-sheet .date-editor,\n.bottom-sheet .detail-section,\n.bottom-sheet .history-row,\n.bottom-sheet .guidance-row,\n.bottom-sheet .shopping-sheet-item,\n.bottom-sheet .shopping-sheet-manual,\n.bottom-sheet .recipe-alternative-row,\n.bottom-sheet .recipe-shopping-row",
+      "after": ".bottom-sheet :is(.receipt-line,.receipt-product-candidate,.barcode-candidate-card,.label-result-card,.date-editor,.detail-section,.history-row,.guidance-row,.shopping-sheet-item,.shopping-sheet-manual,.recipe-alternative-row,.recipe-shopping-row)"
+    },
+    {
+      "before": ".bottom-sheet .receipt-line-toggle,\n.bottom-sheet .recipe-shopping-check,\n.bottom-sheet .shopping-sheet-check",
+      "after": ".bottom-sheet :is(.receipt-line-toggle,.recipe-shopping-check,.shopping-sheet-check)"
+    },
+    {
+      "before": ".bottom-sheet .section-kicker,\n.bottom-sheet .guidance-number,\n.bottom-sheet .history-icon",
+      "after": ".bottom-sheet :is(.section-kicker,.guidance-number,.history-icon)"
+    },
+    {
+      "before": ".bottom-sheet .recipe-time,\n.bottom-sheet .recipe-serving-note,\n.bottom-sheet .recipe-optimizer-note,\n.bottom-sheet .recipe-allergen-note,\n.bottom-sheet .recipe-preferences-note",
+      "after": ".bottom-sheet :is(.recipe-time,.recipe-serving-note,.recipe-optimizer-note,.recipe-allergen-note,.recipe-preferences-note)"
+    },
+    {
+      "before": ".app-shell-preview .home-hero-copy,\n.app-shell-preview .greeting-block",
+      "after": ".app-shell-preview :is(.home-hero-copy,.greeting-block)"
+    },
+    {
+      "before": ".app-shell-preview .priority-section,\n.app-shell-preview .section-heading",
+      "after": ".app-shell-preview :is(.priority-section,.section-heading)"
+    },
+    {
+      "before": ".app-shell-preview .food-subline,\n.app-shell-preview .food-meta-line,\n.app-shell-preview .date-source",
+      "after": ".app-shell-preview :is(.food-subline,.food-meta-line,.date-source)"
+    },
+    {
+      "before": ".app-shell-native .home-hero-copy,\n.app-shell-native .greeting-block",
+      "after": ".app-shell-native :is(.home-hero-copy,.greeting-block)"
+    },
+    {
+      "before": ".app-shell-native .priority-section,\n.app-shell-native .section-heading",
+      "after": ".app-shell-native :is(.priority-section,.section-heading)"
+    },
+    {
+      "before": ".app-shell-native .food-subline,\n.app-shell-native .food-meta-line,\n.app-shell-native .date-source",
+      "after": ".app-shell-native :is(.food-subline,.food-meta-line,.date-source)"
+    },
+    {
+      "before": ".app-shell-web .food-subline,\n.app-shell-web .food-meta-line,\n.app-shell-web .date-source,\n.app-shell-web .priority-date",
+      "after": ".app-shell-web :is(.food-subline,.food-meta-line,.date-source,.priority-date)"
+    },
+    {
+      "before": ".app-shell-web .meal-home,\n  .app-shell-web .app-bottom-nav",
+      "after": ".app-shell-web :is(.meal-home,.app-bottom-nav)"
+    },
+    {
+      "before": ".app-shell-web .meal-plan-button,\n  .app-shell-web .add-food-button",
+      "after": ".app-shell-web :is(.meal-plan-button,.add-food-button)"
+    },
+    {
+      "before": ".app-shell-web .header-actions .icon-button,\n  .app-shell-web .header-actions .notification-button",
+      "after": ".app-shell-web .header-actions :is(.icon-button,.notification-button)"
+    },
+    {
+      "before": ".app-shell-native .phone-scale-box,\n  .app-shell-native .phone-device,\n  .app-shell-native .device-screen",
+      "after": ".app-shell-native :is(.phone-scale-box,.phone-device,.device-screen)"
+    },
+    {
+      "before": "html[data-rescue-theme=\"light\"] .meal-home,\nhtml[data-rescue-theme=\"light\"] .bottom-sheet,\nhtml[data-rescue-theme=\"light\"] .app-bottom-nav,\nhtml[data-rescue-theme=\"light\"] .toast",
+      "after": "html[data-rescue-theme=\"light\"] :is(.meal-home,.bottom-sheet,.app-bottom-nav,.toast)"
+    },
+    {
+      "before": "html[data-rescue-theme=\"dark\"] .meal-home,\nhtml[data-rescue-theme=\"dark\"] .bottom-sheet,\nhtml[data-rescue-theme=\"dark\"] .app-bottom-nav,\nhtml[data-rescue-theme=\"dark\"] .toast",
+      "after": "html[data-rescue-theme=\"dark\"] :is(.meal-home,.bottom-sheet,.app-bottom-nav,.toast)"
+    },
+    {
+      "before": "html[data-rescue-theme=\"light\"] .meal-home .connection-offline,\nhtml[data-rescue-theme=\"light\"] .meal-home .connection-auth_required",
+      "after": "html[data-rescue-theme=\"light\"] .meal-home :is(.connection-offline,.connection-auth_required)"
+    },
+    {
+      "before": "html[data-rescue-theme=\"dark\"] .meal-home .connection-offline,\nhtml[data-rescue-theme=\"dark\"] .meal-home .connection-auth_required",
+      "after": "html[data-rescue-theme=\"dark\"] .meal-home :is(.connection-offline,.connection-auth_required)"
+    },
+    {
+      "before": "html[data-rescue-theme=\"light\"] .meal-home .icon-button,\nhtml[data-rescue-theme=\"light\"] .meal-home .notification-button",
+      "after": "html[data-rescue-theme=\"light\"] .meal-home :is(.icon-button,.notification-button)"
+    },
+    {
+      "before": "html[data-rescue-theme=\"dark\"] .meal-home .icon-button,\nhtml[data-rescue-theme=\"dark\"] .meal-home .notification-button",
+      "after": "html[data-rescue-theme=\"dark\"] .meal-home :is(.icon-button,.notification-button)"
+    },
+    {
+      "before": "html[data-rescue-theme=\"dark\"] .meal-home .food-subline,\nhtml[data-rescue-theme=\"dark\"] .meal-home .food-meta-line,\nhtml[data-rescue-theme=\"dark\"] .meal-home .date-source",
+      "after": "html[data-rescue-theme=\"dark\"] .meal-home :is(.food-subline,.food-meta-line,.date-source)"
+    },
+    {
+      "before": "html[data-rescue-theme=\"dark\"] .bottom-sheet .camera-capture-viewfinder,\nhtml[data-rescue-theme=\"dark\"] .bottom-sheet .scanner-frame,\nhtml[data-rescue-theme=\"dark\"] .bottom-sheet .receipt-source-preview-frame,\nhtml[data-rescue-theme=\"dark\"] .bottom-sheet .label-source-preview-frame,\nhtml[data-rescue-theme=\"dark\"] .bottom-sheet .scanner-preview",
+      "after": "html[data-rescue-theme=\"dark\"] .bottom-sheet :is(.camera-capture-viewfinder,.scanner-frame,.receipt-source-preview-frame,.label-source-preview-frame,.scanner-preview)"
+    },
+    {
+      "before": ".meal-home .priority-unknown-state,\n.meal-home .inventory-unknown-state",
+      "after": ".meal-home :is(.priority-unknown-state,.inventory-unknown-state)"
+    },
+    {
+      "before": ".bottom-sheet .detail-read-only-callout,\n.bottom-sheet .detail-read-only-inline-note",
+      "after": ".bottom-sheet :is(.detail-read-only-callout,.detail-read-only-inline-note)"
+    },
+    {
+      "before": ".bottom-sheet .recipe-safety-summary-list .recipe-date-review-callout,\n.bottom-sheet .recipe-safety-summary-list .recipe-preference-callout",
+      "after": ".bottom-sheet .recipe-safety-summary-list :is(.recipe-date-review-callout,.recipe-preference-callout)"
+    },
+    {
+      "before": ".bottom-sheet .recipe-safety-summary-list .recipe-missing-callout,\n.bottom-sheet .recipe-safety-summary-list .recipe-allergen-callout",
+      "after": ".bottom-sheet .recipe-safety-summary-list :is(.recipe-missing-callout,.recipe-allergen-callout)"
+    },
+    {
+      "before": ".bottom-sheet .shopping-sheet-receive-steps .shopping-sheet-receive-step-complete,\n.bottom-sheet .shopping-sheet-receive-steps .shopping-sheet-receive-step-active",
+      "after": ".bottom-sheet .shopping-sheet-receive-steps :is(.shopping-sheet-receive-step-complete,.shopping-sheet-receive-step-active)"
+    },
+    {
+      "before": ".bottom-sheet .receipt-review,\n.bottom-sheet .label-result-card",
+      "after": ".bottom-sheet :is(.receipt-review,.label-result-card)"
+    },
+    {
+      "before": ".bottom-sheet .notification-sheet-heading,\n  .bottom-sheet .shopping-sheet-list-heading",
+      "after": ".bottom-sheet :is(.notification-sheet-heading,.shopping-sheet-list-heading)"
+    },
+    {
+      "before": ".bottom-sheet .shopping-sheet-receive-cancel,\n  .bottom-sheet .shopping-sheet-receive-submit",
+      "after": ".bottom-sheet :is(.shopping-sheet-receive-cancel,.shopping-sheet-receive-submit)"
+    },
+    {
+      "before": ".bottom-sheet .receipt-line-confirm-button,\n  .bottom-sheet .receipt-line-confirmed-badge",
+      "after": ".bottom-sheet :is(.receipt-line-confirm-button,.receipt-line-confirmed-badge)"
+    },
+    {
+      "before": ".bottom-sheet .grocy-outbox-card .grocy-refresh-button,\n  .bottom-sheet .grocy-outbox-card .grocy-process-button",
+      "after": ".bottom-sheet .grocy-outbox-card :is(.grocy-refresh-button,.grocy-process-button)"
+    },
+    {
+      "before": ".bottom-sheet .recipe-time-picker,\n.bottom-sheet .recipe-serving-picker",
+      "after": ".bottom-sheet :is(.recipe-time-picker,.recipe-serving-picker)"
+    },
+    {
+      "before": ".bottom-sheet .recipe-time-picker,\n  .bottom-sheet .recipe-serving-picker",
+      "after": ".bottom-sheet :is(.recipe-time-picker,.recipe-serving-picker)"
+    },
+    {
+      "before": ".bottom-sheet .recipe-actions.detail-actions .secondary-sheet-button,\n  .bottom-sheet .recipe-actions.detail-actions .primary-sheet-button",
+      "after": ".bottom-sheet .recipe-actions.detail-actions :is(.secondary-sheet-button,.primary-sheet-button)"
+    },
+    {
+      "before": ".bottom-sheet .receipt-review,\n  .bottom-sheet .receipt-lines,\n  .bottom-sheet .receipt-line-card,\n  .bottom-sheet .receipt-line-editor,\n  .bottom-sheet .receipt-line-editor-grid,\n  .bottom-sheet .receipt-line-editor-field",
+      "after": ".bottom-sheet :is(.receipt-review,.receipt-lines,.receipt-line-card,.receipt-line-editor,.receipt-line-editor-grid,.receipt-line-editor-field)"
+    },
+    {
+      "before": "html[data-rescue-theme=\"light\"] .meal-home,\nhtml[data-rescue-theme=\"light\"] .bottom-sheet,\nhtml[data-rescue-theme=\"light\"] .app-bottom-nav,\nhtml[data-rescue-theme=\"light\"] .toast",
+      "after": "html[data-rescue-theme=\"light\"] :is(.meal-home,.bottom-sheet,.app-bottom-nav,.toast)"
+    },
+    {
+      "before": "html[data-rescue-theme=\"dark\"] .meal-home,\nhtml[data-rescue-theme=\"dark\"] .bottom-sheet,\nhtml[data-rescue-theme=\"dark\"] .app-bottom-nav,\nhtml[data-rescue-theme=\"dark\"] .toast",
+      "after": "html[data-rescue-theme=\"dark\"] :is(.meal-home,.bottom-sheet,.app-bottom-nav,.toast)"
+    },
+    {
+      "before": ".meal-home .connection-pill,\n.meal-home .icon-button,\n.meal-home .notification-button",
+      "after": ".meal-home :is(.connection-pill,.icon-button,.notification-button)"
+    },
+    {
+      "before": ".home-action-row .meal-plan-button,\n.home-action-row .add-food-button",
+      "after": ".home-action-row :is(.meal-plan-button,.add-food-button)"
+    },
+    {
+      "before": ".bottom-sheet .mode-tabs,\n.bottom-sheet .account-tabs",
+      "after": ".bottom-sheet :is(.mode-tabs,.account-tabs)"
+    },
+    {
+      "before": ".bottom-sheet .primary-sheet-button,\n.bottom-sheet .manual-submit,\n.bottom-sheet .shopping-sheet-manual-submit,\n.bottom-sheet .recipe-complete-button",
+      "after": ".bottom-sheet :is(.primary-sheet-button,.manual-submit,.shopping-sheet-manual-submit,.recipe-complete-button)"
+    },
+    {
+      "before": ".bottom-sheet .receipt-line-card,\n.bottom-sheet .receipt-review-contract,\n.bottom-sheet .label-result-action-summary,\n.bottom-sheet .food-provenance-card,\n.bottom-sheet .product-provenance-card,\n.bottom-sheet .recipe-safety-summary,\n.bottom-sheet .recipe-safety-summary-item,\n.bottom-sheet .history-row,\n.bottom-sheet .guidance-row",
+      "after": ".bottom-sheet :is(.receipt-line-card,.receipt-review-contract,.label-result-action-summary,.food-provenance-card,.product-provenance-card,.recipe-safety-summary,.recipe-safety-summary-item,.history-row,.guidance-row)"
+    },
+    {
+      "before": ".bottom-sheet .receipt-line-card,\n.bottom-sheet .history-row,\n.bottom-sheet .guidance-row",
+      "after": ".bottom-sheet :is(.receipt-line-card,.history-row,.guidance-row)"
+    },
+    {
+      "before": ".bottom-sheet .receipt-line-card-checked,\n.bottom-sheet .receipt-line-card-needs-confirmation,\n.bottom-sheet .receipt-line-card-confirmed,\n.bottom-sheet .receipt-line-card-source-active",
+      "after": ".bottom-sheet :is(.receipt-line-card-checked,.receipt-line-card-needs-confirmation,.receipt-line-card-confirmed,.receipt-line-card-source-active)"
+    },
+    {
+      "before": ".bottom-sheet .recipe-safety-summary-list .recipe-date-review-callout,\n.bottom-sheet .recipe-safety-summary-list .recipe-preference-callout,\n.bottom-sheet .recipe-safety-summary-list .recipe-missing-callout,\n.bottom-sheet .recipe-safety-summary-list .recipe-allergen-callout",
+      "after": ".bottom-sheet .recipe-safety-summary-list :is(.recipe-date-review-callout,.recipe-preference-callout,.recipe-missing-callout,.recipe-allergen-callout)"
+    },
+    {
+      "before": "html[data-rescue-theme=\"light\"] .meal-home,\n  html[data-rescue-theme=\"light\"] .bottom-sheet,\n  html[data-rescue-theme=\"light\"] .app-bottom-nav",
+      "after": "html[data-rescue-theme=\"light\"] :is(.meal-home,.bottom-sheet,.app-bottom-nav)"
+    },
+    {
+      "before": "html[data-rescue-theme=\"dark\"] .meal-home,\n  html[data-rescue-theme=\"dark\"] .bottom-sheet,\n  html[data-rescue-theme=\"dark\"] .app-bottom-nav",
+      "after": "html[data-rescue-theme=\"dark\"] :is(.meal-home,.bottom-sheet,.app-bottom-nav)"
+    }
+  ]
+}

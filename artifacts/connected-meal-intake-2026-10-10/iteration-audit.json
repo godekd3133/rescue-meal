@@ -1,0 +1,32 @@
+{
+  "changes": [
+    "Shorten serving caption to 식사 인원 to avoid awkward wrapping"
+  ],
+  "environment": "Owned localAPI8089, Vite4212, isolatedSQLite synthetic account; no production data",
+  "verification": {
+    "connected_no_match": "10min/2servings returns no-match with available recovery",
+    "intake_save": "감자3개 냉장 persisted",
+    "after_save": "meal reopened,10min/2servings retained",
+    "followup": "saved potato detail opens; closing returns same meal conditions",
+    "API_readback": {
+      "records": 1,
+      "quantity": 3.0,
+      "unit": "개",
+      "storage": "refrigerated",
+      "date_kind": "unknown",
+      "date_value": null
+    },
+    "date_state": "actualunknown/no date retained; no fabricated use-first date",
+    "build": "passed",
+    "runtime_files": 28,
+    "node_tests": 375,
+    "diff_check": "passed",
+    "playwright_CLI": "not used"
+  },
+  "remaining": [
+    "CSS budget",
+    "Other user journeys and real device/OCR acceptance",
+    "Browser regression migration"
+  ],
+  "goal": "active"
+}

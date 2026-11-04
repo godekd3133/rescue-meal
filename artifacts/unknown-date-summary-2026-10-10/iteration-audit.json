@@ -1,0 +1,28 @@
+{
+  "changes": [
+    "Unknown priority date omits repeated date-origin and generic action badge",
+    "Unknown inventory state uses one 미확인 label instead of repeated check wording",
+    "Preserve separate storage review warning alongside unknown date"
+  ],
+  "verification": {
+    "IAB_demo_item": "대파1개 냉장 with no entereddate",
+    "IAB_priority_text": [
+      "대파",
+      "1개",
+      "냉장",
+      "날짜 미확인"
+    ],
+    "IAB_inventory_text": "same four fields",
+    "IAB_open_detail": "date unknown group and printed-date input action remain",
+    "build": "passed",
+    "runtime_files": 28,
+    "node_tests": 422,
+    "diff_check": "passed"
+  },
+  "remaining": [
+    "Connected/mixed storage mismatch display acceptance",
+    "CSS budget",
+    "Other journeys and real device/OCR coverage"
+  ],
+  "goal": "active"
+}

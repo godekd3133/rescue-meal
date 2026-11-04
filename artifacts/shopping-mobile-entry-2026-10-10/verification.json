@@ -1,0 +1,31 @@
+{
+  "goal": "active",
+  "problems": [
+    "Shopping name, quantity, unit and submit remained in one row because viewport media queries missed phone-width sheets in desktop preview",
+    "Submit pointerdown hid keyboard before click, moving button and losing first tap"
+  ],
+  "changes": [
+    "Use shopping section inline-size container to place name full row and remaining fields on next row for widths up to420px",
+    "Reveal focused manual fields in scroll container",
+    "Hide keyboard after successful submit rather than before click"
+  ],
+  "validation": {
+    "shopping_manual_tests": 12,
+    "build": "passed",
+    "runtime_protected": 28,
+    "diff_check": "passed",
+    "GUI": {
+      "scope": "Explicit demo iPhone/Pixel10 preview with simulated keyboard",
+      "iPhone": "Full-width name234.64 scaledpx; button55.54x31.93 scaledpx corresponds80x46 CSSpx; all field bottom edges above keyboard top421.79; one tap adds2packs; form resets empty name,1,unit개",
+      "Pixel": "Name244.60 scaledpx; button bottom374.31 before keyboard top463.23; one tap adds3units",
+      "restored": "Demo reload removes two fixtures; iPhone preset"
+    },
+    "connected_API_mobile": "not-run",
+    "physical_device": "not-run"
+  },
+  "source_snapshot": {
+    "apps/web/src/ShoppingListSheet.tsx": "2ed103893000db48431d244e1bbb10ad252a853d602d0947765cbeb55950b118",
+    "apps/web/src/mealShoppingSheets.css": "928ed95e1efe010523a59600c8a6fad06a27770f8591e07dc3e08925e55ff7dd"
+  },
+  "CSS_KB": 291.3
+}

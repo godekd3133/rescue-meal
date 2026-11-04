@@ -1,0 +1,39 @@
+{
+  "goal_status": "active",
+  "previous_turn": "progress",
+  "cause": "Before effect starts a new query, response key/status belongs to previous search; local zero was shown as final empty search",
+  "implemented": [
+    "Phase derived from current request key and response key",
+    "No confirmed count or empty-state before first response",
+    "Error only belongs to matching query",
+    "Pagination loading retains confirmed rows"
+  ],
+  "runtime": {
+    "first_response_wait": "verified actual API/UI busy=true,heading=countunknown,loading present,empty absent",
+    "after_response": "verified1broccoli row under all storage",
+    "waiting_screenshot": "waiting.png"
+  },
+  "unit_scope": [
+    "oldkeyerror is waiting",
+    "samekeyemptyerror is error",
+    "samekeypaginationfailurewith40rows is stale",
+    "paginationloading40rows is refreshing",
+    "inactive server search useslocalview"
+  ],
+  "checks": {
+    "web": "689passed",
+    "build": "passed",
+    "runtime_integrity": "28protectedfilespassed",
+    "diff": "passed"
+  },
+  "not_run": [
+    "Physicaldevice",
+    "PlaywrightCLI/MCP full suite",
+    "Live paginated failure scenario"
+  ],
+  "sha256": {
+    "apps/web/src/Prototype.tsx": "ca24061419e3e363b4e6aad1be73459d43beaec0b8e90b08695f1b5a1ee72347",
+    "apps/web/src/inventorySearchPhase.ts": "7053bc27bbbf7d40608e530d4b4674cec3d2af25284c774f1c08f0660e62503e",
+    "apps/web/tests/inventory-search-phase.test.mjs": "0d622eef39dfa2e7b3c63618b7bf46fe268b3763b2392e9eada7688473b20465"
+  }
+}

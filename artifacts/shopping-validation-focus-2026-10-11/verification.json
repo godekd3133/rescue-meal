@@ -1,0 +1,35 @@
+{
+  "status": "partial",
+  "finding": "Invalid direct shopping entry showed a message without moving focus to the invalid input or marking/describing that input",
+  "changes": [
+    "Name/quantity/unit refs route validation failure to corresponding input after DOM error renders",
+    "Field-specific aria-invalid and error described-by linkage",
+    "Unrelated field edits retain the current error; editing the implicated field clears it",
+    "12px error copy and explicit themed error border"
+  ],
+  "validation": {
+    "frontend_suite": 853,
+    "build": "passed",
+    "runtime_files": 28,
+    "diff_check": "passed",
+    "name_failure_focus": "직접 추가 상품명",
+    "quantity_failure_focus": "직접 추가 수량",
+    "unit_failure_focus": "직접 추가 단위",
+    "linked_description": "shopping-manual-error",
+    "quantity_test": "0",
+    "error_seen_above_keyboard": true,
+    "unrelated_unit_edit_keeps_name_error": true,
+    "restored_form": [
+      "empty name",
+      "1",
+      "개"
+    ],
+    "shopping_mutations": "none; every attempted addition failed frontend validation"
+  },
+  "proof": "quantity-error.png",
+  "limits": [
+    "Current connected iPhone/light and invalid-entry cases only",
+    "No valid add, quantity update, checkbox or delete executed",
+    "Other device/layout and server-error cases remain separate evidence"
+  ]
+}

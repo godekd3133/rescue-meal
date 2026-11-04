@@ -1,0 +1,31 @@
+{
+  "status": "partial",
+  "findings": [
+    "Missing consumed/discarded amount rendered as0 using nullish fallback",
+    "Direct number interpolation used scientific notation for very small recorded amounts"
+  ],
+  "changes": [
+    "Unknown or invalid historical amount has explicit unknown copy",
+    "Known amounts use existing decimal formatter and preserve current recorded unit/action"
+  ],
+  "validation": {
+    "frontend_suite": 853,
+    "new_cases": 4,
+    "build": "passed",
+    "runtime_files": 28,
+    "diff_check": "passed",
+    "fixture_unknown": "기록된 양을 확인할 수 없어요.",
+    "fixture_small": "0.0000004팩 먹었어요",
+    "known_decimal": "1.1234L 먹었어요",
+    "disposal": "0.2팩 폐기했어요",
+    "record_writes": "none",
+    "cleanup": "Temporary fixture tab closed; original detail retained"
+  },
+  "unit_investigation": "Current product profile correction has no quantity-unit editor; no unit-changing flow introduced",
+  "proof": "fixture-quantity.png",
+  "limits": [
+    "Synthetic received events in actual FoodHistory component; no claim of observed legacy live null amounts",
+    "Current immutable lot unit remains the history unit source; no per-event unit snapshot added",
+    "Full journey acceptance and CSS budget remain open"
+  ]
+}

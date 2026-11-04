@@ -1,0 +1,35 @@
+{
+  "scope": "product and date editor guidance roundtrip",
+  "changes": [
+    "restore open product editor and name/brand/category draft",
+    "report date editor draft to owning detail for restoration",
+    "restore date value and explicit meaning without guessing",
+    "clear date draft on explicit cancel",
+    "bind drafts to name/brand/category/date baseline as well as food and inventory baseline",
+    "avoid re-running field resets on product request status transitions",
+    "use neutral record refresh heading without an unverified device attribution"
+  ],
+  "runtime": {
+    "environment": "local isolated SQLite synthetic account IAB",
+    "retained": {
+      "product_name": "배추김치",
+      "brand": "검증 브랜드",
+      "category": "김치",
+      "date": "2026-01-01",
+      "kind": "use_by"
+    },
+    "focus": "날짜 안내 보기",
+    "cancel_date": "reopen value empty, no selected use_by",
+    "final_close": "original 김치, 500g, refrigerated, unopened, no editor visible"
+  },
+  "verification": {
+    "build": "passed",
+    "protected_files": 28,
+    "diff_check": "passed",
+    "node_passed": 465
+  },
+  "limits": [
+    "no actual date or product save in this loop",
+    "full app acceptance and CSS budget remain open"
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "goal": "active",
+  "problem": "Unknown manual shopping write outcome was shown as definitely failed despite server persistence.",
+  "change": "Unknown outcome offers owner-scoped list read; known persistence rejection keeps write retry.",
+  "verification": {
+    "shopping_manual_tests": 12,
+    "build": "passed",
+    "runtime_protected": 28,
+    "diff_check": "passed",
+    "GUI": "Isolated local API wrote fixture then proxy dropped acknowledgement; UI showed uncertainty and list-confirm action; list-confirm revealed exactly one fixture, cleared error, without manual resubmission",
+    "synthetic_fixture": "저장확인검증 1개",
+    "production": "not-run"
+  },
+  "source_sha256": "c697f49b79a25a5ad8f6120419dcd717d884f362ae4ae9e317af6a8b70fcf998",
+  "proxy_session": 40291,
+  "ack_drop_flag": "removed"
+}

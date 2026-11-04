@@ -1,0 +1,28 @@
+{
+  "goal": "active",
+  "problem": "Label sticky commit bar reserved53px content padding plus34px home inset while keyboard already occupied safe bottom; date input center was covered by summary.",
+  "changes": [
+    "Preview label review removes extra bottom space only while keyboard visible",
+    "Date and product name focus explicitly reveal fields in sheet center"
+  ],
+  "validation": {
+    "tests": 25,
+    "build": "passed",
+    "runtime_protected": 28,
+    "diff_check": "passed",
+    "GUI": {
+      "scope": "Explicit demo preview with calibrated iPhone and Pixel10 and simulated keyboard",
+      "iPhone": "Date input284.05-314.59; summary357.65-382.21; save386.38-418.31; keyboard begins421.79; input center hit INPUT",
+      "Pixel": "Date input275.64-304.57; summary380.91-391.56; save395.51-425.75; keyboard begins429.45; input center hit INPUT",
+      "roundtrip": "Switch to barcode dismisses keyboard; return to label retains date2026-12-14 and edited product name",
+      "close": "Final dialog0 and keyboardfalse; restored iPhone",
+      "saved": false
+    },
+    "real_OCR": "not-run",
+    "physical_device": "not-run"
+  },
+  "source_snapshot": {
+    "apps/web/src/AddFoodSheet.tsx": "8e176f3394b20048264a5c026443ebeaa0d4fabec4ce74f8f45dd250c80f4108",
+    "apps/web/src/prototype.css": "3c5322d43e5f509b4ceb9646be38b358d916866d63bc97a87298ca9e87044cc9"
+  }
+}

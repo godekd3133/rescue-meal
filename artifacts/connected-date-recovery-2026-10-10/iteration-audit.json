@@ -1,0 +1,33 @@
+{
+  "goal_turn": "progress through runtime verification",
+  "source_changes": false,
+  "environment": "Isolated local SQLite synthetic account; proxy returns503 only for label intake, all storage/readback use real API",
+  "verification": {
+    "manual_recovery_source": "manual",
+    "initial_date_and_kind": "empty; save blocked until selected",
+    "saved_date": "2026-01-01",
+    "API_readback": {
+      "matching_records": 1,
+      "same_food_id": true,
+      "quantity": 2.5,
+      "unit": "팩",
+      "brand": "검증 원래상품",
+      "category": "채소",
+      "storage_type": "refrigerated",
+      "date": "2026-01-01",
+      "date_source": "user_input",
+      "prior_dates": [
+        "2026-10-14"
+      ]
+    },
+    "IAB_reload": "date and2.5팩 unchanged, UI source 포장지에서 직접 확인",
+    "real_OCR": "not-run; recognition failure intentionally injected",
+    "playwright_CLI": "not used"
+  },
+  "remaining": [
+    "CSS size budget",
+    "Real camera/OCR and device acceptance",
+    "Other full journey acceptance/browser spec migration"
+  ],
+  "goal": "active"
+}

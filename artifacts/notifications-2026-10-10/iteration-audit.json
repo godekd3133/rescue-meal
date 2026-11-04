@@ -1,0 +1,30 @@
+{
+  "previous_goal_turn": "progress",
+  "goal_status": "active",
+  "changes": [
+    "Food-specific titles identifydateorstorage task",
+    "Remove repeatednameprefix andexactgenericduplicateinstruction; preserve substantive date/safety information",
+    "Remove duplicateunreadsubheading; keepread/unread groups andreadstatus",
+    "Failedemptyread shows error/retry,notempty success; keepcachedrows onrefreshfailure",
+    "Successfulemptyretry stopsprogress andfocusesempty status",
+    "Quietbackgroundrevision refresh withoutattributinganother device",
+    "Stablecreatedtime fordemo notifications withinmount",
+    "Empty/error-only websheetfitscontent; errortext/actions13px and44px targets"
+  ],
+  "validation": {
+    "combined_frontend_tests": "182 passed",
+    "notification_helpers": "9 passed",
+    "build": "pass",
+    "runtime": "28 protected files pass",
+    "diff": "pass",
+    "browser": "IAB:foodalert -> matchingdetail -> returnwithunread2/read1; readallkeeps3rows andtimestampsunchanged",
+    "fault_injection": "RealLocalAPIwithloopback503proxy:empty -> readfailurewithretryandnoemptyclaim -> explicitretry -> empty; no lingeringprogress; focusnotification-empty",
+    "geometry": "erroraction13px/44px,message13px",
+    "bundle": "FAIL:CSS295.1KB,budget260KB"
+  },
+  "remaining": [
+    "Broaderaccountbrowser/device/camera validation",
+    "Readonlynarrowfinalvisualcheck",
+    "CSSbudget exceeded"
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "goal_status": "active",
+  "previous_turn": "progress",
+  "changes": [
+    "Apply the initial and changed theme through useLayoutEffect before the browser paints app content",
+    "Remove 36 declarations dominated by later theme rules under both supported theme values"
+  ],
+  "size": {
+    "source_css_before_bytes": 344609,
+    "source_css_after_bytes": 342637,
+    "source_reduction_bytes": 1972,
+    "built_css_before_KB": 293.4,
+    "built_css_after_KB": 291.6,
+    "budget_KB": 260,
+    "budget_status": "failed"
+  },
+  "verification": {
+    "light_computed_styles_equal": true,
+    "dark_computed_styles_equal": true,
+    "style_scope": "20 properties on five matched home/detail elements per theme; not every screen or hover state",
+    "theme_restored": "light",
+    "web_tests": "749 passed",
+    "web_log": "/tmp/rescue-theme-cleanup-web.log",
+    "build": "passed",
+    "build_log": "/tmp/rescue-theme-cleanup-build.log",
+    "runtime_integrity": "28 protected files passed",
+    "git_diff_check": "passed",
+    "bundle_log": "/tmp/rescue-theme-cleanup-bundle.log",
+    "first_paint_timing_measurement": "not-run; theme phase verified by the useLayoutEffect implementation",
+    "deployment": "not-run"
+  },
+  "evidence": [
+    "removed-declarations.json",
+    "light-before.json",
+    "light-after.json",
+    "dark-before.json",
+    "dark-after.json",
+    "light-after.png",
+    "dark-after.png"
+  ],
+  "remaining_scope": "CSS still exceeds its budget and full journey acceptance remains partial"
+}

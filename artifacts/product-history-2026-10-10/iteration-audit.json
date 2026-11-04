@@ -1,0 +1,38 @@
+{
+  "changes": [
+    "Separate change fields and show exact before/after values",
+    "Preserve admin attribution instead of account label",
+    "Suppress only known generic generated reason; retain custom reasons",
+    "Identify storage/use history separately from product edits",
+    "History read failure is error with44px retry, not confirmed empty/hide",
+    "Keep previous same-food history on refresh failure; clear on owner change; cancel late callbacks",
+    "History fields12px and headings13px, changes in separate rows"
+  ],
+  "verification": {
+    "environment": "Isolated temporarySQLite synthetic admin account; no production or user credentials",
+    "IAB_connected_changes": [
+      "상품명 양파 → 국산 양파",
+      "브랜드 미입력 → 검증 상품",
+      "분류 기타 → 채소",
+      "관리자 기록"
+    ],
+    "IAB_separator": false,
+    "IAB_API_stopped": "all3 read categories show error/retry, not empty",
+    "IAB_same_DB_restart": "all retry actions restore correct rows or actual empty; errors0",
+    "IAB_retry_height": 44,
+    "read_effect_cases": 12,
+    "actor_cases": 3,
+    "change_cases": 4,
+    "node_tests": 351,
+    "build": "passed",
+    "runtime_files": 28,
+    "diff_check": "passed"
+  },
+  "remaining": [
+    "Narrow/dark history acceptance",
+    "CSS size gate",
+    "Other journeys and device/OCR acceptance",
+    "Browser spec migration"
+  ],
+  "goal": "active"
+}

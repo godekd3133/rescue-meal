@@ -1,0 +1,17 @@
+{
+  "changes": [
+    "Receipt summary shows merchant and product count without parser template or duplicate filename",
+    "Auto-read badges removed; review and explicit-confirmation states retained",
+    "Local-rule match labelled as reference information"
+  ],
+  "validation": {
+    "frontend_tests": 618,
+    "build": "passed",
+    "diff_check": "passed",
+    "runtime_integrity": "28 protected files passed in build precheck",
+    "browser": "Simplified summary and auto-read rows verified; editing name shows review badge and blocks saving; closing and reopening restores original server draft",
+    "physical_device": "not-run",
+    "css_budget": "last check failed:291.3KB versus260KB"
+  },
+  "source_sha256": "2d321ce43093e081710f07eccb9dd280b4e305f860db8a9aec81d9bb9893674c"
+}

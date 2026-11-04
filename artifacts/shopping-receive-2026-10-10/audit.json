@@ -1,0 +1,48 @@
+{
+  "scope": "shopping manual add, purchase mark, receive, follow-up and source/brand reload",
+  "changes": [
+    "render receive summary name, amount and storage as explicit parts",
+    "use commas in shopping action accessible name",
+    "label checked item quantity as planned quantity",
+    "show authoritative just-received quantity in completion card"
+  ],
+  "runtime": {
+    "environment": "local isolated account IAB",
+    "shopping_target": "2모",
+    "received_operations": [
+      "1모",
+      "1모"
+    ],
+    "plan_label": "계획 2모",
+    "completion_label": "장보기 검증 두부 1모 목록에 추가했어요",
+    "follow_up": "received food detail opened",
+    "brand_edit": "풀무원 saved on second received lot",
+    "reload_identity": [
+      "풀무원",
+      "장보기",
+      "남은 1모"
+    ],
+    "api_readback": {
+      "records": 2,
+      "total_quantity": 2.0,
+      "units": [
+        "모",
+        "모"
+      ],
+      "brands": [
+        "풀무원",
+        "장보기에서 추가한 식품"
+      ]
+    }
+  },
+  "verification": {
+    "node_passed": 530,
+    "build": "passed",
+    "protected_files": 28,
+    "diff_check": "passed"
+  },
+  "limits": [
+    "manual shopping item flow, not every planned-ingredient receive variant",
+    "full goal and CSS budget remain open"
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "scope": "connected product edit rejection, latest-draft retry and acknowledgement",
+  "changes": [
+    "keep confirmed product fields until server acknowledgement",
+    "remove rollback rewrite that resets editable fields",
+    "remove stale payload retry action",
+    "retry from current editor values with one save action",
+    "reopen editor instead of silently retrying a closed draft",
+    "advance current detail revision and clear prior warning only after successful readback"
+  ],
+  "runtime": {
+    "environment": "local isolated SQLite synthetic account and IAB",
+    "rejection": "proxy returns structured product_info_persistence_unavailable 503 before forward",
+    "retained_fields": [
+      "배추김치",
+      "검증 브랜드",
+      "김치"
+    ],
+    "after_rejection_edit": "name changed to 배추김치 최신 before retry",
+    "retry": "latest name saved",
+    "second_save": "brand updated to 검증 브랜드 완료",
+    "confirmed_warning_count": 0,
+    "confirmed_error_count": 0,
+    "reload": "latest name, brand, 500g and refrigerated state persisted"
+  },
+  "verification": {
+    "node_passed": 482,
+    "acknowledgement_cases": 7,
+    "build": "passed",
+    "protected_files": 28,
+    "diff_check": "passed"
+  },
+  "limits": [
+    "synthetic rejection, not production outage",
+    "generic lost acknowledgement and auth rejection GUI not covered in this loop",
+    "CSS budget and full journey acceptance remain open"
+  ]
+}

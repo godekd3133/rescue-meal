@@ -1,0 +1,37 @@
+{
+  "status": "partial",
+  "kind": "runtime-validation",
+  "scope": "Real local dashboard/revision reads blocked only in temporary browser tab; cached current guest retained",
+  "validation": {
+    "before_inventory_count": 5,
+    "failed_read_inventory_count": 5,
+    "offline_header": "최근 기록 plus cache age; cached-data accessible warning",
+    "offline_home": "Read-failure notice and last-confirmed time shown",
+    "offline_detail": "Cabbage2packs retained; only close/date guidance/change-history actions shown; durable mutation controls absent",
+    "recovery": "Cleared request blocking, clicked 식품 목록 다시 불러오기",
+    "recovered_account_label": "계정 열기",
+    "recovered_account_text": "계정",
+    "recovered_inventory_count": 5,
+    "recovered_offline_notice": null,
+    "device_scroll": 0,
+    "food_mutations": "none",
+    "runtime_files": 28,
+    "runtime_integrity": "passed"
+  },
+  "proof": [
+    "offline-home.png",
+    "readonly.png",
+    "recovered-home.png"
+  ],
+  "cleanup": [
+    "Blocked URL list cleared",
+    "Cache-disabled override resetfalse",
+    "Network capability disabled",
+    "Temporary tab closed; primary Home retained"
+  ],
+  "limits": [
+    "Dashboard read failure only; other API routes remained reachable",
+    "Current iPhone/light, already cached guest; no fresh empty guest or owner transition",
+    "No actual food add/consume/disposal or settings save"
+  ]
+}

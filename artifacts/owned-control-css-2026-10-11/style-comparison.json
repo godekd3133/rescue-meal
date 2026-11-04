@@ -1,0 +1,326 @@
+{
+  "before": [
+    {
+      "text": "검증용 우유",
+      "values": {
+        "backgroundColor": "rgb(255, 253, 248)",
+        "borderRadius": "10px",
+        "borderTopColor": "rgba(36, 49, 40, 0.23)",
+        "boxShadow": "none",
+        "color": "rgb(36, 49, 40)",
+        "display": "block",
+        "fontSize": "12px",
+        "fontWeight": "600",
+        "gap": "normal",
+        "height": "44px",
+        "minHeight": "44px"
+      }
+    },
+    {
+      "text": "우유",
+      "values": {
+        "backgroundColor": "rgb(255, 253, 248)",
+        "borderRadius": "10px",
+        "borderTopColor": "rgba(36, 49, 40, 0.23)",
+        "boxShadow": "none",
+        "color": "rgb(36, 49, 40)",
+        "display": "block",
+        "fontSize": "12px",
+        "fontWeight": "600",
+        "gap": "normal",
+        "height": "44px",
+        "minHeight": "44px"
+      }
+    },
+    {
+      "text": "개",
+      "values": {
+        "backgroundColor": "color(srgb 0.919216 0.943922 0.971765)",
+        "borderRadius": "10px",
+        "borderTopColor": "color(srgb 0.183185 0.453902 0.822535 / 0.631059)",
+        "boxShadow": "none",
+        "color": "rgb(49, 130, 246)",
+        "display": "block",
+        "fontSize": "12px",
+        "fontWeight": "600",
+        "gap": "normal",
+        "height": "44px",
+        "minHeight": "44px"
+      }
+    },
+    {
+      "text": "팩",
+      "values": {
+        "backgroundColor": "rgb(255, 253, 248)",
+        "borderRadius": "10px",
+        "borderTopColor": "rgba(36, 49, 40, 0.23)",
+        "boxShadow": "none",
+        "color": "rgb(36, 49, 40)",
+        "display": "block",
+        "fontSize": "12px",
+        "fontWeight": "600",
+        "gap": "normal",
+        "height": "44px",
+        "minHeight": "44px"
+      }
+    },
+    {
+      "text": "모",
+      "values": {
+        "backgroundColor": "rgb(255, 253, 248)",
+        "borderRadius": "10px",
+        "borderTopColor": "rgba(36, 49, 40, 0.23)",
+        "boxShadow": "none",
+        "color": "rgb(36, 49, 40)",
+        "display": "block",
+        "fontSize": "12px",
+        "fontWeight": "600",
+        "gap": "normal",
+        "height": "44px",
+        "minHeight": "44px"
+      }
+    },
+    {
+      "text": "g",
+      "values": {
+        "backgroundColor": "rgb(255, 253, 248)",
+        "borderRadius": "10px",
+        "borderTopColor": "rgba(36, 49, 40, 0.23)",
+        "boxShadow": "none",
+        "color": "rgb(36, 49, 40)",
+        "display": "block",
+        "fontSize": "12px",
+        "fontWeight": "600",
+        "gap": "normal",
+        "height": "44px",
+        "minHeight": "44px"
+      }
+    },
+    {
+      "text": "ml",
+      "values": {
+        "backgroundColor": "rgb(255, 253, 248)",
+        "borderRadius": "10px",
+        "borderTopColor": "rgba(36, 49, 40, 0.23)",
+        "boxShadow": "none",
+        "color": "rgb(36, 49, 40)",
+        "display": "block",
+        "fontSize": "12px",
+        "fontWeight": "600",
+        "gap": "normal",
+        "height": "44px",
+        "minHeight": "44px"
+      }
+    },
+    {
+      "text": " 식품 추가하기",
+      "values": {
+        "backgroundColor": "rgb(43, 112, 214)",
+        "borderRadius": "10px",
+        "borderTopColor": "rgb(43, 112, 214)",
+        "boxShadow": "color(srgb 0.168627 0.439216 0.839216 / 0.2) 0px 12px 24px 0px",
+        "color": "rgb(255, 255, 255)",
+        "display": "inline-flex",
+        "fontSize": "14px",
+        "fontWeight": "570",
+        "gap": "7px",
+        "height": "46px",
+        "minHeight": "46px"
+      }
+    },
+    {
+      "text": "참고 날짜 확인",
+      "values": {
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "borderRadius": "0px",
+        "borderTopColor": "rgb(98, 111, 100)",
+        "boxShadow": "none",
+        "color": "rgb(98, 111, 100)",
+        "display": "flex",
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "gap": "normal",
+        "height": "44px",
+        "minHeight": "44px"
+      }
+    },
+    {
+      "text": "같은 식품을 다시 추가하면?",
+      "values": {
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "borderRadius": "0px",
+        "borderTopColor": "rgb(98, 111, 100)",
+        "boxShadow": "none",
+        "color": "rgb(98, 111, 100)",
+        "display": "flex",
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "gap": "normal",
+        "height": "44px",
+        "minHeight": "44px"
+      }
+    }
+  ],
+  "after": [
+    {
+      "text": "검증용 우유",
+      "values": {
+        "backgroundColor": "rgb(255, 253, 248)",
+        "borderRadius": "10px",
+        "borderTopColor": "rgba(36, 49, 40, 0.23)",
+        "boxShadow": "none",
+        "color": "rgb(36, 49, 40)",
+        "display": "block",
+        "fontSize": "12px",
+        "fontWeight": "600",
+        "gap": "normal",
+        "height": "44px",
+        "minHeight": "44px"
+      }
+    },
+    {
+      "text": "우유",
+      "values": {
+        "backgroundColor": "rgb(255, 253, 248)",
+        "borderRadius": "10px",
+        "borderTopColor": "rgba(36, 49, 40, 0.23)",
+        "boxShadow": "none",
+        "color": "rgb(36, 49, 40)",
+        "display": "block",
+        "fontSize": "12px",
+        "fontWeight": "600",
+        "gap": "normal",
+        "height": "44px",
+        "minHeight": "44px"
+      }
+    },
+    {
+      "text": "개",
+      "values": {
+        "backgroundColor": "color(srgb 0.919216 0.943922 0.971765)",
+        "borderRadius": "10px",
+        "borderTopColor": "color(srgb 0.183185 0.453902 0.822535 / 0.631059)",
+        "boxShadow": "none",
+        "color": "rgb(49, 130, 246)",
+        "display": "block",
+        "fontSize": "12px",
+        "fontWeight": "600",
+        "gap": "normal",
+        "height": "44px",
+        "minHeight": "44px"
+      }
+    },
+    {
+      "text": "팩",
+      "values": {
+        "backgroundColor": "rgb(255, 253, 248)",
+        "borderRadius": "10px",
+        "borderTopColor": "rgba(36, 49, 40, 0.23)",
+        "boxShadow": "none",
+        "color": "rgb(36, 49, 40)",
+        "display": "block",
+        "fontSize": "12px",
+        "fontWeight": "600",
+        "gap": "normal",
+        "height": "44px",
+        "minHeight": "44px"
+      }
+    },
+    {
+      "text": "모",
+      "values": {
+        "backgroundColor": "rgb(255, 253, 248)",
+        "borderRadius": "10px",
+        "borderTopColor": "rgba(36, 49, 40, 0.23)",
+        "boxShadow": "none",
+        "color": "rgb(36, 49, 40)",
+        "display": "block",
+        "fontSize": "12px",
+        "fontWeight": "600",
+        "gap": "normal",
+        "height": "44px",
+        "minHeight": "44px"
+      }
+    },
+    {
+      "text": "g",
+      "values": {
+        "backgroundColor": "rgb(255, 253, 248)",
+        "borderRadius": "10px",
+        "borderTopColor": "rgba(36, 49, 40, 0.23)",
+        "boxShadow": "none",
+        "color": "rgb(36, 49, 40)",
+        "display": "block",
+        "fontSize": "12px",
+        "fontWeight": "600",
+        "gap": "normal",
+        "height": "44px",
+        "minHeight": "44px"
+      }
+    },
+    {
+      "text": "ml",
+      "values": {
+        "backgroundColor": "rgb(255, 253, 248)",
+        "borderRadius": "10px",
+        "borderTopColor": "rgba(36, 49, 40, 0.23)",
+        "boxShadow": "none",
+        "color": "rgb(36, 49, 40)",
+        "display": "block",
+        "fontSize": "12px",
+        "fontWeight": "600",
+        "gap": "normal",
+        "height": "44px",
+        "minHeight": "44px"
+      }
+    },
+    {
+      "text": " 식품 추가하기",
+      "values": {
+        "backgroundColor": "rgb(43, 112, 214)",
+        "borderRadius": "10px",
+        "borderTopColor": "rgb(43, 112, 214)",
+        "boxShadow": "color(srgb 0.168627 0.439216 0.839216 / 0.2) 0px 12px 24px 0px",
+        "color": "rgb(255, 255, 255)",
+        "display": "inline-flex",
+        "fontSize": "14px",
+        "fontWeight": "570",
+        "gap": "7px",
+        "height": "46px",
+        "minHeight": "46px"
+      }
+    },
+    {
+      "text": "참고 날짜 확인",
+      "values": {
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "borderRadius": "0px",
+        "borderTopColor": "rgb(98, 111, 100)",
+        "boxShadow": "none",
+        "color": "rgb(98, 111, 100)",
+        "display": "flex",
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "gap": "normal",
+        "height": "44px",
+        "minHeight": "44px"
+      }
+    },
+    {
+      "text": "같은 식품을 다시 추가하면?",
+      "values": {
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "borderRadius": "0px",
+        "borderTopColor": "rgb(98, 111, 100)",
+        "boxShadow": "none",
+        "color": "rgb(98, 111, 100)",
+        "display": "flex",
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "gap": "normal",
+        "height": "44px",
+        "minHeight": "44px"
+      }
+    }
+  ]
+}

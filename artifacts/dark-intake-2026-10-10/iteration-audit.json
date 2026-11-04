@@ -1,0 +1,39 @@
+{
+  "changes": [
+    "Prevent generic field helper styling from overriding quantity error color",
+    "Invalid quantity input border and halo match error ink",
+    "Light-only darker error ink reaches small-text contrast threshold"
+  ],
+  "verification": {
+    "IAB_viewport": "320x740",
+    "dark_meal_no_match": "layout/readability checked",
+    "dark_label_normal_fields": {
+      "foreground": "rgb241236223",
+      "background": "rgb273730",
+      "contrast": 13.3866
+    },
+    "dark_error": {
+      "color": "rgb255137117",
+      "font": "12px",
+      "invalid_border": "same color",
+      "save_disabled": true
+    },
+    "light_error": {
+      "previous_contrast": 4.43,
+      "new_foreground": "rgb1586455",
+      "background": "rgb252250244",
+      "contrast": 6.2053
+    },
+    "corrected_quantity": "error absent,aria-invalidfalse,save enabled",
+    "build": "passed",
+    "runtime_files": 28,
+    "node_tests": 384,
+    "diff_check": "passed",
+    "theme_at_finish": "light"
+  },
+  "remaining": [
+    "CSS total-size budget",
+    "Remaining journey/device/OCR acceptance"
+  ],
+  "goal": "active"
+}

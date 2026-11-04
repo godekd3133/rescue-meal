@@ -1,0 +1,87 @@
+[
+  {
+    "file": "AddFoodSheet",
+    "line": 2350,
+    "action": "submitLabel();"
+  },
+  {
+    "file": "AddFoodSheet",
+    "line": 2376,
+    "action": "submitManual();"
+  },
+  {
+    "file": "MealPlanSheet",
+    "line": 1682,
+    "action": "setSafetyAcknowledged((current) => !current);"
+  },
+  {
+    "file": "MealPlanSheet",
+    "line": 1682,
+    "action": "void completePlan(); keyboard.hide();"
+  },
+  {
+    "file": "AccountSheet",
+    "line": 1270,
+    "action": "keyboard.hide(); void refresh();"
+  },
+  {
+    "file": "AccountSheet",
+    "line": 1903,
+    "action": "keyboard.hide(); void refresh();"
+  },
+  {
+    "file": "AccountSheet",
+    "line": 1952,
+    "action": "keyboard.hide(); void saveLocation(option.value);"
+  },
+  {
+    "file": "AccountSheet",
+    "line": 1974,
+    "action": "keyboard.hide(); void saveProduct(record);"
+  },
+  {
+    "file": "AccountSheet",
+    "line": 2001,
+    "action": "keyboard.hide(); void saveProductMapping(mapping.canonical_name, key, mapping.grocy_unit ?? \"\");"
+  },
+  {
+    "file": "AccountSheet",
+    "line": 2003,
+    "action": "keyboard.hide(); setEditingProductKey(\"\");"
+  },
+  {
+    "file": "AccountSheet",
+    "line": 2009,
+    "action": "keyboard.hide(); setProductDrafts((current) => ({ ...current, [key]: { productId: String(mapping.grocy_product_id), unit: mapping.grocy_unit ?? \"\" } })); setEditingProductKey(key);"
+  },
+  {
+    "file": "AccountSheet",
+    "line": 2010,
+    "action": "keyboard.hide(); void toggleProductHistory(mapping);"
+  },
+  {
+    "file": "AccountSheet",
+    "line": 2049,
+    "action": "keyboard.hide(); void reconcileOutbox(record, \"already_applied\");"
+  },
+  {
+    "file": "AccountSheet",
+    "line": 2050,
+    "action": "keyboard.hide(); void reconcileOutbox(record, \"not_applied\");"
+  },
+  {
+    "file": "AccountSheet",
+    "line": 2069,
+    "action": "keyboard.hide(); void retryOutbox(record);"
+  },
+  {
+    "file": "AccountSheet",
+    "line": 2080,
+    "action": "keyboard.hide(); void scanReconciliation();"
+  },
+  {
+    "file": "AccountSheet",
+    "line": 2081,
+    "action": "keyboard.hide(); void processOutbox();"
+  }
+]

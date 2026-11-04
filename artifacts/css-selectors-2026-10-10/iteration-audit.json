@@ -1,0 +1,28 @@
+{
+  "previous_goal_turn": "progress",
+  "goal_status": "active",
+  "changes": {
+    "selector_groups_factored": 75,
+    "source_selector_bytes_saved": 3875,
+    "unused_rule_groups_removed": 5,
+    "unused_style_bytes_saved": 1116,
+    "matching_invariant": "Only factor the first simple compound with equal specificity and identical ancestor prefix and descendant suffix; never move a descendant chain inside :is"
+  },
+  "validation": {
+    "build": "pass",
+    "runtime": "28 protected files pass",
+    "diff": "pass",
+    "actual_viewport": "320x740 measured viaDOM",
+    "computed_styles": {
+      "home350elements": 0,
+      "detail454elements": 0,
+      "manual419elements": 0
+    },
+    "browser": "IAB normalpreview; noJSX/behavior changes thisiteration",
+    "prior_narrow_readonly_check": "still incomplete; thisiteration validated normal detail rather than readonlyvariant"
+  },
+  "remaining": [
+    "CSSbudget stillabove260KB",
+    "Fullaccount browser andphysical device/camera validation"
+  ]
+}

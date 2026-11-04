@@ -1,0 +1,25 @@
+{
+  "previous_goal_turn": "progress",
+  "goal_status": "active",
+  "changes": [
+    "History grouping captures one calendar reference timestamp andaccepts explicittestclock",
+    "Older-yearhistory includesyear whiletoday/yesterday remaincalendarbased",
+    "Refresh stalehistorytest expectations tocurrentconsumer wording"
+  ],
+  "validation": {
+    "command": "node --experimental-strip-types --test tests/*.test.mjs",
+    "all_node_tests": "247 passed,0 failed",
+    "initial_failures": "2 stalehistory expectations exposed: unpassedfixedclock andoldinvalidtimecopy",
+    "coverage": "Quantity, consumption, shopping, mutationreadback, session/workspace scope, notifications, history, workerandrelease/smoke artifact contracts; no browser launch",
+    "history_boundary": "Yearboundaryyesterday andolderyearlabels checked",
+    "diff": "pass",
+    "playwright_cli": "awaitinghumanpermission; not-run",
+    "build": "pass",
+    "runtime": "28 protected files pass"
+  },
+  "remaining": [
+    "CSS budget and broader browser/device verification",
+    "CSSbudget above260KB",
+    "Connectedbrowser,accountandphysicaldevice/camera coverage"
+  ]
+}

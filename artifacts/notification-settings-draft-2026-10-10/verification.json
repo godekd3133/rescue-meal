@@ -1,0 +1,24 @@
+{
+  "scope": "Notification settings unsaved draft across sheet navigation",
+  "before": "Changed lead period2 to3, closed settings, reopened: silently restored2",
+  "after": "Same workspace retains draft in Root memory across panel/sheet close; initial mandatory server read preserves it; dirty status and cancel action only shown for changed inputs; owner presentation reset clears draft",
+  "validation": {
+    "frontend_tests": 643,
+    "failures": 0,
+    "build": "passed",
+    "protected_runtime_files": 28,
+    "diff_check": "passed",
+    "actual_browser": "Local API guest:2->3 without save, close to notification list, reopen3 and dirty status; settings refresh still3; cancel returned2 with saved-state button; server preferences not mutated",
+    "owner_switch_draft": "source reset inspected; runtime not-run in this loop",
+    "save_then_reopen": "not-run in this loop; existing save tests passed",
+    "page_reload": "Draft intentionally memory only; runtime not-run",
+    "native_device": "not-run",
+    "css_budget": "last check failed:291.3KB versus260KB"
+  },
+  "sha256": {
+    "apps/web/src/AccountSheet.tsx": "32bfa072dbc5aafd609dc91c75796016ba70580d69548745543af6dd6d49e53f",
+    "apps/web/src/Prototype.tsx": "923fab381ed19600f8f16100ffdbc8f699818cfd84ccd824d956a2dc8af55295",
+    "apps/web/src/notificationSettingsDraft.ts": "928a1d8a68d2ce5e62fef7de697052e03a349575773b94cd1d048e05e3063889",
+    "apps/web/tests/notification-settings-refresh-draft.test.mjs": "64fd3233ebc5eb0f3bdf5b5efd5d4e18cd0594c2ab9596fa95f0e33d3d49df74"
+  }
+}

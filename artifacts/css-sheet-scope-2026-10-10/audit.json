@@ -1,0 +1,67 @@
+{
+  "scope": "superseded global declarations for sheet-owned classes",
+  "method": [
+    "class references confined to approved sheet components in current source",
+    "later bottom-sheet-scoped selector has greater specificity",
+    "same at-rule context and property coverage",
+    "preserve custom properties, layers, keyframes and uncertain selectors"
+  ],
+  "removed_declarations": 116,
+  "source_bytes_removed": 4077,
+  "style_comparisons": {
+    "settings": {
+      "elements": 117,
+      "differences": 0
+    },
+    "account": {
+      "elements": 61,
+      "differences": 0
+    },
+    "home": {
+      "elements": 308,
+      "differences": 0
+    },
+    "shopping": {
+      "elements": 35,
+      "differences": 0
+    },
+    "meal": {
+      "elements": 130,
+      "differences": 0
+    },
+    "detail": {
+      "elements": 112,
+      "differences": 0
+    },
+    "guidance": {
+      "elements": 39,
+      "differences": 0
+    },
+    "darkDetail": {
+      "elements": 112,
+      "differences": 0
+    },
+    "darkHome": {
+      "elements": 308,
+      "differences": 0
+    }
+  },
+  "comparison_exclusion": "initial dark home navigation and pointer state differed; discarded and repeated with fixed home state",
+  "verification": {
+    "build": "passed",
+    "protected_runtime_files": 28,
+    "diff_check": "passed",
+    "active_css_matches_built_candidate": true,
+    "candidate_sha256": "413dad2dfe1985c96e948c6ef317bfbe7cc124be96f743a3c1e0f5bf1bc3f7a9",
+    "css_budget_KB": {
+      "actual": 292.3,
+      "limit": 260,
+      "status": "failed"
+    }
+  },
+  "limits": [
+    "nine rendered states are not every transient state of the product",
+    "CSS budget remains unmet",
+    "goal remains active"
+  ]
+}

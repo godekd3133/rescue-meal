@@ -1,0 +1,23 @@
+{
+  "status": "partial",
+  "finding": "Refresh captured clean/dirty state before async reads; edits or completed mutations while waiting could be replaced by an older response",
+  "changes": [
+    "Always merge response with current draft when a saved baseline exists",
+    "Initial confirmed read still initializes defaults from server",
+    "Increment local mutation generation on preference save and push connect/remove",
+    "Ignore refresh crossing a newer mutation or started during one; release loading without overwriting success/error/latest state"
+  ],
+  "validation": {
+    "new_cases": 3,
+    "focused_real_handler_tests": 31,
+    "frontend_suite": 846,
+    "build": "passed",
+    "runtime_files": 28,
+    "diff_check": "passed"
+  },
+  "limits": [
+    "Deferred real-handler tests only; browser server/push response races not reproduced live this iteration",
+    "No actual preferences or browser subscription changes",
+    "All-flow acceptance and CSS budget remain open"
+  ]
+}

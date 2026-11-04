@@ -1,0 +1,28 @@
+{
+  "previous_goal_turn": "progress",
+  "goal_status": "active",
+  "changes": [
+    "Receipt review closes only after authoritative save confirmation",
+    "Rejected saves retain editable selected lines; uncertain saves retain and lock original payload",
+    "Same submission reuses its commit key and created draft",
+    "Late responses and background enrichment cannot overwrite a later session or pending submission",
+    "Errors and retry actions stay beside the save button"
+  ],
+  "verification": {
+    "build": "pass",
+    "runtime": "28 protected files pass",
+    "node_scope_session_tests": "24 passed",
+    "diff": "pass",
+    "browser_fault_injection": "Real local API behind controlled loopback proxy; reject then lost commit acknowledgement then pass",
+    "retained_fields": "복구 확인 버섯 / 3팩 / 냉장 / one selected row",
+    "recovered_inventory": "one row, 3팩; review closes after replay confirmed",
+    "requests": 4,
+    "same_commit_key_and_receipt": true,
+    "updated_browser_regression": "not-run"
+  },
+  "remaining": [
+    "CSS budget exceeded",
+    "Broader connected account transition browser audit",
+    "Physical camera and installed device verification"
+  ]
+}

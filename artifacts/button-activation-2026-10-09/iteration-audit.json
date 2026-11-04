@@ -1,0 +1,24 @@
+{
+  "previous_goal_turn": "progress",
+  "goal_status": "active",
+  "changes": [
+    "Move17 app-owned actions frompointerdown to completedclick; preserve focus prevention,validation,busy states andkeyboarddismissal",
+    "Pointer andkeyboard activation useoneaction path",
+    "Separate two labels inoutboxretry button withoutmiddle-dotseparator"
+  ],
+  "validation": {
+    "build": "pass",
+    "runtime": "28 protectedfiles pass",
+    "diff": "pass",
+    "actual_action_body_tests": "120 passed across40 buttonhandlers: cancel,pointerclick,keyboardactivation; each action dispatched once",
+    "combined_session_scope_tests": "160 passed",
+    "browser": "IAB demo: drag fromeligible savebutton tooutside -> formremains,inventory7,newrow0; normalclick -> inventory8,newrow1; buttonEnter -> inventory9,secondnewrow1",
+    "test_environment": "No real account credentials,external inventory requests orproductiondata used",
+    "mobile_hardware": "not-run"
+  },
+  "remaining": [
+    "CSS298.8KB exceeds260KB budget",
+    "Full connectedaccount browsertransition",
+    "Installeddevice andcamera tests"
+  ]
+}

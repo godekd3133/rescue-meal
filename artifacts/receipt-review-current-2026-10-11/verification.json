@@ -1,0 +1,50 @@
+{
+  "status": "partial",
+  "source_change": "Removed redundant generic receipt header description; contextual recovery descriptions retained",
+  "recognition": "Actual local Paddle worker -> API -> browser, synthetic receipt image",
+  "products": [
+    {
+      "name": "국산콩 두부",
+      "quantity": 1,
+      "unit": "모"
+    },
+    {
+      "name": "맛타리버섯",
+      "quantity": 2,
+      "unit": "팩"
+    }
+  ],
+  "excluded_from_food_review": [
+    "discount -130",
+    "subtotal 6340",
+    "card approval 6340"
+  ],
+  "unknown_prices": "Displayed quantity only; no invented zero price",
+  "review_gate": {
+    "storage_edit_did_not_confirm": true,
+    "explicit_confirmation_enabled_save": true,
+    "reload_requires_confirmation_again": true
+  },
+  "draft_resume_after_reload": true,
+  "commit": "not-run",
+  "current_workspace_foods": 5,
+  "database_total_foods": 19,
+  "visible_joined_bullets": [],
+  "final_device_scroll": 0,
+  "screenshots": {
+    "receipt-resumed.png": "Current resumed review, device scroll 0",
+    "receipt-review.png": "Earlier confirmed view; automation-induced device scroll 114, not layout proof"
+  },
+  "validation": {
+    "web_tests": 763,
+    "build": "passed",
+    "protected_runtime_files": 28,
+    "diff_check": "passed",
+    "css_budget": "failed: 292.0KB / 260KB"
+  },
+  "limitations": [
+    "Synthetic input does not establish real photo OCR accuracy",
+    "No receipt inventory commit in this iteration",
+    "Automatic CLI browser suite not run; permission pending"
+  ]
+}

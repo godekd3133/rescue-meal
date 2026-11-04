@@ -1,0 +1,32 @@
+{
+  "goal_status": "active",
+  "previous_turn": "progress",
+  "scope": "Contextual quantity recovery entry and return to meal",
+  "runtime_verified": [
+    "Quantity recovery opens editor immediately and focuses group",
+    "New input has no assumed unit",
+    "Amount without unit cannot save",
+    "Save and view meal returns to API-generated recipe without separate detail close",
+    "30minutes and1serving retained",
+    "Ordinary food view does not automatically open quantity editor",
+    "Ordinary editor uses Save rather than Save and view meal",
+    "Synthetic1count reference cleared after validation;food remains1pack"
+  ],
+  "validation": {
+    "web": "683tests passed",
+    "build": "passed",
+    "runtime": "28protectedfilespassed",
+    "diff": "passed",
+    "api": "unchanged from560passed previous checkpoint"
+  },
+  "not_run": [
+    "Physicaldevice",
+    "PlaywrightCLI/MCP full suite"
+  ],
+  "hashes": {
+    "apps/web/src/QuantityReferenceEditor.tsx": "71953d2dfe4f371616278e9e5f5874005becbacc75009504a82e4f503dfd2c42",
+    "apps/web/src/Prototype.tsx": "ec24d81631b092a384f7579ca2392c79d878de8fb2b72f0920d6aad4d525c987",
+    "apps/web/src/MealPlanSheet.tsx": "843bbe99d0eb90bb3030e4f9d793585e7c0c6e7857ab9ed697df8ac2e31678b9",
+    "apps/web/src/FoodDetailSheet.tsx": "6daf9ea4a967161b4cd2dd912313864c59044a6298f0d16209585fd22ab636da"
+  }
+}

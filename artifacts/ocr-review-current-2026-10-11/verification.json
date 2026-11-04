@@ -1,0 +1,57 @@
+{
+  "goal_status": "active",
+  "previous_turn": "progress",
+  "service_restoration": {
+    "before": "API ready 200 while OCR worker 8002 was unavailable",
+    "existing_environment": "Python 3.12.2 arm64, PaddleOCR 3.7.0, PaddlePaddle 3.3.1",
+    "worker_process": 18769,
+    "worker_session": 81700,
+    "health_before_model_load": "200 not_initialized, available false",
+    "ready_after_predict_warmup": "200 ready, available true",
+    "model": "PP-OCRv5_mobile_det+korean_PP-OCRv5_mobile_rec",
+    "worker_left_running": true
+  },
+  "input": {
+    "file": "/tmp/rescue-ocr-label-check.png",
+    "kind": "Previously agent-created synthetic label with standard system font; no real merchant photo",
+    "text": "두부, 소비기한 2026.12.31, 냉장 보관 0~10도, 내용량 300g"
+  },
+  "browser_verified": {
+    "pipeline": "Actual file chooser to configured API to real Paddle worker to label review; no mocked OCR response",
+    "recognized_product": "두부",
+    "recognized_date": "2026-12-31",
+    "date_meaning": "소비기한",
+    "storage_condition": "냉장 보관 0~10도",
+    "quantity": "Default 1개 remained explicitly identified as a default; no unconfirmed quantity inferred from 300g text",
+    "date_meaning_clear": "Save disabled while date kind unselected",
+    "manufacturing_date": "Existing warning retained and save summary reflected manufacturing meaning",
+    "date_kind_restored": "소비기한 before closing",
+    "save": "not performed",
+    "food_counts": "Current workspace stayed 5; total stored food records stayed 19",
+    "device_scroll": 0,
+    "missing_description_targets": [],
+    "review_closed": "Confirmed; focus returned to Food Add"
+  },
+  "copy_changes": [
+    "Remove repeated generic label capture instruction from the sheet header; retain contextual existing-food correction description",
+    "Remove redundant and directionally incorrect below-date editing instruction",
+    "Keep manufacturing/packaging date warning, original-image comparison, default quantity note and persistent save summary"
+  ],
+  "checks": {
+    "web_tests": "763 passed",
+    "web_log": "/tmp/rescue-ocr-review-web.log",
+    "worker_tests": "10 passed, 1 deprecation warning",
+    "worker_log": "/tmp/rescue-ocr-worker-tests.log",
+    "build": "TypeScript and production build passed",
+    "build_log": "/tmp/rescue-ocr-review-build.log",
+    "protected_runtime_integrity": "28 passed",
+    "git_diff_check": "passed",
+    "bundle_budget": "failed: CSS 292.0KB exceeds 260KB",
+    "bundle_log": "/tmp/rescue-ocr-review-bundle.log",
+    "real_photo_accuracy": "not-run",
+    "physical_camera": "not-run",
+    "deployment": "not-run"
+  },
+  "proof": ["label-review.png", "dom-observation.json"],
+  "scope": "Current local recognition-to-review availability and concise label guidance; this does not establish real-product OCR accuracy or full journey acceptance."
+}

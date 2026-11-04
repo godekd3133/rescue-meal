@@ -1,0 +1,45 @@
+{
+  "scope": "saved receipt resume and metadata presentation",
+  "runtime": {
+    "browser": "Codex IAB",
+    "api": "isolated local SQLite and synthetic account",
+    "failure": 503,
+    "retry": "same receipt id loaded product review successfully",
+    "review": {
+      "merchant": "복구 검증마트",
+      "food": "양파",
+      "quantity": "1개",
+      "price": "1,000원"
+    },
+    "visible_metadata_separators_removed": true,
+    "receipt_commit": "passed: one selected product saved, sheet closed, inventory 3 to 4, persisted after reload",
+    "pending_receipts": "2 to 1 after commit, persisted after reload",
+    "optional_lookup": "collapsed by default, opens and closes, 44px summary"
+  },
+  "fixes": [
+    "retry saved receipt read without replacing receipt",
+    "abort stale resume read and restart StrictMode effect",
+    "differentiate missing and already saved drafts",
+    "omit misleading progress rail during resume recovery",
+    "normalize mixed naive and aware receipt dates for sorting only",
+    "split source and item count metadata",
+    "collapse optional idle product lookup while keeping jobs and errors visible",
+    "reduce resume notice to file persistence meaning",
+    "style product lookup action with existing secondary button"
+  ],
+  "verification": {
+    "node": {
+      "passed": 436,
+      "failed": 0
+    },
+    "api": {
+      "passed": 540,
+      "failed": 0
+    },
+    "build": "passed after density changes",
+    "protected_runtime_files": 28,
+    "diff_check": "passed",
+    "automated_browser_suite": "not-run; Playwright CLI permission pending",
+    "css_budget": "unresolved"
+  }
+}

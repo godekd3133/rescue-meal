@@ -1,0 +1,38 @@
+{
+  "goal_status": "active",
+  "previous_turn": "progress",
+  "changes": [
+    "Manual-only shopping omits unrelatedauto-adjustmentnoteandemptyicon",
+    "Receiveconfirmationexplicitlynamesfoodinventorydestination"
+  ],
+  "runtime": {
+    "surface": "4184separateactualAPIQAworkspace",
+    "steps": [
+      "Addmilk2counts toshoppinglist",
+      "Selectcoldstoragebeforepurchased:receivebuttondisabled",
+      "Markpurchased:beforestockreceivefoodcountstill1",
+      "Receive2counts:SQLitehasmilk2counts,cold,dateassertionunknown,datevaluenull",
+      "Confirmationopensexactnewfood",
+      "Displayedusefirstwindowisexplicitlynotexpiry",
+      "Closefoodreturnsconfirmationfocus"
+    ],
+    "manual_purchase_history": "Checkedmanualshoppingitemremainsbyexistingcontract",
+    "real_purchase_or_payment": false
+  },
+  "checks": {
+    "web": "703passed before finalempty-wrapperfix",
+    "build": "passed after finalfix",
+    "runtime": "28protectedfilespassed",
+    "diff": "passed"
+  },
+  "not_run": [
+    "Physicaldevice",
+    "PlaywrightCLI/MCPfullsuite",
+    "Repeatedreceive ofsamepurchase"
+  ],
+  "sha256": {
+    "apps/web/src/ShoppingListSheet.tsx": "c6062da8d2ace1f5904738685a0995d6c263ad941f42937d040554b29685c5f6",
+    "apps/web/src/shoppingListPresentation.ts": "69948da12320bac9a1f0db4d5a39834a9752fa2128901024f9955f5da7cc2025",
+    "apps/web/tests/shopping-adjustment-note.test.mjs": "7d98fb0c286ee0cacb60b19e591a89d5e318ec48237eb1c8ff5b7d3b3ccd00e8"
+  }
+}

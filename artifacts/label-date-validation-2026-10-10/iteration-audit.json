@@ -1,0 +1,26 @@
+{
+  "changes": [
+    "Validate real calendar day before label save; reject leap/month overflow/year0/partial dates",
+    "Clear previous date immediately on new label image",
+    "Invalid recognized candidate asks for printed date re-selection"
+  ],
+  "verification": {
+    "calendar_cases": 17,
+    "node_regression_tests": 324,
+    "API_regression_tests": 536,
+    "API_result": "passed; existing deprecation warnings",
+    "build": "passed",
+    "runtime_files": 28,
+    "diff_check": "passed",
+    "IAB_valid_sample": "Save enabled with2026-10-14",
+    "IAB_missing_date": "Backspace cleared actual date; save disabled and summary requests date",
+    "real_OCR_impossible_date": "not-run"
+  },
+  "remaining": [
+    "Real capture/OCR and ambiguous-date acceptance",
+    "Old browser fixture migration",
+    "CSS budget",
+    "Full journey/device acceptance"
+  ],
+  "goal": "active"
+}

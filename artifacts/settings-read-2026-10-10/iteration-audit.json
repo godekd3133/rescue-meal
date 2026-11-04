@@ -1,0 +1,36 @@
+{
+  "changes": [
+    "No preference editor/save until first confirmed read",
+    "Freeze editable controls and refresh action during save/read",
+    "Handler rejects unread settings, pending operations and empty lead period",
+    "Track changed draft; unchanged settings show disabled saved state, edited settings enable save",
+    "Clear stale saved notice on draft change"
+  ],
+  "verification": {
+    "isolated_saved_initial": {
+      "lead_days": 7,
+      "in_app_enabled": false
+    },
+    "IAB_read503": {
+      "edit_groups": 0,
+      "save_buttons": 0,
+      "retry_available": true
+    },
+    "IAB_read_recovery": "actual7/false restored, controls enabled",
+    "IAB_save503": "edited8 retained and retryavailable",
+    "IAB_save_recovery": "same8 saved, errors0",
+    "IAB_dirty_state": "edited9 enables save with no oldnotice; returnto8 disables savedstate",
+    "save_guard_cases": 5,
+    "draft_cases": 5,
+    "node_tests": 404,
+    "build": "passed",
+    "runtime_files": 28,
+    "diff_check": "passed"
+  },
+  "remaining": [
+    "Notification delivery empty-history label still inaccurate",
+    "CSS size budget",
+    "Broader journey and device/OCR acceptance"
+  ],
+  "goal": "active"
+}

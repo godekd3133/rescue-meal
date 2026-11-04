@@ -1,0 +1,31 @@
+{
+  "scope": "Contextual notification settings entry and return",
+  "findings": [
+    "Settings were available to guest workspace but hidden below account login form",
+    "Opening disclosure still exposed unrelated login content"
+  ],
+  "changes": [
+    "44x44 settings button on connected notification sheet including empty list",
+    "Standalone notification preferences view without login form, duplicate heading or unrelated record settings",
+    "Close returns to original notification list",
+    "Owner presentation reset clears settings handoff; default login autofocus skipped for settings context",
+    "Unconfigured demo has no nonfunctional settings action"
+  ],
+  "validation": {
+    "frontend_tests": 638,
+    "failures": 0,
+    "build": "passed",
+    "protected_runtime_files": 28,
+    "diff_check": "passed",
+    "actual_browser": "Local API guest empty notification sheet -> settings button -> settings-only view; close -> notification sheet; reopen -> same preferences, close control focus contained",
+    "settings_mutation": "not-run; values unchanged",
+    "logged_account_route": "not-run",
+    "native_settings_route": "not-run",
+    "css_budget": "last check failed:291.3KB versus260KB"
+  },
+  "sha256": {
+    "apps/web/src/Prototype.tsx": "004da1904cfb434bffdc726ae7871e7fdf8fa8fd46a819144e8d56992e348bc6",
+    "apps/web/src/AccountSheet.tsx": "4b5525d14424843919f09e354224ab24f2214dbff24ee4dba7f28ba81338e9bf",
+    "apps/web/src/NotificationSheet.tsx": "04741e52af9ad183b348775147ec88a68acb64f1a7abfb5427a01d8ee9c41d0a"
+  }
+}

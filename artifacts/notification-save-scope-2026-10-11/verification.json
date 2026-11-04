@@ -1,0 +1,24 @@
+{
+  "status": "partial",
+  "finding": "Preference save had no initiating-session/workspace check or synchronous mutation lock; push operations could finish while a settings save was pending",
+  "changes": [
+    "Shared synchronous lock serializes preference saving and push connect/remove",
+    "Settings save disabled during pending connection management",
+    "Session version and coordinator generation scope checked before applying save success/error",
+    "Push scope upgraded from key equality to coordinator generation, so leaving and returning cannot revive old operations",
+    "Lock released in finally on success/failure/stale response"
+  ],
+  "validation": {
+    "frontend_suite": 843,
+    "focused_real_handler_tests": 23,
+    "new_cases": 5,
+    "build": "passed",
+    "runtime_files": 28,
+    "diff_check": "passed"
+  },
+  "limits": [
+    "Deferred API/browser doubles used; no actual preference write, permission request, subscription creation/removal",
+    "Already-started server operations are not cancelled by ignoring obsolete UI responses",
+    "Full journey acceptance and CSS size gate remain open"
+  ]
+}

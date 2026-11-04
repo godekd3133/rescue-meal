@@ -1,0 +1,24 @@
+{
+  "scope": "Meal ingredient quantities and shopping shortage handoff",
+  "changes": [
+    "Required, available and missing amounts are separate metadata fields",
+    "Removed repeated matching and calculation narration",
+    "Unknown/invalid amount no longer claims sufficient stock; incompatible-unit boundary retained"
+  ],
+  "validation": {
+    "targeted_tests": 8,
+    "frontend_tests": 632,
+    "failures": 0,
+    "build": "passed",
+    "runtime_integrity": "28 protected files passed",
+    "diff_check": "passed",
+    "browser": "Calibrated iPhone demo: 2 servings showed spinach required2/available1/missing1 pack, tofu required2/available1/missing1 unit, chicken required2/available2 packs. Temporary save and shopping handoff added only spinach1 pack and tofu1 unit. No completion or consumption executed.",
+    "api_connected_shopping_handoff": "not-run in this loop",
+    "physical_device": "not-run",
+    "css_budget": "last check failed:291.3KB versus260KB"
+  },
+  "sha256": {
+    "apps/web/src/MealPlanSheet.tsx": "eebedddcfc9720a27f00967fc1448be0a919e52c81eb450144591bd6a7ad3089",
+    "apps/web/tests/meal-ingredient-summary.test.mjs": "e33b8664a1c9745d19937b1173304d97ab7c6eb85652532327330eac0a045abf"
+  }
+}

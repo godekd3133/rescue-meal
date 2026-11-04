@@ -1,0 +1,36 @@
+{
+  "goal_status": "active",
+  "previous_turn": "progress",
+  "observed": "Dark app background hid black preview status icons,time andiOShomeindicator",
+  "change": "Appowned theme styles adjustcontrastonlyinpreview;templatefilesandoriginalassetsunchanged",
+  "verified": {
+    "iphone": {
+      "status_height": "54px",
+      "home_height": "34px",
+      "time_color": "rgb(241,236,223)",
+      "asset": "/assets/status/ios-status-icons.svg",
+      "font_unchanged": true
+    },
+    "pixel10": {
+      "font": "Roboto,Arial,sans-serif",
+      "padding": "32px32px0",
+      "asset": "/assets/status/status-icons.svg",
+      "navigation_asset": "/assets/android/navigation-bar.svg",
+      "navigation_filter": "none"
+    },
+    "keyboard": "iOSindicatorfilterNoneonbrightkeyboard;invert1afterclose",
+    "restored": "iPhone,lighttheme;originalfiltersNoneandtimecolor5,5,5"
+  },
+  "checks": {
+    "build": "passed",
+    "runtime_integrity": "28protectedfilespassed",
+    "diff": "passed",
+    "bundle_log": "> web@0.1.0 check:bundle\n> node scripts/check-bundle-size.mjs\n\nbundle budget exceeded:\n  - total CSS is 293.5KB (budget 260KB)"
+  },
+  "not_run": [
+    "Physicaldevice",
+    "NativeOSchromechanges",
+    "FullPlaywrightCLI/MCPsuite"
+  ],
+  "source_sha256": "0273460a1d019d7b084982eae45297ec7228a5ef34b16483f45cf8f59c7144c8"
+}

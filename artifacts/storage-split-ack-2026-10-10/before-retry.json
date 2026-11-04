@@ -1,0 +1,17 @@
+{
+  "rows": [
+    {
+      "quantity": 2.0,
+      "storage": "refrigerated",
+      "opened": false
+    },
+    {
+      "quantity": 2.0,
+      "storage": "frozen",
+      "opened": true
+    }
+  ],
+  "total": 4.0,
+  "moved_events": 1,
+  "opened_events": 1
+}

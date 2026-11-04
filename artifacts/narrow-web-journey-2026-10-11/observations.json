@@ -1,0 +1,83 @@
+{
+  "manualBefore": {
+    "contentScrollWidth": 315,
+    "contentWidth": 296,
+    "dialogScrollWidth": 296,
+    "dialogWidth": 296,
+    "pageWidth": 320,
+    "width": 320
+  },
+  "titleBefore": {
+    "closeBox": {
+      "bottom": 88,
+      "height": 44,
+      "left": 248,
+      "right": 292,
+      "top": 44,
+      "width": 44,
+      "x": 248,
+      "y": 44
+    },
+    "quantity": "남은 1.1234L",
+    "sheetScrollWidth": 506,
+    "sheetWidth": 296,
+    "titleBox": {
+      "bottom": 73,
+      "height": 22,
+      "left": 40,
+      "right": 518.484375,
+      "top": 51,
+      "width": 478.484375,
+      "x": 40,
+      "y": 51
+    },
+    "titleScrollWidth": 478,
+    "titleWidth": 478,
+    "viewport": 320
+  },
+  "titleAfter": {
+    "closeBox": {
+      "bottom": 110,
+      "height": 44,
+      "left": 248,
+      "right": 292,
+      "top": 66,
+      "width": 44,
+      "x": 248,
+      "y": 66
+    },
+    "quantity": "남은 1.1234L",
+    "recordQuantity": "1.1234",
+    "sheetScrollWidth": 296,
+    "sheetWidth": 296,
+    "titleBox": {
+      "bottom": 117,
+      "height": 66,
+      "left": 40,
+      "right": 244,
+      "top": 51,
+      "width": 204,
+      "x": 40,
+      "y": 51
+    },
+    "titleScrollWidth": 204,
+    "titleWidth": 204,
+    "viewport": 320
+  },
+  "manualFinal": {
+    "contentScrollWidth": 281,
+    "contentWidth": 281,
+    "fieldWidth": 225,
+    "formWidth": 225,
+    "quantity": "1.1234L",
+    "scrollLeft": 0,
+    "summaryScrollWidth": 225,
+    "summaryWidth": 225,
+    "viewport": 320
+  },
+  "createdDemoFood": {
+    "name": "ExtraVirginOliveOilColdPressedUnfilteredFamilySizeBottle",
+    "quantity": "1.1234L",
+    "storage": "실온"
+  }
+}

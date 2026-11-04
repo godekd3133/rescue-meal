@@ -1,0 +1,63 @@
+{
+  "scope": "CSS budget investigation without changing product styles or budget",
+  "current_assets": [
+    {
+      "file": "AccountSheet-Beof0KoW.css",
+      "bytes": 1517,
+      "gzip_bytes": 576
+    },
+    {
+      "file": "AddFoodSheet-DPHFeLlI.css",
+      "bytes": 2248,
+      "gzip_bytes": 735
+    },
+    {
+      "file": "FoodDetailSheet-CrIGp8iU.css",
+      "bytes": 2039,
+      "gzip_bytes": 675
+    },
+    {
+      "file": "historyDates-DcR2rBlK.css",
+      "bytes": 690,
+      "gzip_bytes": 343
+    },
+    {
+      "file": "index-DCTrUNXU.css",
+      "bytes": 289462,
+      "gzip_bytes": 45069
+    },
+    {
+      "file": "mealShoppingSheets-DtQC6FGR.css",
+      "bytes": 3806,
+      "gzip_bytes": 975
+    }
+  ],
+  "total_bytes": 299762,
+  "total_gzip_bytes": 48373,
+  "budget_bytes": 266240,
+  "source_sha256": "3c5322d43e5f509b4ceb9646be38b358d916866d63bc97a87298ca9e87044cc9",
+  "experiments": {
+    "same_selector_duplicate_declarations": 0,
+    "color_mix_values": "Most repeated exact expression occurred8 times; aliases alone insufficient",
+    "selector_bytes_in_source": 111492,
+    "rules_in_source": 2400,
+    "cssnano_default": {
+      "installed_location": "/tmp/rescue-cssnano-investigation",
+      "original_entry_bytes": 289462,
+      "optimized_entry_bytes": 288348,
+      "original_entry_gzip_bytes": 45069,
+      "optimized_entry_gzip_bytes": 44968,
+      "warnings": [],
+      "gzip_level": 6
+    },
+    "unreferenced_class_heuristic": [
+      "summary-item",
+      "storage-dot",
+      "date-source-warning"
+    ],
+    "heuristic_limit": "Dynamic class generation and :not conditions mean candidates are not deletion proof"
+  },
+  "product_mutation": "none; no repository dependency or build config changes",
+  "budget_status": "failed",
+  "next_audit": "Account remote-refresh notice producer and consumer after own settings writes"
+}

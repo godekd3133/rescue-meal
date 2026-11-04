@@ -1,0 +1,55 @@
+{
+  "goal_status": "active",
+  "previous_turn": "progress",
+  "cause": "Checked manual history retained an add-food action after a receive; a fresh request key could record samepurchaseagain",
+  "changes": [
+    "Derive received food link from durablematchingreceipts for currentcheckedpurchase",
+    "UI replacesreceiveaction withopenrecordedfood",
+    "Server rejects differentkey repeat for recordedpurchase, retains samekeyreplay",
+    "No-op purchase-check writes preserve receiptlink",
+    "Explicitunchecked thenchecked startsnewpurchase",
+    "Alreadyrecorded conflict refresheslistinstead ofresubmittingwrite"
+  ],
+  "validation": {
+    "api_full": "563passed before adding race test",
+    "api_targeted": "2passed including newconcurrentdifferentkeys test",
+    "web": "704passed",
+    "build": "passed",
+    "runtime": "28protectedfilespassed",
+    "diff": "passed"
+  },
+  "runtime": [
+    "RestartedAPI and reloadedpreview;receiptlinkrestored",
+    "Existingmilk2countsopensfromshoppingrow",
+    "Close returns focus tosame recordlink",
+    "No extra QAfoodcreated byviewing"
+  ],
+  "qa_foods": [
+    {
+      "name": "양배추",
+      "quantity": 2.0,
+      "unit": "팩"
+    },
+    {
+      "name": "우유",
+      "quantity": 2.0,
+      "unit": "개"
+    }
+  ],
+  "not_run": [
+    "Physicaldevice",
+    "Live two-device simultaneouswrite",
+    "Legacy receive reconstruction withoutdurableoperationrecord"
+  ],
+  "api": {
+    "pid": 77566,
+    "session": 39330,
+    "same_db_flags": true
+  },
+  "sha256": {
+    "services/api/app/main.py": "3a566d80084675997b21a16bca28c9d3f5d47b96ba2b752333b385b87875048c",
+    "apps/web/src/mealApi.ts": "53e79f3188bee121ac52a625a0a6917376e419ea896972bfc1beaac757f0f741",
+    "apps/web/src/ShoppingListSheet.tsx": "f503605887db13b413ef0cd3e660a4688e692aad35c64c2c0fd981cfcbd91f95",
+    "apps/web/src/Prototype.tsx": "0dbac0ea28e8297bc67482e4a47f3e597d26be954511010f3e61312968e228f7"
+  }
+}

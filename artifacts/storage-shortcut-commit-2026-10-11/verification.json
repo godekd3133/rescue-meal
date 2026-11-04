@@ -1,0 +1,49 @@
+{
+  "status": "partial",
+  "issues": [
+    "Storage shortcut left focus on its offscreen home button",
+    "Spacer alignment ran after paint; scroll observer could choose Home before committed spacer was aligned"
+  ],
+  "trace_before": {
+    "desired_scroll_top": 872.46879769411,
+    "max_at_initial_write": 421,
+    "written_scroll_top": 421,
+    "height_before_spacer": 1273,
+    "height_after_spacer": 2006,
+    "intent_before_spacer": "food",
+    "intent_after_spacer": null
+  },
+  "changes": [
+    "Storage shortcut focuses storage select after navigation, guarded against another sheet/navigation",
+    "Committed inventory spacer aligns in useLayoutEffect before paint, with no extra scheduled frame"
+  ],
+  "verified": {
+    "refrigerated": 3,
+    "frozen": 1,
+    "ambient": 1,
+    "all_destinations": "Food selected; storage select focused; first row below toolbar; device scroll0",
+    "reset": "All storage selected, Food selected, 5 rows retained"
+  },
+  "mutation": "Read-only food searches, no inventory write",
+  "validation": {
+    "web_tests": 777,
+    "new_commit_lifecycle_regressions": 2,
+    "build": "passed",
+    "runtime_files": 28,
+    "diff_check": "passed",
+    "CLI_browser_suite": "not-run; permission pending",
+    "CSS_budget": {
+      "status": "failed",
+      "actual_KB": 291.4,
+      "limit_KB": 260
+    }
+  },
+  "limits": [
+    "Actual loopback API in light iPhone browser preview",
+    "Other asynchronous/failure and physical-device combinations remain open"
+  ],
+  "evidence": [
+    "ambient.png",
+    "observations.json"
+  ]
+}

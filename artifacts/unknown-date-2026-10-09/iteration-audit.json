@@ -1,0 +1,27 @@
+{
+  "previous_goal_turn": "progress",
+  "goal_status": "active",
+  "changes": [
+    "Consolidate unknown-date facts andreview guidance into one card; keepdate input immediately after",
+    "Preserve separate consumption acknowledgement anddate meaning selection",
+    "Stop inventing a brand andgeneric estimate note for manual unbranded food",
+    "Allow empty brand in product correction andits audit snapshot; keepname andcategory required"
+  ],
+  "validation": {
+    "build": "pass",
+    "runtime": "28 protected files pass",
+    "diff": "pass",
+    "targeted_product_api": "9 passed",
+    "full_api": "207 passed, 5 deprecation warnings",
+    "browser": "IAB390x844 light/dark and320x740; unknown date guidance onecard,12px; no horizontaloverflow",
+    "consume_confirmation": "Confirmed quantity andremaining count remain in separate acknowledgement step; no consumption committed",
+    "date_editor": "Date kind selection required before save; sell-by,use-by,best-before,user reminder remain available",
+    "brand_edit": "New manualfood has no placeholderbrand; rename withoutbrand preserves1개,refrigerated,unknown date",
+    "narrow_touch_targets": "date input90.17px,consume46px"
+  },
+  "remaining": [
+    "CSS326.9KB exceeds260KB budget",
+    "Broader connectedaccount browsertransition",
+    "Physical camera andinstalled device checks"
+  ]
+}

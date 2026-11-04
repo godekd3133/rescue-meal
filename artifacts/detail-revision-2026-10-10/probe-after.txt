@@ -1,0 +1,7 @@
+initial 1
+create 201 2
+/api/dashboard 200 2 2
+/api/notifications 200 2 2
+/api/shopping-list 200 2 2
+/api/storage-locations 200 2 2
+/api/dashboard/revision 200 2 2

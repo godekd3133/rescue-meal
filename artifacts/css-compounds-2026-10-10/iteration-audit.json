@@ -1,0 +1,24 @@
+{
+  "changes": [
+    "Factor61selectorlists differing only by a same-specificity class compound; preserve prefix/suffix, declaration order, media context"
+  ],
+  "source_bytes_saved": 1105,
+  "validation": {
+    "build": "passed",
+    "runtime_files": 28,
+    "node_tests": 291,
+    "diff_check": "passed",
+    "home_computed_style_differences": 0,
+    "shopping_same_open_view_computed_style_differences": 0,
+    "shopping_same_view_nodes": 419,
+    "initial_shopping_comparison": "Excluded due different state/node count; replaced with original/optimized CSS comparison in same open view",
+    "total_CSS_KiB": 294.8,
+    "CSS_budget_KiB": 260,
+    "bundle_budget": "fail"
+  },
+  "remaining": [
+    "TotalCSSbudget still exceeded",
+    "Audit remaining majorflows and auth/cache/device acceptance"
+  ],
+  "goal": "active"
+}

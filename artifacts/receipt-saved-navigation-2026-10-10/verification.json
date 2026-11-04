@@ -1,0 +1,13 @@
+{
+  "problem": "Saved receipt recovery UI had no parent onViewInventory callback; inventory action never appeared.",
+  "change": "Wire saved-receipt inventory action, clear resume and return contexts, open all foods with filters reset.",
+  "verification": {
+    "targeted_tests": 7,
+    "build": "passed",
+    "protected_runtime": "28 passed via prebuild",
+    "diff_check": "passed",
+    "GUI_saved_missing_cancel": "not-run"
+  },
+  "source_sha256": "061a9aa0b07c86f2eda59a1b06571f05e17bbafc78e80fa95ed4ec95733d7a64",
+  "goal": "active"
+}

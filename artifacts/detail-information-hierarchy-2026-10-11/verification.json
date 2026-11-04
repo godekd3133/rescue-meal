@@ -1,0 +1,49 @@
+{
+  "status": "partial",
+  "before": "Food name appeared in fixed dialog heading and again beside photo; remaining quantity was small supporting text",
+  "after": "Food name stays in dialog heading; 19px remaining quantity replaces repeated hero heading; optional identity metadata gets a separate row only when present",
+  "browser": {
+    "light": {
+      "headings": [
+        "양배추"
+      ],
+      "quantity": "남은 2팩",
+      "identity_rows": 0,
+      "record_input": "2",
+      "device_scroll": 0
+    },
+    "dark": {
+      "headings": [
+        "우유"
+      ],
+      "quantity": "남은 2개",
+      "identity": "장보기",
+      "font_px": 19,
+      "record_input": "2",
+      "device_scroll": 0
+    },
+    "restored": "Light Home, 5 foods",
+    "record_writes": "none"
+  },
+  "validation": {
+    "frontend_tests": 788,
+    "build": "passed",
+    "protected_runtime_files": 28,
+    "diff_check": "passed",
+    "existing_browser_assertions": "Updated for one heading and separate quantity/identity; CLI suite not-run",
+    "CSS_budget": {
+      "status": "failed",
+      "actual_KB": 290.9,
+      "limit_KB": 260
+    }
+  },
+  "limits": [
+    "Current light cabbage and dark purchased-milk iPhone preview",
+    "Long names, native/320px and offline combinations not rerun"
+  ],
+  "evidence": [
+    "before.png",
+    "light-after.png",
+    "dark-after.png"
+  ]
+}

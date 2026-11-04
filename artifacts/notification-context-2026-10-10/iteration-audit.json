@@ -1,0 +1,23 @@
+{
+  "changes": [
+    "Notification target and missing-food refresh capture workspace/session scope",
+    "Guard refresh before dispatch and after readback to prevent stale owner navigation",
+    "Missing-food notice no longer immediately dismisses notification center"
+  ],
+  "verification": {
+    "scope_cases": 5,
+    "node_tests": 389,
+    "build": "passed",
+    "runtime_files": 28,
+    "diff_check": "passed",
+    "IAB_demo": "Open spinach alert -> detail -> close -> notification center; unread3to2, read row preserved, focus on returned spinach row",
+    "missing_food_GUI": "not-run; actual handler unit cases verified",
+    "connected_owner_transition": "not-run this iteration"
+  },
+  "remaining": [
+    "Missing target GUI/connected owner acceptance",
+    "CSS budget",
+    "Other journeys and real device/OCR acceptance"
+  ],
+  "goal": "active"
+}

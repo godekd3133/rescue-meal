@@ -1,0 +1,32 @@
+{
+  "previous_goal_turn": "progress",
+  "goal_status": "active",
+  "changes": [
+    "Remove repeated purchase instructions, derived duplicate counters andnonexistent three-step receive rail",
+    "Announce shopping manual add inline once",
+    "Existing manual items show current quantity and수량 변경 instead of claiming addition; preserve backendupsert andmeal sources",
+    "Pointerdown only dismisses keyboard; form submit is sole mutation path for mouse andEnter",
+    "Preserve an edited quantity when name/unit still identify the same item",
+    "Keepstock quantity/location as separate metadata fields without separators",
+    "Increase receive/manual action text from9px to13px; keep44px targets; remove6 unusedstep CSS rules"
+  ],
+  "validation": {
+    "build": "pass",
+    "runtime": "28 protected files pass",
+    "diff": "pass",
+    "presentation_and_scope_tests": "18 passed",
+    "manual_shopping_api_contracts": "2 passed,205 deselected",
+    "browser": "IAB390x844 demo; add2 -> refills2 onexisting -> edit3 -> purchased -> receive1 -> list2 andoneinventory row1",
+    "mouse_submit": "No spurious required-name error after successfuladd; oneinventory row afterreceive",
+    "keyboard_submit": "Enter addsonecarrot row,noalerts",
+    "draft_preservation": "4 retained aftername gains trailing space",
+    "stock_metadata": "No bullet/middle-dot separators inrenderedstock text",
+    "receive_geometry": "289pxclient/scrollwidth,13px actionfont,44px height,13px safetycopy",
+    "bundle": "FAIL:CSS298.8KB,budget260KB"
+  },
+  "remaining": [
+    "CSS38.8KB abovebudget",
+    "Broader account/browser integration",
+    "Actual installeddevice andcamera coverage"
+  ]
+}

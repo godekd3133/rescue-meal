@@ -1,0 +1,23 @@
+{
+  "changes": [
+    "Guard planner shopping and history request results, errors, finalizers and retry callbacks by workspace/session",
+    "Guard reads by current planner inputs and selected plan",
+    "Reset abandoned read progress on inactive view or selected plan change",
+    "Guard deferred shopping focus"
+  ],
+  "validation": {
+    "node_regression_tests": 289,
+    "planner_handler_tests": 39,
+    "build": "passed",
+    "protected_runtime_files": 28,
+    "diff_check": "passed",
+    "IAB_demo": "Saved temporary meal, opened history, reopened same meal; saved state retained",
+    "viewport": "320x740",
+    "visible_bullet_separator": false,
+    "connected_browser_regression": "not-run; Playwright CLI permission pending"
+  },
+  "open_items": [
+    "CSS bundle exceeds 260KB budget; latest build 295.48KB",
+    "Continue connected and offline narrow viewport acceptance"
+  ]
+}

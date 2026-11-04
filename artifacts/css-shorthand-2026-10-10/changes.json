@@ -1,0 +1,359 @@
+[
+  {
+    "line": 12528,
+    "selector": ".bottom-sheet .notification-row:not(.notification-row-read)",
+    "property": "border-color",
+    "value": "color-mix(in srgb, var(--atelier-blue) 30%, var(--sheet-border))",
+    "important": false
+  },
+  {
+    "line": 11548,
+    "selector": "html[data-rescue-theme=\"dark\"] .bottom-sheet",
+    "property": "box-shadow",
+    "value": "0 -22px 56px rgba(0, 0, 0, 0.42)",
+    "important": false
+  },
+  {
+    "line": 11539,
+    "selector": "html[data-rescue-theme=\"light\"] .bottom-sheet",
+    "property": "box-shadow",
+    "value": "0 -22px 56px rgba(2, 32, 71, 0.2)",
+    "important": false
+  },
+  {
+    "line": 11350,
+    "selector": "html[data-rescue-theme=\"dark\"] .meal-home",
+    "property": "background-image",
+    "value": "linear-gradient(180deg, rgba(16, 20, 25, 0.04) 0, rgba(16, 20, 25, 0.9) 355px, #101419 610px)",
+    "important": false
+  },
+  {
+    "line": 11349,
+    "selector": "html[data-rescue-theme=\"dark\"] .meal-home",
+    "property": "background-color",
+    "value": "#101419",
+    "important": false
+  },
+  {
+    "line": 11345,
+    "selector": "html[data-rescue-theme=\"light\"] .meal-home",
+    "property": "background-image",
+    "value": "linear-gradient(180deg, rgba(255, 255, 255, 0.85) 0, rgba(255, 255, 255, 0) 340px)",
+    "important": false
+  },
+  {
+    "line": 11344,
+    "selector": "html[data-rescue-theme=\"light\"] .meal-home",
+    "property": "background-color",
+    "value": "#f2f4f6",
+    "important": false
+  },
+  {
+    "line": 10803,
+    "selector": ".app-shell-web .inventory-section",
+    "property": "margin-top",
+    "value": "70px",
+    "important": false
+  },
+  {
+    "line": 10793,
+    "selector": ".app-shell-web .meal-plan-button",
+    "property": "margin-top",
+    "value": "18px",
+    "important": false
+  },
+  {
+    "line": 10775,
+    "selector": ".app-shell-web .priority-section",
+    "property": "margin-top",
+    "value": "38px",
+    "important": false
+  },
+  {
+    "line": 10759,
+    "selector": ".app-shell-web .greeting-block h1",
+    "property": "margin-top",
+    "value": "18px",
+    "important": false
+  },
+  {
+    "line": 10087,
+    "selector": ".sheet-header",
+    "property": "padding-bottom",
+    "value": "16px",
+    "important": false
+  },
+  {
+    "line": 10001,
+    "selector": ".add-food-plus",
+    "property": "border-color",
+    "value": "var(--atelier-border-strong)",
+    "important": false
+  },
+  {
+    "line": 9990,
+    "selector": ".add-food-button",
+    "property": "margin-top",
+    "value": "25px",
+    "important": false
+  },
+  {
+    "line": 9890,
+    "selector": ".inventory-section",
+    "property": "margin-top",
+    "value": "35px",
+    "important": false
+  },
+  {
+    "line": 9886,
+    "selector": ".trust-card",
+    "property": "border-color",
+    "value": "color-mix(in srgb, var(--atelier-coral) 25%, transparent)",
+    "important": false
+  },
+  {
+    "line": 9851,
+    "selector": ".shopping-summary-card:hover",
+    "property": "background",
+    "value": "var(--atelier-surface-raised)",
+    "important": false
+  },
+  {
+    "line": 9832,
+    "selector": ".meal-plan-button",
+    "property": "margin-top",
+    "value": "18px",
+    "important": false
+  },
+  {
+    "line": 9822,
+    "selector": ".priority-empty-state,\n.inventory-empty-state",
+    "property": "border-color",
+    "value": "var(--atelier-border)",
+    "important": false
+  },
+  {
+    "line": 9720,
+    "selector": ".priority-section,\n.inventory-section",
+    "property": "margin-top",
+    "value": "30px",
+    "important": false
+  },
+  {
+    "line": 9703,
+    "selector": ".greeting-block h1",
+    "property": "margin-top",
+    "value": "10px",
+    "important": false
+  },
+  {
+    "line": 9401,
+    "selector": ".trust-card",
+    "property": "margin-top",
+    "value": "2px",
+    "important": false
+  },
+  {
+    "line": 9392,
+    "selector": ".home-hero-copy",
+    "property": "margin-top",
+    "value": "0",
+    "important": false
+  },
+  {
+    "line": 9388,
+    "selector": ".meal-home",
+    "property": "padding-top",
+    "value": "30px",
+    "important": false
+  },
+  {
+    "line": 9378,
+    "selector": ".trust-card",
+    "property": "border-width",
+    "value": "1px 0 0",
+    "important": false
+  },
+  {
+    "line": 9361,
+    "selector": ".meal-home",
+    "property": "padding-bottom",
+    "value": "calc(var(--mobile-safe-area-height) + 92px)",
+    "important": false
+  },
+  {
+    "line": 8184,
+    "selector": ".bottom-sheet .toggle",
+    "property": "border-color",
+    "value": "var(--sheet-border-strong)",
+    "important": false
+  },
+  {
+    "line": 7673,
+    "selector": ".sheet-header",
+    "property": "border-bottom-color",
+    "value": "var(--sheet-border)",
+    "important": false
+  },
+  {
+    "line": 7655,
+    "selector": ".app-bottom-nav",
+    "property": "border-top-color",
+    "value": "color-mix(in srgb, var(--atelier-ink) 11%, transparent)",
+    "important": false
+  },
+  {
+    "line": 7628,
+    "selector": ".inventory-row",
+    "property": "border-bottom-color",
+    "value": "color-mix(in srgb, var(--atelier-ink) 8%, transparent)",
+    "important": false
+  },
+  {
+    "line": 7624,
+    "selector": ".inventory-list",
+    "property": "border-bottom-color",
+    "value": "color-mix(in srgb, var(--atelier-ink) 15%, transparent)",
+    "important": false
+  },
+  {
+    "line": 7623,
+    "selector": ".inventory-list",
+    "property": "border-top-color",
+    "value": "color-mix(in srgb, var(--atelier-ink) 15%, transparent)",
+    "important": false
+  },
+  {
+    "line": 7605,
+    "selector": ".shopping-summary-card",
+    "property": "margin-top",
+    "value": "10px",
+    "important": false
+  },
+  {
+    "line": 7583,
+    "selector": ".food-image-wrap",
+    "property": "border-color",
+    "value": "color-mix(in srgb, var(--atelier-ink) 12%, transparent)",
+    "important": false
+  },
+  {
+    "line": 7579,
+    "selector": ".priority-list-items",
+    "property": "border-bottom-color",
+    "value": "color-mix(in srgb, var(--atelier-ink) 15%, transparent)",
+    "important": false
+  },
+  {
+    "line": 7578,
+    "selector": ".priority-list-items",
+    "property": "border-top-color",
+    "value": "color-mix(in srgb, var(--atelier-ink) 15%, transparent)",
+    "important": false
+  },
+  {
+    "line": 7466,
+    "selector": ".meal-home",
+    "property": "background-image",
+    "value": "linear-gradient(180deg, rgba(255, 255, 255, 0.85) 0, rgba(255, 255, 255, 0) 340px)",
+    "important": false
+  },
+  {
+    "line": 7465,
+    "selector": ".meal-home",
+    "property": "background-color",
+    "value": "var(--atelier-deep)",
+    "important": false
+  },
+  {
+    "line": 7336,
+    "selector": ".runtime-error-mark,\n.runtime-configuration-mark",
+    "property": "box-shadow",
+    "value": "none",
+    "important": false
+  },
+  {
+    "line": 1017,
+    "selector": ".priority-card-accent",
+    "property": "background",
+    "value": "linear-gradient(105deg, rgba(241, 244, 233, 0.92), rgba(255, 254, 250, 0.95))",
+    "important": false
+  },
+  {
+    "line": 481,
+    "selector": ".connection-retry-callout",
+    "property": "background",
+    "value": "#fff1e9",
+    "important": false
+  },
+  {
+    "line": 443,
+    "selector": ".session-expired-callout",
+    "property": "background",
+    "value": "#fff1e9",
+    "important": false
+  },
+  {
+    "line": 432,
+    "selector": ".connection-auth_required",
+    "property": "background",
+    "value": "#fff1e9",
+    "important": false
+  },
+  {
+    "line": 431,
+    "selector": ".connection-auth_required",
+    "property": "border-color",
+    "value": "#ead7cb",
+    "important": false
+  },
+  {
+    "line": 427,
+    "selector": ".connection-offline",
+    "property": "background",
+    "value": "#fff1e9",
+    "important": false
+  },
+  {
+    "line": 426,
+    "selector": ".connection-offline",
+    "property": "border-color",
+    "value": "#ead7cb",
+    "important": false
+  },
+  {
+    "line": 386,
+    "selector": ".update-prompt-later:hover:not(:disabled)",
+    "property": "background",
+    "value": "rgba(255, 254, 250, 0.72)",
+    "important": false
+  },
+  {
+    "line": 319,
+    "selector": ".update-prompt",
+    "property": "box-shadow",
+    "value": "0 8px 18px rgba(83, 99, 74, 0.05)",
+    "important": false
+  },
+  {
+    "line": 294,
+    "selector": ".install-prompt-close:hover",
+    "property": "background",
+    "value": "rgba(255, 254, 250, 0.7)",
+    "important": false
+  },
+  {
+    "line": 234,
+    "selector": ".install-prompt",
+    "property": "box-shadow",
+    "value": "0 8px 18px rgba(83, 99, 74, 0.06)",
+    "important": false
+  },
+  {
+    "line": 167,
+    "selector": ".runtime-error-mark",
+    "property": "box-shadow",
+    "value": "0 8px 18px rgba(183, 104, 83, 0.16)",
+    "important": false
+  }
+]

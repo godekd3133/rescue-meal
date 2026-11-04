@@ -1,0 +1,65 @@
+[
+  {
+    "index": 422,
+    "cls": "label-result-card ",
+    "property": "background-color",
+    "before": "rgb(255, 255, 255)",
+    "after": "rgb(252, 250, 244)"
+  },
+  {
+    "index": 422,
+    "cls": "label-result-card ",
+    "property": "border-block-end-color",
+    "before": "rgba(2, 32, 71, 0.19)",
+    "after": "rgba(36, 49, 40, 0.13)"
+  },
+  {
+    "index": 422,
+    "cls": "label-result-card ",
+    "property": "border-block-start-color",
+    "before": "rgba(2, 32, 71, 0.19)",
+    "after": "rgba(36, 49, 40, 0.13)"
+  },
+  {
+    "index": 422,
+    "cls": "label-result-card ",
+    "property": "border-bottom-color",
+    "before": "rgba(2, 32, 71, 0.19)",
+    "after": "rgba(36, 49, 40, 0.13)"
+  },
+  {
+    "index": 422,
+    "cls": "label-result-card ",
+    "property": "border-inline-end-color",
+    "before": "rgba(2, 32, 71, 0.19)",
+    "after": "rgba(36, 49, 40, 0.13)"
+  },
+  {
+    "index": 422,
+    "cls": "label-result-card ",
+    "property": "border-inline-start-color",
+    "before": "rgba(2, 32, 71, 0.19)",
+    "after": "rgba(36, 49, 40, 0.13)"
+  },
+  {
+    "index": 422,
+    "cls": "label-result-card ",
+    "property": "border-left-color",
+    "before": "rgba(2, 32, 71, 0.19)",
+    "after": "rgba(36, 49, 40, 0.13)"
+  },
+  {
+    "index": 422,
+    "cls": "label-result-card ",
+    "property": "border-right-color",
+    "before": "rgba(2, 32, 71, 0.19)",
+    "after": "rgba(36, 49, 40, 0.13)"
+  },
+  {
+    "index": 422,
+    "cls": "label-result-card ",
+    "property": "border-top-color",
+    "before": "rgba(2, 32, 71, 0.19)",
+    "after": "rgba(36, 49, 40, 0.13)"
+  }
+]

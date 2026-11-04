@@ -1,0 +1,39 @@
+{
+  "goal_status": "active",
+  "previous_turn": "progress",
+  "browser": "Codex In-app Browser 2, tab 1",
+  "reproduction": "After a rejected local QA login, editing the email left the prior rejection message and aria-invalid=true on both credential inputs",
+  "changes": [
+    "Clear a credential-pair error when either credential is edited",
+    "Clear a field-specific error only when that field is edited",
+    "Retain generic service and rate-limit errors during input edits",
+    "Prevent payload edits and login/register mode switching while authentication is pending",
+    "Guard repeated submission while busy"
+  ],
+  "runtime_verification": {
+    "email_edit": "passed: prior message removed and both aria-invalid attributes changed to false",
+    "password_edit": "passed after a second rejected QA login: prior message removed and both attributes false",
+    "qa_values": "Nonexistent example.invalid account and invented non-secret password values only",
+    "cleanup": "Both QA input fields cleared; login disabled on the empty form",
+    "guest_context": "Existing four food rows and shopping history remained in the page throughout testing",
+    "account_creation": "not performed",
+    "credential_change": "not performed",
+    "screenshots": ["login-after-edit.png", "login-ready.png"],
+    "dom_observation": "dom-observation.json"
+  },
+  "checks": {
+    "account_tests": "29 passed",
+    "account_log": "/tmp/rescue-auth-input-targeted.log",
+    "web_tests": "749 passed",
+    "web_log": "/tmp/rescue-auth-input-web-final.log",
+    "typescript_and_production_build": "passed",
+    "build_log": "/tmp/rescue-auth-input-build.log",
+    "protected_runtime_integrity": "28 passed",
+    "git_diff_check": "passed",
+    "service_error_and_busy_payload_behavior": "Source-extracted handler tests passed; browser service-failure injection not-run",
+    "bundle_budget": "failed: CSS 293.4KB exceeds 260KB",
+    "bundle_log": "/tmp/rescue-auth-input-bundle.log",
+    "deployment": "not-run"
+  },
+  "scope": "Actual browser proof for rejected-login correction and source/test proof for error relevance and pending-request protection. Successful login/guest transfer and full product acceptance remain separate."
+}

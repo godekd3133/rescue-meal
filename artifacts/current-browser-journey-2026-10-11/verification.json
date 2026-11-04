@@ -1,0 +1,41 @@
+{
+  "goal_status": "active",
+  "previous_turn": "progress",
+  "browser": "Codex In-app Browser 2, tab 1",
+  "preview_url": "http://127.0.0.1:4184/",
+  "runtime_verified": {
+    "existing_workspace": "Loaded existing three foods and one checked shopping item",
+    "search": "Milk query showed two separate lots; one clear action restored all rows while keeping search focus and keyboard open",
+    "food_photos": "Inventory photographs completed with naturalWidth 900, loading lazy and decoding async",
+    "manual_save": "Created one local QA record: 검증용 양파, 3팩(200g), ambient",
+    "reload": "After reload, the fourth food retained 3팩(200g), ambient and an estimated date distinct from printed expiry",
+    "test_food_id": "food-a383da2d1a5c",
+    "partial_preview": "Half selection showed selected and remaining quantity 1.5팩(200g); restored whole selection without recording consumption",
+    "shopping_navigation": "Recorded milk opened the exact cold 2-count lot rather than the frozen 250ml lot; close returned to shopping with focus on the original viewing action",
+    "visible_bullet_joins": 0,
+    "data_preservation": "Existing three foods and the checked shopping history were retained; no consume, disposal or deletion executed"
+  },
+  "visual_fix": {
+    "file": "apps/web/src/foodQuantityControls.css",
+    "cause": "The numeric input's 100% flex basis squeezed the unit into two lines",
+    "change": "Use flex 1 1 0 and width 0 for the number input so the unit keeps its natural width",
+    "iphone_before_unit_height": 22.21490478515625,
+    "iphone_after_unit_height": 11.107421875,
+    "pixel_after_unit_height": 10.52056884765625,
+    "pixel_dialog_client_and_scroll_width": 427,
+    "device_selection_restored": "iPhone",
+    "screenshots": ["quantity-detail.png", "quantity-detail-after.png", "quantity-detail-pixel.png"],
+    "dom_observation": "dom-observation.json"
+  },
+  "checks": {
+    "build": "TypeScript and production build passed",
+    "build_log": "/tmp/rescue-browser-quantity-layout-build.log",
+    "protected_runtime_integrity": "28 passed",
+    "git_diff_check": "passed",
+    "node_tests": "Previous manual payload checkpoint: 744 passed; not rerun for this CSS-only fix",
+    "bundle_budget": "failed: CSS 293.4KB exceeds 260KB",
+    "bundle_log": "/tmp/rescue-browser-quantity-layout-bundle.log"
+  },
+  "not_run": ["Image-failure injection in browser", "Measured loading performance", "Physical devices", "Current recipe and account journeys", "Production PostgreSQL migration", "Deployment"],
+  "scope": "Actual current browser proof for search, manual persistence, detail quantity and shopping navigation only. Full journey goal remains active."
+}

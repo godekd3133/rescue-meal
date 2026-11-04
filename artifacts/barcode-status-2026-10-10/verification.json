@@ -1,0 +1,20 @@
+{
+  "goal": "active",
+  "changes": [
+    "Barcode pending uses ClockIcon; candidate success uses CheckCircledIcon; non-success uses InfoCircledIcon",
+    "Barcode status uses MetadataText rather than raw bullet-joined text",
+    "Remove duplicated expiry reminder under pending/status messages",
+    "Normalize known disabled external lookup notices without local or provider codes"
+  ],
+  "verification": {
+    "build": "passed",
+    "runtime_protected": 28,
+    "metadata_SSR_tests": 6,
+    "diff_check": "passed",
+    "GUI": "Connected local API external lookup disabled; human-readable notice; editing barcode clears previous notice",
+    "pending_icon_GUI": "not-run",
+    "provider_success": "not-run",
+    "saved": false
+  },
+  "source_sha256": "ab670f39417e1377bf1b9e2e6b4e052bd12de7c9ca20b2c0149a288a89897dcd"
+}

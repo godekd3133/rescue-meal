@@ -1,0 +1,26 @@
+{
+  "scope": "saved plan metadata and completion quantity density",
+  "changes": [
+    "aggregate completed allocations with same known name and unit",
+    "keep mixed units and unknown record identities separate",
+    "round summed quantities at display precision",
+    "omit saved snapshot availability assertions from saved day rows",
+    "remove abstract allocation explanation, preserve serving count"
+  ],
+  "runtime": {
+    "completed": "감자 0.5 + 1.5 now shown as 사용 2개",
+    "saved_days": "date, minutes and planned/completed status preserved without current-inventory assertions"
+  },
+  "verification": {
+    "node_passed": 452,
+    "new_quantity_cases": 5,
+    "build": "passed",
+    "protected_runtime_files": 28,
+    "diff_check": "passed"
+  },
+  "limits": [
+    "quantity aggregation only changes presentation",
+    "CSS budget still unresolved",
+    "full journey completion remains unproven"
+  ]
+}

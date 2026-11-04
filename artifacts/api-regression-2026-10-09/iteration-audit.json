@@ -1,0 +1,26 @@
+{
+  "date": "2026-10-09",
+  "goal_status": "active",
+  "previous_goal_turn": "progress",
+  "scope": "기존 API 실패 항목 재현 및 사용자 흐름 계약 정리",
+  "changes": [
+    "새 게스트 기록 공간 생성의 응답을 HTTP 201로 명확히 설정",
+    "게스트 생성 응답 상태에 대한 서로 다른 회귀 검사 기대값을 통일",
+    "이미 교체된 PNG 참조를 실제 제공되는 JPEG 사진과 MIME 형식으로 수정",
+    "보관 분류 충돌은 명시적으로 거절하고 맞는 분류의 정상 등록을 별도로 확인"
+  ],
+  "validation": {
+    "targeted_failures": "7 passed",
+    "full_api_command": "RESCUE_MEAL_SQLITE_PATH=\"\" RESCUE_MEAL_AUTH_REQUIRED=false uv run pytest tests/test_api.py",
+    "full_api": "201 passed, 5 deprecation warnings",
+    "web_build": "pass",
+    "runtime_integrity": "28 protected files pass",
+    "diff_whitespace": "pass",
+    "bundle": "FAIL: total CSS 336.2KB, budget 260KB"
+  },
+  "remaining": [
+    "CSS 용량 한도 해결",
+    "계정 전환의 브라우저 전체 검증",
+    "실제 카메라·실기기 및 운영 배포 검증"
+  ]
+}

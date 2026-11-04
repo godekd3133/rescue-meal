@@ -1,0 +1,307 @@
+[
+  {
+    "line": 196,
+    "before": ".meal-home button,\n.bottom-sheet button",
+    "after": ":is(.meal-home,.bottom-sheet) button"
+  },
+  {
+    "line": 610,
+    "before": ".receipt-review-queue-intro strong,\n.receipt-review-queue-row-copy strong",
+    "after": ":is(.receipt-review-queue-intro,.receipt-review-queue-row-copy) strong"
+  },
+  {
+    "line": 618,
+    "before": ".receipt-review-queue-intro small,\n.receipt-review-queue-row-copy small",
+    "after": ":is(.receipt-review-queue-intro,.receipt-review-queue-row-copy) small"
+  },
+  {
+    "line": 1059,
+    "before": ".food-name-line strong,\n.inventory-copy strong,\n.receipt-line-copy strong",
+    "after": ":is(.food-name-line,.inventory-copy,.receipt-line-copy) strong"
+  },
+  {
+    "line": 1121,
+    "before": ".meal-plan-button > span:nth-child(2),\n.trust-card > span:nth-child(2),\n.add-food-button > span:nth-child(2)",
+    "after": ":is(.meal-plan-button,.trust-card,.add-food-button) > span:nth-child(2)"
+  },
+  {
+    "line": 1130,
+    "before": ".meal-plan-button strong,\n.trust-card strong,\n.add-food-button strong",
+    "after": ":is(.meal-plan-button,.trust-card,.add-food-button) strong"
+  },
+  {
+    "line": 1136,
+    "before": ".meal-plan-button small,\n.trust-card small,\n.add-food-button small",
+    "after": ":is(.meal-plan-button,.trust-card,.add-food-button) small"
+  },
+  {
+    "line": 1299,
+    "before": ".inventory-search-state button,\n.inventory-search-inline-error button",
+    "after": ":is(.inventory-search-state,.inventory-search-inline-error) button"
+  },
+  {
+    "line": 1465,
+    "before": ".capture-intro h3,\n.input-flow h3,\n.guidance-lead h3,\n.detail-hero-copy h3,\n.recipe-title-row h3",
+    "after": ":is(.capture-intro,.input-flow,.guidance-lead,.detail-hero-copy,.recipe-title-row) h3"
+  },
+  {
+    "line": 1568,
+    "before": ".capture-intro .capture-actions,\n.input-flow .capture-actions",
+    "after": ":is(.capture-intro,.input-flow) .capture-actions"
+  },
+  {
+    "line": 1573,
+    "before": ".capture-intro .capture-actions .primary-sheet-button,\n.capture-intro .capture-actions .secondary-sheet-button,\n.input-flow .capture-actions .primary-sheet-button,\n.input-flow .capture-actions .secondary-sheet-button",
+    "after": ":is(.capture-intro,.input-flow) .capture-actions :is(.primary-sheet-button,.secondary-sheet-button)"
+  },
+  {
+    "line": 1648,
+    "before": ".capture-intro > .capture-hint,\n.input-flow > .capture-hint",
+    "after": ":is(.capture-intro,.input-flow) > .capture-hint"
+  },
+  {
+    "line": 2402,
+    "before": ".notification-preference-toggle-row + .notification-preference-row,\n.notification-preference-row + .notification-preference-row",
+    "after": ":is(.notification-preference-toggle-row,.notification-preference-row) + .notification-preference-row"
+  },
+  {
+    "line": 2613,
+    "before": ".storage-location-heading p,\n.storage-location-row small,\n.storage-location-empty small,\n.storage-location-footnote",
+    "after": ".storage-location-heading p,\n:is(.storage-location-row,.storage-location-empty) small,\n.storage-location-footnote"
+  },
+  {
+    "line": 2656,
+    "before": ".storage-location-name-field > span,\n.storage-location-type-field > span",
+    "after": ":is(.storage-location-name-field,.storage-location-type-field) > span"
+  },
+  {
+    "line": 2729,
+    "before": ".storage-location-row-actions .grocy-refresh-button,\n.storage-location-edit .grocy-refresh-button",
+    "after": ":is(.storage-location-row-actions,.storage-location-edit) .grocy-refresh-button"
+  },
+  {
+    "line": 2999,
+    "before": ".grocy-integration-heading h3,\n.grocy-integration-heading p,\n.grocy-block-heading strong,\n.grocy-block-heading small,\n.grocy-status-card strong,\n.grocy-status-card small,\n.grocy-location-row strong,\n.grocy-location-row small,\n.grocy-product-task-copy strong,\n.grocy-product-task-copy small,\n.grocy-outbox-card strong,\n.grocy-outbox-card small",
+    "after": ".grocy-integration-heading h3,\n.grocy-integration-heading p,\n:is(.grocy-block-heading,.grocy-status-card,.grocy-location-row,.grocy-product-task-copy,.grocy-outbox-card) strong,\n:is(.grocy-block-heading,.grocy-status-card,.grocy-location-row,.grocy-product-task-copy,.grocy-outbox-card) small"
+  },
+  {
+    "line": 3014,
+    "before": ".grocy-integration-heading p,\n.grocy-block-heading small,\n.grocy-status-card small,\n.grocy-location-row small,\n.grocy-product-task-copy small,\n.grocy-outbox-card small",
+    "after": ".grocy-integration-heading p,\n:is(.grocy-block-heading,.grocy-status-card,.grocy-location-row,.grocy-product-task-copy,.grocy-outbox-card) small"
+  },
+  {
+    "line": 3278,
+    "before": ".grocy-product-history-heading strong,\n.grocy-product-history-event strong",
+    "after": ":is(.grocy-product-history-heading,.grocy-product-history-event) strong"
+  },
+  {
+    "line": 3285,
+    "before": ".grocy-product-history-heading small,\n.grocy-product-history-event small",
+    "after": ":is(.grocy-product-history-heading,.grocy-product-history-event) small"
+  },
+  {
+    "line": 3319,
+    "before": ".grocy-location-row > div,\n.grocy-product-task-copy,\n.grocy-outbox-card > div",
+    "after": ":is(.grocy-location-row,.grocy-outbox-card) > div,\n.grocy-product-task-copy"
+  },
+  {
+    "line": 3327,
+    "before": ".grocy-location-row strong,\n.grocy-product-task-copy strong,\n.grocy-outbox-card strong",
+    "after": ":is(.grocy-location-row,.grocy-product-task-copy,.grocy-outbox-card) strong"
+  },
+  {
+    "line": 3610,
+    "before": ".result-callout > svg,.manual-note > svg,.quality-callout > svg,.guidance-warning > svg,.saved-recipe > svg",
+    "after": ":is(.result-callout,.manual-note,.quality-callout,.guidance-warning,.saved-recipe) > svg"
+  },
+  {
+    "line": 3615,
+    "before": ".result-callout span,.manual-note span,.quality-callout span",
+    "after": ":is(.result-callout,.manual-note,.quality-callout) span"
+  },
+  {
+    "line": 3620,
+    "before": ".result-callout small,.quality-callout small",
+    "after": ":is(.result-callout,.quality-callout) small"
+  },
+  {
+    "line": 3746,
+    "before": ".barcode-date-candidate strong,\n.manual-date-candidate strong",
+    "after": ":is(.barcode-date-candidate,.manual-date-candidate) strong"
+  },
+  {
+    "line": 3752,
+    "before": ".barcode-date-candidate small,\n.manual-date-candidate small",
+    "after": ":is(.barcode-date-candidate,.manual-date-candidate) small"
+  },
+  {
+    "line": 4720,
+    "before": ".label-lot-target-heading small,\n.label-lot-target-option small",
+    "after": ":is(.label-lot-target-heading,.label-lot-target-option) small"
+  },
+  {
+    "line": 5469,
+    "before": ".recipe-loading > span,\n.recipe-safety > span",
+    "after": ":is(.recipe-loading,.recipe-safety) > span"
+  },
+  {
+    "line": 5760,
+    "before": ".shopping-sheet-error button,\n.shopping-sheet-state button",
+    "after": ":is(.shopping-sheet-error,.shopping-sheet-state) button"
+  },
+  {
+    "line": 5773,
+    "before": ".shopping-sheet-error button:hover,\n.shopping-sheet-state button:hover",
+    "after": ":is(.shopping-sheet-error,.shopping-sheet-state) button:hover"
+  },
+  {
+    "line": 6242,
+    "before": ".recipe-review-lead p,\n.recipe-review-source small,\n.recipe-review-source a,\n.recipe-review-raw small",
+    "after": ".recipe-review-lead p,\n:is(.recipe-review-source,.recipe-review-raw) small,\n.recipe-review-source a"
+  },
+  {
+    "line": 6302,
+    "before": ".recipe-review-source-status-heading small,\n.recipe-review-source-status p,\n.recipe-review-import-heading small",
+    "after": ":is(.recipe-review-source-status-heading,.recipe-review-import-heading) small,\n.recipe-review-source-status p"
+  },
+  {
+    "line": 7405,
+    "before": ".runtime-error-screen h1 em,\n.runtime-configuration-screen h1 em",
+    "after": ":is(.runtime-error-screen,.runtime-configuration-screen) h1 em"
+  },
+  {
+    "line": 7423,
+    "before": ".runtime-error-note strong,\n.runtime-configuration-alert strong",
+    "after": ":is(.runtime-error-note,.runtime-configuration-alert) strong"
+  },
+  {
+    "line": 9425,
+    "before": ".meal-plan-button small,\n.add-food-button small",
+    "after": ":is(.meal-plan-button,.add-food-button) small"
+  },
+  {
+    "line": 9565,
+    "before": ".meal-home button:focus-visible,\n.bottom-sheet button:focus-visible,\n.bottom-sheet input:focus-visible,\n.bottom-sheet textarea:focus-visible,\n.meal-home select:focus-visible",
+    "after": ":is(.meal-home,.bottom-sheet) button:focus-visible,\n.bottom-sheet input:focus-visible,\n.bottom-sheet textarea:focus-visible,\n.meal-home select:focus-visible"
+  },
+  {
+    "line": 9617,
+    "before": ".connection-offline .connection-dot,\n.connection-auth_required .connection-dot",
+    "after": ":is(.connection-offline,.connection-auth_required) .connection-dot"
+  },
+  {
+    "line": 9664,
+    "before": ".install-prompt-copy strong,\n.update-prompt-copy strong",
+    "after": ":is(.install-prompt-copy,.update-prompt-copy) strong"
+  },
+  {
+    "line": 9669,
+    "before": ".install-prompt-copy small,\n.update-prompt-copy small,\n.install-prompt-steps,\n.update-prompt-later",
+    "after": ":is(.install-prompt-copy,.update-prompt-copy) small,\n.install-prompt-steps,\n.update-prompt-later"
+  },
+  {
+    "line": 9701,
+    "before": ".session-expired-callout strong,\n.connection-retry-callout strong",
+    "after": ":is(.session-expired-callout,.connection-retry-callout) strong"
+  },
+  {
+    "line": 9706,
+    "before": ".session-expired-callout small,\n.connection-retry-callout small",
+    "after": ":is(.session-expired-callout,.connection-retry-callout) small"
+  },
+  {
+    "line": 9832,
+    "before": ".food-name-line strong,\n.inventory-copy strong,\n.receipt-line-copy strong",
+    "after": ":is(.food-name-line,.inventory-copy,.receipt-line-copy) strong"
+  },
+  {
+    "line": 10023,
+    "before": ".inventory-search-error small,\n.inventory-search-state button,\n.inventory-search-inline-error button",
+    "after": ".inventory-search-error small,\n:is(.inventory-search-state,.inventory-search-inline-error) button"
+  },
+  {
+    "line": 10456,
+    "before": ".runtime-configuration-screen h1 em,\n.runtime-error-screen h1 em",
+    "after": ":is(.runtime-configuration-screen,.runtime-error-screen) h1 em"
+  },
+  {
+    "line": 10701,
+    "before": ".app-shell-preview .priority-section > .section-heading,.app-shell-native .priority-section > .section-heading,:is(.app-shell-preview,.app-shell-native) .priority-list",
+    "after": ":is(.app-shell-preview,.app-shell-native) .priority-section > .section-heading,\n:is(.app-shell-preview,.app-shell-native) .priority-list"
+  },
+  {
+    "line": 10719,
+    "before": ".app-shell-preview .greeting-block h1,.app-shell-native .greeting-block h1,:is(.app-shell-preview,.app-shell-native) .section-heading h2,.bottom-sheet .recipe-title-row h3",
+    "after": ":is(.app-shell-preview,.app-shell-native) .greeting-block h1,\n:is(.app-shell-preview,.app-shell-native) .section-heading h2,\n.bottom-sheet .recipe-title-row h3"
+  },
+  {
+    "line": 10733,
+    "before": ".meal-home .food-subline,\n  .meal-home .food-meta-line,\n  .meal-home .date-source,\n  .bottom-sheet :is(.sheet-description,.capture-hint)",
+    "after": ".meal-home :is(.food-subline,.food-meta-line,.date-source),\n.bottom-sheet :is(.sheet-description,.capture-hint)"
+  },
+  {
+    "line": 11083,
+    "before": ".app-shell-preview .brand-name,.app-shell-native .brand-name,:is(.app-shell-preview,.app-shell-native) .greeting-block h1",
+    "after": ":is(.app-shell-preview,.app-shell-native) .brand-name,\n:is(.app-shell-preview,.app-shell-native) .greeting-block h1"
+  },
+  {
+    "line": 11099,
+    "before": ".app-shell-preview .food-subline,.app-shell-preview .food-meta-line,:is(.app-shell-preview,.app-shell-native) .date-source,.app-shell-native .food-subline,.app-shell-native .food-meta-line",
+    "after": ":is(.app-shell-preview,.app-shell-native) :is(.food-subline,.food-meta-line),\n:is(.app-shell-preview,.app-shell-native) .date-source"
+  },
+  {
+    "line": 11182,
+    "before": ".app-shell-preview .icon-button,:is(.app-shell-preview,.app-shell-native) .notification-button,.app-shell-native .icon-button",
+    "after": ":is(.app-shell-preview,.app-shell-native) :is(.icon-button,.notification-button)"
+  },
+  {
+    "line": 11330,
+    "before": ".app-shell-preview .bottom-sheet :is(.food-subline,.food-meta-line),:is(.app-shell-preview,.app-shell-native) .bottom-sheet .date-source,.app-shell-native .bottom-sheet :is(.food-subline,.food-meta-line)",
+    "after": ":is(.app-shell-preview,.app-shell-native) .bottom-sheet :is(.food-subline,.food-meta-line),\n:is(.app-shell-preview,.app-shell-native) .bottom-sheet .date-source"
+  },
+  {
+    "line": 14204,
+    "before": ".food-subline,\n.food-meta-line,\n.date-source,\n.app-shell-web .food-subline,\n.app-shell-web .food-meta-line,\n.app-shell-web .date-source",
+    "after": ".food-subline,\n.food-meta-line,\n.date-source,\n.app-shell-web :is(.food-subline,.food-meta-line,.date-source)"
+  },
+  {
+    "line": 14286,
+    "before": ".priority-empty-copy strong,\n.inventory-empty-copy strong",
+    "after": ":is(.priority-empty-copy,.inventory-empty-copy) strong"
+  },
+  {
+    "line": 14294,
+    "before": ".priority-empty-copy small,\n.inventory-empty-copy small",
+    "after": ":is(.priority-empty-copy,.inventory-empty-copy) small"
+  },
+  {
+    "line": 15023,
+    "before": ".bottom-sheet :focus-visible,\n.meal-home :focus-visible",
+    "after": ":is(.bottom-sheet,.meal-home) :focus-visible"
+  },
+  {
+    "line": 15080,
+    "before": ".food-subline,\n  .food-meta-line,\n  .date-source,\n  .app-shell-web .food-subline,\n  .app-shell-web .food-meta-line,\n  .app-shell-web .date-source",
+    "after": ".food-subline,\n.food-meta-line,\n.date-source,\n.app-shell-web :is(.food-subline,.food-meta-line,.date-source)"
+  },
+  {
+    "line": 15252,
+    "before": ".bottom-sheet .detail-history .history-list,\n.bottom-sheet .detail-history .history-day-group,\n.bottom-sheet .history-sync-list",
+    "after": ".bottom-sheet .detail-history :is(.history-list,.history-day-group),\n.bottom-sheet .history-sync-list"
+  },
+  {
+    "line": 15568,
+    "before": ".app-shell-web .meal-home .priority-card .food-subline,.app-shell-preview .meal-home .priority-card .food-subline,.app-shell-native .meal-home .priority-card .food-subline,.app-shell-web .meal-home .priority-card .date-source:not(.date-source-warning),.app-shell-preview .meal-home .priority-card .date-source:not(.date-source-warning),.app-shell-native .meal-home .priority-card .date-source:not(.date-source-warning),:is(.app-shell-web,.app-shell-preview,.app-shell-native) .meal-home .priority-card .priority-date strong",
+    "after": ":is(.app-shell-web,.app-shell-preview,.app-shell-native) .meal-home .priority-card .food-subline,\n:is(.app-shell-web,.app-shell-preview,.app-shell-native) .meal-home .priority-card .date-source:not(.date-source-warning),\n:is(.app-shell-web,.app-shell-preview,.app-shell-native) .meal-home .priority-card .priority-date strong"
+  },
+  {
+    "line": 15573,
+    "before": "html[data-rescue-theme=\"light\"] .app-shell-preview .meal-home .priority-card .food-subline,html[data-rescue-theme=\"light\"] .app-shell-native .meal-home .priority-card .food-subline,html[data-rescue-theme=\"light\"] :is(.app-shell-preview,.app-shell-native) .meal-home .priority-card .date-source:not(.date-source-warning)",
+    "after": "html[data-rescue-theme=\"light\"] :is(.app-shell-preview,.app-shell-native) .meal-home .priority-card .food-subline,\nhtml[data-rescue-theme=\"light\"] :is(.app-shell-preview,.app-shell-native) .meal-home .priority-card .date-source:not(.date-source-warning)"
+  },
+  {
+    "line": 15876,
+    "before": ".bottom-sheet .notification-sheet .account-error-action,\n.bottom-sheet .notification-sheet .notification-read-all",
+    "after": ".bottom-sheet .notification-sheet :is(.account-error-action,.notification-read-all)"
+  }
+]

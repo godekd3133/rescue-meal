@@ -1,0 +1,45 @@
+{
+  "status": "partial",
+  "problem": "Push delivery used raw generic title even when in-app presentation added a visible food subject",
+  "changes": [
+    "Non-sync push titles include food name when absent",
+    "Push bodies trim repeated literal name prefixes; preserve dates/reasons/actions",
+    "Already named titles and sync operation subjects preserved",
+    "Original NotificationResponse object, delivery tag, URL and dedup identity unchanged"
+  ],
+  "sample": {
+    "before": {
+      "title": "오늘 확인할 날짜예요",
+      "body": "우유의 표시 날짜를 확인하세요."
+    },
+    "after": {
+      "title": "우유 오늘 확인할 날짜예요",
+      "body": "표시 날짜를 확인하세요."
+    }
+  },
+  "validation": {
+    "focused_delivery_tests": 15,
+    "new_cases": 4,
+    "full_API_tests": 589,
+    "warnings": 9,
+    "diff_check": "passed",
+    "sender": "Isolated fake sender; existing worker dedup test passed",
+    "real_push": "not-run"
+  },
+  "local_service": {
+    "API_PID": 77706,
+    "API_health": 200,
+    "proxy_health": 200,
+    "backup": "/tmp/rescue-push-subject-refresh-2026-10-11",
+    "databases": 7,
+    "food_payloads": 19,
+    "all_food_payload_signatures_preserved": true,
+    "visible_foods": 5,
+    "visible_unread_notifications": 1
+  },
+  "limits": [
+    "No OS permission, subscription, real recipient delivery or device acceptance in this iteration",
+    "Payload click URL still opens app root; exact item deep link not verified",
+    "CSS budget remains failed291.6KB/260KB"
+  ]
+}

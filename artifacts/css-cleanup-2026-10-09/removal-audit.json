@@ -1,0 +1,375 @@
+{
+  "unusedClasses": [
+    "sheet-footnote",
+    "quantity-stepper",
+    "quantity-row",
+    "recipe-art",
+    "recipe-instructions-shortcut",
+    "receipt-result-provenance",
+    "mini-summary",
+    "shopping-sheet-purchase-confirmed",
+    "recipe-kicker",
+    "footer-caption",
+    "summary-divider",
+    "manual-priority-note",
+    "scan-button"
+  ],
+  "beforeBytes": 401963,
+  "afterBytes": 396340,
+  "removedSelectors": [
+    {
+      "line": 898,
+      "selectors": [
+        ".recipe-kicker"
+      ]
+    },
+    {
+      "line": 1076,
+      "selectors": [
+        ".mini-summary"
+      ]
+    },
+    {
+      "line": 1097,
+      "selectors": [
+        ".summary-divider"
+      ]
+    },
+    {
+      "line": 1214,
+      "selectors": [
+        ".recipe-art img"
+      ]
+    },
+    {
+      "line": 1605,
+      "selectors": [
+        ".footer-caption"
+      ]
+    },
+    {
+      "line": 1831,
+      "selectors": [
+        ".sheet-footnote"
+      ]
+    },
+    {
+      "line": 5172,
+      "selectors": [
+        ".sheet-footnote"
+      ]
+    },
+    {
+      "line": 6153,
+      "selectors": [
+        ".quantity-row"
+      ]
+    },
+    {
+      "line": 6162,
+      "selectors": [
+        ".quantity-row > span:first-child"
+      ]
+    },
+    {
+      "line": 6167,
+      "selectors": [
+        ".quantity-row strong"
+      ]
+    },
+    {
+      "line": 6172,
+      "selectors": [
+        ".quantity-row small"
+      ]
+    },
+    {
+      "line": 6177,
+      "selectors": [
+        ".quantity-stepper"
+      ]
+    },
+    {
+      "line": 6187,
+      "selectors": [
+        ".quantity-stepper button"
+      ]
+    },
+    {
+      "line": 6200,
+      "selectors": [
+        ".quantity-stepper button:disabled"
+      ]
+    },
+    {
+      "line": 6205,
+      "selectors": [
+        ".quantity-stepper > strong"
+      ]
+    },
+    {
+      "line": 6540,
+      "selectors": [
+        ".recipe-art"
+      ]
+    },
+    {
+      "line": 6560,
+      "selectors": [
+        ".recipe-art img"
+      ]
+    },
+    {
+      "line": 9063,
+      "selectors": [
+        ".mini-summary"
+      ]
+    },
+    {
+      "line": 9086,
+      "selectors": [
+        ".summary-divider"
+      ]
+    },
+    {
+      "line": 9234,
+      "selectors": [
+        ".footer-caption"
+      ]
+    },
+    {
+      "line": 9409,
+      "selectors": [
+        ".bottom-sheet .sheet-footnote"
+      ]
+    },
+    {
+      "line": 10161,
+      "selectors": [
+        ".bottom-sheet .recipe-art"
+      ]
+    },
+    {
+      "line": 10169,
+      "selectors": [
+        ".bottom-sheet .recipe-art img"
+      ]
+    },
+    {
+      "line": 10544,
+      "selectors": [
+        ".bottom-sheet .quantity-stepper"
+      ]
+    },
+    {
+      "line": 10554,
+      "selectors": [
+        ".bottom-sheet .quantity-stepper button"
+      ]
+    },
+    {
+      "line": 10685,
+      "selectors": [
+        ".bottom-sheet .sheet-footnote"
+      ]
+    },
+    {
+      "line": 10697,
+      "selectors": [
+        ".bottom-sheet .sheet-footnote svg"
+      ]
+    },
+    {
+      "line": 10837,
+      "selectors": [
+        ".bottom-sheet .manual-priority-note"
+      ]
+    },
+    {
+      "line": 11267,
+      "selectors": [
+        ".mini-summary"
+      ]
+    },
+    {
+      "line": 11360,
+      "selectors": [
+        ".bottom-sheet .recipe-art"
+      ]
+    },
+    {
+      "line": 11366,
+      "selectors": [
+        ".bottom-sheet .recipe-art img"
+      ]
+    },
+    {
+      "line": 11652,
+      "selectors": [
+        ".recipe-kicker"
+      ]
+    },
+    {
+      "line": 11673,
+      "selectors": [
+        ".mini-summary"
+      ]
+    },
+    {
+      "line": 11689,
+      "selectors": [
+        ".summary-divider"
+      ]
+    },
+    {
+      "line": 12060,
+      "selectors": [
+        ".footer-caption"
+      ]
+    },
+    {
+      "line": 12065,
+      "selectors": [
+        ".footer-caption svg"
+      ]
+    },
+    {
+      "line": 12221,
+      "selectors": [
+        ".bottom-sheet .sheet-footnote"
+      ]
+    },
+    {
+      "line": 12415,
+      "selectors": [
+        ".bottom-sheet .recipe-kicker"
+      ]
+    },
+    {
+      "line": 12624,
+      "selectors": [
+        ".app-shell-preview .mini-summary"
+      ]
+    },
+    {
+      "line": 12737,
+      "selectors": [
+        ".app-shell-native .mini-summary"
+      ]
+    },
+    {
+      "line": 12901,
+      "selectors": [
+        ".bottom-sheet .sheet-footnote"
+      ]
+    },
+    {
+      "line": 14409,
+      "selectors": [
+        ".bottom-sheet .quantity-stepper button:disabled"
+      ]
+    },
+    {
+      "line": 15144,
+      "selectors": [
+        ".bottom-sheet .shopping-sheet-purchase-confirmed"
+      ]
+    },
+    {
+      "line": 15158,
+      "selectors": [
+        ".bottom-sheet .shopping-sheet-purchase-confirmed svg"
+      ]
+    },
+    {
+      "line": 15478,
+      "selectors": [
+        ".bottom-sheet .receipt-result-provenance"
+      ]
+    },
+    {
+      "line": 15487,
+      "selectors": [
+        ".bottom-sheet .receipt-result-provenance strong"
+      ]
+    },
+    {
+      "line": 15493,
+      "selectors": [
+        ".bottom-sheet .receipt-result-provenance span"
+      ]
+    },
+    {
+      "line": 15678,
+      "selectors": [
+        ".bottom-sheet .receipt-result-provenance span"
+      ]
+    },
+    {
+      "line": 15930,
+      "selectors": [
+        ".bottom-sheet .recipe-art"
+      ]
+    },
+    {
+      "line": 15935,
+      "selectors": [
+        ".bottom-sheet .recipe-art img"
+      ]
+    },
+    {
+      "line": 15978,
+      "selectors": [
+        ".bottom-sheet .recipe-art"
+      ]
+    },
+    {
+      "line": 15984,
+      "selectors": [
+        ".bottom-sheet .recipe-art img"
+      ]
+    },
+    {
+      "line": 17288,
+      "selectors": [
+        ".bottom-sheet .sheet-footnote"
+      ]
+    },
+    {
+      "line": 17519,
+      "selectors": [
+        ".bottom-sheet .receipt-result-provenance"
+      ]
+    },
+    {
+      "line": 17646,
+      "selectors": [
+        ".meal-home .scan-button"
+      ]
+    },
+    {
+      "line": 18015,
+      "selectors": [
+        ".bottom-sheet .recipe-instructions-shortcut"
+      ]
+    },
+    {
+      "line": 18033,
+      "selectors": [
+        ".bottom-sheet .recipe-instructions-shortcut > svg"
+      ]
+    },
+    {
+      "line": 18038,
+      "selectors": [
+        ".bottom-sheet .recipe-instructions-shortcut:hover"
+      ]
+    },
+    {
+      "line": 18043,
+      "selectors": [
+        ".bottom-sheet .recipe-instructions-shortcut:focus-visible"
+      ]
+    }
+  ]
+}

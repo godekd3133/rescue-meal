@@ -1,0 +1,26 @@
+{
+  "status": "partial",
+  "issue": "Subscription requested notification permission before awaiting serviceWorker.ready, which can remain unresolved without an active registration",
+  "changes": [
+    "Read existing registration first",
+    "Require activated worker before requesting permission or subscribing",
+    "Missing/activating worker produces specific retryable preparation message",
+    "Operation lock released on unready outcome; normal prepared connection flow preserved"
+  ],
+  "validation": {
+    "frontend_suite": 834,
+    "focused_push_handlers": 6,
+    "new_cases": 2,
+    "build": "passed",
+    "runtime_files": 28,
+    "diff_check": "passed",
+    "missing_worker": "No permission request, no registration API call, retry shown",
+    "activating_worker": "No subscription API call, busy guard released"
+  },
+  "test_fixture": "Browser subscription fixture supplies activated getRegistration; CLI suite not-run",
+  "limits": [
+    "Isolated real-handler tests with mocked registration; no OS permission or actual subscription requested",
+    "Production worker activation/device lifecycle not exercised this iteration",
+    "CSS budget remains failed291.5KB/260KB"
+  ]
+}

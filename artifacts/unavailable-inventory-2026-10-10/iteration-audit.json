@@ -1,0 +1,30 @@
+{
+  "changes": [
+    "Unread failed inventory has one alert/recovery control, without duplicate hero/priority/trust guidance",
+    "Unknown counts hidden; active query and filter reset remain available",
+    "Connection copy avoids assuming internet failure from unavailable API",
+    "Cached records remain labelled recent records with age",
+    "Recovery and empty-state controls minimum44px/font13px"
+  ],
+  "verification": {
+    "IAB_server_unavailable": {
+      "alerts": 1,
+      "retry_buttons": 1,
+      "inactive_count_controls": 0,
+      "retry_height": 44,
+      "retry_font": "13px"
+    },
+    "IAB_after_API_start": "Explicit retry restored fresh empty inventory and first-food actions",
+    "build": "passed",
+    "runtime_protected_files": 28,
+    "node_tests": 291,
+    "diff_check": "passed",
+    "updated_Playwright_specs": "not-run; permission pending"
+  },
+  "remaining": [
+    "CSS size gate",
+    "Cached/auth-required browser acceptance",
+    "Full user journey and device acceptance"
+  ],
+  "goal": "active"
+}

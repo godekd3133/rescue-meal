@@ -1,0 +1,72 @@
+[
+  {
+    "line": 13083,
+    "selector": ".app-shell-web .priority-section > .section-heading",
+    "property": "margin-top",
+    "value": "14px",
+    "important": false
+  },
+  {
+    "line": 12937,
+    "selector": ".app-shell-web .priority-section > .section-heading",
+    "property": "margin-top",
+    "value": "12px",
+    "important": false
+  },
+  {
+    "line": 12933,
+    "selector": ".app-shell-web .priority-section",
+    "property": "margin-top",
+    "value": "42px",
+    "important": false
+  },
+  {
+    "line": 12929,
+    "selector": ".app-shell-web .greeting-block h1",
+    "property": "margin-top",
+    "value": "12px",
+    "important": false
+  },
+  {
+    "line": 12925,
+    "selector": ".app-shell-web .home-hero-copy",
+    "property": "margin-top",
+    "value": "22px",
+    "important": false
+  },
+  {
+    "line": 12921,
+    "selector": ".app-shell-web .meal-home",
+    "property": "padding-top",
+    "value": "54px",
+    "important": false
+  },
+  {
+    "line": 11178,
+    "selector": ".inventory-toolbar",
+    "property": "padding-bottom",
+    "value": "10px",
+    "important": false
+  },
+  {
+    "line": 11177,
+    "selector": ".inventory-toolbar",
+    "property": "padding-top",
+    "value": "8px",
+    "important": false
+  },
+  {
+    "line": 10500,
+    "selector": ".app-shell-web .priority-section",
+    "property": "margin-top",
+    "value": "34px",
+    "important": false
+  },
+  {
+    "line": 9546,
+    "selector": ".priority-section > .section-heading",
+    "property": "margin-top",
+    "value": "18px",
+    "important": false
+  }
+]

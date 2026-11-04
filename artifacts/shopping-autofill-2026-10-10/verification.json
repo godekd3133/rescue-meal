@@ -1,0 +1,14 @@
+{
+  "goal": "active",
+  "problem": "Quantity filled from an existing shopping item remained after changing item name or unit.",
+  "change": "Track auto-filled value and preceding draft; restore preceding quantity when leaving match; explicit user edits clear auto-fill ownership; successful submit resets ownership.",
+  "verification": {
+    "regression_tests": 6,
+    "build": "passed",
+    "runtime_protected": 28,
+    "diff_check": "passed",
+    "GUI": "Demo shopping fixture with 5 units; entering exact existing name filled 5; changing name restored 1; explicitly editing to 7 then changing name retained 7; demo reloaded and fixture cleared",
+    "connected_API_GUI": "not-run"
+  },
+  "source_sha256": "136129c0850ae5aac0d5aa1b1288f42f5ec7cb19a4b6e8dcc75c90fdb1c4f85d"
+}

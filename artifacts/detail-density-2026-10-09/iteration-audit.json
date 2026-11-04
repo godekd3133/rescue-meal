@@ -1,0 +1,24 @@
+{
+  "previous_goal_turn": "progress",
+  "goal_status": "active",
+  "changes": [
+    "Hide four exact known legacy estimated-date notes covered by the existing safety guidance; preserve specific notes and stored data",
+    "Increase detail note text from10px to12px with18px line height",
+    "Update connected regression assertions for separate source fields, one safety note and12px type"
+  ],
+  "validation": {
+    "browser": "IAB demo 390x844 and320x740",
+    "partial_consumption": "1모 -> consume0.5모 -> list anddetail0.5모; subsequent half0.25모",
+    "specific_note": "Tomato storage note remains visible",
+    "narrow_width": "320 viewport: dialog clientWidth296 andscrollWidth296; notes12px/18px; consume action46px high",
+    "build": "pass",
+    "runtime_integrity": "28 protected files pass",
+    "diff": "pass",
+    "authored_connected_regression": "not-run"
+  },
+  "remaining": [
+    "CSS total remains above260KB budget",
+    "Connected account transition end-to-end",
+    "Installed device andcamera checks"
+  ]
+}

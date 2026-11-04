@@ -1,0 +1,30 @@
+{
+  "experiment": {
+    "optimizer": "InstalledLightningCSS; readablecandidate retained75comments",
+    "source_before_bytes": 352608,
+    "readable_candidate_bytes": 342186,
+    "total_CSS_before_KiB": 297.1,
+    "total_CSS_candidate_KiB": 297.1,
+    "decision": "Rejected: build already performs equivalent optimization; original source restored byte-exact before later targeted change"
+  },
+  "retained_change": [
+    "Remove hover/active surface and scale effect from non-interactive label result form; keep real controls responsive"
+  ],
+  "verification": {
+    "form_transform": "none",
+    "form_background": "rgb252250244",
+    "save_enabled": true,
+    "build": "passed",
+    "runtime_files": 28,
+    "node_tests": 384,
+    "diff_check": "passed",
+    "comparison_note": "Original-vs-restored style snapshot had hover state differences; not accepted as proof of identical transient state",
+    "CSS_budget_KiB": 260,
+    "CSS_budget": "fail"
+  },
+  "remaining": [
+    "Structural stylesheet reduction to meet total-size budget",
+    "Other journey and device/OCR acceptance"
+  ],
+  "goal": "active"
+}

@@ -2,6 +2,10 @@
 
 영수증·바코드·식품 라벨을 이용해 식료품 재고를 빠르게 등록하고, 실제 표시 날짜와 보관 이력을 구분해 관리하며, 먼저 사용해야 할 재료 중심으로 식단을 제안하는 오픈소스 기반 서비스입니다.
 
+## Wiki
+
+제품 개요부터 로컬 실행, 구조, 사용자 흐름, API·설정, 테스트와 운영까지 [GitHub Wiki](https://github.com/godekd3133/rescue-meal/wiki)에서 찾아볼 수 있습니다. 작성 원본은 [docs/wiki/Home.md](docs/wiki/Home.md)에 보관합니다.
+
 ## 현재 상태
 
 - 단계: 1차 vertical slice + 상용화 운영 경계 고도화 및 검증
@@ -391,7 +395,7 @@ code 1을 반환합니다. 장기 실행은 API 장애가 지속될 때 기본 i
 cd services/api
 RESCUE_MEAL_API_BASE_URL=http://127.0.0.1:8000 \
 RESCUE_MEAL_NOTIFICATION_WORKER_TOKEN=server-side-notification-secret \
-RESCUE_MEAL_NOTIFICATION_WORKSPACE_IDS=account-workspace-id \
+RESCUE_MEAL_NOTIFICATION_WORKSPACE_IDS=auto \
 uv run python scripts/run_notification_worker.py
 ```
 

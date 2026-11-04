@@ -1,0 +1,35 @@
+{
+  "status": "partial",
+  "changes": {
+    "overridden_declarations_removed": 19,
+    "scope": "Recipe shopping buttons, detail/recipe action groups and notification rows; later BottomSheet-scoped declarations cover the earlier values",
+    "unused_selectors": "Storage-dot declaration branch removed; selector exclusions restored in subsequent specificity preservation correction",
+    "dynamic_classes_preserved": "Connection classes are generated from current state and were retained"
+  },
+  "validation": {
+    "computed_styles": "2 current notification rows and3 home date-source elements,11 properties each matched before/after",
+    "build": "passed",
+    "runtime_files": 28,
+    "diff_check": "passed",
+    "logic_tests_this_iteration": "not rerun; CSS-only change",
+    "last_frontend_suite": 808,
+    "CSS_budget": {
+      "status": "failed",
+      "before_KB": 291.6,
+      "actual_KB": 291.1,
+      "limit_KB": 260
+    }
+  },
+  "limits": [
+    "Current light preview samples; other interactive/native/dark states not rendered this iteration",
+    "Recipe button ownership/cascade verified in source, no matching current recipe buttons in quantity-blocked plan",
+    "No loading-speed benchmark"
+  ],
+  "record_writes": "none",
+  "evidence": [
+    "removed-declarations.json",
+    "style-comparison.json",
+    "after.png"
+  ],
+  "follow_up_correction": "artifacts/cascade-priority-preservation-2026-10-11/verification.json"
+}

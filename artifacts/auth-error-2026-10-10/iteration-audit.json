@@ -1,0 +1,29 @@
+{
+  "changes": [
+    "Map credential401, duplicate409, rate429, validation and service errors separately",
+    "Only credential and known field errors highlight inputs",
+    "Service errors focus alert; inactive account does not steal focus",
+    "Account errors13px/18.85px",
+    "Remote account refresh no longer assumes another device actor"
+  ],
+  "verification": {
+    "local_proxy_login_status": 503,
+    "IAB_message": "로그인하지 못했어요. 잠시 후 다시 시도해 주세요.",
+    "IAB_focused_id": "account-auth-error",
+    "IAB_invalid_inputs": 0,
+    "IAB_inputs_retained": true,
+    "IAB_retry_enabled": true,
+    "error_font": "13px",
+    "build": "passed",
+    "runtime_files": 28,
+    "node_tests": 302,
+    "presentation_tests": 11,
+    "diff_check": "passed"
+  },
+  "remaining": [
+    "Successful account login and transfer browser acceptance",
+    "Full journey and devices",
+    "CSS budget"
+  ],
+  "goal": "active"
+}

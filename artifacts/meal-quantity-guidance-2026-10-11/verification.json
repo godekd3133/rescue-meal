@@ -1,0 +1,25 @@
+{
+  "status": "partial",
+  "finding": "Quantity no-match used generic quantity/unit advice although actionable foods require an amount per package or count unit",
+  "change": "Only when all recovery targets have known count units, title names one-unit amounts; repeated generic description is omitted. Measured/unknown-unit fallback remains original.",
+  "validation": {
+    "existing_focused_tests": 20,
+    "build": "passed",
+    "runtime_files": 28,
+    "diff_check": "passed",
+    "live_title": "1팩 또는 1개의 양이 필요해요",
+    "description_visible": false,
+    "sheet_client_width": 393,
+    "sheet_scroll_width": 393,
+    "device_scroll": 0,
+    "visible_bullet_separator": false,
+    "navigation": "Meal -> cabbage per-pack reference editor -> cancel -> close detail -> meal; no save or consumption",
+    "record_writes": "none"
+  },
+  "proof": "meal-guidance.png",
+  "limits": [
+    "Current connected iPhone light-mode quantity recovery state verified",
+    "Other no-match states and physical-device behavior not exercised this turn",
+    "Full journey acceptance still partial; existing CSS size gate remains open"
+  ]
+}

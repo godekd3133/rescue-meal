@@ -1,0 +1,33 @@
+{
+  "goal": "active",
+  "changes": [
+    "Limit app-owned sheet snap when simulated keyboard is visible to keep title below status safe area",
+    "Prevent close-button pointerdown from moving focus before click; closes sheet and keyboard in one activation"
+  ],
+  "validation": {
+    "keyboard_geometry_tests": 5,
+    "full_node_tests": 578,
+    "build": "passed",
+    "protected_runtime_files": 28,
+    "diff_check": "passed",
+    "GUI": {
+      "scope": "Explicit demo preview shell in selected IAB; calibrated iPhone and Pixel10 presets; simulated keyboard",
+      "iPhone": "Sheet top101.75 equals status bottom101.75; sheet bottom421.09 before keyboard top421.79; save225.41-257.35 and input348.97-379.52 above keyboard",
+      "Pixel": "Sheet top89.10 below status bottom77.92; sheet bottom465.21 before keyboard top465.86; save208.59-238.84 and input325.62-354.55 above keyboard",
+      "close": "One tap per preset; final dialog count0 and keyboard visible false",
+      "saved": false,
+      "restored": "iPhone preset"
+    },
+    "physical_device": "not-run",
+    "connected_API_keyboard": "not-run"
+  },
+  "source_snapshot": {
+    "apps/web/src/Prototype.tsx": "5ad4fa2621f2c09810c3ae307cc8dd4295e5abee77cdf04b4f25622bebdf172d",
+    "apps/web/src/keyboardSheetPresentation.ts": "82c1fd32ad52098ec5a70457f78c696b25a9d680de7d9a6bd9ec9c6b147ed15f"
+  },
+  "preview": {
+    "URL": "http://127.0.0.1:4181",
+    "session": 98557,
+    "browser_tab": "28"
+  }
+}

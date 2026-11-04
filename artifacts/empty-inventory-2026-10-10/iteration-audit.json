@@ -1,0 +1,24 @@
+{
+  "previous_goal_turn": "progress",
+  "goal_status": "active",
+  "changes": [
+    "Hideinactive search,storage andstatus filters onlyforknownempty unfilteredinventory",
+    "Remove repeatedzero count andheadingkicker inthatstate",
+    "Keep toolsforactivequery/storage/status andunknowninventory",
+    "Loadingheading announces actualloadingstatus ratherthanreadfailure"
+  ],
+  "validation": {
+    "build": "pass",
+    "runtime": "28 protectedfiles pass",
+    "diff": "pass",
+    "combined_frontend_tests": "173 passed",
+    "browser": "FreshlocalAPIguestempty;0searches,0storagefilters,0statusgroups; foodmenuandreceiptaddremainavailable",
+    "search_result_empty": "Demo7records -> unmatchedquery0results; search/filter controlsremain; resetrestores7records andclearsquery",
+    "updated_browser_regression": "not-run"
+  },
+  "remaining": [
+    "CSS294.8KB exceeds260KB budget",
+    "Readonlynarrowfinalvisualcheck",
+    "Fullaccountbrowser andinstalleddevice/camera checks"
+  ]
+}

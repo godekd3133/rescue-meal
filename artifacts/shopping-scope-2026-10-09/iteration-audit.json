@@ -1,0 +1,23 @@
+{
+  "previous_goal_turn": "progress",
+  "goal_status": "active",
+  "changes": [
+    "Bind shopping add, receive, toggle anddelete completions, catches, finalizers andretry callbacks to original workspace/session",
+    "Bind notification single/all-read completions, errors, finalizers andretry actions to original workspace/session",
+    "Reset mutation flags andoldretry actions at workspace reset; stale finalizers cannot end new operations"
+  ],
+  "validation": {
+    "actual_handler_tests": "16 passed; execute extracted actual Prototype handlers with deferred transport and UI setters",
+    "combined_session_scope_readback_tests": "40 passed",
+    "build": "pass",
+    "runtime": "28 protected files pass",
+    "diff": "pass",
+    "browser_demo": "대파2개 directadd -> purchased -> refrigerated receive -> detail shows2개 andunknown date",
+    "connected_account_browser_transition": "not-run"
+  },
+  "remaining": [
+    "CSS budget remains exceeded",
+    "Full account transition through browser UI",
+    "Actual camera and installed device checks"
+  ]
+}

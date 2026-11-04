@@ -1,0 +1,22 @@
+[
+  {
+    "path": "/api/receipts/receipt-d95b87209a2c/commit",
+    "key": "receipt-commit:2072f6c6-76db-4b24-90c3-602bbd76a157",
+    "mode": "reject"
+  },
+  {
+    "path": "/api/receipts/receipt-d95b87209a2c/commit",
+    "key": "receipt-commit:2072f6c6-76db-4b24-90c3-602bbd76a157",
+    "mode": "lost"
+  },
+  {
+    "path": "/api/receipts/receipt-d95b87209a2c/commit",
+    "key": "receipt-commit:2072f6c6-76db-4b24-90c3-602bbd76a157",
+    "mode": "lost"
+  },
+  {
+    "path": "/api/receipts/receipt-d95b87209a2c/commit",
+    "key": "receipt-commit:2072f6c6-76db-4b24-90c3-602bbd76a157",
+    "mode": "pass"
+  }
+]

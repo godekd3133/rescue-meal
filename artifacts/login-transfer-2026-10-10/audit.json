@@ -1,0 +1,29 @@
+{
+  "previous_turn": "progress",
+  "scope": "guest records when signing into an existing account",
+  "changes": [
+    "preview original guest token after login as well as registration",
+    "serialize primitive values in nested guest transfer fingerprints",
+    "distinguish a confirmed record conflict from a read failure",
+    "retain conflicting pending transfer across account reload",
+    "shorten notice without promising eventual import"
+  ],
+  "runtime": {
+    "environment": "local isolated SQLite, synthetic credentials",
+    "guest": "created one food through UI",
+    "login": "existing populated account",
+    "initial_preview": "500 discovered and repaired",
+    "retry": "conflict shown",
+    "skip": "existing account four foods retained, no automatic merge",
+    "reload": "conflict choice restored",
+    "empty_account_import": "not-run"
+  },
+  "verification": {
+    "frontend_node_passed": 444,
+    "api_passed": 542,
+    "build": "passed",
+    "protected_runtime_files": 28,
+    "diff_check": "passed",
+    "automated_browser_suite": "not-run; permission pending"
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "status": "partial",
+  "changes": [
+    "44x44 minus/plus controls change notification lead period one day at a time without opening keyboard",
+    "Direct numeric entry retained",
+    "Steps respect0..14 and do not replace invalid/unfinished input with guesses"
+  ],
+  "runtime": {
+    "initial_saved_days": 2,
+    "plus_result": 3,
+    "keyboard_on_button_adjustment": false,
+    "button_size_px": 44,
+    "lower_bound": "0 disables minus",
+    "upper_bound": "14 disables plus",
+    "restored_days": 2,
+    "actual_save": "not-run",
+    "device_scroll": 0,
+    "unread_notifications": 1
+  },
+  "validation": {
+    "frontend_tests": 820,
+    "new_step_tests": 2,
+    "build": "passed",
+    "runtime_files": 28,
+    "diff_check": "passed",
+    "CSS_budget": {
+      "status": "failed",
+      "actual_KB": 291.5,
+      "limit_KB": 260
+    }
+  },
+  "limits": [
+    "Current light iPhone preview; separate narrow/native/dark layouts not re-exercised this iteration"
+  ],
+  "evidence": [
+    "after.png"
+  ]
+}

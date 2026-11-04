@@ -1,0 +1,55 @@
+{
+  "scope": "connected storage/opening save rejection and same-request retry",
+  "changes": [
+    "keep detail open until storage acknowledgement",
+    "disable edits while pending and while unresolved recovery exists",
+    "preserve draft on rejection without optimistic state rollback",
+    "offer same-request retry and known-rejection edit recovery",
+    "do not overwrite successful current dashboard with event snapshot",
+    "dismiss only the originating selected detail after success",
+    "track all pending food IDs",
+    "present priority basis as readable storage reference instead of rule IDs",
+    "focus and reveal retry action on failure",
+    "show saving status on the existing save button",
+    "preserve direct-child detail layout through fieldset class"
+  ],
+  "runtime": {
+    "environment": "local isolated SQLite synthetic account IAB",
+    "pending_delay_seconds": 2,
+    "pending": "detail open, edit fields disabled",
+    "rejection": "frozen and opened drafts retained",
+    "retry": {
+      "attempts": 2,
+      "same_idempotency_key": true,
+      "all_nonempty": true,
+      "moved_events": 1,
+      "opened_events": 1
+    },
+    "persisted_onion": {
+      "quantity": 2,
+      "storage": "frozen",
+      "opened": true
+    },
+    "edit_recovery": "fields re-enabled, change to another choice possible, close without save keeps original egg record",
+    "date_source": "식품 종류와 냉동 보관 정보 참고",
+    "layout": {
+      "display": "grid",
+      "gap": "12px"
+    },
+    "failure_focus": "다시 시도",
+    "failure_dialog_scroll_top": 10
+  },
+  "verification": {
+    "frontend_node_passed": 492,
+    "storage_handler_cases": 5,
+    "date_source_cases": 5,
+    "build": "passed",
+    "protected_runtime_files": 28,
+    "diff_check": "passed"
+  },
+  "limits": [
+    "post-commit response loss GUI not exercised here",
+    "partial-lot storage split GUI not exercised in this loop",
+    "full journey acceptance and CSS gate remain open"
+  ]
+}

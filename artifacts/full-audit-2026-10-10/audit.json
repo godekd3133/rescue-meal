@@ -1,0 +1,51 @@
+{
+  "goal": "active",
+  "requirements": [
+    "All entry-to-completion flows remain usable and recoverable",
+    "Natural concise copy, explicit date meaning and uncertainty",
+    "No bullet joined visible metadata",
+    "Established palette, licensed photos, readable interactive states"
+  ],
+  "current_validation": {
+    "node_tests": 548,
+    "api_tests": 543,
+    "build": "passed",
+    "protected_runtime_files": 28,
+    "diff_check": "passed",
+    "responsive_GUI": {
+      "actual_width": 320,
+      "home_scroll_width": 320,
+      "nav_height": 53.5,
+      "manual_dialog_width": 296,
+      "manual_dialog_scroll_width": 296,
+      "save_target_height": 46,
+      "storage_target_height": 44
+    },
+    "publication": "not-run"
+  },
+  "gates": {
+    "CSS_size_budget": {
+      "status": "failed",
+      "actual_KB": 291.1,
+      "limit_KB": 260
+    },
+    "automatic_browser_suite": "not-run; explicit permission pending"
+  },
+  "remaining_by_flow": {
+    "first-entry": "Current-source mixed owner and cold load coverage",
+    "loading-and-failure": "Full native/dark combinations",
+    "intake-manual": "Interrupted manual write acknowledgement combinations",
+    "intake-receipt": "Current resumed/deleted draft GUI",
+    "intake-barcode": "Connected provider failure/success acceptance",
+    "intake-label": "RealOCR/device capture",
+    "food-details-history": "Current narrow/dark mixed mutation states",
+    "meal-and-return": "Interrupted multi-day write and owner-switch GUI",
+    "shopping": "Planned-source receive and interrupted readback variants",
+    "notifications": "Live owner transition GUI",
+    "account-settings": "Multi-record import and interrupted transfer GUI",
+    "guidance": "Every guidance entry and device text-size combination",
+    "receipt-queue": "Missing/already committed drafts and cancel GUI",
+    "recipe-review": "Concurrent reviewer, publication and 320px actual review GUI"
+  },
+  "responsive_scope": "demo web preview home and direct input at real320px; cancelled without save; viewport restored"
+}

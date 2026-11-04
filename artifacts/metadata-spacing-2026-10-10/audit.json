@@ -1,0 +1,35 @@
+{
+  "scope": "shared metadata whitespace preservation",
+  "changes": [
+    "preserve explicit JSX spaces within separated groups",
+    "drop groups containing only whitespace",
+    "retain numeric zero and opaque nontext content"
+  ],
+  "verification": {
+    "actual_react_render_cases": 6,
+    "cases": [
+      "food name plus numeric quantity",
+      "nested fragments",
+      "bullet removal",
+      "whitespace-only optional groups",
+      "zero quantity",
+      "unseparated text"
+    ],
+    "node_passed": 536,
+    "build": "passed",
+    "protected_runtime_files": 28,
+    "diff_check": "passed"
+  },
+  "runtime": {
+    "environment": "IAB local connected account",
+    "observed_metadata": [
+      "풀무원 장보기 1모",
+      "냉장 먼저 살펴볼 시점"
+    ],
+    "screen": "current detail inspected"
+  },
+  "limits": [
+    "not every metadata-producing flow rendered",
+    "full goal and CSS budget remain open"
+  ]
+}

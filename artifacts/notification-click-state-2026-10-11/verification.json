@@ -1,0 +1,42 @@
+{
+  "status": "partial",
+  "issues": [
+    "Existing root app client was navigated again, replacing in-memory draft state",
+    "Click URL could accept protocol-relative external targets",
+    "First client selected instead of focused app, and stale client focused after navigation"
+  ],
+  "changes": [
+    "Same-origin target normalizer used for both push data and click",
+    "Focused same-origin app window preferred",
+    "Matching path/root target focuses current app without navigation; existing query/draft retained",
+    "Different target focuses returned client; null return opens validated target"
+  ],
+  "regressions": {
+    "before": "5 new click tests failed on old implementation",
+    "after": "12 service-worker tests passed, including7 new cases",
+    "draft": "Mock client draft1.1234L retained with0 navigation calls",
+    "external_targets": "Protocol-relative, external HTTPS and javascript targets normalize to app root",
+    "navigation": "Returned/new window focused, disappeared window reopened"
+  },
+  "validation": {
+    "frontend_tests": 808,
+    "build": "passed",
+    "runtime_files": 28,
+    "built_sw_matches_source": true,
+    "diff_check": "passed",
+    "CSS_budget": {
+      "status": "failed",
+      "actual_KB": 291.6,
+      "limit_KB": 260
+    }
+  },
+  "limits": [
+    "VM service-worker simulation; actual OS notification click and browser client lifecycle not run",
+    "Current root notification focuses app; specific food deep link not implemented in this iteration",
+    "No actual push delivery, permission or data mutation"
+  ],
+  "source": [
+    "apps/web/public/sw.js",
+    "apps/web/tests/service-worker.test.mjs"
+  ]
+}

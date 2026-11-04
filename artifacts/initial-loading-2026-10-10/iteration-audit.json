@@ -1,0 +1,28 @@
+{
+  "changes": [
+    "First unfiltered inventory load has one concise status and three decorative placeholders",
+    "Hide duplicate priority and trust callouts during first load",
+    "No unverified zero count filter controls during first load",
+    "Mark inventory region aria-busy"
+  ],
+  "verification": {
+    "IAB_delayed_real_API": {
+      "loading_status_count": 1,
+      "zero_count_buttons": 0,
+      "placeholder_rows": 3,
+      "inventory_aria_busy": true,
+      "long_delay": "Request timed out; existing failure state appeared",
+      "explicit_retry": "Successful connection; real empty first-entry screen restored"
+    },
+    "build": "passed",
+    "runtime_files": 28,
+    "node_tests": 289,
+    "diff_check": "passed"
+  },
+  "remaining": [
+    "Failure screen still repeats guidance and shows zero filter counts",
+    "CSS budget",
+    "Broader journey and device acceptance"
+  ],
+  "goal": "active"
+}

@@ -1,0 +1,35 @@
+{
+  "scope": "single meal save, partial consumption and completed history",
+  "changes": [
+    "clarify completion action occurs after cooking",
+    "state reduction by used quantity rather than removing food",
+    "do not claim missing skipped ingredients remain in inventory",
+    "completed history disables re-save and shows recipe quantities as recipe basis",
+    "show actual consumed allocation separately",
+    "restore skipped count from completed plan"
+  ],
+  "runtime": {
+    "environment": "local isolated SQLite/synthetic account",
+    "saved_recipe": "우유 옥수수 감자수프",
+    "consumption": "감자 0.5개 from 1개",
+    "readback": "remaining 0.5개 after reload",
+    "history": "completed plan reopened with 0.5개 consumption",
+    "completed_actions": {
+      "save": 0,
+      "complete": 0
+    },
+    "missing_ingredients": 2
+  },
+  "verification": {
+    "node_passed": 446,
+    "build": "passed",
+    "protected_files": 28,
+    "diff_check": "passed"
+  },
+  "limits": [
+    "not real cooking or safety acceptance",
+    "three-day completion remains unverified",
+    "CSS budget unresolved",
+    "automated browser suite permission pending"
+  ]
+}

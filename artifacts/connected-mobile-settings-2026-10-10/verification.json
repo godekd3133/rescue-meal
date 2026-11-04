@@ -1,0 +1,38 @@
+{
+  "scope": "API-connected calibrated iPhone notification settings keyboard, save and close flow",
+  "changes": [
+    "Save/cancel actions moved to bottom of settings fieldset and made sticky",
+    "Only changed or saving settings show the action area; unchanged disabled save omitted",
+    "Number and time focus reveal inside nearest app-owned scroll region",
+    "Preview keyboard clears extra action bottom inset"
+  ],
+  "validation": {
+    "frontend_tests": 643,
+    "failures": 0,
+    "build": "passed",
+    "protected_runtime_files": 28,
+    "diff_check": "passed",
+    "actual_browser": "Fresh local guest on4183 preview shell via loopback8090 proxy to actual API8088. Edited lead2->3, keyboard open, one native click saved viaPUT; notice shown, keyboard dismissed and actions removed. Restored2 viasame flow and reopened to confirm2. Time focus revealed abovekeyboard; one native close returned notifications.",
+    "before_save_bottom": 544.7805,
+    "keyboard_top": 421.7851,
+    "after_save_bottom": 418.3141,
+    "time_input_bottom": 300.2325,
+    "device_scroll_top": 0,
+    "preview_shell": "iPhone calibrated preview",
+    "physical_device": "not-run",
+    "pixel_keyboard": "not-run",
+    "proxy_initial_failure": "Preview proxy initially lackedPUT. Corrected proxy and retried; no product error handling weakened.",
+    "proxy_origin": "Only http://127.0.0.1:4183 allowed; unrelated origin403",
+    "original_api_cors": "unchanged",
+    "new_local_services": {
+      "proxy_session": 51513,
+      "frontend_session": 90516
+    },
+    "css_budget": "failed:292.7KB versus260KB"
+  },
+  "sha256": {
+    "apps/web/src/AccountSheet.tsx": "4ae56e649adc64ab38c21c1650e23d2d144e253809ed9568bc3e61df4f880ed0",
+    "apps/web/src/notificationSettingsLayout.css": "bcc504aeedf9514a9ec8bc9d0a68440e352e0a3998454e5dab50120bc3ec2ea7",
+    "artifacts/connected-mobile-settings-2026-10-10/proxy.py": "1df9211284078d6bc6cffe2b52a9131ea999eae2cae822f4b8ac22ba4b43b75a"
+  }
+}

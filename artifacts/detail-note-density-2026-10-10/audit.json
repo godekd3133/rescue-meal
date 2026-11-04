@@ -1,0 +1,31 @@
+{
+  "scope": "reduce redundant food notes while retaining specific warnings",
+  "changes": [
+    "hide only exact known generic or redundant generated sentences",
+    "replace broad package-keyword suppression with exact sentence matching",
+    "place retained food-specific note before record controls",
+    "shorten date input description",
+    "fall back from pending detail text to recorded assertion source type without inferring an unknown source"
+  ],
+  "runtime": {
+    "environment": "isolated local API synthetic account IAB",
+    "generic_default_note_count": 0,
+    "specific_package_note_count": 1,
+    "note_top": 386.39,
+    "record_controls_top": 681.28,
+    "date_source": "포장지에서 직접 확인"
+  },
+  "verification": {
+    "node_passed": 503,
+    "note_cases": 6,
+    "source_cases": 3,
+    "build": "passed",
+    "protected_files": 28,
+    "diff_check": "passed"
+  },
+  "limits": [
+    "specific note is synthetic fixture content",
+    "not a whole-app copy audit",
+    "full journey acceptance and CSS gate remain open"
+  ]
+}

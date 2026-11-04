@@ -1,0 +1,23 @@
+{
+  "status": "partial",
+  "issue": "Push permission and registration/removal waits could outlive their initiating session or workspace",
+  "changes": [
+    "Capture session version and workspace key at push operation start",
+    "Check ownership after every awaited boundary before registration, UI update or browser cleanup",
+    "Suppress stale success/error presentation; release operation guard",
+    "Check ownership during browser subscription fingerprint lookup before unsubscribe"
+  ],
+  "validation": {
+    "frontend_suite": 838,
+    "focused_push_handlers": 14,
+    "new_cases": 4,
+    "build": "passed",
+    "runtime_files": 28,
+    "diff_check": "passed"
+  },
+  "limits": [
+    "Real-handler tests mock browser permission, push registration and server responses; no actual permission or subscription changes",
+    "Already-started external operations cannot be cancelled by these ownership checks",
+    "Full journey acceptance remains partial; CSS budget remains failed at 291.5KB versus 260KB"
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "status": "partial",
+  "finding": "Guidance lead repeated its below-paragraph instruction in a separate heading",
+  "change": "Removed redundant lead heading; existing date meanings and safety boundaries unchanged",
+  "validation": {
+    "focused_existing_tests": 13,
+    "build": "passed",
+    "runtime_files": 28,
+    "diff_check": "passed",
+    "live_path": "Home unknown-date summary -> frozen milk detail -> date guide -> same detail",
+    "draft_quantity_before": "100.1234",
+    "draft_quantity_after": "100.1234",
+    "return_focus": "날짜 안내 보기",
+    "guide_keyboard_visible": false,
+    "device_scroll": 0,
+    "restored_draft": "250",
+    "record_writes": "none"
+  },
+  "proof": "guidance.png",
+  "limits": [
+    "Connected iPhone light-mode entry/return only",
+    "Other entry contexts, dark/narrow and native text-size combinations not exercised this iteration"
+  ]
+}

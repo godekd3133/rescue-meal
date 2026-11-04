@@ -1,0 +1,27 @@
+{
+  "goal": "active",
+  "problem": "Receive-submit pointerdown hid keyboard before click; cancel blur also moved form before activation. Both first taps failed in current preview.",
+  "changes": [
+    "Receive submit retains input focus through pointerdown; existing successful completion dismisses keyboard",
+    "Receive cancel prevents pointerdown focus change; cancellation then dismisses keyboard",
+    "Purchase quantity uses shopping field reveal helper"
+  ],
+  "validation": {
+    "shopping_tests": 18,
+    "build": "passed",
+    "runtime_protected": 28,
+    "diff_check": "passed",
+    "GUI": {
+      "scope": "Explicit demo iPhone preview with simulated keyboard",
+      "cancel": "One tap closes receive form while purchase status remains",
+      "receive": "One tap with keyboard visible adds1 cold unit; inventory7 becomes8; keyboard closes",
+      "food_detail": "Quantity1 and printed date unknown; no expiry assigned; close returns to received confirmation",
+      "repeat": "Second clean demo session one-tap receive also succeeds",
+      "restored": "Demo reload clears fixtures"
+    },
+    "connected_API_mobile": "not-run",
+    "physical_device": "not-run"
+  },
+  "remaining_observation": "Direct detail overlap reproduced with zero page/device scroll and corrected in artifacts/detail-safearea-2026-10-10/verification.json; received-food transition screenshot positioning not revalidated.",
+  "source_sha256": "549041a45f181d6892aed21855ce7be839ad0b633910f546a5e4a4b36062d3a8"
+}

@@ -1,0 +1,41 @@
+{
+  "scope": "Actual two-preview same-workspace notification setting changes",
+  "before": "Primary unsaved3/on remained after peer saved4/off; cancel revealed4/off, proving current baseline had refreshed but untouched input had not. Switch first click with keyboard only dismissed keyboard. Disabled refresh dropped DOM focus toBODY while simulated keyboard stayed visible.",
+  "changes": [
+    "Merge untouched fields against prior saved baseline; preserve edited fields and raw period text",
+    "Persist saved baseline and remote field labels in memory draft across entry paths",
+    "Show changed saved period/timezone/quiet hours only where local draft differs",
+    "Clear stale success note when incoming saved settings change",
+    "Keep keyboard switch click target stable until click, then dismiss keyboard",
+    "Restore pre-refresh input focus only when still connected, enabled and user has not chosen another target; save/cancel clear pending restoration"
+  ],
+  "validation": {
+    "frontend_tests": 662,
+    "failures": 0,
+    "targeted_merge_refresh_tests": 10,
+    "build": "passed",
+    "protected_runtime_files": 28,
+    "diff_check": "passed",
+    "actual_two_preview": "Primary draft5/off, peer saved6/on: primary kept5 and mergedon, showed saved6. Peer then saved7/on: primary kept5, showed saved7, DOM active label remained period and keyboardtrue. Primary saved5/on; peer displayed5/on and old success notice cleared. Final2/on saved and peer read2/on.",
+    "switch_one_tap": "Peer switchoff->on while keyboard open changed on first native click",
+    "focus_after_refresh": {
+      "activeLabel": "알림 미리 받을 기간",
+      "period": "5",
+      "inApp": "true",
+      "keyboard": "true"
+    },
+    "baseline_restored": {
+      "lead_days": 2,
+      "in_app_enabled": true
+    },
+    "temporary_peer_tab": "32 closed",
+    "physical_device": "not-run",
+    "css_budget": "failed:292.7KB versus260KB"
+  },
+  "sha256": {
+    "apps/web/src/AccountSheet.tsx": "015567f4c01d182ef0c4eea1b4b3e04aa45fc1b97e9abc7eb571acfef068949f",
+    "apps/web/src/notificationSettingsDraft.ts": "131e4464ff3211b638f973780b6158ffd13804495b4271e348e9013b28c36f0d",
+    "apps/web/tests/notification-settings-refresh-draft.test.mjs": "4189a7e61a80533f0d83ddbf164d3d8116cc7ed7ff602aeea22d56a1dc48173f",
+    "apps/web/tests/notification-settings-merge.test.mjs": "6b9dfab6f70131a01fbd1e43c3e013245520083fbf575e87956fbae636424481"
+  }
+}

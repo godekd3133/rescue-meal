@@ -1,0 +1,26 @@
+{
+  "changes": [
+    "Hide obvious default consumption instruction",
+    "Keep partial/skipped/empty selection summaries",
+    "Render changed-selection summary as separate metadata fields"
+  ],
+  "verification": {
+    "IAB_default_instruction_count": 0,
+    "IAB_skipped_spinbutton_value": 0,
+    "IAB_summary_fields": [
+      "2가지 재료를 사용해요",
+      "1가지는 남겨요."
+    ],
+    "bullet_separator": false,
+    "build": "passed",
+    "runtime_protected_files": 28,
+    "node_regression_tests": 289,
+    "diff_check": "passed",
+    "safety_jump_focus_correction": "Previous empty element ID was inconclusive; current active element BUTTON 시금치 보기 is within safety region. No focus defect or code change."
+  },
+  "remaining": [
+    "Full journey acceptance still in progress",
+    "Connected CLI browser regression permission pending",
+    "CSS budget exceeded"
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "goal_status": "active",
+  "previous_turn": "progress",
+  "browser_observed_before_change": {
+    "meal_conditions": "30 minutes, 2 servings selected",
+    "recovery": "Quantity comparison unavailable; explicit cabbage and milk quantity-input actions",
+    "detail_handoff": "Cabbage action opened the correct two-pack lot with quantity-reference editor expanded",
+    "reference_validation": "Draft amount 200 with blank unit; save-and-return button disabled; no assumed unit",
+    "first_cancel": "Native click closed the keyboard but left the editor and draft visible; subsequent DOM snapshot confirmed the editor remained open",
+    "follow_up": "The comparison click and subsequent browser reattachment/state reads timed out; final cancellation outcome cannot be established"
+  },
+  "source_trace": {
+    "input_blur": "QuantityReferenceEditor input calls keyboard.hide on blur",
+    "keyboard_layout": "KeyboardProvider.hide clears the focused element and visibility; keyboard insets change with visibility",
+    "cancel_before": "No pointer-down focus prevention; close callback closes editing and hides keyboard",
+    "change": "Keep input focus during cancel pointer-down and close the keyboard inside the existing close callback",
+    "certainty": "Observed behavior and source interaction support this fix; post-change one-tap browser outcome remains unverified"
+  },
+  "verification": {
+    "web_tests": "744 passed",
+    "web_log": "/tmp/rescue-meal-quantity-cancel-web.log",
+    "typescript_and_production_build": "passed",
+    "build_log": "/tmp/rescue-meal-quantity-cancel-build.log",
+    "protected_runtime_integrity": "28 passed",
+    "git_diff_check": "passed",
+    "post_change_pointer_cancel": "not-run: browser tool stopped returning observations",
+    "return_to_meal_preserves_two_servings": "not-run",
+    "current_screenshot": "not captured because browser observations timed out",
+    "bundle_budget": "failed: CSS 293.4KB exceeds 260KB",
+    "bundle_log": "/tmp/rescue-meal-quantity-cancel-bundle.log",
+    "deployment": "not-run"
+  },
+  "data_changes": "No quantity reference, consumption, shopping or recipe record saved during this iteration; only UI drafts and serving selection changed",
+  "remaining_scope": "Post-change runtime cancellation and round-trip condition retention must be verified before claiming this flow complete",
+  "follow_up_verification": "artifacts/meal-return-verified-2026-10-11/verification.json"
+}

@@ -1,0 +1,40 @@
+{
+  "scope": "opened draft reversibility versus saved opened record",
+  "changes": [
+    "disable switch only for readonly or already persisted opened food",
+    "allow pending opened choice to toggle off",
+    "show unsaved choice copy before commit instead of an irreversible-record warning"
+  ],
+  "runtime": {
+    "environment": "isolated local SQLite synthetic account IAB",
+    "pending_on": {
+      "checked": true,
+      "enabled": true,
+      "copy": "저장 전 선택이에요."
+    },
+    "pending_off": {
+      "checked": false,
+      "pending_save_buttons": 0
+    },
+    "guidance_roundtrip": {
+      "checked": true,
+      "enabled": true
+    },
+    "saved_reload": {
+      "checked": true,
+      "enabled": false,
+      "opened_at_shown": true
+    }
+  },
+  "verification": {
+    "build": "passed",
+    "protected_runtime_files": 28,
+    "diff_check": "passed",
+    "browser_lifecycle": "passed"
+  },
+  "limits": [
+    "save-rejection path for opening not exercised here",
+    "physical food acceptance not tested",
+    "full goal and CSS budget remain open"
+  ]
+}

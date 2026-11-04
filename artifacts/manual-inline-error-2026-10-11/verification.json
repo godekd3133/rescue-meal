@@ -1,0 +1,35 @@
+{
+  "status": "partial",
+  "finding": "Manual quantity validation appeared only near the save action, 143.83 rendered pixels from the quantity field",
+  "changes": [
+    "Validation now appears immediately after quantity input with existing described-by ID",
+    "One error message only; submit stays disabled for invalid quantities",
+    "Visible error border and readable light-theme error ink reuse intake validation style",
+    "Valid save summary remains at action; invalid summary is omitted"
+  ],
+  "validation": {
+    "frontend_suite": 838,
+    "focused_existing_tests": 16,
+    "build": "passed",
+    "runtime_files": 28,
+    "diff_check": "passed",
+    "invalid_draft": "0개",
+    "invalid_save_disabled": true,
+    "error_instances": 1,
+    "error_gap_pixels": 5.55,
+    "error_light_color": "rgb(158,64,55)",
+    "corrected_draft": "1.1234L",
+    "corrected_error_instances": 0,
+    "corrected_save_disabled": false,
+    "corrected_summary": "우유 / 1.1234L / 냉장 보관",
+    "keyboard": "Visible during invalid entry; dismissed by manual tab focus",
+    "device_scroll": 0,
+    "record_writes": "none"
+  },
+  "proof": "quantity-error.png",
+  "limits": [
+    "Connected iPhone light-mode validation and correction only",
+    "Actual save/server failure, dark/narrow layout not exercised this iteration",
+    "Full journey acceptance remains partial"
+  ]
+}

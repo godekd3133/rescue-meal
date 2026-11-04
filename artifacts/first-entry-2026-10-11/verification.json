@@ -1,0 +1,40 @@
+{
+  "goal_status": "active",
+  "previous_turn": "progress",
+  "cause": "Automatic tab detection combined unscaled clientHeight threshold with rendered bounds, and treated top of short home as food; clickingHome reproduced scroll0 withFood selected",
+  "implemented": [
+    "Top of home remainsHome",
+    "Threshold uses rendered viewport coordinates with360logicalpxcapscaledconsistently",
+    "Explicit food navigation stillworks"
+  ],
+  "runtime": [
+    "Fresh guest4184 has0foods;Home selected andscroll0afterreload",
+    "Numeric2withoutunit blocks save;selectPackenablessave",
+    "RealAPI saves cabbage2packs in separate QAguest;SQLite record confirmsidquantityunitstorageunknown date",
+    "Reloadsamefoodsamequantity;Home selectedscroll0",
+    "Foodnavmoves tolisttop721;Homenavreturns0andHome selected"
+  ],
+  "checks": {
+    "web": "698passed",
+    "build": "passed",
+    "runtime": "28protectedfilespassed",
+    "diff": "passed"
+  },
+  "services": {
+    "api": "existing8088reusedunchanged",
+    "qa_proxy": "loopback8091allowOrigin4184upstream8088withapprovedOrigin4182",
+    "qa_frontend": "4184",
+    "proxy_session": 3827,
+    "frontend_session": 98095
+  },
+  "not_run": [
+    "Physicaldevice",
+    "FullbrowserCLI/MCPsuite",
+    "Darkmodefirstentry"
+  ],
+  "sha256": {
+    "apps/web/src/Prototype.tsx": "666be52c5c312c413984099ac00247b31a7ced6e892802ff5a880fa3ff051e66",
+    "apps/web/src/contentNavigationPosition.ts": "5f8304ebd639279f01e90b295b59576630d4b1158666ad5a0cb081145d69f9c3",
+    "apps/web/tests/content-navigation-position.test.mjs": "ca50fa3aba4fa248111fc5054c0101c4b1c86bc4d7a62546e90e7ce949f6d373"
+  }
+}

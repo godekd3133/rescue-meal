@@ -1,0 +1,27 @@
+{
+  "changes": [
+    "Failed existing-food recheck continues in same-food manual date entry instead of new-food form",
+    "Manual recovery clears date and requires explicit date kind; retains target/name/storage/quantity",
+    "Save source user_input for manual recovery rather than label_ocr"
+  ],
+  "verification": {
+    "IAB_mode": "explicit demo; local licensed spinach JPEG; image reading unavailable intentionally",
+    "IAB_recovery": "same target, empty date/kind, save disabled",
+    "IAB_save": "manual date2026-01-01, returned existing detail, source 포장지에서 직접 확인",
+    "IAB_record_count": 7,
+    "IAB_preserved": "original brand,1팩,cold storage,opened state",
+    "handler_tests": 3,
+    "node_tests": 327,
+    "build": "passed",
+    "runtime_files": 28,
+    "diff_check": "passed",
+    "updated_browser_spec": "not-run"
+  },
+  "remaining": [
+    "Connected manual recovery and realOCR/device validation",
+    "Duplicate followup action on returning detail",
+    "CSS budget",
+    "Broader journey acceptance"
+  ],
+  "goal": "active"
+}

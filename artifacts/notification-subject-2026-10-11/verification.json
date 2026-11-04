@@ -1,0 +1,43 @@
+{
+  "status": "partial",
+  "changes": [
+    "Non-sync food notifications show their food subject in visible title when absent",
+    "Body trims repeated literal food-name prefixes while retaining dates, reasons and actions",
+    "External sync operation subjects are preserved",
+    "Event metadata uses separate Metadata parts directly",
+    "Theme tooltip uses a short destination action without a middle-dot join"
+  ],
+  "runtime": {
+    "title_before": "표시 날짜를 확인해 주세요",
+    "title_after": "우유 표시 날짜를 확인해 주세요",
+    "body_after": "날짜를 확인하지 못했어요. 포장지 촬영 또는 직접 입력으로 실제 표시 날짜를 확인하세요.",
+    "personal_reminder": "양배추 내 알림일이 다가와요; 내가 정한 날짜는10월13일",
+    "tooltip": "다크 모드로 전환",
+    "unread_count_before_after": 1,
+    "food_count": 5,
+    "device_scroll": 0,
+    "read_or_food_mutations": "none",
+    "restored": "Home, light"
+  },
+  "validation": {
+    "frontend_tests": 801,
+    "new_subject_regressions": 5,
+    "focused_notification_tests": 16,
+    "build": "passed",
+    "runtime_files": 28,
+    "diff_check": "passed",
+    "CSS_budget": {
+      "status": "failed",
+      "actual_KB": 291.6,
+      "limit_KB": 260
+    }
+  },
+  "limits": [
+    "Current light preview food notifications; actual sync event metadata not present in this workspace",
+    "No OS push or physical device verification"
+  ],
+  "evidence": [
+    "after.png",
+    "observations.json"
+  ]
+}

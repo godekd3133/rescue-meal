@@ -1,0 +1,30 @@
+{
+  "goal": "active",
+  "cause": "Receipt name/barcode lookup completion did not compare current input or request order; old responses could repopulate edited/session-reset rows.",
+  "changes": [
+    "Per-row lookup tickets and receipt generation guard success and failure",
+    "Current row name/barcode must match original request",
+    "Name edits and candidate selection invalidate pending identity lookup state and confirmation",
+    "Mode switches remove pending loading state while completed results remain available"
+  ],
+  "validation": {
+    "controlled_lifecycle_tests": 7,
+    "full_frontend_tests": 611,
+    "build": "passed",
+    "runtime_protected": 28,
+    "diff_check": "passed",
+    "cases": [
+      "Late name success after edit ignored",
+      "Late failure after edit ignored",
+      "Second same-name request wins",
+      "Session change ignores response",
+      "Identity edit invalidates pending barcode lookup",
+      "Quantity edit retains same-product lookup",
+      "Candidate selection invalidates pending same-name request"
+    ],
+    "GUI": "Actual lookup unavailable notice appears for current name; editing name clears old notice and preserves new value, raw source and review requirement",
+    "real_delayed_provider_GUI": "not-run",
+    "stock_saved": false
+  },
+  "source_sha256": "3167035eb89be789b70521d2d21167e818f74943acfcc6012f667c662ad536a6"
+}

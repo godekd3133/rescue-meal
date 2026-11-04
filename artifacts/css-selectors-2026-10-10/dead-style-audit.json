@@ -1,0 +1,9 @@
+{
+  "removedRuleGroups": 5,
+  "savedBytes": 1116,
+  "unusedClasses": [
+    "detail-actions-read-only",
+    "detail-read-only-inline-note",
+    "detail-read-only-danger"
+  ]
+}

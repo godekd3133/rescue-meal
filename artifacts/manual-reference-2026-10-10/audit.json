@@ -1,0 +1,29 @@
+{
+  "scope": "manual entry optional priority reference",
+  "changes": [
+    "collapse optional estimate behind 44px reference disclosure",
+    "name action according to its date-reference function",
+    "omit duplicate cause when inference abstains",
+    "show safety meaning at relevant reference action and result"
+  ],
+  "runtime": {
+    "browser": "IAB, local isolated API",
+    "initial": "name quantity storage allow direct save",
+    "reference": "collapsed by default, summary 44px",
+    "success": "대파 reference window displayed",
+    "abstained": "남은 반찬 one cause plus safety meaning",
+    "direct_save": "change back to 대파 clears prior result, collapse and save without new inference request",
+    "reload": "대파 1개 냉장 retained"
+  },
+  "verification": {
+    "node": 444,
+    "build": "passed",
+    "protected_files": 28,
+    "diff_check": "passed"
+  },
+  "remaining": [
+    "full journey audit",
+    "CSS budget",
+    "automated browser suite permission pending"
+  ]
+}

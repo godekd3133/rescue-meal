@@ -1,0 +1,31 @@
+{
+  "goal": "active",
+  "cause": "GET shopping-list always invoked durable flush even when reconciliation left every row unchanged; background reads incremented global revision and triggered detail freshness notices.",
+  "changes": [
+    "Conditional persistence remains inside existing mutation lock and rollback boundary",
+    "Shopping source comparisons treat order-only differences as equal; unchanged rows retain original source order and timestamps",
+    "Actual reconciliation changes still flush and use bounded concurrent conflict retry"
+  ],
+  "validation": {
+    "targeted_API_tests": 24,
+    "full_API_tests": 548,
+    "full_frontend_tests": 594,
+    "diff_check": "passed",
+    "live_probe_before": "food create revision2; unchanged shopping GET raised it to3",
+    "live_probe_after": "same sequence stayed at2 for dashboard, notifications, shopping, storage and revision reads",
+    "GUI": {
+      "unchanged": "Visible detail open35seconds beyond30second poll; refresh notice false",
+      "actual_change": "Peer tab updates name, original detail reflects latest name while pending quantity0.5 retained; same-origin refresh means no stale notice needed",
+      "restored": "Name reset to두부; pending0.5 not consumed or saved; peer tab closed"
+    },
+    "external_device": "not-run"
+  },
+  "runtime_API": {
+    "URL": "http://127.0.0.1:8088",
+    "session": 20337
+  },
+  "source_snapshot": {
+    "services/api/app/main.py": "6cf9b3210c2c9d09aa0f9eea1f04b32e167f46b9e5019b7d376a8860a1d119d0",
+    "services/api/app/workspace_mutation.py": "0758257c2a5d0ac3891e39f93a9101544343a01f48a8cfe75d9f607c979b9401"
+  }
+}

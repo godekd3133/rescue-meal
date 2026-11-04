@@ -1,0 +1,19 @@
+{
+  "goal": "active",
+  "problem": "Unknown raw scans and GS1 without valid product identity reached product providers despite parser result.",
+  "change": "Lookup only parsed 14-digit product identity; preserve date-only GS1 review; stop unknown/restricted/malformed identity.",
+  "validation": {
+    "executed_handler_tests": 5,
+    "build": "passed",
+    "runtime_files": 28,
+    "diff_check": "passed",
+    "GUI": [
+      "123 shows unsupported format notice",
+      "(17)261015 retains use_by 2026-10-15 candidate",
+      "Applying date enters manual with empty product name and retained date",
+      "Closed without saving"
+    ],
+    "provider_success": "not-run"
+  },
+  "source_sha256": "2ae048e122917e16038a3f1128b03a2cd25cd442206483cc6b402a095277d7de"
+}

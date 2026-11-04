@@ -1,0 +1,43 @@
+{
+  "goal": "active",
+  "cause": "Whole-image mean brightness and edge density misclassified sparse sharp white documents as glare and poor focus, despite sufficient contrast and high-frequency detail.",
+  "changes": [
+    "Use contrast>=12 plus blur-score>=1 to avoid brightness/edge recapture advisories when visible detail exists",
+    "Keep darkness, low-contrast, blur, extreme aspect, corrupt/tiny/oversized-image checks",
+    "Shorten mapped receipt hint while retaining edit action and source-file persistence meaning"
+  ],
+  "validation": {
+    "quality_tests": 12,
+    "full_API_tests": 552,
+    "build": "passed",
+    "runtime_protected": 28,
+    "diff_check": "passed",
+    "before_sparse_sharp": {
+      "brightness": 252.54,
+      "contrast": 24.04,
+      "edge": 2.36,
+      "blur": 6.38,
+      "warnings": 2
+    },
+    "blurred_same_document": {
+      "blur": 0.21,
+      "status": "review_required"
+    },
+    "real_input_after": {
+      "brightness": 250.59,
+      "contrast": 31.38,
+      "edge": 4.68,
+      "blur": 9.43,
+      "status": "pass",
+      "warnings": []
+    },
+    "GUI": "Actual Paddle/API receipt on rendered document; product2 quantities1모 and2팩; no photo recapture advisories; document mapping and review preserved; no stock committed",
+    "real_photos": "not-run",
+    "partial_glare": "not-run"
+  },
+  "runtime_API_session": 90931,
+  "source_snapshot": {
+    "services/api/app/pipeline/image_quality.py": "a82ce351f525562b4696ad0a321b1d1bdd279d3610c04f4024f079013aafe4ff",
+    "apps/web/src/AddFoodSheet.tsx": "03b6b43fa8bf0c6f9b982667b297db2da2c4784877962d96cec2a5fb73700c2c"
+  }
+}

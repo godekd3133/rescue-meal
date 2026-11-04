@@ -1,0 +1,26 @@
+{
+  "status": "rejected-experiment",
+  "scope": "Reduce repetitive app-owned sheet selectors without changing protected build/runtime files or bundle budget",
+  "experiment": {
+    "grouped_rules": 682,
+    "groups": 55,
+    "ordered_declarations": 7570,
+    "flattened_cascade": "identical",
+    "standalone_minifier_savings_bytes": 8079,
+    "actual_build_css_KB": 291.8,
+    "budget_KB": 260,
+    "actual_build_result": "Vite expands nesting; no shipped CSS reduction"
+  },
+  "decision": "Reverted exact source snapshot after checking no concurrent edits; do not keep source-only size reductions",
+  "validation": {
+    "frontend_suite_during_experiment": 838,
+    "experimental_build": "passed",
+    "restored_build": "passed",
+    "restored_source_sha256": "aae90836e6d5a829de3e0606a4de93e34a87242fc699a32eede684e43264f172",
+    "runtime_files": 28,
+    "diff_check": "passed",
+    "current_home_foods": 5,
+    "current_device_scroll": 0
+  },
+  "next_constraint": "Optimization must reduce emitted assets while preserving existing runtime/browser target and cascade; splitting CSS alone cannot satisfy the current total-CSS gate"
+}

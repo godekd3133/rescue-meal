@@ -1,0 +1,242 @@
+[
+  {
+    "line": 66,
+    "before": ".app-shell-native .device-screen,\n.app-shell-native .device-screen *",
+    "after": ".app-shell-native :is(.device-screen,.device-screen *)"
+  },
+  {
+    "line": 655,
+    "before": ".receipt-review-queue-row-copy strong,\n.receipt-review-queue-row-copy small",
+    "after": ".receipt-review-queue-row-copy :is(strong,small)"
+  },
+  {
+    "line": 1148,
+    "before": ".shopping-summary-copy strong,\n.shopping-summary-copy small",
+    "after": ".shopping-summary-copy :is(strong,small)"
+  },
+  {
+    "line": 2887,
+    "before": ".grocy-integration-heading h3,\n.grocy-integration-heading p,\n:is(.grocy-block-heading,.grocy-status-card,.grocy-location-row,.grocy-product-task-copy,.grocy-outbox-card) strong,\n:is(.grocy-block-heading,.grocy-status-card,.grocy-location-row,.grocy-product-task-copy,.grocy-outbox-card) small",
+    "after": ".grocy-integration-heading :is(h3,p),\n:is(.grocy-block-heading,.grocy-status-card,.grocy-location-row,.grocy-product-task-copy,.grocy-outbox-card) strong,\n:is(.grocy-block-heading,.grocy-status-card,.grocy-location-row,.grocy-product-task-copy,.grocy-outbox-card) small"
+  },
+  {
+    "line": 3394,
+    "before": ".input-flow .capture-visual,\n.input-flow h3,\n.input-flow p",
+    "after": ".input-flow .capture-visual,\n.input-flow :is(h3,p)"
+  },
+  {
+    "line": 3716,
+    "before": ".review-summary strong,\n.review-summary small",
+    "after": ".review-summary :is(strong,small)"
+  },
+  {
+    "line": 4661,
+    "before": ".date-proof-card span,\n.date-proof-card small",
+    "after": ".date-proof-card :is(span,small)"
+  },
+  {
+    "line": 5146,
+    "before": ".history-row small,\n.history-row time,\n.history-empty",
+    "after": ".history-row :is(small,time),\n.history-empty"
+  },
+  {
+    "line": 5425,
+    "before": ".recipe-shopping-row-checked .recipe-multi-day-copy strong,\n.recipe-shopping-row-checked .recipe-multi-day-copy small",
+    "after": ".recipe-shopping-row-checked .recipe-multi-day-copy :is(strong,small)"
+  },
+  {
+    "line": 7713,
+    "before": ".bottom-sheet .grocy-status-card[data-status=\"ok\"],\n.bottom-sheet .grocy-worker-card[data-worker-state=\"ready\"]",
+    "after": ".bottom-sheet :is(.grocy-status-card[data-status=\"ok\"],.grocy-worker-card[data-worker-state=\"ready\"])"
+  },
+  {
+    "line": 7719,
+    "before": ".bottom-sheet .grocy-status-card[data-status=\"unavailable\"],\n.bottom-sheet .grocy-status-card[data-status=\"disabled\"],\n.bottom-sheet .grocy-worker-card[data-worker-state=\"error\"]",
+    "after": ".bottom-sheet :is(.grocy-status-card[data-status=\"unavailable\"],.grocy-status-card[data-status=\"disabled\"],.grocy-worker-card[data-worker-state=\"error\"])"
+  },
+  {
+    "line": 7731,
+    "before": ".bottom-sheet .grocy-status-card[data-status=\"unavailable\"] .grocy-status-dot,\n.bottom-sheet .grocy-status-card[data-status=\"disabled\"] .grocy-status-dot,\n.bottom-sheet .grocy-worker-card[data-worker-state=\"error\"] > span",
+    "after": ".bottom-sheet :is(.grocy-status-card[data-status=\"unavailable\"] .grocy-status-dot,.grocy-status-card[data-status=\"disabled\"] .grocy-status-dot),\n.bottom-sheet .grocy-worker-card[data-worker-state=\"error\"] > span"
+  },
+  {
+    "line": 7742,
+    "before": ".bottom-sheet [data-outbox-status=\"pending\"],\n.bottom-sheet [data-outbox-status=\"in_flight\"]",
+    "after": ".bottom-sheet :is([data-outbox-status=\"pending\"],[data-outbox-status=\"in_flight\"])"
+  },
+  {
+    "line": 7812,
+    "before": ".bottom-sheet .grocy-product-history-heading .grocy-task-state-badge[data-outbox-status=\"pending\"],\n.bottom-sheet .grocy-product-history-heading .grocy-task-state-badge[data-outbox-status=\"in_flight\"]",
+    "after": ".bottom-sheet .grocy-product-history-heading :is(.grocy-task-state-badge[data-outbox-status=\"pending\"],.grocy-task-state-badge[data-outbox-status=\"in_flight\"])"
+  },
+  {
+    "line": 7818,
+    "before": ".bottom-sheet .grocy-product-history-heading .grocy-task-state-badge[data-outbox-status=\"blocked\"],\n.bottom-sheet .grocy-product-history-heading .grocy-task-state-badge[data-outbox-status=\"reconciliation_required\"]",
+    "after": ".bottom-sheet .grocy-product-history-heading :is(.grocy-task-state-badge[data-outbox-status=\"blocked\"],.grocy-task-state-badge[data-outbox-status=\"reconciliation_required\"])"
+  },
+  {
+    "line": 8030,
+    "before": ".bottom-sheet .recipe-preferences-note,\n.bottom-sheet .recipe-consumption-heading small,\n.bottom-sheet .recipe-complete-actions > small",
+    "after": ".bottom-sheet .recipe-preferences-note,\n.bottom-sheet :is(.recipe-consumption-heading small,.recipe-complete-actions > small)"
+  },
+  {
+    "line": 8056,
+    "before": ".bottom-sheet .recipe-loading strong,\n.bottom-sheet .recipe-loading small",
+    "after": ".bottom-sheet .recipe-loading :is(strong,small)"
+  },
+  {
+    "line": 8504,
+    "before": ".bottom-sheet .capture-intro h3,\n.bottom-sheet .input-flow > h3",
+    "after": ".bottom-sheet :is(.capture-intro h3,.input-flow > h3)"
+  },
+  {
+    "line": 8512,
+    "before": ".bottom-sheet .capture-intro p,\n.bottom-sheet .input-flow > p",
+    "after": ".bottom-sheet :is(.capture-intro p,.input-flow > p)"
+  },
+  {
+    "line": 9069,
+    "before": ".bottom-sheet .detail-actions .detail-consume-action-review:focus-visible,\n.bottom-sheet .detail-actions .detail-consume-action-review:hover",
+    "after": ".bottom-sheet .detail-actions :is(.detail-consume-action-review:focus-visible,.detail-consume-action-review:hover)"
+  },
+  {
+    "line": 9210,
+    "before": ".meal-home button,\n.meal-home select,\n.bottom-sheet :is(button,input,textarea,select)",
+    "after": ".meal-home :is(button,select),\n.bottom-sheet :is(button,input,textarea,select)"
+  },
+  {
+    "line": 9216,
+    "before": ":is(.meal-home,.bottom-sheet) button:focus-visible,\n.bottom-sheet input:focus-visible,\n.bottom-sheet textarea:focus-visible,\n.meal-home select:focus-visible",
+    "after": ":is(.meal-home,.bottom-sheet) button:focus-visible,\n.bottom-sheet :is(input:focus-visible,textarea:focus-visible),\n.meal-home select:focus-visible"
+  },
+  {
+    "line": 9839,
+    "before": ".bottom-sheet [class*=\"-card\"],\n.bottom-sheet [class*=\"-panel\"],\n.bottom-sheet [class*=\"-callout\"],\n.bottom-sheet [class*=\"-notice\"],\n.bottom-sheet [class*=\"-editor\"],\n.bottom-sheet [class*=\"-lookup\"],\n.bottom-sheet [class*=\"-hero\"],\n.bottom-sheet [class*=\"-list-section\"],\n.bottom-sheet [class*=\"-lead\"],\n.bottom-sheet [class*=\"-profile\"],\n.bottom-sheet [class*=\"-block\"]",
+    "after": ".bottom-sheet :is([class*=\"-card\"],[class*=\"-panel\"],[class*=\"-callout\"],[class*=\"-notice\"],[class*=\"-editor\"],[class*=\"-lookup\"],[class*=\"-hero\"],[class*=\"-list-section\"],[class*=\"-lead\"],[class*=\"-profile\"],[class*=\"-block\"])"
+  },
+  {
+    "line": 9855,
+    "before": ".bottom-sheet [class*=\"-card\"] strong,\n.bottom-sheet [class*=\"-panel\"] strong,\n.bottom-sheet [class*=\"-callout\"] strong,\n.bottom-sheet :is(.receipt-review-queue-row, .notification-row, .history-row, .guidance-row, .recipe-alternative-row, .recipe-audit-row, .recipe-consumption-row, .recipe-history-row, .recipe-multi-day-history-row, .recipe-multi-day-row, .recipe-shopping-row, .recipe-ingredient-row, .recipe-review-audit-row, .grocy-dead-letter-row, .grocy-location-row, .grocy-reconciliation-row, .notification-preference-row, .notification-preference-toggle-row, .push-subscription-row, .receipt-privacy-row, .storage-location-row, .shopping-sheet-row) strong",
+    "after": ".bottom-sheet :is([class*=\"-card\"] strong,[class*=\"-panel\"] strong,[class*=\"-callout\"] strong),\n.bottom-sheet :is(.receipt-review-queue-row, .notification-row, .history-row, .guidance-row, .recipe-alternative-row, .recipe-audit-row, .recipe-consumption-row, .recipe-history-row, .recipe-multi-day-history-row, .recipe-multi-day-row, .recipe-shopping-row, .recipe-ingredient-row, .recipe-review-audit-row, .grocy-dead-letter-row, .grocy-location-row, .grocy-reconciliation-row, .notification-preference-row, .notification-preference-toggle-row, .push-subscription-row, .receipt-privacy-row, .storage-location-row, .shopping-sheet-row) strong"
+  },
+  {
+    "line": 9862,
+    "before": ".bottom-sheet [class*=\"-card\"] small,\n.bottom-sheet [class*=\"-panel\"] small,\n.bottom-sheet [class*=\"-callout\"] small,\n.bottom-sheet [class*=\"-notice\"] small,\n.bottom-sheet :is(.receipt-review-queue-row, .notification-row, .history-row, .guidance-row, .recipe-alternative-row, .recipe-audit-row, .recipe-consumption-row, .recipe-history-row, .recipe-multi-day-history-row, .recipe-multi-day-row, .recipe-shopping-row, .recipe-ingredient-row, .recipe-review-audit-row, .grocy-dead-letter-row, .grocy-location-row, .grocy-reconciliation-row, .notification-preference-row, .notification-preference-toggle-row, .push-subscription-row, .receipt-privacy-row, .storage-location-row, .shopping-sheet-row) small",
+    "after": ".bottom-sheet :is([class*=\"-card\"] small,[class*=\"-panel\"] small,[class*=\"-callout\"] small,[class*=\"-notice\"] small),\n.bottom-sheet :is(.receipt-review-queue-row, .notification-row, .history-row, .guidance-row, .recipe-alternative-row, .recipe-audit-row, .recipe-consumption-row, .recipe-history-row, .recipe-multi-day-history-row, .recipe-multi-day-row, .recipe-shopping-row, .recipe-ingredient-row, .recipe-review-audit-row, .grocy-dead-letter-row, .grocy-location-row, .grocy-reconciliation-row, .notification-preference-row, .notification-preference-toggle-row, .push-subscription-row, .receipt-privacy-row, .storage-location-row, .shopping-sheet-row) small"
+  },
+  {
+    "line": 9943,
+    "before": ".bottom-sheet .receipt-line-toggle[aria-checked=\"true\"],\n.bottom-sheet .recipe-shopping-row-checked .recipe-shopping-check,\n.bottom-sheet .shopping-sheet-row-checked .shopping-sheet-check",
+    "after": ".bottom-sheet :is(.receipt-line-toggle[aria-checked=\"true\"],.recipe-shopping-row-checked .recipe-shopping-check,.shopping-sheet-row-checked .shopping-sheet-check)"
+  },
+  {
+    "line": 10717,
+    "before": ".bottom-sheet .capture-intro h3,\n.bottom-sheet .input-flow > h3",
+    "after": ".bottom-sheet :is(.capture-intro h3,.input-flow > h3)"
+  },
+  {
+    "line": 11088,
+    "before": "html[data-rescue-theme=\"light\"] .meal-home .priority-card:hover,\nhtml[data-rescue-theme=\"light\"] .meal-home .priority-card-accent,\nhtml[data-rescue-theme=\"light\"] .meal-home .priority-card-accent:hover",
+    "after": "html[data-rescue-theme=\"light\"] .meal-home :is(.priority-card:hover,.priority-card-accent:hover),\nhtml[data-rescue-theme=\"light\"] .meal-home .priority-card-accent"
+  },
+  {
+    "line": 11094,
+    "before": "html[data-rescue-theme=\"dark\"] .meal-home .priority-card:hover,\nhtml[data-rescue-theme=\"dark\"] .meal-home .priority-card-accent,\nhtml[data-rescue-theme=\"dark\"] .meal-home .priority-card-accent:hover",
+    "after": "html[data-rescue-theme=\"dark\"] .meal-home :is(.priority-card:hover,.priority-card-accent:hover),\nhtml[data-rescue-theme=\"dark\"] .meal-home .priority-card-accent"
+  },
+  {
+    "line": 11147,
+    "before": "html[data-rescue-theme] .meal-home .meal-plan-button strong,\nhtml[data-rescue-theme] .meal-home .meal-plan-button small,\nhtml[data-rescue-theme] .meal-home .meal-plan-button > svg,\nhtml[data-rescue-theme] .meal-home .meal-plan-icon",
+    "after": "html[data-rescue-theme] .meal-home :is(.meal-plan-button strong,.meal-plan-button small,.meal-plan-button > svg),\nhtml[data-rescue-theme] .meal-home .meal-plan-icon"
+  },
+  {
+    "line": 11161,
+    "before": "html[data-rescue-theme=\"light\"] .meal-home .trust-card strong,\nhtml[data-rescue-theme=\"light\"] .meal-home .trust-card small",
+    "after": "html[data-rescue-theme=\"light\"] .meal-home .trust-card :is(strong,small)"
+  },
+  {
+    "line": 11634,
+    "before": ".meal-home .priority-unknown-state .priority-empty-icon,\n.meal-home .inventory-unknown-state .inventory-empty-icon",
+    "after": ".meal-home :is(.priority-unknown-state .priority-empty-icon,.inventory-unknown-state .inventory-empty-icon)"
+  },
+  {
+    "line": 11640,
+    "before": ".meal-home .priority-unknown-state .priority-empty-copy strong,\n.meal-home .inventory-unknown-state .inventory-empty-copy strong",
+    "after": ".meal-home :is(.priority-unknown-state .priority-empty-copy strong,.inventory-unknown-state .inventory-empty-copy strong)"
+  },
+  {
+    "line": 11645,
+    "before": ".meal-home .priority-unknown-state .priority-empty-copy small,\n.meal-home .inventory-unknown-state .inventory-empty-copy small",
+    "after": ".meal-home :is(.priority-unknown-state .priority-empty-copy small,.inventory-unknown-state .inventory-empty-copy small)"
+  },
+  {
+    "line": 12377,
+    "before": ".bottom-sheet .shopping-sheet-delete:hover,\n.bottom-sheet .shopping-sheet-delete:focus-visible",
+    "after": ".bottom-sheet :is(.shopping-sheet-delete:hover,.shopping-sheet-delete:focus-visible)"
+  },
+  {
+    "line": 12567,
+    "before": "html[data-rescue-theme=\"dark\"] .bottom-sheet .shopping-sheet-error button:hover,\nhtml[data-rescue-theme=\"dark\"] .bottom-sheet .shopping-sheet-error button:focus-visible",
+    "after": "html[data-rescue-theme=\"dark\"] .bottom-sheet .shopping-sheet-error :is(button:hover,button:focus-visible)"
+  },
+  {
+    "line": 12646,
+    "before": ".bottom-sheet .intake-flow-rail li.intake-flow-step-active,\n.bottom-sheet .intake-flow-rail li.intake-flow-step-complete",
+    "after": ".bottom-sheet .intake-flow-rail :is(li.intake-flow-step-active,li.intake-flow-step-complete)"
+  },
+  {
+    "line": 12652,
+    "before": ".bottom-sheet .intake-flow-rail li.intake-flow-step-active > span,\n.bottom-sheet .intake-flow-rail li.intake-flow-step-complete > span",
+    "after": ".bottom-sheet .intake-flow-rail :is(li.intake-flow-step-active > span,li.intake-flow-step-complete > span)"
+  },
+  {
+    "line": 12801,
+    "before": ".bottom-sheet .notification-sheet-heading h3,\n  .bottom-sheet .shopping-sheet-list-heading strong",
+    "after": ".bottom-sheet :is(.notification-sheet-heading h3,.shopping-sheet-list-heading strong)"
+  },
+  {
+    "line": 12913,
+    "before": ".bottom-sheet .add-sheet-content-date-recheck .intake-flow-rail-heading strong,\n  .bottom-sheet .add-sheet-content-date-recheck .input-flow > p",
+    "after": ".bottom-sheet .add-sheet-content-date-recheck :is(.intake-flow-rail-heading strong,.input-flow > p)"
+  },
+  {
+    "line": 12975,
+    "before": ".bottom-sheet .grocy-dead-letter-row strong,\n  .bottom-sheet .grocy-dead-letter-row small",
+    "after": ".bottom-sheet .grocy-dead-letter-row :is(strong,small)"
+  },
+  {
+    "line": 12986,
+    "before": ".bottom-sheet .grocy-product-history-heading small,\n  .bottom-sheet .grocy-product-history-event summary small,\n  .bottom-sheet .grocy-product-history-event > div small",
+    "after": ".bottom-sheet .grocy-product-history-heading small,\n.bottom-sheet :is(.grocy-product-history-event summary small,.grocy-product-history-event > div small)"
+  },
+  {
+    "line": 13142,
+    "before": ".bottom-sheet .recipe-details-heading span,\n.bottom-sheet .recipe-details-heading small",
+    "after": ".bottom-sheet .recipe-details-heading :is(span,small)"
+  },
+  {
+    "line": 13167,
+    "before": ".bottom-sheet .recipe-details .recipe-safety strong,\n.bottom-sheet .recipe-details .recipe-safety small",
+    "after": ".bottom-sheet .recipe-details .recipe-safety :is(strong,small)"
+  },
+  {
+    "line": 15149,
+    "before": ".meal-home button:not(.app-bottom-nav-item),\n.bottom-sheet .date-proof-card > button,\n.bottom-sheet :is(.capture-action-camera,.capture-sample-button,.product-info-edit-button,.danger-text-button),\n.bottom-sheet .date-review-callout-compact > .date-edit-button-compact,\n.bottom-sheet .detail-actions .detail-consume-action-review,\n.bottom-sheet .detail-sheet-content .storage-option",
+    "after": ".meal-home button:not(.app-bottom-nav-item),\n.bottom-sheet .date-proof-card > button,\n.bottom-sheet :is(.capture-action-camera,.capture-sample-button,.product-info-edit-button,.danger-text-button),\n.bottom-sheet :is(.date-review-callout-compact > .date-edit-button-compact,.detail-actions .detail-consume-action-review,.detail-sheet-content .storage-option)"
+  },
+  {
+    "line": 15274,
+    "before": ".bottom-sheet .capture-intro p,\n.bottom-sheet .input-flow > p",
+    "after": ".bottom-sheet :is(.capture-intro p,.input-flow > p)"
+  },
+  {
+    "line": 15434,
+    "before": ".bottom-sheet .detail-sheet-content[data-read-only=\"true\"] .detail-hero-copy h3,\n.bottom-sheet .detail-sheet-content[data-read-only=\"true\"] .detail-read-only-callout small",
+    "after": ".bottom-sheet .detail-sheet-content[data-read-only=\"true\"] :is(.detail-hero-copy h3,.detail-read-only-callout small)"
+  },
+  {
+    "line": 15516,
+    "before": ".toast.toast-recovery,\n.toast.toast-recovery .toast-message,\n.toast.toast-recovery .metadata-part,\n.toast.toast-recovery .toast-action",
+    "after": ".toast.toast-recovery,\n.toast.toast-recovery :is(.toast-message,.metadata-part,.toast-action)"
+  }
+]

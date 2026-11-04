@@ -1,0 +1,358 @@
+{
+  "before": {
+    "light": [
+      {
+        "selector": ".meal-home",
+        "values": {
+          "--atelier-border": "rgba(36, 49, 40, 0.13)",
+          "--atelier-border-strong": "rgba(36, 49, 40, 0.23)",
+          "--meal-blue-soft": "rgba(49, 130, 246, 0.09)",
+          "--meal-coral-soft": "rgba(240, 68, 82, 0.08)",
+          "--sheet-border": "",
+          "--sheet-border-strong": "",
+          "background-color": "rgb(244, 240, 231)",
+          "border-top-color": "rgb(36, 49, 40)",
+          "color": "rgb(36, 49, 40)"
+        }
+      },
+      {
+        "selector": ".app-bottom-nav",
+        "values": {
+          "--atelier-border": "rgba(36, 49, 40, 0.13)",
+          "--atelier-border-strong": "rgba(36, 49, 40, 0.23)",
+          "--meal-blue-soft": "rgba(49, 130, 246, 0.09)",
+          "--meal-coral-soft": "rgba(240, 68, 82, 0.08)",
+          "--sheet-border": "",
+          "--sheet-border-strong": "",
+          "background-color": "rgb(252, 250, 244)",
+          "border-top-color": "rgba(36, 49, 40, 0.13)",
+          "color": "rgb(98, 111, 100)"
+        }
+      },
+      {
+        "selector": ".bottom-sheet",
+        "values": {
+          "--atelier-border": "rgba(36, 49, 40, 0.13)",
+          "--atelier-border-strong": "rgba(36, 49, 40, 0.23)",
+          "--meal-blue-soft": "rgba(49, 130, 246, 0.09)",
+          "--meal-coral-soft": "rgba(240, 68, 82, 0.08)",
+          "--sheet-border": "rgba(2, 32, 71, 0.11)",
+          "--sheet-border-strong": "rgba(2, 32, 71, 0.19)",
+          "background-color": "rgb(242, 244, 246)",
+          "border-top-color": "rgba(36, 49, 40, 0.13)",
+          "color": "rgb(36, 49, 40)"
+        }
+      }
+    ],
+    "lightContrast": [
+      {
+        "selector": ".meal-home",
+        "values": {
+          "--atelier-border": "rgba(2, 32, 71, 0.22)",
+          "--atelier-border-strong": "rgba(2, 32, 71, 0.38)",
+          "--meal-blue-soft": "rgba(49, 130, 246, 0.09)",
+          "--meal-coral-soft": "rgba(240, 68, 82, 0.08)",
+          "--sheet-border": "",
+          "--sheet-border-strong": "",
+          "background-color": "rgb(244, 240, 231)",
+          "border-top-color": "rgb(36, 49, 40)",
+          "color": "rgb(36, 49, 40)"
+        }
+      },
+      {
+        "selector": ".app-bottom-nav",
+        "values": {
+          "--atelier-border": "rgba(2, 32, 71, 0.22)",
+          "--atelier-border-strong": "rgba(2, 32, 71, 0.38)",
+          "--meal-blue-soft": "rgba(49, 130, 246, 0.09)",
+          "--meal-coral-soft": "rgba(240, 68, 82, 0.08)",
+          "--sheet-border": "",
+          "--sheet-border-strong": "",
+          "background-color": "rgb(252, 250, 244)",
+          "border-top-color": "rgba(2, 32, 71, 0.22)",
+          "color": "rgb(78, 89, 104)"
+        }
+      },
+      {
+        "selector": ".bottom-sheet",
+        "values": {
+          "--atelier-border": "rgba(2, 32, 71, 0.22)",
+          "--atelier-border-strong": "rgba(2, 32, 71, 0.38)",
+          "--meal-blue-soft": "rgba(49, 130, 246, 0.09)",
+          "--meal-coral-soft": "rgba(240, 68, 82, 0.08)",
+          "--sheet-border": "rgba(2, 32, 71, 0.11)",
+          "--sheet-border-strong": "rgba(2, 32, 71, 0.19)",
+          "background-color": "rgb(242, 244, 246)",
+          "border-top-color": "rgba(2, 32, 71, 0.22)",
+          "color": "rgb(36, 49, 40)"
+        }
+      }
+    ],
+    "dark": [
+      {
+        "selector": ".meal-home",
+        "values": {
+          "--atelier-border": "rgba(241, 236, 223, 0.14)",
+          "--atelier-border-strong": "rgba(241, 236, 223, 0.25)",
+          "--meal-blue-soft": "rgba(155, 181, 213, 0.16)",
+          "--meal-coral-soft": "rgba(255, 128, 111, 0.15)",
+          "--sheet-border": "",
+          "--sheet-border-strong": "",
+          "background-color": "rgb(20, 27, 22)",
+          "border-top-color": "rgb(241, 236, 223)",
+          "color": "rgb(241, 236, 223)"
+        }
+      },
+      {
+        "selector": ".app-bottom-nav",
+        "values": {
+          "--atelier-border": "rgba(241, 236, 223, 0.14)",
+          "--atelier-border-strong": "rgba(241, 236, 223, 0.25)",
+          "--meal-blue-soft": "rgba(155, 181, 213, 0.16)",
+          "--meal-coral-soft": "rgba(255, 128, 111, 0.15)",
+          "--sheet-border": "",
+          "--sheet-border-strong": "",
+          "background-color": "rgb(27, 37, 30)",
+          "border-top-color": "rgba(241, 236, 223, 0.14)",
+          "color": "rgb(180, 187, 174)"
+        }
+      },
+      {
+        "selector": ".bottom-sheet",
+        "values": {
+          "--atelier-border": "rgba(241, 236, 223, 0.14)",
+          "--atelier-border-strong": "rgba(241, 236, 223, 0.25)",
+          "--meal-blue-soft": "rgba(155, 181, 213, 0.16)",
+          "--meal-coral-soft": "rgba(255, 128, 111, 0.15)",
+          "--sheet-border": "rgba(203, 220, 236, 0.16)",
+          "--sheet-border-strong": "rgba(203, 220, 236, 0.3)",
+          "background-color": "rgb(16, 20, 25)",
+          "border-top-color": "rgba(241, 236, 223, 0.14)",
+          "color": "rgb(241, 236, 223)"
+        }
+      }
+    ],
+    "darkContrast": [
+      {
+        "selector": ".meal-home",
+        "values": {
+          "--atelier-border": "rgba(235, 246, 238, 0.38)",
+          "--atelier-border-strong": "rgba(235, 246, 238, 0.58)",
+          "--meal-blue-soft": "rgba(155, 181, 213, 0.16)",
+          "--meal-coral-soft": "rgba(255, 128, 111, 0.15)",
+          "--sheet-border": "",
+          "--sheet-border-strong": "",
+          "background-color": "rgb(20, 27, 22)",
+          "border-top-color": "rgb(241, 236, 223)",
+          "color": "rgb(241, 236, 223)"
+        }
+      },
+      {
+        "selector": ".app-bottom-nav",
+        "values": {
+          "--atelier-border": "rgba(235, 246, 238, 0.38)",
+          "--atelier-border-strong": "rgba(235, 246, 238, 0.58)",
+          "--meal-blue-soft": "rgba(155, 181, 213, 0.16)",
+          "--meal-coral-soft": "rgba(255, 128, 111, 0.15)",
+          "--sheet-border": "",
+          "--sheet-border-strong": "",
+          "background-color": "rgb(27, 37, 30)",
+          "border-top-color": "rgba(235, 246, 238, 0.38)",
+          "color": "rgb(183, 200, 191)"
+        }
+      },
+      {
+        "selector": ".bottom-sheet",
+        "values": {
+          "--atelier-border": "rgba(235, 246, 238, 0.38)",
+          "--atelier-border-strong": "rgba(235, 246, 238, 0.58)",
+          "--meal-blue-soft": "rgba(155, 181, 213, 0.16)",
+          "--meal-coral-soft": "rgba(255, 128, 111, 0.15)",
+          "--sheet-border": "rgba(203, 220, 236, 0.16)",
+          "--sheet-border-strong": "rgba(203, 220, 236, 0.3)",
+          "background-color": "rgb(16, 20, 25)",
+          "border-top-color": "rgba(235, 246, 238, 0.38)",
+          "color": "rgb(241, 236, 223)"
+        }
+      }
+    ]
+  },
+  "after": {
+    "light": [
+      {
+        "selector": ".meal-home",
+        "values": {
+          "--atelier-border": "rgba(36, 49, 40, 0.13)",
+          "--atelier-border-strong": "rgba(36, 49, 40, 0.23)",
+          "--meal-blue-soft": "rgba(49, 130, 246, 0.09)",
+          "--meal-coral-soft": "rgba(240, 68, 82, 0.08)",
+          "--sheet-border": "",
+          "--sheet-border-strong": "",
+          "background-color": "rgb(244, 240, 231)",
+          "border-top-color": "rgb(36, 49, 40)",
+          "color": "rgb(36, 49, 40)"
+        }
+      },
+      {
+        "selector": ".app-bottom-nav",
+        "values": {
+          "--atelier-border": "rgba(36, 49, 40, 0.13)",
+          "--atelier-border-strong": "rgba(36, 49, 40, 0.23)",
+          "--meal-blue-soft": "rgba(49, 130, 246, 0.09)",
+          "--meal-coral-soft": "rgba(240, 68, 82, 0.08)",
+          "--sheet-border": "",
+          "--sheet-border-strong": "",
+          "background-color": "rgb(252, 250, 244)",
+          "border-top-color": "rgba(36, 49, 40, 0.13)",
+          "color": "rgb(98, 111, 100)"
+        }
+      },
+      {
+        "selector": ".bottom-sheet",
+        "values": {
+          "--atelier-border": "rgba(36, 49, 40, 0.13)",
+          "--atelier-border-strong": "rgba(36, 49, 40, 0.23)",
+          "--meal-blue-soft": "rgba(49, 130, 246, 0.09)",
+          "--meal-coral-soft": "rgba(240, 68, 82, 0.08)",
+          "--sheet-border": "rgba(2, 32, 71, 0.11)",
+          "--sheet-border-strong": "rgba(2, 32, 71, 0.19)",
+          "background-color": "rgb(242, 244, 246)",
+          "border-top-color": "rgba(36, 49, 40, 0.13)",
+          "color": "rgb(36, 49, 40)"
+        }
+      }
+    ],
+    "lightContrast": [
+      {
+        "selector": ".meal-home",
+        "values": {
+          "--atelier-border": "rgba(2, 32, 71, 0.22)",
+          "--atelier-border-strong": "rgba(2, 32, 71, 0.38)",
+          "--meal-blue-soft": "rgba(49, 130, 246, 0.09)",
+          "--meal-coral-soft": "rgba(240, 68, 82, 0.08)",
+          "--sheet-border": "",
+          "--sheet-border-strong": "",
+          "background-color": "rgb(244, 240, 231)",
+          "border-top-color": "rgb(36, 49, 40)",
+          "color": "rgb(36, 49, 40)"
+        }
+      },
+      {
+        "selector": ".app-bottom-nav",
+        "values": {
+          "--atelier-border": "rgba(2, 32, 71, 0.22)",
+          "--atelier-border-strong": "rgba(2, 32, 71, 0.38)",
+          "--meal-blue-soft": "rgba(49, 130, 246, 0.09)",
+          "--meal-coral-soft": "rgba(240, 68, 82, 0.08)",
+          "--sheet-border": "",
+          "--sheet-border-strong": "",
+          "background-color": "rgb(252, 250, 244)",
+          "border-top-color": "rgba(2, 32, 71, 0.22)",
+          "color": "rgb(78, 89, 104)"
+        }
+      },
+      {
+        "selector": ".bottom-sheet",
+        "values": {
+          "--atelier-border": "rgba(2, 32, 71, 0.22)",
+          "--atelier-border-strong": "rgba(2, 32, 71, 0.38)",
+          "--meal-blue-soft": "rgba(49, 130, 246, 0.09)",
+          "--meal-coral-soft": "rgba(240, 68, 82, 0.08)",
+          "--sheet-border": "rgba(2, 32, 71, 0.11)",
+          "--sheet-border-strong": "rgba(2, 32, 71, 0.19)",
+          "background-color": "rgb(242, 244, 246)",
+          "border-top-color": "rgba(2, 32, 71, 0.22)",
+          "color": "rgb(36, 49, 40)"
+        }
+      }
+    ],
+    "dark": [
+      {
+        "selector": ".meal-home",
+        "values": {
+          "--atelier-border": "rgba(241, 236, 223, 0.14)",
+          "--atelier-border-strong": "rgba(241, 236, 223, 0.25)",
+          "--meal-blue-soft": "rgba(155, 181, 213, 0.16)",
+          "--meal-coral-soft": "rgba(255, 128, 111, 0.15)",
+          "--sheet-border": "",
+          "--sheet-border-strong": "",
+          "background-color": "rgb(20, 27, 22)",
+          "border-top-color": "rgb(241, 236, 223)",
+          "color": "rgb(241, 236, 223)"
+        }
+      },
+      {
+        "selector": ".app-bottom-nav",
+        "values": {
+          "--atelier-border": "rgba(241, 236, 223, 0.14)",
+          "--atelier-border-strong": "rgba(241, 236, 223, 0.25)",
+          "--meal-blue-soft": "rgba(155, 181, 213, 0.16)",
+          "--meal-coral-soft": "rgba(255, 128, 111, 0.15)",
+          "--sheet-border": "",
+          "--sheet-border-strong": "",
+          "background-color": "rgb(27, 37, 30)",
+          "border-top-color": "rgba(241, 236, 223, 0.14)",
+          "color": "rgb(180, 187, 174)"
+        }
+      },
+      {
+        "selector": ".bottom-sheet",
+        "values": {
+          "--atelier-border": "rgba(241, 236, 223, 0.14)",
+          "--atelier-border-strong": "rgba(241, 236, 223, 0.25)",
+          "--meal-blue-soft": "rgba(155, 181, 213, 0.16)",
+          "--meal-coral-soft": "rgba(255, 128, 111, 0.15)",
+          "--sheet-border": "rgba(203, 220, 236, 0.16)",
+          "--sheet-border-strong": "rgba(203, 220, 236, 0.3)",
+          "background-color": "rgb(16, 20, 25)",
+          "border-top-color": "rgba(241, 236, 223, 0.14)",
+          "color": "rgb(241, 236, 223)"
+        }
+      }
+    ],
+    "darkContrast": [
+      {
+        "selector": ".meal-home",
+        "values": {
+          "--atelier-border": "rgba(235, 246, 238, 0.38)",
+          "--atelier-border-strong": "rgba(235, 246, 238, 0.58)",
+          "--meal-blue-soft": "rgba(155, 181, 213, 0.16)",
+          "--meal-coral-soft": "rgba(255, 128, 111, 0.15)",
+          "--sheet-border": "",
+          "--sheet-border-strong": "",
+          "background-color": "rgb(20, 27, 22)",
+          "border-top-color": "rgb(241, 236, 223)",
+          "color": "rgb(241, 236, 223)"
+        }
+      },
+      {
+        "selector": ".app-bottom-nav",
+        "values": {
+          "--atelier-border": "rgba(235, 246, 238, 0.38)",
+          "--atelier-border-strong": "rgba(235, 246, 238, 0.58)",
+          "--meal-blue-soft": "rgba(155, 181, 213, 0.16)",
+          "--meal-coral-soft": "rgba(255, 128, 111, 0.15)",
+          "--sheet-border": "",
+          "--sheet-border-strong": "",
+          "background-color": "rgb(27, 37, 30)",
+          "border-top-color": "rgba(235, 246, 238, 0.38)",
+          "color": "rgb(183, 200, 191)"
+        }
+      },
+      {
+        "selector": ".bottom-sheet",
+        "values": {
+          "--atelier-border": "rgba(235, 246, 238, 0.38)",
+          "--atelier-border-strong": "rgba(235, 246, 238, 0.58)",
+          "--meal-blue-soft": "rgba(155, 181, 213, 0.16)",
+          "--meal-coral-soft": "rgba(255, 128, 111, 0.15)",
+          "--sheet-border": "rgba(203, 220, 236, 0.16)",
+          "--sheet-border-strong": "rgba(203, 220, 236, 0.3)",
+          "background-color": "rgb(16, 20, 25)",
+          "border-top-color": "rgba(235, 246, 238, 0.38)",
+          "color": "rgb(241, 236, 223)"
+        }
+      }
+    ]
+  }
+}

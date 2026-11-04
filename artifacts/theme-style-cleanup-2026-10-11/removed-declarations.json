@@ -1,0 +1,222 @@
+{
+  "count": 36,
+  "bytes": 1515,
+  "declarations": [
+    {
+      "line": 10249,
+      "selector": ".meal-home,\n  .bottom-sheet,\n  .app-bottom-nav",
+      "prop": "--atelier-dim",
+      "value": "var(--atelier-muted)"
+    },
+    {
+      "line": 10248,
+      "selector": ".meal-home,\n  .bottom-sheet,\n  .app-bottom-nav",
+      "prop": "--atelier-muted",
+      "value": "var(--atelier-muted)"
+    },
+    {
+      "line": 9731,
+      "selector": ".bottom-sheet .primary-sheet-button:hover",
+      "prop": "color",
+      "value": "var(--atelier-primary-action-ink)"
+    },
+    {
+      "line": 9730,
+      "selector": ".bottom-sheet .primary-sheet-button:hover",
+      "prop": "background",
+      "value": "var(--atelier-primary-action-hover)"
+    },
+    {
+      "line": 9726,
+      "selector": ".bottom-sheet .primary-sheet-button",
+      "prop": "border-color",
+      "value": "var(--atelier-primary-action)"
+    },
+    {
+      "line": 9690,
+      "selector": ".bottom-sheet",
+      "prop": "background",
+      "value": "var(--atelier-surface)"
+    },
+    {
+      "line": 9154,
+      "selector": ".meal-home",
+      "prop": "background",
+      "value": "var(--atelier-deep)"
+    },
+    {
+      "line": 9148,
+      "selector": ".meal-home,\n.bottom-sheet,\n.app-bottom-nav",
+      "prop": "font-family",
+      "value": "\"Avenir Next\", \"Apple SD Gothic Neo\", \"Noto Sans KR\", sans-serif"
+    },
+    {
+      "line": 9147,
+      "selector": ".meal-home,\n.bottom-sheet,\n.app-bottom-nav",
+      "prop": "color-scheme",
+      "value": "light"
+    },
+    {
+      "line": 9144,
+      "selector": ".meal-home,\n.bottom-sheet,\n.app-bottom-nav",
+      "prop": "--meal-coral",
+      "value": "var(--atelier-coral)"
+    },
+    {
+      "line": 9143,
+      "selector": ".meal-home,\n.bottom-sheet,\n.app-bottom-nav",
+      "prop": "--meal-line",
+      "value": "var(--atelier-border)"
+    },
+    {
+      "line": 9142,
+      "selector": ".meal-home,\n.bottom-sheet,\n.app-bottom-nav",
+      "prop": "--meal-white",
+      "value": "var(--atelier-surface)"
+    },
+    {
+      "line": 9141,
+      "selector": ".meal-home,\n.bottom-sheet,\n.app-bottom-nav",
+      "prop": "--meal-sage-dark",
+      "value": "var(--atelier-pistachio)"
+    },
+    {
+      "line": 9140,
+      "selector": ".meal-home,\n.bottom-sheet,\n.app-bottom-nav",
+      "prop": "--meal-sage",
+      "value": "var(--atelier-pistachio-deep)"
+    },
+    {
+      "line": 9139,
+      "selector": ".meal-home,\n.bottom-sheet,\n.app-bottom-nav",
+      "prop": "--meal-muted",
+      "value": "var(--atelier-muted)"
+    },
+    {
+      "line": 9138,
+      "selector": ".meal-home,\n.bottom-sheet,\n.app-bottom-nav",
+      "prop": "--meal-ink",
+      "value": "var(--atelier-ink)"
+    },
+    {
+      "line": 9137,
+      "selector": ".meal-home,\n.bottom-sheet,\n.app-bottom-nav",
+      "prop": "--atelier-blue",
+      "value": "var(--atelier-blue)"
+    },
+    {
+      "line": 9136,
+      "selector": ".meal-home,\n.bottom-sheet,\n.app-bottom-nav",
+      "prop": "--atelier-amber",
+      "value": "var(--atelier-amber)"
+    },
+    {
+      "line": 9135,
+      "selector": ".meal-home,\n.bottom-sheet,\n.app-bottom-nav",
+      "prop": "--atelier-coral",
+      "value": "var(--atelier-coral)"
+    },
+    {
+      "line": 9134,
+      "selector": ".meal-home,\n.bottom-sheet,\n.app-bottom-nav",
+      "prop": "--atelier-pistachio-deep",
+      "value": "var(--atelier-pistachio-deep)"
+    },
+    {
+      "line": 9133,
+      "selector": ".meal-home,\n.bottom-sheet,\n.app-bottom-nav",
+      "prop": "--atelier-pistachio",
+      "value": "var(--atelier-pistachio)"
+    },
+    {
+      "line": 9130,
+      "selector": ".meal-home,\n.bottom-sheet,\n.app-bottom-nav",
+      "prop": "--atelier-surface-raised",
+      "value": "var(--atelier-surface)"
+    },
+    {
+      "line": 9129,
+      "selector": ".meal-home,\n.bottom-sheet,\n.app-bottom-nav",
+      "prop": "--atelier-surface",
+      "value": "var(--atelier-surface)"
+    },
+    {
+      "line": 9127,
+      "selector": ".meal-home,\n.bottom-sheet,\n.app-bottom-nav",
+      "prop": "--atelier-dim",
+      "value": "var(--atelier-dim)"
+    },
+    {
+      "line": 9126,
+      "selector": ".meal-home,\n.bottom-sheet,\n.app-bottom-nav",
+      "prop": "--atelier-muted",
+      "value": "var(--atelier-muted)"
+    },
+    {
+      "line": 9125,
+      "selector": ".meal-home,\n.bottom-sheet,\n.app-bottom-nav",
+      "prop": "--atelier-soft",
+      "value": "var(--atelier-soft)"
+    },
+    {
+      "line": 9124,
+      "selector": ".meal-home,\n.bottom-sheet,\n.app-bottom-nav",
+      "prop": "--atelier-ink",
+      "value": "var(--atelier-ink)"
+    },
+    {
+      "line": 9123,
+      "selector": ".meal-home,\n.bottom-sheet,\n.app-bottom-nav",
+      "prop": "--atelier-deep",
+      "value": "var(--atelier-deep)"
+    },
+    {
+      "line": 9117,
+      "selector": ".app-screen,\n.app-screen .mobile-scroll-content",
+      "prop": "background",
+      "value": "#f2f4f6"
+    },
+    {
+      "line": 7425,
+      "selector": ".bottom-sheet :is(.primary-sheet-button:hover,.manual-submit:hover,.shopping-sheet-manual-submit:hover,.recipe-multi-day-save:hover,.recipe-complete-button:hover)",
+      "prop": "color",
+      "value": "var(--atelier-primary-action-ink)"
+    },
+    {
+      "line": 7424,
+      "selector": ".bottom-sheet :is(.primary-sheet-button:hover,.manual-submit:hover,.shopping-sheet-manual-submit:hover,.recipe-multi-day-save:hover,.recipe-complete-button:hover)",
+      "prop": "background",
+      "value": "var(--atelier-primary-action-hover)"
+    },
+    {
+      "line": 7420,
+      "selector": ".bottom-sheet :is(.primary-sheet-button,.manual-submit,.shopping-sheet-manual-submit,.recipe-multi-day-save,.recipe-complete-button)",
+      "prop": "box-shadow",
+      "value": "0 10px 22px color-mix(in srgb, var(--atelier-primary-action) 14%, transparent)"
+    },
+    {
+      "line": 7417,
+      "selector": ".bottom-sheet :is(.primary-sheet-button,.manual-submit,.shopping-sheet-manual-submit,.recipe-multi-day-save,.recipe-complete-button)",
+      "prop": "color",
+      "value": "var(--atelier-primary-action-ink)"
+    },
+    {
+      "line": 7416,
+      "selector": ".bottom-sheet :is(.primary-sheet-button,.manual-submit,.shopping-sheet-manual-submit,.recipe-multi-day-save,.recipe-complete-button)",
+      "prop": "background",
+      "value": "linear-gradient(135deg, var(--atelier-primary-action), var(--atelier-primary-action))"
+    },
+    {
+      "line": 7356,
+      "selector": ".bottom-sheet",
+      "prop": "--sheet-surface-raised",
+      "value": "var(--atelier-surface)"
+    },
+    {
+      "line": 7355,
+      "selector": ".bottom-sheet",
+      "prop": "--sheet-surface",
+      "value": "var(--atelier-surface)"
+    }
+  ]
+}

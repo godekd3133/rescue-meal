@@ -1,0 +1,50 @@
+{
+  "date_kst": "2026-10-09",
+  "frontend": {
+    "url": "https://rescue-meal.minkyu-andy.chatgpt.site",
+    "project_id": "appgprj_6ac8a127d6688191b4b43c8287853a59",
+    "deployment_id": "appgdep_6ac8a2b5460481919106e9f4edbbc33f",
+    "status": "succeeded",
+    "source_commit": "41f75b1ee8d3e0ea063704c71be39a24aa64a2b5",
+    "audience": "owner-private",
+    "api_base": "https://rescue-meal-api-1066866003837.us-west1.run.app"
+  },
+  "backend": {
+    "project": "rescue-meal-godekd3133",
+    "region": "us-west1",
+    "url": "https://rescue-meal-api-1066866003837.us-west1.run.app",
+    "revision": "rescue-meal-api-00003-cem",
+    "traffic_percent": 100,
+    "previous_revision": "rescue-meal-api-00002-c76",
+    "build_id": "4517a31d-0f95-4dcc-bd91-53628e88dfb3",
+    "image_digest": "sha256:5c75ec5eeb4db99962e9ed59e793557466297b2490285f0f687cbb8812b9e723",
+    "existing_configuration_preserved": true,
+    "cors_added": "https://rescue-meal.minkyu-andy.chatgpt.site",
+    "database_vm": "rescue-meal-vm",
+    "database_vm_started_from": "TERMINATED",
+    "database_vm_internal_ip": "10.138.0.2"
+  },
+  "verification": {
+    "api_pytest_passed": 536,
+    "api_pytest_warnings": 8,
+    "frontend_node_tests_passed": 170,
+    "sites_worker_tests_passed": 4,
+    "mobile_runtime_integrity": "passed (28 files)",
+    "production_build": "passed",
+    "connected_browser_passed": 3,
+    "connected_browser_failed": 2,
+    "connected_browser_limit": "Receipt test references obsolete .food-subline/구매 출처 and label test has duplicate date text locator; attempted selector update exposed further stale copy and was reverted. No full browser acceptance claim.",
+    "live_health": 200,
+    "live_ready": 200,
+    "live_cors_preflight": 200,
+    "live_guest_creation": 201,
+    "live_initial_inventory_count": 0,
+    "live_food_save_readback_and_idempotency": "passed",
+    "live_test_inventory_cleanup_count": 0
+  },
+  "local_changes_by_deployment": [
+    "apps/web/.openai/hosting.json project_id persisted",
+    "services/api/tests/test_image_quality.py points at existing spinach-photo.jpg"
+  ],
+  "scope": "Web frontend and FastAPI backend deployment; OCR unchanged; no TestFlight upload."
+}

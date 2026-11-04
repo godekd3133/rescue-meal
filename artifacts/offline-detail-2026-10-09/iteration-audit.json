@@ -1,0 +1,26 @@
+{
+  "previous_goal_turn": "progress",
+  "goal_status": "active",
+  "changes": [
+    "One readonly notice instead ofrepeated connection instructions",
+    "Showquantity/openstate inhero; hideinactive edit,consume,discard andquantity controls",
+    "Preservecustomlocation/opening timestamp whenpresent; sharestorage mismatch warning acrossreadonly andeditable views",
+    "Webreadonly sheetfitscontent; native runtime unchanged",
+    "KeepKoreanwordboundaries intitle/readonlycopy"
+  ],
+  "validation": {
+    "revalidated_date": "2026-10-10",
+    "build": "pass",
+    "runtime": "28 protected files pass",
+    "diff": "pass",
+    "targeted_initial_date_tests": "8 passed",
+    "browser_before_environment_resume": "Actualowncachedonion2개 readonly;0inputs and0mutationactions;390px sheetheight550.17; regularquantity/date/storage controls enabled andhalf selection0.5모",
+    "viewport_caveat": "Final320px emulation capture didnotmatchrequestedviewport; excluded-emulation.png isnotverification evidence; temporarymetrics werecleared",
+    "browser_regression_updated": "not-run"
+  },
+  "remaining": [
+    "Narrowviewport finalvisual recheck",
+    "CSSbudget stillabove260KB",
+    "Fullaccount browseranddevice/camera coverage"
+  ]
+}

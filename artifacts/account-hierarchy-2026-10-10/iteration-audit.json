@@ -1,0 +1,29 @@
+{
+  "changes": [
+    "Login/register ahead of guest settings",
+    "Authenticated food settings precede account security; remove duplicate connected lead",
+    "Password length hint only on registration",
+    "Account disclosure titles13px, descriptions12px, minimum44px with chevrons"
+  ],
+  "verification": {
+    "IAB_connected_guest": "login first; settings after guest preservation note",
+    "invalid_login_keyboard": "error kept beside inputs, inputs retained, retry enabled",
+    "invalid_login_pointer": "retry verified after stable keyboard focus; first immediate pointer attempt inconclusive",
+    "register_tab_password_hint": "8자 이상",
+    "disclosure_height": 47.39,
+    "disclosure_title_size": "13px",
+    "notification_disclosure": "opened and read live preferences",
+    "build": "passed",
+    "runtime_files": 28,
+    "node_tests": 291,
+    "diff_check": "passed",
+    "authenticated_layout": "source verified; runtime not-run",
+    "narrow_connected_account": "not-run"
+  },
+  "remaining": [
+    "Successful login/guest transfer and narrow account acceptance",
+    "CSS budget",
+    "Full journey and device acceptance"
+  ],
+  "goal": "active"
+}

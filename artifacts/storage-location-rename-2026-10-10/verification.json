@@ -1,0 +1,37 @@
+{
+  "scope": "Custom location rename, selected filter identity and background refresh draft protection",
+  "findings": [
+    "Own rename produced another-device attribution because global workspace revision was treated as storage change",
+    "Global revision refresh discarded active location edit",
+    "Late location read could replace newer own mutation state"
+  ],
+  "changes": [
+    "Background poll reads actual location rows instead of inferring a location change from global revision",
+    "Visible row identity/name/method compared independent of ordering and hidden timestamps",
+    "Existing edited ID retains name draft and keyboard; only missing edited ID closes it with factual notice",
+    "Mutation generation fences late reads",
+    "Immediate own list/ref update prevents own write from looking remote",
+    "Pending create/name save retains newer text rather than blindly clearing it"
+  ],
+  "validation": {
+    "frontend_tests": 675,
+    "failures": 0,
+    "targeted_tests": 8,
+    "build": "passed",
+    "protected_runtime_files": 28,
+    "diff_check": "passed",
+    "actual_api_filter": "Selected refrigerator top shelf only; renamed to vegetable shelf; selection followed same ID and label changed, broccoli1 pack remained refrigerated and date unknown. Restored top shelf; selected filter still same1 food.",
+    "actual_periodic_edit": "After own restore, typed unsaved sorting-shelf name and waited35 seconds: name draft, input focus and keyboardtrue retained; no remote attribution notice. Cancelled unsaved edit.",
+    "pending_name_save": "Deferred actual source function tests; runtime delayed write not-run in this loop",
+    "other_preview_location_change": "controlled tests only in this loop",
+    "physical_device": "not-run",
+    "baseline_restored": "냉장고 윗칸, broccoli1 pack unchanged",
+    "css_budget": "failed:293.0KB versus260KB"
+  },
+  "sha256": {
+    "apps/web/src/AccountSheet.tsx": "f80e963b2fceb8e7021cb1c6d8a69e57e3e034be9fcb5bdaffeb73847b031753",
+    "apps/web/src/storageLocationPresentation.ts": "f150381b8569710ccc3f7f00f47d5dbf1ba1ddb1eb919c94fd2793175566bca5",
+    "apps/web/tests/storage-location-refresh.test.mjs": "04f6d63137a6ddcc5dfe5b033a69092d238560d1f713cc0fe33579d1bf685148",
+    "apps/web/tests/storage-location-pending-name.test.mjs": "f003009d1c706b6e6a562ffccd0d6760ec72305657240f6628fa5dac32897c11"
+  }
+}

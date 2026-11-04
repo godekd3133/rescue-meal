@@ -1,0 +1,48 @@
+{
+  "inventoryDark": {
+    "deviceScroll": 0,
+    "firstRowTop": 211.0692138671875,
+    "rows": 5,
+    "theme": "dark",
+    "toolbarBottom": 210.375
+  },
+  "pixelBefore": {
+    "deviceScroll": 0,
+    "headingTop": 60.801368713378906,
+    "statusBottom": 77.91780853271484,
+    "stickyTop": "0px",
+    "toolbarTop": 47.32191848754883
+  },
+  "pixelFinal": {
+    "deviceScroll": 0,
+    "firstRowTop": 205.7876739501953,
+    "headingTop": 102.88356018066406,
+    "scrollTop": 842,
+    "statusBottom": 77.91780853271484,
+    "tail": 181,
+    "toolbarBottom": 205.1301422119141,
+    "toolbarTop": 89.40410614013672
+  },
+  "pixelRepeated": {
+    "deviceScroll": 0,
+    "firstRowTop": 205.7876739501953,
+    "headingTop": 102.88356018066406,
+    "scrollTop": 842,
+    "tail": 181,
+    "toolbarBottom": 205.1301422119141
+  },
+  "pixelFiltered": {
+    "firstRowTop": 236.03424072265625,
+    "headingTop": 102.88356018066406,
+    "scrollTop": 842,
+    "statusBottom": 77.91780853271484,
+    "tail": 283,
+    "toolbarBottom": 235.37670135498047
+  },
+  "iphoneReturned": {
+    "deviceScroll": 0,
+    "firstRowTop": 211.0692138671875,
+    "selectedNav": "식품",
+    "toolbarBottom": 210.375
+  }
+}

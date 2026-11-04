@@ -1,0 +1,31 @@
+{
+  "previous_goal_turn": "progress",
+  "goal_status": "active",
+  "changes": [
+    "New privateguest spaces seedFalse; onlydefault demo workspace contains examples",
+    "Configuredfrontend starts without demo records beforeAPI response",
+    "Knownemptyhome hasdirect/receipt entry withoutrepeatedpriority/date instruction cards",
+    "Backgroundrevision refresh isquiet: itcannot inferactor orfood changes",
+    "Generated estimate fromuser_input islabelledfoodtype/storage basis,notentereddate",
+    "Offline status,age andtimestamp appearasseparate fields"
+  ],
+  "validation": {
+    "full_api": "210 passed,5 deprecation warnings",
+    "guest_targeted": "12 passed",
+    "combined_frontend_tests": "168 passed",
+    "build": "pass",
+    "runtime": "28 protected files pass",
+    "diff": "pass",
+    "real_browser_api": "FreshisolatedSQLite API:0 foods -> addownonion2개 ->1 row; reload1 row with2개",
+    "offline_browser": "API stopped; realowner snapshot restored1 row with2개; quantityandothermutations disabled; noexamplefood injected",
+    "transfer": "Newemptyguest previewempty; guestwithoneuserrecord transfersonly1; preferencesandhistory preserved",
+    "sqlite_reconstruction": "Emptyguest stays0; savedguest remains1 withsameid/quantity; demo remains7",
+    "updated_browser_regressions": "not-run"
+  },
+  "remaining": [
+    "CSSbudget remains exceeded",
+    "Fullaccount browsertransition",
+    "Installeddevice andcamera validation",
+    "BroaderUX coverage remains active"
+  ]
+}

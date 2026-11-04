@@ -1,0 +1,33 @@
+{
+  "goal_status": "active",
+  "previous_turn": "progress",
+  "before": {
+    "clear_query": true,
+    "focus": false,
+    "keyboard": "false"
+  },
+  "after": {
+    "clear_query": true,
+    "focus": true,
+    "keyboard": "true"
+  },
+  "change": "Input clear retains searchinputfocus andkeyboard;separateall-filterresetunchanged",
+  "runtime": [
+    "Typedmilkquery",
+    "Clearoncekeepskeyboardopenandinputfocused",
+    "Typecabbagewithoutretappinginput",
+    "Nextqueryreturns1existingrecord"
+  ],
+  "checks": {
+    "web": "721passed",
+    "build": "passed",
+    "runtime_integrity": "28protectedfilespassed",
+    "diff": "passed"
+  },
+  "not_run": [
+    "Physicaldevice",
+    "OSIMEclearwhileactivelycomposing",
+    "FullPlaywrightCLI/MCPsuite"
+  ],
+  "source_sha256": "b8fa4270ae4f570a4150e460ce74cf49ae53e01d9af953c885c31acc58233fd1"
+}

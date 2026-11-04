@@ -1,0 +1,17 @@
+{
+  "goal": "active",
+  "changes": [
+    "Hide engine exception for needs_ocr_engine label intake",
+    "Remove repeated fallback instructions",
+    "Only explain recognized date observation positions when a review result exists"
+  ],
+  "validation": {
+    "build": "passed",
+    "runtime_protected": 28,
+    "label_recovery_handler_tests": 3,
+    "GUI": "Connected local API needs_ocr_engine; consumer copy observed; no repeated fallback copy; direct entry opened manual; closed without saving",
+    "existing_lot_recovery_GUI": "not-run",
+    "real_OCR": "not-run"
+  },
+  "source_sha256": "8663c8966cc4bc495a8720cb12f58c77414ffda87e6233b0bf1df6974490dd2d"
+}

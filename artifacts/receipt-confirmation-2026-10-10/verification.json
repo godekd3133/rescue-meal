@@ -1,0 +1,21 @@
+{
+  "goal": "active",
+  "cause": "Every receipt field edit added line to user-confirmed IDs, including storage-only changes while product name remained uncertain.",
+  "changes": [
+    "No implicit name confirmation from quantity/unit/storage edits",
+    "Explicit confirmation remains; name changes invalidate confirmation",
+    "Quantity changes after confirmation retain confirmed name",
+    "Remove unsupported product-information provenance claim from generic storage hint"
+  ],
+  "validation": {
+    "targeted_tests": 5,
+    "full_frontend_tests": 602,
+    "build": "passed",
+    "runtime_protected": 28,
+    "diff_check": "passed",
+    "GUI": "Real Paddle/API on synthetic unknown-product receipt; storage and quantity changes keep confirmation visible/save disabled; explicit confirm enables save; subsequent quantity edit stays enabled; name edit restores confirmation requirement",
+    "stock_saved": false,
+    "physical_receipt_photo": "not-run"
+  },
+  "source_sha256": "70a08edf53b8f41c9683b20fa422d3eabeadaaad8d5fc9c2fd83d845a42210a8"
+}

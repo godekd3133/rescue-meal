@@ -1,0 +1,35 @@
+{
+  "goal_turn": "progress through current runtime evidence",
+  "source_changes": false,
+  "environment": "Owned local proxy8089 -> API8087 with existing isolatedSQLite; Vite4212",
+  "verification": {
+    "forced_status": 503,
+    "retry_response_delay_seconds": 3,
+    "progress": {
+      "role": "status",
+      "aria_busy": true,
+      "button_disabled": true,
+      "text": "기록을 다시 불러오고 있어요.불러오는 중"
+    },
+    "product_info_recovered": {
+      "rows": 1,
+      "focus": "product-info-history"
+    },
+    "empty_product_provenance": {
+      "panel_unmounted": true,
+      "focus": "detail-history-disclosure summary"
+    },
+    "empty_storage_history": {
+      "message": "아직 보관·사용 기록이 없어요.",
+      "focus": "detail-history"
+    },
+    "final_error_count": 0,
+    "playwright_CLI": "not used"
+  },
+  "remaining": [
+    "Narrow/dark history acceptance",
+    "CSS size budget",
+    "Full other journeys and real device/OCR coverage"
+  ],
+  "goal": "active"
+}

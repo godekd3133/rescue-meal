@@ -1,0 +1,27 @@
+{
+  "changes": [
+    "Initial barcode/label view keeps step rail without repeated heading and description",
+    "Barcode date boundary retained, generic lookup explanation removed",
+    "Label capture title concrete, photo retention and date meaning notes preserved",
+    "No unqueried label date default; sample date follows local calendar4days ahead"
+  ],
+  "verification": {
+    "IAB_viewport": "320x740",
+    "IAB_label_sample_date": "2026-10-14 at2026-10-10",
+    "IAB_label_result": "step2 and explicit date-kind/save summary preserved",
+    "IAB_barcode_sample": "product candidate displayed; editing barcode removes apply action",
+    "IAB_label_tab_roundtrip": "date2026-10-14 retained",
+    "build": "passed",
+    "runtime_files": 28,
+    "node_tests": 307,
+    "diff_check": "passed",
+    "updated_browser_spec": "not-run; other older fixed date cases need migration",
+    "real_camera_OCR": "not-run"
+  },
+  "remaining": [
+    "Older date fixture browser spec migration",
+    "CSS budget",
+    "Full journey and device acceptance"
+  ],
+  "goal": "active"
+}

@@ -1,0 +1,43 @@
+{
+  "status": "partial",
+  "problem": "Food tab scroll aligned inventory section to viewport top, while sticky toolbar reserved a safe-area inset and covered the first product name",
+  "changes": [
+    "Inventory alignment, tail-space calculation, resize realignment and search reveal all subtract actual sticky toolbar top inset",
+    "Inset uses CSS pixels after transformed-rect scale conversion",
+    "Removed repeated inventory kicker above same heading"
+  ],
+  "runtime": {
+    "home_to_food": "First name and quantity fully visible",
+    "all_list_first_row_top": 211.0692138671875,
+    "all_list_toolbar_bottom": 210.375,
+    "review_filter_first_row_top": 329.08575439453125,
+    "review_filter_toolbar_bottom": 328.39154052734375,
+    "detail_return": "Same filtered food row focused; filter retained; no dialog left",
+    "milk_search_results": 3,
+    "clear_search_results": 5,
+    "keyboard": "Kept on clear; dismissed by moving focus out of input",
+    "device_scroll": 0,
+    "data_writes": "None"
+  },
+  "validation": {
+    "web_tests": 770,
+    "new_scroll_regressions": 5,
+    "build": "passed",
+    "protected_runtime_files": 28,
+    "diff_check": "passed",
+    "css_budget": {
+      "status": "failed",
+      "actual_KB": 291.3,
+      "limit_KB": 260
+    },
+    "CLI_browser_suite": "not-run; permission pending"
+  },
+  "limits": [
+    "Current connected light iPhone preview; full dark/native and 320px GUI not rerun",
+    "Home and food remain a shared scroll journey; no new screen model introduced"
+  ],
+  "evidence": [
+    "inventory.png",
+    "dom-observation.json"
+  ]
+}

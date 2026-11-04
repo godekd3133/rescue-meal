@@ -1,0 +1,26 @@
+{
+  "previous_goal_turn": "progress",
+  "goal_status": "active",
+  "changes": [
+    "Bind preference/single/multi saveandcompletion callbacks,catchesandfinalizers tooriginalworkspace/session",
+    "Bind alternatives/multiday previewreadstocurrentactiveview,inputsignatureandpreferencesversion",
+    "Supersededsame-contextreadcannotfinishnewerloadingstate",
+    "Resetoldworkspace mutationflags andinactiveviewreadflags",
+    "Binddeferredshoppingcallbacktosavedworkspace"
+  ],
+  "validation": {
+    "new_actual_handler_tests": "15 passed",
+    "all_node_tests": "262 passed",
+    "build": "pass",
+    "runtime": "28 protected files pass",
+    "diff": "pass",
+    "browser_demo": "20분/2인분 changesreflected -> temporarysaved2servings -> missing2ingredientscorrect; noinventoryconsumption performed",
+    "live_account_transition_browser": "not-run",
+    "playwright_cli": "waitingexplicituserresponse"
+  },
+  "remaining": [
+    "Broadconnectedbrowserandphysicaldevice/camera coverage",
+    "CSSbudget exceeded",
+    "Otherplannerasyncpaths requirecontinuedaudit"
+  ]
+}

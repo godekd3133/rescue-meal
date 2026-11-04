@@ -1,0 +1,19 @@
+{
+  "goal": "active",
+  "change": "Saved receipt inventory navigation restores focus to inventory controls instead of off-screen receipt trigger.",
+  "validation": {
+    "receipt_tests": 7,
+    "build": "passed",
+    "runtime_protected": 28,
+    "diff_check": "passed",
+    "GUI": {
+      "scope": "Current connected app with synthetic 404 / committed GET readbacks; real records not deleted or committed",
+      "missing": "No editable draft, other receipt action returns idle selector",
+      "saved": "No editable draft, inventory action closes dialog, food nav active, search empty, all4 filter focused"
+    },
+    "actual_delete_or_commit": "not-run"
+  },
+  "source_sha256": "780794e5f2be631e023a08f3e224c40a060f618e413a13c046a978f54f42f597",
+  "proxy_session": 37468,
+  "flags": "removed"
+}

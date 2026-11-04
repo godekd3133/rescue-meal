@@ -1,0 +1,35 @@
+{
+  "scope": "pending food edit metadata and native timezone options",
+  "changes": [
+    "split pending field labels through MetadataText",
+    "use comma-separated accessible save action name",
+    "replace timezone dot joins with parentheses",
+    "remove decorative storage dots from home, intake and detail controls",
+    "use selected background and check icon",
+    "remove unused storage dot rules and intake helper"
+  ],
+  "runtime": {
+    "environment": "local isolated account IAB",
+    "pending_text": "보관 위치 저장 필요 보관 위치 개봉 상태",
+    "save_accessible_name": "보관 위치, 개봉 상태 변경 저장",
+    "timezone_labels": [
+      "한국 표준시 (서울)",
+      "일본 표준시 (도쿄)",
+      "협정 세계시 (UTC)"
+    ],
+    "timezone_value": "Asia/Seoul",
+    "saved_setting": "unchanged; no preference save performed",
+    "decorative_dots": 0
+  },
+  "verification": {
+    "build": "passed",
+    "protected_files": 28,
+    "diff_check": "passed",
+    "node_passed": 475,
+    "unused_css_rules_removed": 3
+  },
+  "limits": [
+    "these two displayed states were verified, not a whole-app separator-free claim",
+    "CSS gate and full journey acceptance remain open"
+  ]
+}

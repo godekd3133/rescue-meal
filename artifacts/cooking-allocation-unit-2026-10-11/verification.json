@@ -1,0 +1,64 @@
+{
+  "status": "partial",
+  "bug": "Completion validated each allocation but serialized all consumed units using the last unit variable from that ingredient loop",
+  "before": {
+    "allocation": [
+      {
+        "quantity": 100,
+        "unit": "g"
+      },
+      {
+        "quantity": 0.2,
+        "unit": "팩"
+      }
+    ],
+    "completion": [
+      {
+        "quantity": 100,
+        "unit": "팩"
+      },
+      {
+        "quantity": 0.2,
+        "unit": "팩"
+      }
+    ]
+  },
+  "fix": "Serialize each completion allocation with mutation.unit from that actual inventory event",
+  "regressions": {
+    "known_stock": "200g measured lot supplies recipe while an unknown pack is ignored and unchanged",
+    "reference_flow": "100g known stock + unresolved pack -> quantity recovery targets only pack; explicit500g/pack reference preserves existing quantity/date/storage; save allocates100g and0.2pack; complete leaves0.8pack",
+    "completion_modes": [
+      "default allocations",
+      "explicit consumptions"
+    ],
+    "replay": "Already completed; no second deduction"
+  },
+  "validation": {
+    "API_full_suite": 585,
+    "warnings": 9,
+    "new_cases": 3,
+    "diff_check": "passed",
+    "frontend_this_iteration": "not rerun; backend-only change",
+    "last_frontend_suite": 788,
+    "live_API_PID": 40071,
+    "API_8088_health": 200,
+    "proxy_8091_health": 200
+  },
+  "QA_preservation": {
+    "backup": "/tmp/rescue-completion-unit-refresh-2026-10-11",
+    "databases": 7,
+    "food_records": 19,
+    "all_food_payload_signatures_equal_after_restart": true,
+    "existing_saved_plans": 1,
+    "existing_completed_plans": 0
+  },
+  "limits": [
+    "Cooking completion tested through isolated TestClient fixtures, not live browser consumption",
+    "No existing completed QA plans available for historical unit audit",
+    "CSS budget remains failed:290.8KB/260KB"
+  ],
+  "source_files": [
+    "services/api/app/main.py",
+    "services/api/tests/test_api.py"
+  ]
+}

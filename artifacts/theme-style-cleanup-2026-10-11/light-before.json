@@ -1,0 +1,123 @@
+{
+  ".bottom-sheet": [
+    {
+      "--atelier-ink": "#243128",
+      "--atelier-muted": "#626f64",
+      "--atelier-pistachio": "#3182f6",
+      "--atelier-surface": "#fcfaf4",
+      "--meal-ink": "#243128",
+      "--meal-line": "rgba(36, 49, 40, 0.13)",
+      "--meal-muted": "#626f64",
+      "background-color": "rgb(242, 244, 246)",
+      "border-color": "rgba(36, 49, 40, 0.13) rgb(36, 49, 40) rgb(36, 49, 40)",
+      "border-radius": "20px 20px 0px 0px",
+      "border-width": "1px 0px 0px",
+      "color": "rgb(36, 49, 40)",
+      "color-scheme": "light",
+      "display": "flex",
+      "font-family": "\"Apple SD Gothic Neo\", \"Noto Sans KR\", -apple-system, \"system-ui\", sans-serif",
+      "font-size": "16px",
+      "font-weight": "400",
+      "gap": "normal",
+      "line-height": "normal",
+      "padding": "0px"
+    }
+  ],
+  ".detail-hero": [
+    {
+      "--atelier-ink": "#243128",
+      "--atelier-muted": "#626f64",
+      "--atelier-pistachio": "#3182f6",
+      "--atelier-surface": "#fcfaf4",
+      "--meal-ink": "#243128",
+      "--meal-line": "rgba(36, 49, 40, 0.13)",
+      "--meal-muted": "#626f64",
+      "background-color": "rgb(252, 250, 244)",
+      "border-color": "rgba(36, 49, 40, 0.13)",
+      "border-radius": "0px",
+      "border-width": "0px",
+      "color": "rgb(36, 49, 40)",
+      "color-scheme": "light",
+      "display": "flex",
+      "font-family": "\"Apple SD Gothic Neo\", \"Noto Sans KR\", -apple-system, \"system-ui\", sans-serif",
+      "font-size": "14px",
+      "font-weight": "400",
+      "gap": "13px",
+      "line-height": "normal",
+      "padding": "14px"
+    }
+  ],
+  ".detail-quantity-controls": [
+    {
+      "--atelier-ink": "#243128",
+      "--atelier-muted": "#626f64",
+      "--atelier-pistachio": "#3182f6",
+      "--atelier-surface": "#fcfaf4",
+      "--meal-ink": "#243128",
+      "--meal-line": "rgba(36, 49, 40, 0.13)",
+      "--meal-muted": "#626f64",
+      "background-color": "rgba(0, 0, 0, 0)",
+      "border-color": "rgba(2, 32, 71, 0.11) rgb(36, 49, 40) rgb(36, 49, 40)",
+      "border-radius": "0px",
+      "border-width": "1px 0px 0px",
+      "color": "rgb(36, 49, 40)",
+      "color-scheme": "light",
+      "display": "grid",
+      "font-family": "\"Apple SD Gothic Neo\", \"Noto Sans KR\", -apple-system, \"system-ui\", sans-serif",
+      "font-size": "14px",
+      "font-weight": "400",
+      "gap": "9px",
+      "line-height": "normal",
+      "padding": "12px 0px 2px"
+    }
+  ],
+  ".meal-home": [
+    {
+      "--atelier-ink": "#243128",
+      "--atelier-muted": "#626f64",
+      "--atelier-pistachio": "#3182f6",
+      "--atelier-surface": "#fcfaf4",
+      "--meal-ink": "#243128",
+      "--meal-line": "rgba(36, 49, 40, 0.13)",
+      "--meal-muted": "#626f64",
+      "background-color": "rgb(244, 240, 231)",
+      "border-color": "rgb(36, 49, 40)",
+      "border-radius": "0px",
+      "border-width": "0px",
+      "color": "rgb(36, 49, 40)",
+      "color-scheme": "light",
+      "display": "block",
+      "font-family": "\"Apple SD Gothic Neo\", \"Noto Sans KR\", -apple-system, \"system-ui\", sans-serif",
+      "font-size": "16px",
+      "font-weight": "400",
+      "gap": "normal",
+      "line-height": "normal",
+      "padding": "44px 15px 126px"
+    }
+  ],
+  ".primary-sheet-button": [],
+  ".secondary-sheet-button": [
+    {
+      "--atelier-ink": "#243128",
+      "--atelier-muted": "#626f64",
+      "--atelier-pistachio": "#3182f6",
+      "--atelier-surface": "#fcfaf4",
+      "--meal-ink": "#243128",
+      "--meal-line": "rgba(36, 49, 40, 0.13)",
+      "--meal-muted": "#626f64",
+      "background-color": "color(srgb 0.935373 0.953569 0.971922)",
+      "border-color": "color(srgb 0.142832 0.406957 0.78105 / 0.464235)",
+      "border-radius": "10px",
+      "border-width": "1px",
+      "color": "rgb(36, 49, 40)",
+      "color-scheme": "light",
+      "display": "flex",
+      "font-family": "\"Apple SD Gothic Neo\", \"Noto Sans KR\", -apple-system, \"system-ui\", sans-serif",
+      "font-size": "14px",
+      "font-weight": "570",
+      "gap": "7px",
+      "line-height": "normal",
+      "padding": "0px 14px"
+    }
+  ]
+}

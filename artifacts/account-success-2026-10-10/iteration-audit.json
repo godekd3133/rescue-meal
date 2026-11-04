@@ -1,0 +1,30 @@
+{
+  "changes": [
+    "Optional inventory integration starts collapsed and unmounted until opened",
+    "Keep mounted integration drafts after first open; deactivate while closed",
+    "Open integration for outbox/notification context",
+    "Remove repeated multi-device explanation under identity",
+    "Identity uses person icon and14px full wrapping email"
+  ],
+  "validation": {
+    "test_account": "Seeded only isolated local SQLite via API; no real credentials or production data",
+    "IAB_login": "success",
+    "IAB_reload": "same synthetic account retained; no login form",
+    "IAB_integration_initial_region_count": 0,
+    "IAB_integration_open": "live connection region visible",
+    "IAB_integration_close": "collapsed",
+    "build": "passed",
+    "runtime_files": 28,
+    "node_tests": 302,
+    "diff_check": "passed",
+    "updated_browser_specs": "not-run",
+    "notification_autoopen": "source checked; browser not-run"
+  },
+  "remaining": [
+    "Guest transfer browser acceptance",
+    "Narrow/dark authenticated account",
+    "Full journey and device acceptance",
+    "CSS budget"
+  ],
+  "goal": "active"
+}

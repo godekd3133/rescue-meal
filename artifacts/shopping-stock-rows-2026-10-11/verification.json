@@ -1,0 +1,48 @@
+{
+  "goal_status": "active",
+  "previous_turn": "progress",
+  "changes": [
+    "Stock records shown as quantityandstorage columns in separate rows",
+    "No listbulletorjoinedmetadata",
+    "No repeatedfoodname orobviouscomparisoninstruction",
+    "Shared presentation inexistingstockdisclosureandmanualform",
+    "Disclosurepointerdownpreservesinputfocusforonetapcollapse"
+  ],
+  "runtime": {
+    "surface": "4184separateactualAPIQAworkspace",
+    "records": [
+      [
+        "2개",
+        "냉장"
+      ],
+      [
+        "250ml",
+        "냉동"
+      ]
+    ],
+    "list_style_type": "none",
+    "aggregation": "none",
+    "keyboardcollapse": {
+      "one_click": true,
+      "keyboard_visible": true,
+      "focus": "manualproductname"
+    },
+    "additional_QA_record": "milk250mlfrozen,independentmanualrecord;notarealpurchase"
+  },
+  "checks": {
+    "web": "705passed before finalpointerhandlerchange",
+    "build": "passed afterfinalchange",
+    "runtime": "28protectedfilespassed",
+    "diff": "passed",
+    "bundle_log": "> web@0.1.0 check:bundle\n> node scripts/check-bundle-size.mjs\n\nbundle budget exceeded:\n  - total CSS is 293.7KB (budget 260KB)"
+  },
+  "not_run": [
+    "Physicaldevice",
+    "FullPlaywrightCLI/MCPsuite"
+  ],
+  "sha256": {
+    "apps/web/src/ShoppingStockList.tsx": "d85bfa6dad591fe5de7d1e8eb280e3613bc1b0d2a32a523b271cd5e3c6ad817a",
+    "apps/web/src/ShoppingListSheet.tsx": "c89066deccd96e36e330bd4e0be6202211974d1e6f63fafa94dc4f05481bae0a",
+    "apps/web/src/mealShoppingSheets.css": "6c350e404bbf96034ad0e84c88b284c526e5f77163f5aad145d754807e6478f6"
+  }
+}

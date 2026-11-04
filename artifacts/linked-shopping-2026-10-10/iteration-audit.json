@@ -1,0 +1,31 @@
+{
+  "changes": [
+    "Empty pantry shopping primary action focuses manual entry instead of empty meal planner",
+    "Home empty shopping copy matches available pantry",
+    "Quiet shopping/receipt revision polling without invented other-device attribution",
+    "Checked shopping home summary does not insist on inventory addition; purchase/source fields separated"
+  ],
+  "verification": {
+    "environment": "Isolated local SQLite, app.main on 8089, Vite4203; no production writes",
+    "new_guest_foods": 0,
+    "manual_focus": "직접 추가 상품명",
+    "shopping_added": "양파2개",
+    "receive": "2개 실온",
+    "after_reload": "1 food row 양파2개 실온",
+    "receive_success_toast": null,
+    "home_metadata_fields": [
+      "1개 구매 완료",
+      "직접 추가한 물건"
+    ],
+    "separator": false,
+    "build": "passed",
+    "runtime_files": 28,
+    "node_tests": 289,
+    "diff_check": "passed"
+  },
+  "remaining": [
+    "CSS budget",
+    "Full journey and device acceptance"
+  ],
+  "goal": "active"
+}

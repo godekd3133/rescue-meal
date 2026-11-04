@@ -1,0 +1,36 @@
+{
+  "scope": "recipe save pending edit protection",
+  "changes": [
+    "disable editing while saving/claiming/loading",
+    "guard draft selection and queue-filter changes while busy",
+    "disable refresh and list/filter controls while request is pending",
+    "show saving label on existing save action"
+  ],
+  "runtime": {
+    "environment": "isolated local catalog synthetic draft IAB",
+    "delay_seconds": 3,
+    "pending": {
+      "title_enabled": false,
+      "note_enabled": false,
+      "refresh_enabled": false,
+      "saving_button_count": 1
+    },
+    "confirmed": {
+      "title_enabled": true,
+      "title": "검증 초안 저장 대기",
+      "notice": "변경 내용을 저장했어요."
+    },
+    "claim": "released after verification",
+    "publication": "not performed"
+  },
+  "verification": {
+    "node_passed": 548,
+    "build": "passed",
+    "protected_files": 28,
+    "diff_check": "passed"
+  },
+  "limits": [
+    "one draft is available; multiple draft switching not exercised in GUI",
+    "full goal and CSS gate remain open"
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "goal_status": "active",
+  "previous_turn": "progress",
+  "source_cause": "Ordinary home priority viewing defaulted to consume-action; foods with provenance defaulted to provenance-review, whose focus target was the information-removal action",
+  "change": "Ordinary detail viewing uses neutral entry intent; explicit date, provenance and consume routes retain their supplied intent",
+  "before_tests": "2 failed, 2 passed",
+  "before_log": "/tmp/rescue-detail-focus-before.log",
+  "runtime_verification": {
+    "home_priority_open": "Close button retained focus after detail content loaded",
+    "enter_activation": "Closed detail and restored focus to the original home food row",
+    "food_quantity": "1.1234L retained",
+    "food_count": "5 retained",
+    "consumption_or_disposal": "not performed",
+    "device_scroll": 0,
+    "screenshot": "browse-detail.png",
+    "dom_observation": "dom-observation.json"
+  },
+  "checks": {
+    "web_tests": "755 passed",
+    "web_log": "/tmp/rescue-detail-focus-web.log",
+    "explicit_action_and_inventory_return": "Source-extracted route tests passed",
+    "build": "TypeScript and production build passed",
+    "build_log": "/tmp/rescue-detail-focus-build.log",
+    "protected_runtime_integrity": "28 passed",
+    "git_diff_check": "passed",
+    "css_budget": "still failed: 291.6KB versus 260KB",
+    "bundle_log": "/tmp/rescue-detail-focus-bundle.log",
+    "deployment": "not-run"
+  },
+  "scope": "Current browser proof for ordinary priority-detail keyboard entry; provenance default and explicit routes covered by source handler tests. Full journey acceptance remains active."
+}

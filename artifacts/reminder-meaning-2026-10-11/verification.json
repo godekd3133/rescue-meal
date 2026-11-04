@@ -1,0 +1,47 @@
+{
+  "goal_status": "active",
+  "previous_turn": "progress",
+  "cause": "Internal user_confirmed view state is produced foruser_reminder; old labels implied confirmed package date",
+  "changes": [
+    "Personalreminder meaning preserved onhome/inventory/detail",
+    "Detail uses exactstored date whilehome retainsrelativefriendlydate",
+    "Shorter reminder edit action",
+    "Omit known canned reminder notes but preserve specificnotes"
+  ],
+  "runtime": [
+    "RealAPI savedchosen2026-10-13asuser_reminder",
+    "HomeandinventoryshowMyreminderdate",
+    "Reloadretainsmeaningand2packs",
+    "Detailshows2026.10.13andpersonallychosendate"
+  ],
+  "stored": [
+    {
+      "id": "food-376113303bb7",
+      "quantity": 2.0,
+      "unit": "팩",
+      "storage_type": "refrigerated",
+      "date_kind": "user_reminder",
+      "date_value": "2026-10-13",
+      "previous_kinds": [
+        "unknown"
+      ]
+    }
+  ],
+  "checks": {
+    "web": "702passed before final copy/detaildate change",
+    "build": "passed after finalchanges",
+    "runtime_integrity": "28protectedfilespassed",
+    "diff": "passed"
+  },
+  "not_run": [
+    "Physicaldevice",
+    "FullPlaywrightCLI/MCPsuite",
+    "Updatedprototypebrowsertestexecution"
+  ],
+  "sha256": {
+    "apps/web/src/datePresentation.ts": "e26d690e2a0703d00f94c0f45158290b6a09f125d7afb5b6d0872a83723fbaf6",
+    "apps/web/src/detailFoodNotes.ts": "9433d1347646f18b1bf53469b004dbc71092faecbe423f65afc6f18db6653dfc",
+    "apps/web/src/FoodDetailSheet.tsx": "0f1d92bf60966921ac0f53da1001fb92d275871342e2bf68d992a9453c44480f",
+    "apps/web/src/Prototype.tsx": "cddda300f9d400f0f4416cc934cb66bb56d736dd1739334c7c9ad6cf33662ad0"
+  }
+}

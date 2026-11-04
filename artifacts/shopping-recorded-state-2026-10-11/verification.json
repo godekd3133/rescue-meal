@@ -1,0 +1,32 @@
+{
+  "goal_status": "active",
+  "previous_turn": "progress",
+  "observed": "Recorded purchase offered disabledviewbuttonwhenitslotwasnotavailable",
+  "changes": [
+    "Showrecordedstatusratherthanunavailableaction",
+    "Neverinfermissinglotreason",
+    "MatchrecordedlotbyexactID;samenameisnotenough"
+  ],
+  "validation": {
+    "web": "709passed",
+    "component_render": "3passed:missing,differentID,exactID",
+    "api_consumed_receipt": "1passed inisolatedfixture;receiptretainedandrepeatreceiveblocked",
+    "runtime": "ExistingliveQAstockviewactionpreserved",
+    "build": "passed",
+    "runtime_integrity": "28protectedfilespassed",
+    "diff": "passed",
+    "bundle_log": "> web@0.1.0 check:bundle\n> node scripts/check-bundle-size.mjs\n\nbundle budget exceeded:\n  - total CSS is 293.4KB (budget 260KB)"
+  },
+  "real_QA_food_consumed_or_deleted": false,
+  "not_run": [
+    "Missinglotcaseinlivebrowser",
+    "Physicaldevice",
+    "FullPlaywrightCLI/MCPsuite"
+  ],
+  "sha256": {
+    "apps/web/src/shoppingListPresentation.ts": "2e83ba9f50fadf5d0ceeff779bc9ba6b28947bd3afaa41d7917aecb6938b74ce",
+    "apps/web/src/ShoppingListSheet.tsx": "80515e1b712f0ea8f4013b116d9d2c051ba48da4337e136404d61e48f257027e",
+    "apps/web/src/mealShoppingSheets.css": "ce98d3dd66e3a84601b600f3190ae879b01f349589dcb964ef519b46f5a21388",
+    "apps/web/tests/shopping-recorded-state-render.test.mjs": "6ae9970bc3bdc75c0a7ce4a7c02f3b53a5470eec565ed136c841e4099479921a"
+  }
+}

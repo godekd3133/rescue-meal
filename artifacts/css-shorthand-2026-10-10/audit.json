@@ -1,0 +1,36 @@
+{
+  "scope": "CSS cascade cleanup preserving matching and computed appearance",
+  "removed_declarations": 51,
+  "source_bytes_removed": 3041,
+  "method": "same selector and same at-rule context; later declaration covers every affected longhand at equal or greater importance; includes border-image reset coverage; excludes custom properties/keyframes",
+  "runtime": {
+    "light_home": {
+      "elements": 216,
+      "computed_property_differences": 0
+    },
+    "light_detail": {
+      "elements": 108,
+      "computed_property_differences": 0
+    },
+    "dark_home": {
+      "elements": 216,
+      "computed_property_differences": 0
+    },
+    "theme_at_finish": "light"
+  },
+  "verification": {
+    "build": "passed",
+    "protected_runtime_files": 28,
+    "diff_check": "passed",
+    "CSS_budget": {
+      "actual_KB": 295.5,
+      "limit_KB": 260,
+      "status": "failed"
+    }
+  },
+  "limits": [
+    "not a whole-app visual equivalence proof",
+    "unvisited transient states excluded",
+    "CSS budget still requires structural work"
+  ]
+}

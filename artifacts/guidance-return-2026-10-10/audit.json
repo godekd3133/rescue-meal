@@ -1,0 +1,30 @@
+{
+  "scope": "food guidance return and date meaning copy",
+  "changes": [
+    "retain unsaved storage, storage location, opened and quantity draft only during guidance roundtrip",
+    "bind retained draft to original food record baseline",
+    "clear draft on final detail close and workspace reset",
+    "restore focus to guidance trigger on return",
+    "distinguish personally chosen reminder date from printed-date manual entry",
+    "shorten repeated guidance while preserving safety boundary"
+  ],
+  "runtime": {
+    "environment": "isolated local API synthetic account IAB",
+    "before_fix": "unsaved 냉동 selection lost after help return",
+    "after_fix": "냉동, opened true, quantity250g survive return",
+    "focus": "날짜 안내 보기",
+    "final_close_reopen": "stored 냉장, opened false, quantity500g"
+  },
+  "verification": {
+    "node_passed": 459,
+    "draft_identity_cases": 7,
+    "build": "passed",
+    "protected_files": 28,
+    "diff_check": "passed"
+  },
+  "limits": [
+    "product editor and date editor draft preservation not covered by this change",
+    "all guidance entry routes not yet verified",
+    "CSS budget unresolved"
+  ]
+}

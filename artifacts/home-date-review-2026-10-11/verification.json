@@ -1,0 +1,40 @@
+{
+  "goal_status": "active",
+  "previous_turn": "progress",
+  "changes": [
+    "Single review food opens detail directly from home;multiple review foods keep list route",
+    "Action label and accessible name match destination",
+    "Remove repeated incomplete date prompts",
+    "Preserve unknown-date choice,kind requirement,andpersonalreminder distinction"
+  ],
+  "runtime": {
+    "surface": "4184separateactualAPIQAworkspace",
+    "verified": [
+      "Home callout openscabbage2packs directly",
+      "Focusonpackage-date-inputaction",
+      "All4datekinds unselectedinitially",
+      "Savebuttondisabledwithoutdateandkind",
+      "Personalreminderheadinganddescription distinguish chosen date frompackage date",
+      "Cancelreturnsdateinputaction;unknown date and2packs maintained"
+    ],
+    "date_saved": false,
+    "multiple_food_route": "sourcechecked,notruntime thisturn"
+  },
+  "checks": {
+    "web": "699passed",
+    "build": "passed",
+    "runtime": "28protectedfilespassed",
+    "diff": "passed"
+  },
+  "not_run": [
+    "Physicaldevice",
+    "FullPlaywrightCLI/MCPsuite",
+    "Newdate-savepath"
+  ],
+  "sha256": {
+    "apps/web/src/Prototype.tsx": "214e7fe4668d5d10df950a970c63e86f2ee0bfb768f9554efdd24d65ec5f1afb",
+    "apps/web/src/DateAssertionEditor.tsx": "3d70475993fce19869865cd1caa2149e7eccc4b5aca50ceb0baa6996e8804d8d",
+    "apps/web/src/dateEditorPresentation.ts": "4dbcb2f569f1b9979c0fb7b7c9c65d85defb843b6a6b22ecfb3af67548086a69",
+    "apps/web/tests/date-editor-presentation.test.mjs": "be5771d84218fdc66c8590c070411c038f5d51f1d6e590383b6d072a739a8310"
+  }
+}

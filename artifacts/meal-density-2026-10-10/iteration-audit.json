@@ -1,0 +1,23 @@
+{
+  "changes": [
+    "Remove duplicate safety section heading; retain summary jump, named region and all warnings",
+    "Remove redundant loading detail and history query limit",
+    "History shows recipe minutes rather than maximum requested time",
+    "Audit timestamp and consumed quantities use separate metadata fields"
+  ],
+  "verification": {
+    "build": "passed",
+    "runtime_integrity": "28 protected files passed",
+    "node_tests": 289,
+    "diff_check": "passed",
+    "IAB": "30-minute condition produced a 15-minute recipe; saved history displays 15 minutes",
+    "safety_jump": "scrolls to date and allergen section; keyboard focus not established in observed DOM",
+    "viewport": "320x740",
+    "bullet_separator": false
+  },
+  "remaining": [
+    "Connected browser regression not-run",
+    "CSS budget remains exceeded",
+    "Continue full journey audit"
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "changes": [
+    "Same-session correction returning to its detail keeps confirmation without redundant open-food action",
+    "Retain background and failed-readback recovery actions",
+    "Future printed dates remain editable through neutral48px recheck button",
+    "Current printed-date summary separates date-kind/date/source without dot separators"
+  ],
+  "verification": {
+    "finish_input_scope_cases": 5,
+    "IAB_demo_save": "detail returns, printed date2026-10-14 updated; confirmation text observed immediately, toast actions0",
+    "IAB_future_date": "recheck button1, opens same-food label review",
+    "IAB_recheck_button_height": 48,
+    "IAB_recheck_button_background": "transparent",
+    "IAB_summary_fields": [
+      "포장 소비기한",
+      "2026.10.14",
+      "포장지 표시"
+    ],
+    "IAB_separator": false,
+    "build": "passed",
+    "runtime_files": 28,
+    "node_tests": 332,
+    "diff_check": "passed",
+    "connected_readback_failure": "not-run this iteration"
+  },
+  "remaining": [
+    "CSS budget",
+    "Real OCR, guest transfer, connected failure/device coverage",
+    "Browser spec migration"
+  ],
+  "goal": "active"
+}

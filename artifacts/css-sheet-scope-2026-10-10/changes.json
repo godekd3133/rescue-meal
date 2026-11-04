@@ -1,0 +1,1291 @@
+[
+  {
+    "line": 7195,
+    "selector": ".guidance-warning",
+    "property": "background",
+    "value": "#fff0e7",
+    "owners": {
+      "guidance-warning": [
+        "GuidanceSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 7190,
+    "selector": ".guidance-row small",
+    "property": "color",
+    "value": "var(--meal-muted)",
+    "owners": {
+      "guidance-row": [
+        "GuidanceSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 7186,
+    "selector": ".guidance-row strong",
+    "property": "color",
+    "value": "var(--meal-ink)",
+    "owners": {
+      "guidance-row": [
+        "GuidanceSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 7162,
+    "selector": ".guidance-icon",
+    "property": "background",
+    "value": "var(--meal-coral-soft)",
+    "owners": {
+      "guidance-icon": [
+        "GuidanceSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 7042,
+    "selector": ".recipe-consumption-row",
+    "property": "background",
+    "value": "rgba(255, 254, 250, 0.72)",
+    "owners": {
+      "recipe-consumption-row": [
+        "MealPlanSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 6998,
+    "selector": ".recipe-history-row",
+    "property": "background",
+    "value": "rgba(237, 243, 233, 0.56)",
+    "owners": {
+      "recipe-history-row": [
+        "MealPlanSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 6979,
+    "selector": ".recipe-history-toggle",
+    "property": "background",
+    "value": "transparent",
+    "owners": {
+      "recipe-history-toggle": [
+        "MealPlanSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 6933,
+    "selector": ".recipe-multi-day-row",
+    "property": "background",
+    "value": "var(--meal-white)",
+    "owners": {
+      "recipe-multi-day-row": [
+        "MealPlanSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 6817,
+    "selector": ".recipe-multi-day-toggle",
+    "property": "background",
+    "value": "transparent",
+    "owners": {
+      "recipe-multi-day-toggle": [
+        "MealPlanSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 6808,
+    "selector": ".recipe-alternative-row small",
+    "property": "color",
+    "value": "var(--meal-muted)",
+    "owners": {
+      "recipe-alternative-row": [
+        "MealPlanSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 6740,
+    "selector": ".recipe-alternatives-toggle",
+    "property": "background",
+    "value": "#f6f9f2",
+    "owners": {
+      "recipe-alternatives-toggle": [
+        "MealPlanSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 6731,
+    "selector": ".recipe-audit-row small",
+    "property": "color",
+    "value": "var(--meal-muted)",
+    "owners": {
+      "recipe-audit-row": [
+        "MealPlanSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 6726,
+    "selector": ".recipe-audit-row strong",
+    "property": "color",
+    "value": "var(--meal-ink)",
+    "owners": {
+      "recipe-audit-row": [
+        "MealPlanSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 6622,
+    "selector": ".recipe-safety strong",
+    "property": "color",
+    "value": "#7b675a",
+    "owners": {
+      "recipe-safety": [
+        "MealPlanSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 6613,
+    "selector": ".recipe-safety",
+    "property": "color",
+    "value": "#a67b6b",
+    "owners": {
+      "recipe-safety": [
+        "MealPlanSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 6612,
+    "selector": ".recipe-safety",
+    "property": "background",
+    "value": "#fff8ef",
+    "owners": {
+      "recipe-safety": [
+        "MealPlanSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 6611,
+    "selector": ".recipe-safety",
+    "property": "border-radius",
+    "value": "10px",
+    "owners": {
+      "recipe-safety": [
+        "MealPlanSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 6603,
+    "selector": ".recipe-details li b",
+    "property": "background",
+    "value": "#dfeadc",
+    "owners": {
+      "recipe-details": [
+        "MealPlanSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 6563,
+    "selector": ".recipe-details",
+    "property": "padding-top",
+    "value": "2px",
+    "owners": {
+      "recipe-details": [
+        "MealPlanSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 5907,
+    "selector": ".shopping-sheet-storage-option",
+    "property": "background",
+    "value": "var(--meal-white)",
+    "owners": {
+      "shopping-sheet-storage-option": [
+        "ShoppingListSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 5822,
+    "selector": ".shopping-sheet-delete:hover",
+    "property": "background",
+    "value": "#fff1eb",
+    "owners": {
+      "shopping-sheet-delete": [
+        "ShoppingListSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 5818,
+    "selector": ".shopping-sheet-delete",
+    "property": "background",
+    "value": "transparent",
+    "owners": {
+      "shopping-sheet-delete": [
+        "ShoppingListSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 5817,
+    "selector": ".shopping-sheet-delete",
+    "property": "border",
+    "value": "0",
+    "owners": {
+      "shopping-sheet-delete": [
+        "ShoppingListSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 5797,
+    "selector": ".shopping-sheet-receive",
+    "property": "background",
+    "value": "#f5f8f1",
+    "owners": {
+      "shopping-sheet-receive": [
+        "ShoppingListSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 5672,
+    "selector": ".shopping-sheet-error",
+    "property": "background",
+    "value": "#fff5ef",
+    "owners": {
+      "shopping-sheet-error": [
+        "ShoppingListSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 5556,
+    "selector": ".recipe-shopping-toggle",
+    "property": "background",
+    "value": "transparent",
+    "owners": {
+      "recipe-shopping-toggle": [
+        "MealPlanSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 5523,
+    "selector": ".recipe-preference-chip-active",
+    "property": "background",
+    "value": "var(--meal-sage-dark)",
+    "owners": {
+      "recipe-preference-chip-active": [
+        "MealPlanSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 5522,
+    "selector": ".recipe-preference-chip-active",
+    "property": "border-color",
+    "value": "var(--meal-sage-dark)",
+    "owners": {
+      "recipe-preference-chip-active": [
+        "MealPlanSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 5518,
+    "selector": ".recipe-preference-chip",
+    "property": "background",
+    "value": "var(--meal-white)",
+    "owners": {
+      "recipe-preference-chip": [
+        "MealPlanSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 5492,
+    "selector": ".recipe-date-review-callout",
+    "property": "background",
+    "value": "#fff7ee",
+    "owners": {
+      "recipe-date-review-callout": [
+        "MealPlanSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 5491,
+    "selector": ".recipe-date-review-callout",
+    "property": "border",
+    "value": "1px solid #edd9c5",
+    "owners": {
+      "recipe-date-review-callout": [
+        "MealPlanSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 5487,
+    "selector": ".recipe-preference-callout",
+    "property": "background",
+    "value": "#fff8e8",
+    "owners": {
+      "recipe-preference-callout": [
+        "MealPlanSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 5464,
+    "selector": ".recipe-preferences-toggle",
+    "property": "background",
+    "value": "transparent",
+    "owners": {
+      "recipe-preferences-toggle": [
+        "MealPlanSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 5450,
+    "selector": ".recipe-missing-callout",
+    "property": "background",
+    "value": "#fff3eb",
+    "owners": {
+      "recipe-missing-callout": [
+        "MealPlanSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 5434,
+    "selector": ".recipe-ingredient-missing",
+    "property": "background",
+    "value": "#fff3eb",
+    "owners": {
+      "recipe-ingredient-missing": [
+        "MealPlanSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 5433,
+    "selector": ".recipe-ingredient-missing",
+    "property": "border-color",
+    "value": "#ead7cb",
+    "owners": {
+      "recipe-ingredient-missing": [
+        "MealPlanSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 5405,
+    "selector": ".recipe-title-row h3",
+    "property": "margin-top",
+    "value": "6px",
+    "owners": {
+      "recipe-title-row": [
+        "MealPlanSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 5383,
+    "selector": ".recipe-loading",
+    "property": "background",
+    "value": "#edf3e9",
+    "owners": {
+      "recipe-loading": [
+        "MealPlanSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 5381,
+    "selector": ".recipe-loading",
+    "property": "align-items",
+    "value": "center",
+    "owners": {
+      "recipe-loading": [
+        "MealPlanSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 5377,
+    "selector": ".recipe-empty-art",
+    "property": "background",
+    "value": "#edf3e9",
+    "owners": {
+      "recipe-empty-art": [
+        "MealPlanSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 5357,
+    "selector": ".recipe-serving-picker button",
+    "property": "background",
+    "value": "#fffaf0",
+    "owners": {
+      "recipe-serving-picker": [
+        "MealPlanSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 5343,
+    "selector": ".recipe-time-picker button",
+    "property": "background",
+    "value": "rgba(255, 254, 250, 0.72)",
+    "owners": {
+      "recipe-time-picker": [
+        "MealPlanSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 5279,
+    "selector": ".history-row strong",
+    "property": "color",
+    "value": "var(--meal-ink)",
+    "owners": {
+      "history-row": [
+        "FoodHistory.tsx",
+        "ProductInfoHistory.tsx",
+        "ProductProvenanceHistory.tsx"
+      ]
+    }
+  },
+  {
+    "line": 5269,
+    "selector": ".history-icon",
+    "property": "background",
+    "value": "#dfeadc",
+    "owners": {
+      "history-icon": [
+        "FoodHistory.tsx",
+        "ProductInfoHistory.tsx",
+        "ProductProvenanceHistory.tsx"
+      ]
+    }
+  },
+  {
+    "line": 5259,
+    "selector": ".history-row",
+    "property": "background",
+    "value": "rgba(237, 243, 233, 0.62)",
+    "owners": {
+      "history-row": [
+        "FoodHistory.tsx",
+        "ProductInfoHistory.tsx",
+        "ProductProvenanceHistory.tsx"
+      ]
+    }
+  },
+  {
+    "line": 5202,
+    "selector": ".discard-confirm",
+    "property": "background",
+    "value": "#fff2eb",
+    "owners": {
+      "discard-confirm": [
+        "FoodDetailSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 5191,
+    "selector": ".danger-text-button",
+    "property": "background",
+    "value": "transparent",
+    "owners": {
+      "danger-text-button": [
+        "FoodDetailSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 5190,
+    "selector": ".danger-text-button",
+    "property": "border",
+    "value": "0",
+    "owners": {
+      "danger-text-button": [
+        "FoodDetailSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 5166,
+    "selector": ".toggle-on",
+    "property": "background",
+    "value": "var(--meal-sage)",
+    "owners": {
+      "toggle-on": [
+        "AccountSheet.tsx",
+        "FoodDetailSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 5136,
+    "selector": ".opened-row",
+    "property": "border-bottom",
+    "value": "1px solid var(--meal-line)",
+    "owners": {
+      "opened-row": [
+        "FoodDetailSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 5135,
+    "selector": ".opened-row",
+    "property": "border-top",
+    "value": "1px solid var(--meal-line)",
+    "owners": {
+      "opened-row": [
+        "FoodDetailSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 5027,
+    "selector": ".date-edit-button",
+    "property": "background",
+    "value": "rgba(240, 246, 236, 0.72)",
+    "owners": {
+      "date-edit-button": [
+        "FoodDetailSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 5026,
+    "selector": ".date-edit-button",
+    "property": "border",
+    "value": "1px dashed #c5d2bd",
+    "owners": {
+      "date-edit-button": [
+        "FoodDetailSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 4859,
+    "selector": ".product-provenance-card",
+    "property": "background",
+    "value": "rgba(244, 248, 240, 0.92)",
+    "owners": {
+      "product-provenance-card": [
+        "FoodDetailSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 4851,
+    "selector": ".food-provenance-icon",
+    "property": "background",
+    "value": "#e6eee1",
+    "owners": {
+      "food-provenance-icon": [
+        "FoodDetailSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 4847,
+    "selector": ".food-provenance-card",
+    "property": "background",
+    "value": "rgba(247, 249, 243, 0.88)",
+    "owners": {
+      "food-provenance-card": [
+        "FoodDetailSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 4825,
+    "selector": ".storage-mismatch-callout",
+    "property": "background",
+    "value": "#fff6ef",
+    "owners": {
+      "storage-mismatch-callout": [
+        "FoodDetailSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 4824,
+    "selector": ".storage-mismatch-callout",
+    "property": "border",
+    "value": "1px solid #e8cfbe",
+    "owners": {
+      "storage-mismatch-callout": [
+        "FoodDetailSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 4791,
+    "selector": ".date-review-callout",
+    "property": "background",
+    "value": "#fff2eb",
+    "owners": {
+      "date-review-callout": [
+        "FoodDetailSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 4759,
+    "selector": ".proof-icon",
+    "property": "background",
+    "value": "rgba(255, 255, 255, 0.68)",
+    "owners": {
+      "proof-icon": [
+        "FoodDetailSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 4744,
+    "selector": ".detail-remote-refresh button",
+    "property": "border",
+    "value": "1px solid #d2b98e",
+    "owners": {
+      "detail-remote-refresh": [
+        "FoodDetailSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 4733,
+    "selector": ".detail-remote-refresh",
+    "property": "background",
+    "value": "#fff8ea",
+    "owners": {
+      "detail-remote-refresh": [
+        "FoodDetailSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 4732,
+    "selector": ".detail-remote-refresh",
+    "property": "border",
+    "value": "1px solid #e8d5b4",
+    "owners": {
+      "detail-remote-refresh": [
+        "FoodDetailSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 4706,
+    "selector": ".confirmed-badge",
+    "property": "background",
+    "value": "#d9e8d5",
+    "owners": {
+      "confirmed-badge": [
+        "AddFoodSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 4673,
+    "selector": ".label-lot-target-option-active",
+    "property": "background",
+    "value": "#edf3e9",
+    "owners": {
+      "label-lot-target-option-active": [
+        "AddFoodSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 4672,
+    "selector": ".label-lot-target-option-active",
+    "property": "border-color",
+    "value": "#8ca17f",
+    "owners": {
+      "label-lot-target-option-active": [
+        "AddFoodSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 4661,
+    "selector": ".label-lot-target-option",
+    "property": "background",
+    "value": "#fffdf8",
+    "owners": {
+      "label-lot-target-option": [
+        "AddFoodSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 4606,
+    "selector": ".label-date-kind-option-active",
+    "property": "background",
+    "value": "#a9785e",
+    "owners": {
+      "label-date-kind-option-active": [
+        "AddFoodSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 4605,
+    "selector": ".label-date-kind-option-active",
+    "property": "border-color",
+    "value": "#a9785e",
+    "owners": {
+      "label-date-kind-option-active": [
+        "AddFoodSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 4599,
+    "selector": ".label-date-kind-option",
+    "property": "background",
+    "value": "#fffaf3",
+    "owners": {
+      "label-date-kind-option": [
+        "AddFoodSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 4387,
+    "selector": ".label-result-card-ambiguous",
+    "property": "background",
+    "value": "#fff8ee",
+    "owners": {
+      "label-result-card-ambiguous": [
+        "AddFoodSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 4297,
+    "selector": ".receipt-validation-callout",
+    "property": "background",
+    "value": "#fff1e9",
+    "owners": {
+      "receipt-validation-callout": [
+        "AddFoodSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 4242,
+    "selector": ".receipt-product-lookup",
+    "property": "background",
+    "value": "#edf3e9",
+    "owners": {
+      "receipt-product-lookup": [
+        "AddFoodSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 4240,
+    "selector": ".receipt-product-lookup",
+    "property": "padding",
+    "value": "9px",
+    "owners": {
+      "receipt-product-lookup": [
+        "AddFoodSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 4010,
+    "selector": ".receipt-resume-callout",
+    "property": "background",
+    "value": "#fff7e7",
+    "owners": {
+      "receipt-resume-callout": [
+        "AddFoodSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 3933,
+    "selector": ".label-source-preview",
+    "property": "background",
+    "value": "rgba(255, 255, 252, 0.82)",
+    "owners": {
+      "label-source-preview": [
+        "AddFoodSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 3820,
+    "selector": ".receipt-source-preview",
+    "property": "background",
+    "value": "rgba(255, 255, 252, 0.82)",
+    "owners": {
+      "receipt-source-preview": [
+        "AddFoodSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 3780,
+    "selector": ".receipt-review",
+    "property": "gap",
+    "value": "10px",
+    "owners": {
+      "receipt-review": [
+        "AddFoodSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 3779,
+    "selector": ".receipt-review",
+    "property": "display",
+    "value": "grid",
+    "owners": {
+      "receipt-review": [
+        "AddFoodSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 3749,
+    "selector": ".storage-option-active",
+    "property": "background",
+    "value": "#edf3e9",
+    "owners": {
+      "storage-option-active": [
+        "AddFoodSheet.tsx",
+        "FoodDetailSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 3748,
+    "selector": ".storage-option-active",
+    "property": "border-color",
+    "value": "#aebeaa",
+    "owners": {
+      "storage-option-active": [
+        "AddFoodSheet.tsx",
+        "FoodDetailSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 3742,
+    "selector": ".storage-option",
+    "property": "background",
+    "value": "rgba(255, 254, 250, 0.75)",
+    "owners": {
+      "storage-option": [
+        "AddFoodSheet.tsx",
+        "FoodDetailSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 3683,
+    "selector": ".manual-date-candidate",
+    "property": "background",
+    "value": "#fff9f4",
+    "owners": {
+      "manual-date-candidate": [
+        "AddFoodSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 3532,
+    "selector": ".quality-callout",
+    "property": "background",
+    "value": "#f4eee2",
+    "owners": {
+      "quality-callout": [
+        "AddFoodSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 3361,
+    "selector": ".grocy-dead-letter-row small",
+    "property": "color",
+    "value": "#a67b6b",
+    "owners": {
+      "grocy-dead-letter-row": [
+        "AccountSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 3352,
+    "selector": ".grocy-dead-letter-row strong",
+    "property": "color",
+    "value": "#865d4f",
+    "owners": {
+      "grocy-dead-letter-row": [
+        "AccountSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 3028,
+    "selector": ".grocy-worker-card",
+    "property": "background",
+    "value": "#f3f7ef",
+    "owners": {
+      "grocy-worker-card": [
+        "AccountSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 2979,
+    "selector": ".grocy-status-card",
+    "property": "background",
+    "value": "#f4eee2",
+    "owners": {
+      "grocy-status-card": [
+        "AccountSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 2957,
+    "selector": ".grocy-refresh-button",
+    "property": "background",
+    "value": "transparent",
+    "owners": {
+      "grocy-refresh-button": [
+        "AccountSheet.tsx",
+        "FoodHistory.tsx"
+      ]
+    }
+  },
+  {
+    "line": 2915,
+    "selector": ".grocy-integration",
+    "property": "border-top",
+    "value": "1px solid var(--meal-line)",
+    "owners": {
+      "grocy-integration": [
+        "AccountSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 2914,
+    "selector": ".grocy-integration",
+    "property": "padding-top",
+    "value": "13px",
+    "owners": {
+      "grocy-integration": [
+        "AccountSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 2646,
+    "selector": ".storage-location-row",
+    "property": "background",
+    "value": "rgba(255, 254, 250, 0.72)",
+    "owners": {
+      "storage-location-row": [
+        "AccountSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 2532,
+    "selector": ".storage-location-panel",
+    "property": "border-top",
+    "value": "1px solid var(--meal-line)",
+    "owners": {
+      "storage-location-panel": [
+        "AccountSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 2531,
+    "selector": ".storage-location-panel",
+    "property": "padding-top",
+    "value": "13px",
+    "owners": {
+      "storage-location-panel": [
+        "AccountSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 2484,
+    "selector": ".workspace-export-panel",
+    "property": "border-top",
+    "value": "1px solid var(--meal-line)",
+    "owners": {
+      "workspace-export-panel": [
+        "AccountSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 2483,
+    "selector": ".workspace-export-panel",
+    "property": "padding-top",
+    "value": "13px",
+    "owners": {
+      "workspace-export-panel": [
+        "AccountSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 2440,
+    "selector": ".push-subscription-row",
+    "property": "background",
+    "value": "rgba(255, 254, 250, 0.9)",
+    "owners": {
+      "push-subscription-row": [
+        "AccountSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 2306,
+    "selector": ".notification-preferences-panel",
+    "property": "border-top",
+    "value": "1px solid var(--meal-line)",
+    "owners": {
+      "notification-preferences-panel": [
+        "AccountSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 2305,
+    "selector": ".notification-preferences-panel",
+    "property": "padding-top",
+    "value": "13px",
+    "owners": {
+      "notification-preferences-panel": [
+        "AccountSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 2213,
+    "selector": ".account-delete-panel",
+    "property": "border-top",
+    "value": "1px solid var(--meal-line)",
+    "owners": {
+      "account-delete-panel": [
+        "AccountSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 2212,
+    "selector": ".account-delete-panel",
+    "property": "padding-top",
+    "value": "13px",
+    "owners": {
+      "account-delete-panel": [
+        "AccountSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 2208,
+    "selector": ".account-danger-button",
+    "property": "background",
+    "value": "#fff8f4",
+    "owners": {
+      "account-danger-button": [
+        "AccountSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 2204,
+    "selector": ".account-security-button",
+    "property": "background",
+    "value": "rgba(255, 254, 250, 0.82)",
+    "owners": {
+      "account-security-button": [
+        "AccountSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 2168,
+    "selector": ".guest-transfer-summary",
+    "property": "background",
+    "value": "rgba(255, 254, 250, 0.86)",
+    "owners": {
+      "guest-transfer-summary": [
+        "AccountSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 2112,
+    "selector": ".guest-transfer-panel",
+    "property": "background",
+    "value": "linear-gradient(145deg, #f3f8ef, #fbfaf3)",
+    "owners": {
+      "guest-transfer-panel": [
+        "AccountSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 2104,
+    "selector": ".account-profile strong",
+    "property": "white-space",
+    "value": "nowrap",
+    "owners": {
+      "account-profile": [
+        "AccountSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 2103,
+    "selector": ".account-profile strong",
+    "property": "text-overflow",
+    "value": "ellipsis",
+    "owners": {
+      "account-profile": [
+        "AccountSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 2102,
+    "selector": ".account-profile strong",
+    "property": "font-size",
+    "value": "11px",
+    "owners": {
+      "account-profile": [
+        "AccountSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 2101,
+    "selector": ".account-profile strong",
+    "property": "overflow",
+    "value": "hidden",
+    "owners": {
+      "account-profile": [
+        "AccountSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 2091,
+    "selector": ".account-profile-icon",
+    "property": "background",
+    "value": "#dfeadc",
+    "owners": {
+      "account-profile-icon": [
+        "AccountSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 1996,
+    "selector": ".account-error",
+    "property": "background",
+    "value": "#fff1e9",
+    "owners": {
+      "account-error": [
+        "AccountSheet.tsx",
+        "FoodDetailSheet.tsx",
+        "NotificationSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 1505,
+    "selector": ".capture-action",
+    "property": "padding",
+    "value": "0 10px",
+    "owners": {
+      "capture-action": [
+        "AddFoodSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 1504,
+    "selector": ".capture-action",
+    "property": "min-height",
+    "value": "46px",
+    "owners": {
+      "capture-action": [
+        "AddFoodSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 1498,
+    "selector": ".capture-actions",
+    "property": "gap",
+    "value": "8px",
+    "owners": {
+      "capture-actions": [
+        "AddFoodSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 1497,
+    "selector": ".capture-actions",
+    "property": "grid-template-columns",
+    "value": "minmax(0, 1.08fr) minmax(0, 1fr)",
+    "owners": {
+      "capture-actions": [
+        "AddFoodSheet.tsx"
+      ]
+    }
+  },
+  {
+    "line": 1496,
+    "selector": ".capture-actions",
+    "property": "display",
+    "value": "grid",
+    "owners": {
+      "capture-actions": [
+        "AddFoodSheet.tsx"
+      ]
+    }
+  }
+]

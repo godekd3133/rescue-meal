@@ -1,0 +1,24 @@
+{
+  "changes": [
+    "Remove repeated capture instructions; retain explicit photo retention note and three-step rail",
+    "Hide duplicated first-receipt rail title/count; preserve live accessible title",
+    "Review note retains date entry boundary without repeating item-selection instruction"
+  ],
+  "verification": {
+    "IAB_viewport": "320x740",
+    "IAB_receipt_entry": "single capture title, photo note, camera/photo-PDF and example controls",
+    "IAB_review": "step2 date note preserved",
+    "IAB_tab_roundtrip": "Deselect spinach, switch barcode, returnreceipt; spinach stays unselected andreview remainsstep2",
+    "build": "passed",
+    "runtime_files": 28,
+    "node_tests": 307,
+    "diff_check": "passed",
+    "real_OCR_camera": "not-run"
+  },
+  "remaining": [
+    "Continue barcode/label entry density audit",
+    "CSS budget",
+    "Guest transfer and full journey/device acceptance"
+  ],
+  "goal": "active"
+}

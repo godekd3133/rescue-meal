@@ -1,0 +1,123 @@
+{
+  ".bottom-sheet": [
+    {
+      "--atelier-ink": "#f1ecdf",
+      "--atelier-muted": "#b4bbae",
+      "--atelier-pistachio": "#6f8dff",
+      "--atelier-surface": "#1b251e",
+      "--meal-ink": "#f1ecdf",
+      "--meal-line": "rgba(241, 236, 223, 0.14)",
+      "--meal-muted": "#b4bbae",
+      "background-color": "rgb(16, 20, 25)",
+      "border-color": "rgba(241, 236, 223, 0.14) rgb(241, 236, 223) rgb(241, 236, 223)",
+      "border-radius": "20px 20px 0px 0px",
+      "border-width": "1px 0px 0px",
+      "color": "rgb(241, 236, 223)",
+      "color-scheme": "dark",
+      "display": "flex",
+      "font-family": "\"Apple SD Gothic Neo\", \"Noto Sans KR\", -apple-system, \"system-ui\", sans-serif",
+      "font-size": "16px",
+      "font-weight": "400",
+      "gap": "normal",
+      "line-height": "normal",
+      "padding": "0px"
+    }
+  ],
+  ".detail-hero": [
+    {
+      "--atelier-ink": "#f1ecdf",
+      "--atelier-muted": "#b4bbae",
+      "--atelier-pistachio": "#6f8dff",
+      "--atelier-surface": "#1b251e",
+      "--meal-ink": "#f1ecdf",
+      "--meal-line": "rgba(241, 236, 223, 0.14)",
+      "--meal-muted": "#b4bbae",
+      "background-color": "rgb(27, 37, 30)",
+      "border-color": "rgba(241, 236, 223, 0.14)",
+      "border-radius": "0px",
+      "border-width": "0px",
+      "color": "rgb(241, 236, 223)",
+      "color-scheme": "dark",
+      "display": "flex",
+      "font-family": "\"Apple SD Gothic Neo\", \"Noto Sans KR\", -apple-system, \"system-ui\", sans-serif",
+      "font-size": "14px",
+      "font-weight": "400",
+      "gap": "13px",
+      "line-height": "normal",
+      "padding": "14px"
+    }
+  ],
+  ".detail-quantity-controls": [
+    {
+      "--atelier-ink": "#f1ecdf",
+      "--atelier-muted": "#b4bbae",
+      "--atelier-pistachio": "#6f8dff",
+      "--atelier-surface": "#1b251e",
+      "--meal-ink": "#f1ecdf",
+      "--meal-line": "rgba(241, 236, 223, 0.14)",
+      "--meal-muted": "#b4bbae",
+      "background-color": "rgba(0, 0, 0, 0)",
+      "border-color": "rgba(203, 220, 236, 0.16) rgb(241, 236, 223) rgb(241, 236, 223)",
+      "border-radius": "0px",
+      "border-width": "1px 0px 0px",
+      "color": "rgb(241, 236, 223)",
+      "color-scheme": "dark",
+      "display": "grid",
+      "font-family": "\"Apple SD Gothic Neo\", \"Noto Sans KR\", -apple-system, \"system-ui\", sans-serif",
+      "font-size": "14px",
+      "font-weight": "400",
+      "gap": "9px",
+      "line-height": "normal",
+      "padding": "12px 0px 2px"
+    }
+  ],
+  ".meal-home": [
+    {
+      "--atelier-ink": "#f1ecdf",
+      "--atelier-muted": "#b4bbae",
+      "--atelier-pistachio": "#6f8dff",
+      "--atelier-surface": "#1b251e",
+      "--meal-ink": "#f1ecdf",
+      "--meal-line": "rgba(241, 236, 223, 0.14)",
+      "--meal-muted": "#b4bbae",
+      "background-color": "rgb(20, 27, 22)",
+      "border-color": "rgb(241, 236, 223)",
+      "border-radius": "0px",
+      "border-width": "0px",
+      "color": "rgb(241, 236, 223)",
+      "color-scheme": "dark",
+      "display": "block",
+      "font-family": "\"Apple SD Gothic Neo\", \"Noto Sans KR\", -apple-system, \"system-ui\", sans-serif",
+      "font-size": "16px",
+      "font-weight": "400",
+      "gap": "normal",
+      "line-height": "normal",
+      "padding": "44px 15px 126px"
+    }
+  ],
+  ".primary-sheet-button": [],
+  ".secondary-sheet-button": [
+    {
+      "--atelier-ink": "#f1ecdf",
+      "--atelier-muted": "#b4bbae",
+      "--atelier-pistachio": "#6f8dff",
+      "--atelier-surface": "#1b251e",
+      "--meal-ink": "#f1ecdf",
+      "--meal-line": "rgba(241, 236, 223, 0.14)",
+      "--meal-muted": "#b4bbae",
+      "background-color": "color(srgb 0.15749 0.206588 0.21349)",
+      "border-color": "color(srgb 0.568621 0.667428 0.972465 / 0.539294)",
+      "border-radius": "10px",
+      "border-width": "1px",
+      "color": "rgb(241, 236, 223)",
+      "color-scheme": "dark",
+      "display": "flex",
+      "font-family": "\"Apple SD Gothic Neo\", \"Noto Sans KR\", -apple-system, \"system-ui\", sans-serif",
+      "font-size": "14px",
+      "font-weight": "570",
+      "gap": "7px",
+      "line-height": "normal",
+      "padding": "0px 14px"
+    }
+  ]
+}

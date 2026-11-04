@@ -1,0 +1,342 @@
+[
+  {
+    "line": 10186,
+    "selector": ".meal-home,\n  .bottom-sheet,\n  .app-bottom-nav",
+    "property": "--atelier-border-strong",
+    "value": "color-mix(in srgb, var(--atelier-ink) 38%, transparent)",
+    "context": [
+      "media:(prefers-contrast: more)"
+    ],
+    "overrides": [
+      {
+        "line": 14960,
+        "selector": "html[data-rescue-theme=\"light\"] :is(.meal-home,.bottom-sheet,.app-bottom-nav)",
+        "value": "rgba(2, 32, 71, 0.38)",
+        "context": [
+          "media:(prefers-contrast: more)"
+        ]
+      },
+      {
+        "line": 14967,
+        "selector": "html[data-rescue-theme=\"dark\"] :is(.meal-home,.bottom-sheet,.app-bottom-nav)",
+        "value": "rgba(235, 246, 238, 0.58)",
+        "context": [
+          "media:(prefers-contrast: more)"
+        ]
+      },
+      {
+        "line": 14960,
+        "selector": "html[data-rescue-theme=\"light\"] :is(.meal-home,.bottom-sheet,.app-bottom-nav)",
+        "value": "rgba(2, 32, 71, 0.38)",
+        "context": [
+          "media:(prefers-contrast: more)"
+        ]
+      },
+      {
+        "line": 14967,
+        "selector": "html[data-rescue-theme=\"dark\"] :is(.meal-home,.bottom-sheet,.app-bottom-nav)",
+        "value": "rgba(235, 246, 238, 0.58)",
+        "context": [
+          "media:(prefers-contrast: more)"
+        ]
+      },
+      {
+        "line": 14960,
+        "selector": "html[data-rescue-theme=\"light\"] :is(.meal-home,.bottom-sheet,.app-bottom-nav)",
+        "value": "rgba(2, 32, 71, 0.38)",
+        "context": [
+          "media:(prefers-contrast: more)"
+        ]
+      },
+      {
+        "line": 14967,
+        "selector": "html[data-rescue-theme=\"dark\"] :is(.meal-home,.bottom-sheet,.app-bottom-nav)",
+        "value": "rgba(235, 246, 238, 0.58)",
+        "context": [
+          "media:(prefers-contrast: more)"
+        ]
+      }
+    ]
+  },
+  {
+    "line": 10185,
+    "selector": ".meal-home,\n  .bottom-sheet,\n  .app-bottom-nav",
+    "property": "--atelier-border",
+    "value": "color-mix(in srgb, var(--atelier-ink) 22%, transparent)",
+    "context": [
+      "media:(prefers-contrast: more)"
+    ],
+    "overrides": [
+      {
+        "line": 14959,
+        "selector": "html[data-rescue-theme=\"light\"] :is(.meal-home,.bottom-sheet,.app-bottom-nav)",
+        "value": "rgba(2, 32, 71, 0.22)",
+        "context": [
+          "media:(prefers-contrast: more)"
+        ]
+      },
+      {
+        "line": 14966,
+        "selector": "html[data-rescue-theme=\"dark\"] :is(.meal-home,.bottom-sheet,.app-bottom-nav)",
+        "value": "rgba(235, 246, 238, 0.38)",
+        "context": [
+          "media:(prefers-contrast: more)"
+        ]
+      },
+      {
+        "line": 14959,
+        "selector": "html[data-rescue-theme=\"light\"] :is(.meal-home,.bottom-sheet,.app-bottom-nav)",
+        "value": "rgba(2, 32, 71, 0.22)",
+        "context": [
+          "media:(prefers-contrast: more)"
+        ]
+      },
+      {
+        "line": 14966,
+        "selector": "html[data-rescue-theme=\"dark\"] :is(.meal-home,.bottom-sheet,.app-bottom-nav)",
+        "value": "rgba(235, 246, 238, 0.38)",
+        "context": [
+          "media:(prefers-contrast: more)"
+        ]
+      },
+      {
+        "line": 14959,
+        "selector": "html[data-rescue-theme=\"light\"] :is(.meal-home,.bottom-sheet,.app-bottom-nav)",
+        "value": "rgba(2, 32, 71, 0.22)",
+        "context": [
+          "media:(prefers-contrast: more)"
+        ]
+      },
+      {
+        "line": 14966,
+        "selector": "html[data-rescue-theme=\"dark\"] :is(.meal-home,.bottom-sheet,.app-bottom-nav)",
+        "value": "rgba(235, 246, 238, 0.38)",
+        "context": [
+          "media:(prefers-contrast: more)"
+        ]
+      }
+    ]
+  },
+  {
+    "line": 9096,
+    "selector": ".meal-home,\n.bottom-sheet,\n.app-bottom-nav",
+    "property": "--meal-blue-soft",
+    "value": "color-mix(in srgb, var(--atelier-pistachio) 9%, transparent)",
+    "context": [],
+    "overrides": [
+      {
+        "line": 10821,
+        "selector": "html[data-rescue-theme=\"light\"] :is(.meal-home,.bottom-sheet,.app-bottom-nav,.toast)",
+        "value": "rgba(49, 130, 246, 0.09)",
+        "context": []
+      },
+      {
+        "line": 10834,
+        "selector": "html[data-rescue-theme=\"dark\"] :is(.meal-home,.bottom-sheet,.app-bottom-nav,.toast)",
+        "value": "rgba(155, 181, 213, 0.16)",
+        "context": []
+      },
+      {
+        "line": 10821,
+        "selector": "html[data-rescue-theme=\"light\"] :is(.meal-home,.bottom-sheet,.app-bottom-nav,.toast)",
+        "value": "rgba(49, 130, 246, 0.09)",
+        "context": []
+      },
+      {
+        "line": 10834,
+        "selector": "html[data-rescue-theme=\"dark\"] :is(.meal-home,.bottom-sheet,.app-bottom-nav,.toast)",
+        "value": "rgba(155, 181, 213, 0.16)",
+        "context": []
+      },
+      {
+        "line": 10821,
+        "selector": "html[data-rescue-theme=\"light\"] :is(.meal-home,.bottom-sheet,.app-bottom-nav,.toast)",
+        "value": "rgba(49, 130, 246, 0.09)",
+        "context": []
+      },
+      {
+        "line": 10834,
+        "selector": "html[data-rescue-theme=\"dark\"] :is(.meal-home,.bottom-sheet,.app-bottom-nav,.toast)",
+        "value": "rgba(155, 181, 213, 0.16)",
+        "context": []
+      }
+    ]
+  },
+  {
+    "line": 9095,
+    "selector": ".meal-home,\n.bottom-sheet,\n.app-bottom-nav",
+    "property": "--meal-coral-soft",
+    "value": "color-mix(in srgb, var(--atelier-coral) 8%, transparent)",
+    "context": [],
+    "overrides": [
+      {
+        "line": 10820,
+        "selector": "html[data-rescue-theme=\"light\"] :is(.meal-home,.bottom-sheet,.app-bottom-nav,.toast)",
+        "value": "rgba(240, 68, 82, 0.08)",
+        "context": []
+      },
+      {
+        "line": 10833,
+        "selector": "html[data-rescue-theme=\"dark\"] :is(.meal-home,.bottom-sheet,.app-bottom-nav,.toast)",
+        "value": "rgba(255, 128, 111, 0.15)",
+        "context": []
+      },
+      {
+        "line": 10820,
+        "selector": "html[data-rescue-theme=\"light\"] :is(.meal-home,.bottom-sheet,.app-bottom-nav,.toast)",
+        "value": "rgba(240, 68, 82, 0.08)",
+        "context": []
+      },
+      {
+        "line": 10833,
+        "selector": "html[data-rescue-theme=\"dark\"] :is(.meal-home,.bottom-sheet,.app-bottom-nav,.toast)",
+        "value": "rgba(255, 128, 111, 0.15)",
+        "context": []
+      },
+      {
+        "line": 10820,
+        "selector": "html[data-rescue-theme=\"light\"] :is(.meal-home,.bottom-sheet,.app-bottom-nav,.toast)",
+        "value": "rgba(240, 68, 82, 0.08)",
+        "context": []
+      },
+      {
+        "line": 10833,
+        "selector": "html[data-rescue-theme=\"dark\"] :is(.meal-home,.bottom-sheet,.app-bottom-nav,.toast)",
+        "value": "rgba(255, 128, 111, 0.15)",
+        "context": []
+      }
+    ]
+  },
+  {
+    "line": 9094,
+    "selector": ".meal-home,\n.bottom-sheet,\n.app-bottom-nav",
+    "property": "--atelier-border-strong",
+    "value": "color-mix(in srgb, var(--atelier-ink) 16%, transparent)",
+    "context": [],
+    "overrides": [
+      {
+        "line": 13238,
+        "selector": "html[data-rescue-theme=\"light\"] :is(.meal-home,.bottom-sheet,.app-bottom-nav,.toast)",
+        "value": "rgba(36, 49, 40, 0.23)",
+        "context": []
+      },
+      {
+        "line": 13260,
+        "selector": "html[data-rescue-theme=\"dark\"] :is(.meal-home,.bottom-sheet,.app-bottom-nav,.toast)",
+        "value": "rgba(241, 236, 223, 0.25)",
+        "context": []
+      },
+      {
+        "line": 13238,
+        "selector": "html[data-rescue-theme=\"light\"] :is(.meal-home,.bottom-sheet,.app-bottom-nav,.toast)",
+        "value": "rgba(36, 49, 40, 0.23)",
+        "context": []
+      },
+      {
+        "line": 13260,
+        "selector": "html[data-rescue-theme=\"dark\"] :is(.meal-home,.bottom-sheet,.app-bottom-nav,.toast)",
+        "value": "rgba(241, 236, 223, 0.25)",
+        "context": []
+      },
+      {
+        "line": 13238,
+        "selector": "html[data-rescue-theme=\"light\"] :is(.meal-home,.bottom-sheet,.app-bottom-nav,.toast)",
+        "value": "rgba(36, 49, 40, 0.23)",
+        "context": []
+      },
+      {
+        "line": 13260,
+        "selector": "html[data-rescue-theme=\"dark\"] :is(.meal-home,.bottom-sheet,.app-bottom-nav,.toast)",
+        "value": "rgba(241, 236, 223, 0.25)",
+        "context": []
+      }
+    ]
+  },
+  {
+    "line": 9093,
+    "selector": ".meal-home,\n.bottom-sheet,\n.app-bottom-nav",
+    "property": "--atelier-border",
+    "value": "color-mix(in srgb, var(--atelier-ink) 9%, transparent)",
+    "context": [],
+    "overrides": [
+      {
+        "line": 13237,
+        "selector": "html[data-rescue-theme=\"light\"] :is(.meal-home,.bottom-sheet,.app-bottom-nav,.toast)",
+        "value": "rgba(36, 49, 40, 0.13)",
+        "context": []
+      },
+      {
+        "line": 13259,
+        "selector": "html[data-rescue-theme=\"dark\"] :is(.meal-home,.bottom-sheet,.app-bottom-nav,.toast)",
+        "value": "rgba(241, 236, 223, 0.14)",
+        "context": []
+      },
+      {
+        "line": 13237,
+        "selector": "html[data-rescue-theme=\"light\"] :is(.meal-home,.bottom-sheet,.app-bottom-nav,.toast)",
+        "value": "rgba(36, 49, 40, 0.13)",
+        "context": []
+      },
+      {
+        "line": 13259,
+        "selector": "html[data-rescue-theme=\"dark\"] :is(.meal-home,.bottom-sheet,.app-bottom-nav,.toast)",
+        "value": "rgba(241, 236, 223, 0.14)",
+        "context": []
+      },
+      {
+        "line": 13237,
+        "selector": "html[data-rescue-theme=\"light\"] :is(.meal-home,.bottom-sheet,.app-bottom-nav,.toast)",
+        "value": "rgba(36, 49, 40, 0.13)",
+        "context": []
+      },
+      {
+        "line": 13259,
+        "selector": "html[data-rescue-theme=\"dark\"] :is(.meal-home,.bottom-sheet,.app-bottom-nav,.toast)",
+        "value": "rgba(241, 236, 223, 0.14)",
+        "context": []
+      }
+    ]
+  },
+  {
+    "line": 7340,
+    "selector": ".bottom-sheet",
+    "property": "--sheet-border-strong",
+    "value": "color-mix(in srgb, var(--atelier-ink) 19%, transparent)",
+    "context": [],
+    "overrides": [
+      {
+        "line": 11017,
+        "selector": "html[data-rescue-theme=\"light\"] .bottom-sheet",
+        "value": "rgba(2, 32, 71, 0.19)",
+        "context": []
+      },
+      {
+        "line": 11025,
+        "selector": "html[data-rescue-theme=\"dark\"] .bottom-sheet",
+        "value": "rgba(203, 220, 236, 0.3)",
+        "context": []
+      }
+    ]
+  },
+  {
+    "line": 7339,
+    "selector": ".bottom-sheet",
+    "property": "--sheet-border",
+    "value": "color-mix(in srgb, var(--atelier-ink) 11%, transparent)",
+    "context": [],
+    "overrides": [
+      {
+        "line": 11016,
+        "selector": "html[data-rescue-theme=\"light\"] .bottom-sheet",
+        "value": "rgba(2, 32, 71, 0.11)",
+        "context": []
+      },
+      {
+        "line": 11024,
+        "selector": "html[data-rescue-theme=\"dark\"] .bottom-sheet",
+        "value": "rgba(203, 220, 236, 0.16)",
+        "context": []
+      }
+    ]
+  }
+]

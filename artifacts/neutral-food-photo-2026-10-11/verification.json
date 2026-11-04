@@ -1,0 +1,42 @@
+{
+  "status": "partial",
+  "problem": "Unrecognized food names and unavailable photo fallbacks could display the generic grocery photograph, suggesting unrelated food imagery",
+  "changes": [
+    "Generic marker without a known match renders a neutral ArchiveIcon in the existing image slot",
+    "Provided photo paths remain authoritative; known generic markers resolve to matching local photos",
+    "Known primary failure tries matching fallback; unavailable fallback becomes neutral placeholder",
+    "Failure bound to original source and actual fallback so name/source changes can display a fresh photo",
+    "Shared image renderer used by home, inventory, receipt items and recipe ingredients"
+  ],
+  "runtime": {
+    "unmatched_generic": "Current cabbage home/detail uses neutral placeholder",
+    "known_photos": "Two milk home photos still load with naturalWidth900",
+    "blocked_known_photo": "Actual onion JPG blocked in temporary browser tab; detail shows88px placeholder, stock3 remains",
+    "device_scroll": 0,
+    "record_writes": "none",
+    "cleanup": "Blocked URLs cleared, cache override reset, Network disabled, temporary tab closed; primary Home retained"
+  },
+  "validation": {
+    "frontend_tests": 796,
+    "new_photo_state_regressions": 7,
+    "build": "passed",
+    "protected_runtime_files": 28,
+    "diff_check": "passed",
+    "CSS_budget": {
+      "status": "failed",
+      "actual_KB": 291.6,
+      "limit_KB": 260
+    }
+  },
+  "limits": [
+    "Browser proof in current light preview home/detail; receipt/recipe placeholder geometry specified in shared CSS but not separately exercised",
+    "Provided custom photo preservation validated by isolated presentation test",
+    "No speed benchmark"
+  ],
+  "evidence": [
+    "detail.png",
+    "known-photo-failure.png",
+    "observations.json",
+    "failure-observation.json"
+  ]
+}

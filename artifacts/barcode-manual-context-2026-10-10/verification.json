@@ -1,0 +1,23 @@
+{
+  "goal": "active",
+  "change": "Show manual no-date guidance only without a barcode date candidate.",
+  "verification": {
+    "lookup_handler_tests": 8,
+    "new_cases": [
+      "late parse after edit",
+      "late provider success after edit",
+      "late provider failure after edit"
+    ],
+    "build": "passed",
+    "protected_runtime": 28,
+    "diff_check": "passed",
+    "GUI": [
+      "GS1 date candidate applied to manual",
+      "No no-date guidance while candidate present",
+      "Deleting candidate restores no-date guidance"
+    ],
+    "food_saved": false,
+    "slow_provider_GUI": "not-run"
+  },
+  "source_sha256": "28a6dbd8a921abea3700637eb9d8bb61583b020799e813c5d2361a4332a8f67f"
+}

@@ -1,0 +1,45 @@
+{
+  "status": "partial",
+  "finding": "Unchanged save button was already hidden. A leftover failed-save retry could still invoke save after draft returned to saved values.",
+  "changes": [
+    "Save handler returns without a request when draftChanged is false",
+    "Obsolete save error/retry cleared when draft returns to persisted settings",
+    "Changed draft retains failed-save recovery; read/conflict refresh recovery retained"
+  ],
+  "regression": {
+    "no_op_before": "New guard test issued request and success notice on old handler",
+    "after": "No request or state changes for unchanged draft",
+    "focused_save_tests": 9,
+    "new_cases": 4
+  },
+  "runtime": {
+    "lead_days_before": 2,
+    "edited_draft": 3,
+    "save_and_unsaved_shown_on_edit": true,
+    "restored_without_save": 2,
+    "save_and_unsaved_removed_on_restore": true,
+    "keyboard_closed": true,
+    "device_scroll": 0,
+    "actual_save": "not-run",
+    "read_state": "unread1 retained"
+  },
+  "validation": {
+    "frontend_suite": 812,
+    "build": "passed",
+    "runtime_files": 28,
+    "diff_check": "passed",
+    "CSS_budget": {
+      "status": "failed",
+      "actual_KB": 291.2,
+      "limit_KB": 260
+    }
+  },
+  "limits": [
+    "Actual UI edit/restore without saving; failure cleanup validated in extracted real handler/effect tests",
+    "No OS permission or actual push subscription change"
+  ],
+  "evidence": [
+    "draft.png",
+    "observations.json"
+  ]
+}

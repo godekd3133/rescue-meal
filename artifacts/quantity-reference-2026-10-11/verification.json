@@ -1,0 +1,39 @@
+{
+  "goal_status": "active",
+  "scope": "User-entered per-lot contents reference; original quantity and unit conserved",
+  "runtime": {
+    "preview": "http://127.0.0.1:4183/",
+    "verified": [
+      "Keyboard-open one-tap save",
+      "Saved reference survived API restart and fresh dashboard read",
+      "1pack=1count yields broccoli corn yogurt salad",
+      "Inventory remains 1pack, original cold shelf, unknown date"
+    ],
+    "test_data": "500g then 1count are synthetic QA inputs, not measured or inferred food contents",
+    "no_consumption": true
+  },
+  "checks": {
+    "api_full": "558 passed, 8 existing warnings",
+    "web": "681 passed",
+    "postgres_after_readiness_update": "31 passed (contract fixtures, not live PostgreSQL)",
+    "build": "passed",
+    "runtime_integrity": "28 protected files passed",
+    "diff": "passed",
+    "bundle": "failed: CSS293.1KB versus260KB"
+  },
+  "not_run": [
+    "Physical device",
+    "live PostgreSQL migration",
+    "Full Playwright CLI/MCP browser suite"
+  ],
+  "hashes": {
+    "services/api/app/main.py": "3729af9e0280456eb6cc6d4cba82cd551e6b728b5b15020d722bac4f22ae8fec",
+    "services/api/app/planner.py": "cbc6e83a910d42d55d630efe4caad7a307028bc9b4157d8921e42ad46621f338",
+    "services/api/app/normalized_inventory.py": "a896528e6d559c7e1d30b12c45c38b70a0947d49ef1d45f50d7a5ea40854b0e8",
+    "services/api/app/postgres_readiness.py": "98a2fa2b858b0ab5937e363fa547960c1783e3e78b202d0d7a54c6fd61b556d3",
+    "infra/postgres/027_quantity_reference.sql": "429ea90384e3157aee64479af4e98d05e1ad4db55ad829a7fc2ddef631577d33",
+    "apps/web/src/QuantityReferenceEditor.tsx": "16a285ed9714b509861c3781ae01b2a754ac42175d7e1b4b88edfb398bd212ec",
+    "apps/web/src/Prototype.tsx": "f90f7942f6751875ef8948ca2d9110f007ecd03f2e5f734938eeb50f08394f86",
+    "apps/web/src/MealPlanSheet.tsx": "c3cefe5144bdb02238ed17833c1591539fa46203d3759f31939b939d875b9022"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "changes": [
+    "Offer device connection button only when browser and connection setup support it",
+    "Unavailable capability displayed as note, not disabled blue action",
+    "Unavailable/no-device/no-enabled-preference state omits inactive switch and redundant instructions",
+    "Existing device and enabled preferences stay manageable"
+  ],
+  "verification": {
+    "availability_cases": 4,
+    "management_cases": 3,
+    "IAB_unavailable_buttons": 0,
+    "IAB_inactive_switches": 0,
+    "IAB_note": "기기 알림은 현재 연결할 수 없어요.",
+    "node_tests": 416,
+    "build": "passed",
+    "runtime_files": 28,
+    "diff_check": "passed",
+    "permission_request_or_push": "not-run; no permission requested or realpush sent"
+  },
+  "remaining": [
+    "Configured device connection and delivery acceptance",
+    "CSS budget",
+    "Other journeys/device/OCR coverage"
+  ],
+  "goal": "active"
+}

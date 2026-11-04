@@ -1,0 +1,1373 @@
+{
+  "goal": "active",
+  "previous_turn": "progress",
+  "requirements": [
+    "All entry-to-completion flows remain usable and recoverable",
+    "Natural concise copy, explicit date meaning and uncertainty",
+    "No bullet joined visible metadata",
+    "Established palette, licensed photos, readable interactive states"
+  ],
+  "flows": [
+    {
+      "flow": "first-entry",
+      "status": "partial",
+      "historical_evidence": [
+        "artifacts/first-run-2026-10-09/iteration-audit.json",
+        "artifacts/current-owner-checkpoint-2026-10-10/verification.json",
+        "artifacts/real-ocr-path-2026-10-10/verification.json",
+        "artifacts/first-entry-2026-10-11/verification.json",
+        "artifacts/food-photo-recovery-2026-10-11/verification.json",
+        "artifacts/current-browser-journey-2026-10-11/verification.json",
+        "artifacts/photo-failure-runtime-2026-10-11/verification.json",
+        "artifacts/theme-style-cleanup-2026-10-11/verification.json",
+        "artifacts/home-priority-date-order-2026-10-11/verification.json",
+        "artifacts/narrow-web-journey-2026-10-11/verification.json",
+        "artifacts/neutral-food-photo-2026-10-11/verification.json",
+        "artifacts/account-entry-2026-10-11/verification.json",
+        "artifacts/offline-account-recovery-2026-10-11/verification.json",
+        "artifacts/cold-entry-failure-2026-10-11/verification.json"
+      ],
+      "observed_scope": "Fresh guest empty, own record reload/offline proof; current real local logout to fresh guest and login back, account inventory/receipt/shopping absent in guest and restored in account; real Paddle worker/API/UI recognition, explicit save and reload on synthetic label verified",
+      "unproven": "Cold auth/bootstrap failure, offline owner transition and native/dark combinations",
+      "latest_observed_scope": "Separatefreshguest0foods->directadd2packs->realAPIpersisted->reloadsameIDqtyunit;Home0 andFoodnavigationverified aftertop/scale correction",
+      "latest_photo_validation": {
+        "unmatched_generic": "Current cabbage home/detail uses neutral placeholder",
+        "known_photos": "Two milk home photos still load with naturalWidth900",
+        "blocked_known_photo": "Actual onion JPG blocked in temporary browser tab; detail shows88px placeholder, stock3 remains",
+        "device_scroll": 0,
+        "record_writes": "none",
+        "cleanup": "Blocked URLs cleared, cache override reset, Network disabled, temporary tab closed; primary Home retained"
+      },
+      "latest_runtime_checkpoint": "artifacts/current-browser-journey-2026-10-11/verification.json",
+      "latest_runtime_scope": "Existing guest workspace restored in current browser; this is not a fresh guest or first-run network-failure test.",
+      "latest_theme_validation": "Theme phase moved before paint; computed property samples for the current home/detail matched in light and dark after 36 dominated declarations were removed. Full first-paint timing and other screen states not measured.",
+      "latest_priority_order_validation": {
+        "home_and_priority_filter_names": [
+          "양배추",
+          "우유",
+          "검증용 우유"
+        ],
+        "unknown_date_summary_count": 1,
+        "all_inventory_count": 5,
+        "device_scroll": 0,
+        "restored": "All inventory filter, Home",
+        "record_writes": "none"
+      },
+      "latest_narrow_web_validation": {
+        "title_before": {
+          "sheet_width": 296,
+          "sheet_scroll_width": 506,
+          "title_width": 478
+        },
+        "title_after": {
+          "sheet_width": 296,
+          "sheet_scroll_width": 296,
+          "title_width": 204,
+          "title_scroll_width": 204,
+          "close_button": 44
+        },
+        "manual_after": {
+          "visible_content_width": 281,
+          "scroll_width": 281,
+          "form_and_field_width": 225,
+          "summary_width": 225,
+          "summary_scroll_width": 225,
+          "scroll_left": 0,
+          "unit_button_size": 44,
+          "quantity": "1.1234L"
+        },
+        "demo_home_order": [
+          "시금치",
+          "국산콩 두부",
+          "맛타리버섯"
+        ],
+        "live_preview_after_cleanup": {
+          "viewport": 1280,
+          "mode": "preview",
+          "food_count": 5,
+          "device_scroll": 0
+        }
+      },
+      "latest_account_entry": {
+        "frontend_suite": 853,
+        "build": "passed",
+        "runtime_files": 28,
+        "diff_check": "passed",
+        "live_account_path": "Home account control -> login and guest-settings panel -> Home",
+        "live_label": "계정 열기",
+        "live_text": "계정",
+        "live_person_icons": 1,
+        "live_status_dots": 0,
+        "live_touch_height": 44,
+        "device_scroll": 0,
+        "rendered_states": [
+          "connected",
+          "checking",
+          "offline-cached",
+          "auth_required",
+          "fixture"
+        ],
+        "offline_render": "최근 기록 5분 전; explicit cached-data accessibility warning",
+        "fixture_render": "체험 중; reload-loss accessibility warning",
+        "record_writes": "none"
+      },
+      "latest_connected_read_failure_validation": {
+        "before_inventory_count": 5,
+        "failed_read_inventory_count": 5,
+        "offline_header": "최근 기록 plus cache age; cached-data accessible warning",
+        "offline_home": "Read-failure notice and last-confirmed time shown",
+        "offline_detail": "Cabbage2packs retained; only close/date guidance/change-history actions shown; durable mutation controls absent",
+        "recovery": "Cleared request blocking, clicked 식품 목록 다시 불러오기",
+        "recovered_account_label": "계정 열기",
+        "recovered_account_text": "계정",
+        "recovered_inventory_count": 5,
+        "recovered_offline_notice": null,
+        "device_scroll": 0,
+        "food_mutations": "none",
+        "runtime_files": 28,
+        "runtime_integrity": "passed"
+      },
+      "latest_cold_read_validation": {
+        "frontend_suite": 853,
+        "build": "passed",
+        "runtime_files": 28,
+        "diff_check": "passed",
+        "first_failure": "Fresh origin/new guest, dashboard503 from first request; inventory header without count, no storage counters/priority list/sample spinach",
+        "recovery": "Removed agent-owned fault flag then clicked 다시 연결; actual API confirms empty inventory",
+        "empty_home_shopping_summaries": 0,
+        "first_entry_actions": [
+          "직접 입력",
+          "영수증으로 추가"
+        ],
+        "manual_entry": "Direct manual panel opens with empty name, default1개 and no previous-food name suggestions",
+        "primary_inventory_count": 5,
+        "primary_shopping_summaries": 1,
+        "primary_shopping_completed_items": 2,
+        "base_database_food_payload_signature": "unchanged7rows",
+        "device_scroll": 0,
+        "food_mutations": "none"
+      }
+    },
+    {
+      "flow": "loading-and-failure",
+      "status": "partial",
+      "historical_evidence": [
+        "artifacts/unavailable-inventory-2026-10-10/iteration-audit.json",
+        "artifacts/account-entry-2026-10-11/verification.json",
+        "artifacts/offline-account-recovery-2026-10-11/verification.json",
+        "artifacts/cold-entry-failure-2026-10-11/verification.json"
+      ],
+      "observed_scope": "Delayed load and unavailable API recovery",
+      "unproven": "Full native/dark combinations",
+      "latest_account_entry": {
+        "frontend_suite": 853,
+        "build": "passed",
+        "runtime_files": 28,
+        "diff_check": "passed",
+        "live_account_path": "Home account control -> login and guest-settings panel -> Home",
+        "live_label": "계정 열기",
+        "live_text": "계정",
+        "live_person_icons": 1,
+        "live_status_dots": 0,
+        "live_touch_height": 44,
+        "device_scroll": 0,
+        "rendered_states": [
+          "connected",
+          "checking",
+          "offline-cached",
+          "auth_required",
+          "fixture"
+        ],
+        "offline_render": "최근 기록 5분 전; explicit cached-data accessibility warning",
+        "fixture_render": "체험 중; reload-loss accessibility warning",
+        "record_writes": "none"
+      },
+      "latest_connected_read_failure_validation": {
+        "before_inventory_count": 5,
+        "failed_read_inventory_count": 5,
+        "offline_header": "최근 기록 plus cache age; cached-data accessible warning",
+        "offline_home": "Read-failure notice and last-confirmed time shown",
+        "offline_detail": "Cabbage2packs retained; only close/date guidance/change-history actions shown; durable mutation controls absent",
+        "recovery": "Cleared request blocking, clicked 식품 목록 다시 불러오기",
+        "recovered_account_label": "계정 열기",
+        "recovered_account_text": "계정",
+        "recovered_inventory_count": 5,
+        "recovered_offline_notice": null,
+        "device_scroll": 0,
+        "food_mutations": "none",
+        "runtime_files": 28,
+        "runtime_integrity": "passed"
+      },
+      "latest_cold_read_validation": {
+        "frontend_suite": 853,
+        "build": "passed",
+        "runtime_files": 28,
+        "diff_check": "passed",
+        "first_failure": "Fresh origin/new guest, dashboard503 from first request; inventory header without count, no storage counters/priority list/sample spinach",
+        "recovery": "Removed agent-owned fault flag then clicked 다시 연결; actual API confirms empty inventory",
+        "empty_home_shopping_summaries": 0,
+        "first_entry_actions": [
+          "직접 입력",
+          "영수증으로 추가"
+        ],
+        "manual_entry": "Direct manual panel opens with empty name, default1개 and no previous-food name suggestions",
+        "primary_inventory_count": 5,
+        "primary_shopping_summaries": 1,
+        "primary_shopping_completed_items": 2,
+        "base_database_food_payload_signature": "unchanged7rows",
+        "device_scroll": 0,
+        "food_mutations": "none"
+      }
+    },
+    {
+      "flow": "intake-manual",
+      "status": "partial",
+      "historical_evidence": [
+        "artifacts/connected-meal-intake-2026-10-10/iteration-audit.json",
+        "artifacts/brand-density-2026-10-10/audit.json",
+        "artifacts/manual-reference-2026-10-10/audit.json",
+        "artifacts/storage-location-journey-2026-10-10/verification.json",
+        "artifacts/manual-quantity-payload-2026-10-11/verification.json",
+        "artifacts/current-browser-journey-2026-10-11/verification.json",
+        "artifacts/narrow-web-journey-2026-10-11/verification.json",
+        "artifacts/manual-action-order-2026-10-11/verification.json",
+        "artifacts/manual-inline-error-2026-10-11/verification.json",
+        "artifacts/manual-device-validation-2026-10-11/verification.json",
+        "artifacts/cold-entry-failure-2026-10-11/verification.json"
+      ],
+      "observed_scope": "Connected direct save without optional estimate, empty brand stored; actual API custom refrigerator location creation, exact manual save readback,1-pack food detail and reload verified; iPhone location keyboard reveal and44px method choices measured",
+      "unproven": "Interrupted manual write acknowledgement combinations",
+      "latest_quantity_payload_validation": "Source-extracted request expressions preserve formatted numeric quantities and unit numerals; malformed quantity guard stops before pending save registration. Actual browser save/readback not-run.",
+      "latest_runtime_checkpoint": "artifacts/current-browser-journey-2026-10-11/verification.json",
+      "latest_runtime_scope": "Current browser save and reload of 3팩(200g) ambient food retained exact quantity and unit; one named local QA record added, existing records preserved.",
+      "latest_narrow_web_validation": {
+        "title_before": {
+          "sheet_width": 296,
+          "sheet_scroll_width": 506,
+          "title_width": 478
+        },
+        "title_after": {
+          "sheet_width": 296,
+          "sheet_scroll_width": 296,
+          "title_width": 204,
+          "title_scroll_width": 204,
+          "close_button": 44
+        },
+        "manual_after": {
+          "visible_content_width": 281,
+          "scroll_width": 281,
+          "form_and_field_width": 225,
+          "summary_width": 225,
+          "summary_scroll_width": 225,
+          "scroll_left": 0,
+          "unit_button_size": 44,
+          "quantity": "1.1234L"
+        },
+        "demo_home_order": [
+          "시금치",
+          "국산콩 두부",
+          "맛타리버섯"
+        ],
+        "live_preview_after_cleanup": {
+          "viewport": 1280,
+          "mode": "preview",
+          "food_count": 5,
+          "device_scroll": 0
+        }
+      },
+      "latest_manual_action_order": {
+        "frontend_suite": 838,
+        "build": "passed",
+        "runtime_files": 28,
+        "diff_check": "passed",
+        "current_live_state": "Existing-name suggestion selected milk, 1개, cold storage; no save",
+        "name_input_before_y": 301.8921,
+        "name_input_after_y": 299.3213,
+        "action_layout_height": 46,
+        "action_description": "manual-submit-summary",
+        "date_note_bottom_y": 567.4075,
+        "save_panel_top_y": 575.0439,
+        "device_scroll": 0,
+        "record_writes": "none"
+      },
+      "latest_manual_inline_validation": {
+        "frontend_suite": 838,
+        "focused_existing_tests": 16,
+        "build": "passed",
+        "runtime_files": 28,
+        "diff_check": "passed",
+        "invalid_draft": "0개",
+        "invalid_save_disabled": true,
+        "error_instances": 1,
+        "error_gap_pixels": 5.55,
+        "error_light_color": "rgb(158,64,55)",
+        "corrected_draft": "1.1234L",
+        "corrected_error_instances": 0,
+        "corrected_save_disabled": false,
+        "corrected_summary": "우유 / 1.1234L / 냉장 보관",
+        "keyboard": "Visible during invalid entry; dismissed by manual tab focus",
+        "device_scroll": 0,
+        "record_writes": "none"
+      },
+      "latest_device_validation": {
+        "invalid_quantity": "0개",
+        "error_count": 1,
+        "save_disabled_on_invalid": true,
+        "error_color": "rgb(255,137,117)",
+        "sheet_background": "rgb(16,20,25)",
+        "sheet_client_width": 427,
+        "sheet_scroll_width": 427,
+        "corrected_quantity": "0.0004kg",
+        "error_count_after_correction": 0,
+        "save_disabled_after_correction": false,
+        "action_height": 46,
+        "keyboard": "Shown while editing; manual-tab focus dismisses it; Android navigation visible after dismissal",
+        "device_scroll": 0,
+        "record_writes": "none",
+        "restored": "iPhone, light theme, Home; foods5, unread1, cart2checked"
+      },
+      "latest_cold_read_validation": {
+        "frontend_suite": 853,
+        "build": "passed",
+        "runtime_files": 28,
+        "diff_check": "passed",
+        "first_failure": "Fresh origin/new guest, dashboard503 from first request; inventory header without count, no storage counters/priority list/sample spinach",
+        "recovery": "Removed agent-owned fault flag then clicked 다시 연결; actual API confirms empty inventory",
+        "empty_home_shopping_summaries": 0,
+        "first_entry_actions": [
+          "직접 입력",
+          "영수증으로 추가"
+        ],
+        "manual_entry": "Direct manual panel opens with empty name, default1개 and no previous-food name suggestions",
+        "primary_inventory_count": 5,
+        "primary_shopping_summaries": 1,
+        "primary_shopping_completed_items": 2,
+        "base_database_food_payload_signature": "unchanged7rows",
+        "device_scroll": 0,
+        "food_mutations": "none"
+      }
+    },
+    {
+      "flow": "intake-receipt",
+      "status": "partial",
+      "historical_evidence": [
+        "artifacts/receipt-recovery-2026-10-09/iteration-audit.json",
+        "artifacts/intake-failure-recovery-2026-10-10/verification.json",
+        "artifacts/receipt-saved-navigation-2026-10-10/verification.json",
+        "artifacts/receipt-resume-states-2026-10-10/verification.json",
+        "artifacts/real-receipt-path-2026-10-10/verification.json",
+        "artifacts/document-quality-2026-10-10/verification.json",
+        "artifacts/receipt-lookup-lifecycle-2026-10-10/verification.json",
+        "artifacts/food-photo-recovery-2026-10-11/verification.json",
+        "artifacts/ocr-review-current-2026-10-11/verification.json",
+        "artifacts/receipt-review-current-2026-10-11/verification.json",
+        "artifacts/receipt-confirmation-focus-2026-10-11/verification.json",
+        "artifacts/receipt-editor-clarity-2026-10-11/verification.json",
+        "artifacts/receipt-input-validation-2026-10-11/verification.json"
+      ],
+      "observed_scope": "Connected intake service and upload failure; retry selection and direct input GUI. Saved receipt navigation execution.; current synthetic missing/committed GET GUI, next selection and inventory focus validated; actual Paddle/API receipt recognition and product-only commit on synthetic receipt, quantity persistence and unknown-price omission verified; sharp sparse document quality discrimination and actual OCR review verified; input-bound name/barcode lookup lifecycle and runtime old-notice reset verified",
+      "unproven": "Real merchant photo quality, camera capture and cancelled/owner-switch variants",
+      "latest_photo_validation": "Current food photo markup verified by SSR and source-extracted error transitions; live browser and measured loading performance not-run.",
+      "latest_ocr_service_checkpoint": "artifacts/ocr-review-current-2026-10-11/verification.json",
+      "latest_ocr_service_scope": "Paddle worker restored and real predict readiness verified; current browser synthetic label recognized name/use-by/storage without auto-saving. Receipt recognition not rerun in this checkpoint; real-photo accuracy and physical camera unproven.",
+      "latest_runtime_scope": "Actual Paddle synthetic receipt recognition: 2 products, discount/subtotal/payment excluded; storage edits cannot bypass confirmation; explicit confirmation enables save; draft resumes after close/reload, confirmation required again. No commit, existing 5 foods retained; final device scroll 0 and no visible bullet joins.",
+      "latest_confirmation_validation": "Last keyboard confirmation now focuses confirmed product instead of whole dialog. One visible confirmation badge; polite atomic status preserved. Next selected pending product ordering covered by extracted-handler regression. No inventory commit.",
+      "latest_editor_clarity": {
+        "frontend_suite": 846,
+        "build": "passed",
+        "runtime_files": 28,
+        "diff_check": "passed",
+        "live_raw_name": "영수증 이름: 국산콩 두부 모",
+        "font_size": "12px",
+        "white_space": "normal",
+        "saved_name": "국산콩 두부",
+        "quantity": "1모",
+        "selected_items": 2,
+        "requires_confirmation": 1,
+        "save_disabled": true,
+        "confirm_action_height": 44,
+        "scrolled_confirm_bottom": 451.15,
+        "save_footer_top": 525.93,
+        "device_scroll": 0,
+        "record_writes": "none"
+      },
+      "latest_input_validation": {
+        "frontend_suite": 846,
+        "build": "passed",
+        "runtime_files": 28,
+        "diff_check": "passed",
+        "tiny_quantity": "0.0004",
+        "native_range_underflow": false,
+        "native_step_mismatch": false,
+        "tiny_aria_invalid": false,
+        "blank_quantity": "",
+        "blank_aria_invalid": true,
+        "error_instances": 1,
+        "inline_gap_pixels": 2.78,
+        "keyboard_open_footer_position": "static",
+        "keyboard_open_field_top": 338.87,
+        "keyboard_open_field_bottom": 369.42,
+        "keyboard_open_footer_top": 614.86,
+        "keyboard_closed_footer_position": "sticky",
+        "name_recovery": "Focus quantity, then press 수정하기 -> food name input focused",
+        "restored_name": "국산콩 두부",
+        "restored_quantity": "1",
+        "device_scroll": 0,
+        "record_writes": "none"
+      }
+    },
+    {
+      "flow": "intake-barcode",
+      "status": "partial",
+      "historical_evidence": [
+        "artifacts/barcode-label-entry-2026-10-10/iteration-audit.json",
+        "artifacts/barcode-status-2026-10-10/verification.json",
+        "artifacts/barcode-boundary-2026-10-10/verification.json",
+        "artifacts/barcode-manual-context-2026-10-10/verification.json"
+      ],
+      "observed_scope": "Connected unknown-format and date-only GS1 GUI; date apply/remove and input result reset; 8 executed lookup boundary and delayed response cases.",
+      "unproven": "Real provider success and slow response GUI"
+    },
+    {
+      "flow": "intake-label",
+      "status": "partial",
+      "historical_evidence": [
+        "artifacts/connected-date-recovery-2026-10-10/iteration-audit.json",
+        "artifacts/label-unavailable-2026-10-10/verification.json",
+        "artifacts/label-existing-recovery-2026-10-10/verification.json",
+        "artifacts/real-ocr-path-2026-10-10/verification.json",
+        "artifacts/document-quality-2026-10-10/verification.json",
+        "artifacts/manual-quantity-payload-2026-10-11/verification.json",
+        "artifacts/ocr-review-current-2026-10-11/verification.json"
+      ],
+      "observed_scope": "Connected engine unavailable GUI; new and existing-food fallback; target and 2.5 packs retained; empty date/kind blocks save; cancel restores original detail.; real Paddle worker/API/UI recognition, explicit save and reload on synthetic label verified; sharp sparse document quality discrimination and actual OCR review verified",
+      "unproven": "Real package photos, camera/device input, multiple label/receipt quality cases",
+      "latest_quantity_payload_validation": "Source-extracted request expressions preserve formatted numeric quantities and unit numerals; malformed quantity guard stops before pending save registration. Actual browser save/readback not-run.",
+      "latest_ocr_service_checkpoint": "artifacts/ocr-review-current-2026-10-11/verification.json",
+      "latest_ocr_service_scope": "Paddle worker restored and real predict readiness verified; current browser synthetic label recognized name/use-by/storage without auto-saving. Receipt recognition not rerun in this checkpoint; real-photo accuracy and physical camera unproven."
+    },
+    {
+      "flow": "food-details-history",
+      "status": "partial",
+      "historical_evidence": [
+        "artifacts/product-history-2026-10-10/iteration-audit.json",
+        "artifacts/guidance-editors-2026-10-10/audit.json",
+        "artifacts/storage-split-ack-2026-10-10/audit.json",
+        "artifacts/product-save-recovery-2026-10-10/audit.json",
+        "artifacts/opened-draft-2026-10-10/audit.json",
+        "artifacts/detail-note-density-2026-10-10/audit.json",
+        "artifacts/detail-safearea-2026-10-10/verification.json",
+        "artifacts/received-detail-2026-10-10/verification.json",
+        "artifacts/detail-revision-2026-10-10/verification.json",
+        "artifacts/partial-shopping-receive-2026-10-10/verification.json",
+        "artifacts/storage-location-journey-2026-10-10/verification.json",
+        "artifacts/storage-location-rename-2026-10-10/verification.json",
+        "artifacts/food-photo-recovery-2026-10-11/verification.json",
+        "artifacts/current-browser-journey-2026-10-11/verification.json",
+        "artifacts/meal-quantity-cancel-2026-10-11/verification.json",
+        "artifacts/meal-return-verified-2026-10-11/verification.json",
+        "artifacts/photo-failure-runtime-2026-10-11/verification.json",
+        "artifacts/theme-style-cleanup-2026-10-11/verification.json",
+        "artifacts/live-quantity-precision-2026-10-11/verification.json",
+        "artifacts/detail-browse-focus-2026-10-11/verification.json",
+        "artifacts/inventory-sticky-entry-2026-10-11/verification.json",
+        "artifacts/inventory-device-entry-2026-10-11/verification.json",
+        "artifacts/storage-shortcut-commit-2026-10-11/verification.json",
+        "artifacts/empty-search-recovery-2026-10-11/verification.json",
+        "artifacts/home-priority-date-order-2026-10-11/verification.json",
+        "artifacts/detail-information-hierarchy-2026-10-11/verification.json",
+        "artifacts/narrow-web-journey-2026-10-11/verification.json",
+        "artifacts/neutral-food-photo-2026-10-11/verification.json",
+        "artifacts/history-window-2026-10-11/verification.json",
+        "artifacts/history-quantity-2026-10-11/verification.json",
+        "artifacts/guidance-return-2026-10-11/verification.json",
+        "artifacts/offline-account-recovery-2026-10-11/verification.json",
+        "artifacts/reminder-edit-2026-10-11/verification.json"
+      ],
+      "observed_scope": "Draft return, product rejection/retry, partial storage replay, custom notes, persisted opened record; calibrated iPhone/Pixel detail header safe area verified with zero screen/page scrolling; native accessibility received-detail browse and purchase-note deduplication verified; no-change shopping reads preserve revisions; live stable detail poll and peer update draft retention verified; actual local API partial receive2 of4 eggs, remaining2 shopping, exact new-lot detail and reload verified; actual API custom refrigerator location creation, exact manual save readback,1-pack food detail and reload verified; iPhone location keyboard reveal and44px method choices measured; actual custom location filter survives rename and restoration with same1-pack food; location edit draft/focus retained after35-second background probe; stale reads and pending name acknowledgments tested",
+      "unproven": "Current narrow/dark mixed mutation states",
+      "latest_photo_validation": {
+        "unmatched_generic": "Current cabbage home/detail uses neutral placeholder",
+        "known_photos": "Two milk home photos still load with naturalWidth900",
+        "blocked_known_photo": "Actual onion JPG blocked in temporary browser tab; detail shows88px placeholder, stock3 remains",
+        "device_scroll": 0,
+        "record_writes": "none",
+        "cleanup": "Blocked URLs cleared, cache override reset, Network disabled, temporary tab closed; primary Home retained"
+      },
+      "latest_runtime_checkpoint": "artifacts/current-browser-journey-2026-10-11/verification.json",
+      "latest_runtime_scope": "Current iPhone and Pixel quantity display verified; unit squeeze fixed and one-line presentation confirmed. Half draft preview restored without consumption.",
+      "latest_quantity_cancel_checkpoint": "artifacts/meal-return-verified-2026-10-11/verification.json",
+      "latest_quantity_cancel_scope": "Current browser: keyboard-open Cancel worked with one native click, editor closed and opener regained focus; closing detail restored 30 minutes and 2 servings with focus on the original cabbage recovery action. No reference save or consumption performed.",
+      "latest_theme_validation": "Theme phase moved before paint; computed property samples for the current home/detail matched in light and dark after 36 dominated declarations were removed. Full first-paint timing and other screen states not measured.",
+      "latest_precision_checkpoint": "artifacts/live-quantity-precision-2026-10-11/verification.json",
+      "latest_precision_scope": "Latest local API serves quantity changes; browser create/reload/receive kept 1.1234L. Detail step and half preserve precision. 18 original foods retained; no consumption or disposal executed.",
+      "latest_browse_focus_checkpoint": "artifacts/detail-browse-focus-2026-10-11/verification.json",
+      "latest_browse_focus_scope": "Ordinary home priority detail keeps Close focused after loading; Enter closes without recording consumption. Explicit intent and inventory-return behavior pass source route tests.",
+      "latest_inventory_entry_validation": {
+        "home_to_food": "First name and quantity fully visible",
+        "all_list_first_row_top": 211.0692138671875,
+        "all_list_toolbar_bottom": 210.375,
+        "review_filter_first_row_top": 329.08575439453125,
+        "review_filter_toolbar_bottom": 328.39154052734375,
+        "detail_return": "Same filtered food row focused; filter retained; no dialog left",
+        "milk_search_results": 3,
+        "clear_search_results": 5,
+        "keyboard": "Kept on clear; dismissed by moving focus out of input",
+        "device_scroll": 0,
+        "data_writes": "None"
+      },
+      "latest_device_navigation_validation": {
+        "iPhone_dark": "First row below toolbar; 5 foods retained",
+        "Pixel_dark_before": {
+          "heading_top": 60.801368713378906,
+          "status_bottom": 77.91780853271484
+        },
+        "Pixel_dark_after": {
+          "heading_top": 102.88356018066406,
+          "status_bottom": 77.91780853271484,
+          "first_row_top": 205.7876739501953,
+          "toolbar_bottom": 205.1301422119141
+        },
+        "Pixel_food_reselect": "scrollTop842 and tail181 preserved",
+        "Pixel_review_filter": "1 row visible below toolbar; title below status bar",
+        "iPhone_return": "first row211.069 below toolbar210.375",
+        "restored": "iPhone, light, full food list",
+        "record_writes": "none"
+      },
+      "latest_storage_shortcut_validation": {
+        "refrigerated": 3,
+        "frozen": 1,
+        "ambient": 1,
+        "all_destinations": "Food selected; storage select focused; first row below toolbar; device scroll0",
+        "reset": "All storage selected, Food selected, 5 rows retained"
+      },
+      "latest_empty_search_recovery": {
+        "both_actions_height_px": 44,
+        "edit": "Query 아보카도 retained and all 4 characters selected, cold filter retained, keyboard opened",
+        "clear_filters": "Query retained, storage reset to all, keyboard closed",
+        "useful_recovery": "우유 + ambient -> 0 results; clear filters -> 3 milk rows while retaining 우유",
+        "reset": "All 5 rows restored; query cleared; no record writes",
+        "device_scroll": 0
+      },
+      "latest_priority_order_validation": {
+        "home_and_priority_filter_names": [
+          "양배추",
+          "우유",
+          "검증용 우유"
+        ],
+        "unknown_date_summary_count": 1,
+        "all_inventory_count": 5,
+        "device_scroll": 0,
+        "restored": "All inventory filter, Home",
+        "record_writes": "none"
+      },
+      "latest_detail_hierarchy_validation": {
+        "light": {
+          "headings": [
+            "양배추"
+          ],
+          "quantity": "남은 2팩",
+          "identity_rows": 0,
+          "record_input": "2",
+          "device_scroll": 0
+        },
+        "dark": {
+          "headings": [
+            "우유"
+          ],
+          "quantity": "남은 2개",
+          "identity": "장보기",
+          "font_px": 19,
+          "record_input": "2",
+          "device_scroll": 0
+        },
+        "restored": "Light Home, 5 foods",
+        "record_writes": "none"
+      },
+      "latest_narrow_web_validation": {
+        "title_before": {
+          "sheet_width": 296,
+          "sheet_scroll_width": 506,
+          "title_width": 478
+        },
+        "title_after": {
+          "sheet_width": 296,
+          "sheet_scroll_width": 296,
+          "title_width": 204,
+          "title_scroll_width": 204,
+          "close_button": 44
+        },
+        "manual_after": {
+          "visible_content_width": 281,
+          "scroll_width": 281,
+          "form_and_field_width": 225,
+          "summary_width": 225,
+          "summary_scroll_width": 225,
+          "scroll_left": 0,
+          "unit_button_size": 44,
+          "quantity": "1.1234L"
+        },
+        "demo_home_order": [
+          "시금치",
+          "국산콩 두부",
+          "맛타리버섯"
+        ],
+        "live_preview_after_cleanup": {
+          "viewport": 1280,
+          "mode": "preview",
+          "food_count": 5,
+          "device_scroll": 0
+        }
+      },
+      "latest_history_window": {
+        "frontend_suite": 849,
+        "new_state_tests": 3,
+        "build": "passed",
+        "runtime_files": 28,
+        "diff_check": "passed",
+        "fixture_component": "Actual FoodHistory, isolated method returning7 synthetic records; no API mutations",
+        "fixture_counts": [
+          4,
+          7,
+          4
+        ],
+        "fixture_header_counts": [
+          "4개",
+          "7개",
+          "4개"
+        ],
+        "expand_scroll_top": 0,
+        "toggle_height": 46,
+        "current_food": "양배추",
+        "current_history_empty": true,
+        "device_scroll": 0,
+        "record_writes": "none",
+        "cleanup": "Temporary fixture browser tab closed; primary detail retained"
+      },
+      "latest_history_quantity": {
+        "frontend_suite": 853,
+        "new_cases": 4,
+        "build": "passed",
+        "runtime_files": 28,
+        "diff_check": "passed",
+        "fixture_unknown": "기록된 양을 확인할 수 없어요.",
+        "fixture_small": "0.0000004팩 먹었어요",
+        "known_decimal": "1.1234L 먹었어요",
+        "disposal": "0.2팩 폐기했어요",
+        "record_writes": "none",
+        "cleanup": "Temporary fixture tab closed; original detail retained"
+      },
+      "latest_guidance_return": {
+        "focused_existing_tests": 13,
+        "build": "passed",
+        "runtime_files": 28,
+        "diff_check": "passed",
+        "live_path": "Home unknown-date summary -> frozen milk detail -> date guide -> same detail",
+        "draft_quantity_before": "100.1234",
+        "draft_quantity_after": "100.1234",
+        "return_focus": "날짜 안내 보기",
+        "guide_keyboard_visible": false,
+        "device_scroll": 0,
+        "restored_draft": "250",
+        "record_writes": "none"
+      },
+      "latest_connected_read_failure_validation": {
+        "before_inventory_count": 5,
+        "failed_read_inventory_count": 5,
+        "offline_header": "최근 기록 plus cache age; cached-data accessible warning",
+        "offline_home": "Read-failure notice and last-confirmed time shown",
+        "offline_detail": "Cabbage2packs retained; only close/date guidance/change-history actions shown; durable mutation controls absent",
+        "recovery": "Cleared request blocking, clicked 식품 목록 다시 불러오기",
+        "recovered_account_label": "계정 열기",
+        "recovered_account_text": "계정",
+        "recovered_inventory_count": 5,
+        "recovered_offline_notice": null,
+        "device_scroll": 0,
+        "food_mutations": "none",
+        "runtime_files": 28,
+        "runtime_integrity": "passed"
+      },
+      "latest_reminder_edit_validation": {
+        "api_suite": 596,
+        "api_new_cases": 4,
+        "focused_api": 7,
+        "frontend_suite": 861,
+        "new_frontend_cases": 4,
+        "build": "passed",
+        "runtime_files": 28,
+        "diff_check": "passed",
+        "before_fix": "4 reminder endpoint tests failed; edits409",
+        "live_qa": "Separate guest: create1 QA food, reminder13 -> edit20 -> dashboard20 -> replay no revision/history growth",
+        "live_ui": "Existing cabbage: date20/typeuse_by preview with explicit meaning guidance; cancel returns to saved13",
+        "existing_food_payloads_unchanged": 19,
+        "private_backups_databases": 8,
+        "api_refresh": "Owned local API7058 on8088; proxy8091 health200; existing auth/CORS/settings retained",
+        "device_scroll": 0
+      }
+    },
+    {
+      "flow": "meal-and-return",
+      "status": "partial",
+      "historical_evidence": [
+        "artifacts/connected-meal-intake-2026-10-10/iteration-audit.json",
+        "artifacts/meal-completion-2026-10-10/audit.json",
+        "artifacts/multi-day-flow-2026-10-10/audit.json",
+        "artifacts/meal-guidance-density-2026-10-10/verification.json",
+        "artifacts/connected-shopping-handoff-2026-10-10/verification.json",
+        "artifacts/meal-no-match-recovery-2026-10-10/verification.json",
+        "artifacts/food-photo-recovery-2026-10-11/verification.json",
+        "artifacts/meal-quantity-cancel-2026-10-11/verification.json",
+        "artifacts/meal-return-verified-2026-10-11/verification.json",
+        "artifacts/cooking-quantity-precision-2026-10-11/verification.json",
+        "artifacts/cooking-input-draft-2026-10-11/verification.json",
+        "artifacts/meal-quantity-recovery-label-2026-10-11/verification.json",
+        "artifacts/cooking-allocation-unit-2026-10-11/verification.json",
+        "artifacts/meal-quantity-guidance-2026-10-11/verification.json"
+      ],
+      "observed_scope": "Single partial consumption; three-day save, second day completion and reload; current local API2-serving save,4-egg shortage handoff and reload, saved meal reopened with serving selector consistent; first-food quantity no-match classified by actual API, targeted inspection and30-minute/1-serving return focus verified; no blind time expansion; all API555/frontend680 regression passed",
+      "unproven": "Interrupted multi-day write and owner-switch GUI",
+      "latest_photo_validation": "Current food photo markup verified by SSR and source-extracted error transitions; live browser and measured loading performance not-run.",
+      "latest_quantity_cancel_checkpoint": "artifacts/meal-return-verified-2026-10-11/verification.json",
+      "latest_quantity_cancel_scope": "Current browser: keyboard-open Cancel worked with one native click, editor closed and opener regained focus; closing detail restored 30 minutes and 2 servings with focus on the original cabbage recovery action. No reference save or consumption performed.",
+      "latest_cooking_precision_checkpoint": "artifacts/cooking-quantity-precision-2026-10-11/verification.json",
+      "latest_cooking_precision_scope": "Planner conversion and TestClient save/completion retain subgram portions and reject overage; frontend exact selection, summary and decimal totals verified. Latest API loaded; 19 original food quantities preserved. Browser completion not-run.",
+      "latest_cooking_input_checkpoint": "artifacts/cooking-input-draft-2026-10-11/verification.json",
+      "latest_cooking_input_scope": "Explicit demo browser proved empty and partial decimal drafts remain editable, invalid values block completion, 0 intentionally skips and restores the previous amount. Input font and button targets verified. Demo completion and connected mutation not performed.",
+      "latest_quantity_recovery_labels": {
+        "entry_device_scroll": 0,
+        "clicked": "양배추 1팩의 양 입력",
+        "editor": "1팩에 들어 있는 양, empty amount, disabled save until amount/unit supplied",
+        "remaining_stock": "2팩 unchanged",
+        "cancel": "No amount entered/saved, returned to original planner action",
+        "inventory_count": 5,
+        "record_writes": "none"
+      },
+      "latest_mixed_unit_completion_validation": {
+        "known_stock": "200g measured lot supplies recipe while an unknown pack is ignored and unchanged",
+        "reference_flow": "100g known stock + unresolved pack -> quantity recovery targets only pack; explicit500g/pack reference preserves existing quantity/date/storage; save allocates100g and0.2pack; complete leaves0.8pack",
+        "completion_modes": [
+          "default allocations",
+          "explicit consumptions"
+        ],
+        "replay": "Already completed; no second deduction"
+      },
+      "latest_quantity_guidance_validation": {
+        "existing_focused_tests": 20,
+        "build": "passed",
+        "runtime_files": 28,
+        "diff_check": "passed",
+        "live_title": "1팩 또는 1개의 양이 필요해요",
+        "description_visible": false,
+        "sheet_client_width": 393,
+        "sheet_scroll_width": 393,
+        "device_scroll": 0,
+        "visible_bullet_separator": false,
+        "navigation": "Meal -> cabbage per-pack reference editor -> cancel -> close detail -> meal; no save or consumption",
+        "record_writes": "none"
+      }
+    },
+    {
+      "flow": "shopping",
+      "status": "partial",
+      "historical_evidence": [
+        "artifacts/linked-shopping-2026-10-10/iteration-audit.json",
+        "artifacts/shopping-receive-2026-10-10/audit.json",
+        "artifacts/shopping-autofill-2026-10-10/verification.json",
+        "artifacts/shopping-draft-readback-2026-10-10/verification.json",
+        "artifacts/shopping-save-confirmation-2026-10-10/verification.json",
+        "artifacts/shopping-mobile-entry-2026-10-10/verification.json",
+        "artifacts/shopping-receive-tap-2026-10-10/verification.json",
+        "artifacts/received-detail-2026-10-10/verification.json",
+        "artifacts/detail-revision-2026-10-10/verification.json",
+        "artifacts/connected-shopping-handoff-2026-10-10/verification.json",
+        "artifacts/partial-shopping-receive-2026-10-10/verification.json",
+        "artifacts/shopping-quantity-2026-10-11/verification.json",
+        "artifacts/current-browser-journey-2026-10-11/verification.json",
+        "artifacts/live-quantity-precision-2026-10-11/verification.json",
+        "artifacts/cooking-quantity-precision-2026-10-11/verification.json",
+        "artifacts/shopping-validation-focus-2026-10-11/verification.json",
+        "artifacts/shopping-submit-order-2026-10-11/verification.json"
+      ],
+      "observed_scope": "Manual purchase, partial receive operations, quantity/brand/source reload; quantity autofill restoration, pending-save draft preservation, unknown outcome list-confirm recovery GUI; iPhone/Pixel simulated keyboard direct entry one tap; iPhone receive/cancel one tap and exact quantity readback; native accessibility received-detail browse and purchase-note deduplication verified; no-change shopping reads preserve revisions; live stable detail poll and peer update draft retention verified; current local API2-serving save,4-egg shortage handoff and reload, saved meal reopened with serving selector consistent; actual local API partial receive2 of4 eggs, remaining2 shopping, exact new-lot detail and reload verified",
+      "unproven": "Planned-source receipt and offline/concurrent owner variants",
+      "latest_source_and_test_scope": "Manual shopping and receive preserve API-accepted decimal quantities; exact same-key replay and different quantity conflict verified by API tests; rendered shopping rows and number-field precision constraints verified by SSR. Current browser interaction for this change is not-run.",
+      "latest_runtime_checkpoint": "artifacts/current-browser-journey-2026-10-11/verification.json",
+      "latest_runtime_scope": "Current recorded milk link selects cold 2-count lot and returns to shopping with focus retained; frozen 250ml lot is distinct.",
+      "latest_precision_checkpoint": "artifacts/live-quantity-precision-2026-10-11/verification.json",
+      "latest_precision_scope": "Latest local API serves quantity changes; browser create/reload/receive kept 1.1234L. Detail step and half preserve precision. 18 original foods retained; no consumption or disposal executed.",
+      "latest_cooking_precision_checkpoint": "artifacts/cooking-quantity-precision-2026-10-11/verification.json",
+      "latest_cooking_precision_scope": "Planner conversion and TestClient save/completion retain subgram portions and reject overage; frontend exact selection, summary and decimal totals verified. Latest API loaded; 19 original food quantities preserved. Browser completion not-run.",
+      "latest_manual_validation_focus": {
+        "frontend_suite": 853,
+        "build": "passed",
+        "runtime_files": 28,
+        "diff_check": "passed",
+        "name_failure_focus": "직접 추가 상품명",
+        "quantity_failure_focus": "직접 추가 수량",
+        "unit_failure_focus": "직접 추가 단위",
+        "linked_description": "shopping-manual-error",
+        "quantity_test": "0",
+        "error_seen_above_keyboard": true,
+        "unrelated_unit_edit_keeps_name_error": true,
+        "restored_form": [
+          "empty name",
+          "1",
+          "개"
+        ],
+        "shopping_mutations": "none; every attempted addition failed frontend validation"
+      },
+      "latest_submit_order_validation": {
+        "frontend_suite": 857,
+        "focused_real_handler_tests": 8,
+        "new_cases": 4,
+        "build": "passed",
+        "runtime_files": 28,
+        "diff_check": "passed",
+        "primary_foods": 5,
+        "primary_shopping_completed": 2,
+        "device_scroll": 0,
+        "actual_valid_shopping_submission": "not-run"
+      }
+    },
+    {
+      "flow": "notifications",
+      "status": "partial",
+      "historical_evidence": [
+        "artifacts/notification-navigation-2026-10-10/iteration-audit.json",
+        "artifacts/notification-read-state-2026-10-10/verification.json",
+        "artifacts/notification-dark-2026-10-10/verification.json",
+        "artifacts/settings-notification-audit-2026-10-10/verification.json",
+        "artifacts/notification-settings-paths-2026-10-10/verification.json",
+        "artifacts/notification-subject-2026-10-11/verification.json",
+        "artifacts/push-subject-2026-10-11/verification.json",
+        "artifacts/notification-click-state-2026-10-11/verification.json",
+        "artifacts/settings-saved-state-2026-10-11/verification.json",
+        "artifacts/notification-preferences-noop-2026-10-11/verification.json",
+        "artifacts/notification-day-step-2026-10-11/verification.json",
+        "artifacts/settings-relevance-2026-10-11/verification.json",
+        "artifacts/push-connection-management-2026-10-11/verification.json",
+        "artifacts/push-operation-state-2026-10-11/verification.json",
+        "artifacts/push-registration-readiness-2026-10-11/verification.json",
+        "artifacts/push-owner-scope-2026-10-11/verification.json",
+        "artifacts/notification-save-scope-2026-10-11/verification.json",
+        "artifacts/notification-refresh-order-2026-10-11/verification.json"
+      ],
+      "observed_scope": "Target missing inline recovery and late navigation guard; current light/dark demo read history retains warnings and food targets; measured read-row text contrast; connected guest notification settings-only entry and close/reopen verified, no settings mutation; logged test account settings-only route and cross-entry draft verified; actual320px settings panel overflow fixed and measured",
+      "unproven": "Connected nonempty alert owner transitions and native/device variations",
+      "latest_subject_presentation_validation": {
+        "title_before": "표시 날짜를 확인해 주세요",
+        "title_after": "우유 표시 날짜를 확인해 주세요",
+        "body_after": "날짜를 확인하지 못했어요. 포장지 촬영 또는 직접 입력으로 실제 표시 날짜를 확인하세요.",
+        "personal_reminder": "양배추 내 알림일이 다가와요; 내가 정한 날짜는10월13일",
+        "tooltip": "다크 모드로 전환",
+        "unread_count_before_after": 1,
+        "food_count": 5,
+        "device_scroll": 0,
+        "read_or_food_mutations": "none",
+        "restored": "Home, light"
+      },
+      "latest_push_subject_validation": {
+        "focused_delivery_tests": 15,
+        "new_cases": 4,
+        "full_API_tests": 589,
+        "warnings": 9,
+        "diff_check": "passed",
+        "sender": "Isolated fake sender; existing worker dedup test passed",
+        "real_push": "not-run"
+      },
+      "latest_click_state_validation": {
+        "before": "5 new click tests failed on old implementation",
+        "after": "12 service-worker tests passed, including7 new cases",
+        "draft": "Mock client draft1.1234L retained with0 navigation calls",
+        "external_targets": "Protocol-relative, external HTTPS and javascript targets normalize to app root",
+        "navigation": "Returned/new window focused, disappeared window reopened"
+      },
+      "latest_saved_settings_validation": {
+        "lead_days_before": 2,
+        "edited_draft": 3,
+        "save_and_unsaved_shown_on_edit": true,
+        "restored_without_save": 2,
+        "save_and_unsaved_removed_on_restore": true,
+        "keyboard_closed": true,
+        "device_scroll": 0,
+        "actual_save": "not-run",
+        "read_state": "unread1 retained"
+      },
+      "latest_preferences_noop_validation": {
+        "scope": "Local anonymous QA workspace, exact current values sent unchanged",
+        "HTTP_status": 200,
+        "preferences_equal": true,
+        "revision_before": 2,
+        "revision_after": 2,
+        "API_PID": 24417,
+        "API_health": 200,
+        "proxy_health": 200,
+        "backup": "/tmp/rescue-prefs-noop-refresh-2026-10-11",
+        "database_count": 7,
+        "food_record_count": 19,
+        "all_food_payloads_preserved": true
+      },
+      "latest_day_step_validation": {
+        "initial_saved_days": 2,
+        "plus_result": 3,
+        "keyboard_on_button_adjustment": false,
+        "button_size_px": 44,
+        "lower_bound": "0 disables minus",
+        "upper_bound": "14 disables plus",
+        "restored_days": 2,
+        "actual_save": "not-run",
+        "device_scroll": 0,
+        "unread_notifications": 1
+      },
+      "latest_settings_relevance": {
+        "push_unavailable_no_saved_hours": "Quiet input count0",
+        "named_settings_region_count": 1,
+        "lead_days": 2,
+        "device_scroll": 0,
+        "actual_save": "not-run",
+        "unread_count": 1,
+        "restored": "Home"
+      },
+      "latest_connection_management_validation": {
+        "frontend_suite": 828,
+        "new_local_cleanup_tests": 4,
+        "build": "passed",
+        "runtime_files": 28,
+        "diff_check": "passed",
+        "real_connection_remove": "not-run"
+      },
+      "latest_push_operation_state_validation": {
+        "frontend_suite": 832,
+        "new_real_handler_regressions": 4,
+        "build": "passed",
+        "runtime_files": 28,
+        "diff_check": "passed",
+        "cases": [
+          "Duplicate subscribe and remove blocked during connection",
+          "Other connection operations blocked during removal",
+          "Failure releases operation guard",
+          "Unsaved settings preserved and successful connection copy matches persisted state"
+        ],
+        "CSS_budget": {
+          "status": "failed",
+          "actual_KB": 291.5,
+          "limit_KB": 260
+        }
+      },
+      "latest_registration_readiness_validation": {
+        "frontend_suite": 834,
+        "focused_push_handlers": 6,
+        "new_cases": 2,
+        "build": "passed",
+        "runtime_files": 28,
+        "diff_check": "passed",
+        "missing_worker": "No permission request, no registration API call, retry shown",
+        "activating_worker": "No subscription API call, busy guard released"
+      },
+      "latest_save_scope_validation": {
+        "frontend_suite": 843,
+        "focused_real_handler_tests": 23,
+        "new_cases": 5,
+        "build": "passed",
+        "runtime_files": 28,
+        "diff_check": "passed"
+      },
+      "latest_refresh_order_validation": {
+        "new_cases": 3,
+        "focused_real_handler_tests": 31,
+        "frontend_suite": 846,
+        "build": "passed",
+        "runtime_files": 28,
+        "diff_check": "passed"
+      }
+    },
+    {
+      "flow": "account-settings",
+      "status": "partial",
+      "historical_evidence": [
+        "artifacts/settings-partial-2026-10-10/iteration-audit.json",
+        "artifacts/login-transfer-2026-10-10/audit.json",
+        "artifacts/transfer-completion-2026-10-10/audit.json",
+        "artifacts/current-owner-checkpoint-2026-10-10/verification.json",
+        "artifacts/settings-notification-audit-2026-10-10/verification.json",
+        "artifacts/notification-settings-draft-2026-10-10/verification.json",
+        "artifacts/notification-settings-paths-2026-10-10/verification.json",
+        "artifacts/connected-mobile-settings-2026-10-10/verification.json",
+        "artifacts/pixel-settings-keyboard-2026-10-10/verification.json",
+        "artifacts/account-revision-2026-10-10/verification.json",
+        "artifacts/notification-settings-concurrent-2026-10-10/verification.json",
+        "artifacts/storage-location-journey-2026-10-10/verification.json",
+        "artifacts/storage-location-rename-2026-10-10/verification.json",
+        "artifacts/password-change-recovery-2026-10-11/verification.json",
+        "artifacts/auth-input-recovery-2026-10-11/verification.json",
+        "artifacts/settings-saved-state-2026-10-11/verification.json",
+        "artifacts/notification-preferences-noop-2026-10-11/verification.json",
+        "artifacts/notification-day-step-2026-10-11/verification.json",
+        "artifacts/settings-relevance-2026-10-11/verification.json",
+        "artifacts/push-connection-management-2026-10-11/verification.json",
+        "artifacts/push-operation-state-2026-10-11/verification.json",
+        "artifacts/push-registration-readiness-2026-10-11/verification.json",
+        "artifacts/push-owner-scope-2026-10-11/verification.json",
+        "artifacts/notification-save-scope-2026-10-11/verification.json",
+        "artifacts/notification-refresh-order-2026-10-11/verification.json",
+        "artifacts/account-entry-2026-10-11/verification.json",
+        "artifacts/offline-account-recovery-2026-10-11/verification.json"
+      ],
+      "observed_scope": "Mandatory vs optional reads, retained unsaved draft; existing account conflict and empty account one-food import GUI/reload; connected guest notification settings-only entry and close/reopen verified, no settings mutation; connected guest notification draft close/reopen, read refresh preservation and explicit cancel verified without settings write; logged test account settings-only route and cross-entry draft verified; actual320px settings panel overflow fixed and measured; actual API connected calibrated iPhone keyboard-safe save/cancel, one-tap save, one-tap close and baseline restore verified; actual API-connected calibrated Pixel10 one-tap cancel/save/close, keyboard-safe period/time inputs, stable device scroll and baseline restore verified; own-save versus read revision boundary and probe races tested; actual connected Pixel own save remains without remote warning after35-second wait; actual two-preview shared settings merge, untouched-field preservation, explicit saved-value labels, one-tap keyboard switch and input-focus restoration verified; baseline restored; actual API custom refrigerator location creation, exact manual save readback,1-pack food detail and reload verified; iPhone location keyboard reveal and44px method choices measured; actual custom location filter survives rename and restoration with same1-pack food; location edit draft/focus retained after35-second background probe; stale reads and pending name acknowledgments tested",
+      "unproven": "Multi-record import and interrupted transfer GUI",
+      "latest_source_and_test_scope": "Password-change validation, recovery, sensitive draft clearing, busy guard and field focus are verified through source-extracted handler/effect tests; final web suite and build passed. Live browser and actual account password change are not-run.",
+      "latest_auth_input_checkpoint": "artifacts/auth-input-recovery-2026-10-11/verification.json",
+      "latest_auth_input_scope": "Current local browser rejected-login email and password edits clear obsolete messages and invalid highlighting. Service-error relevance and busy guards verified by handlers/tests. No successful account sign-in, creation or password change performed.",
+      "latest_saved_settings_validation": {
+        "lead_days_before": 2,
+        "edited_draft": 3,
+        "save_and_unsaved_shown_on_edit": true,
+        "restored_without_save": 2,
+        "save_and_unsaved_removed_on_restore": true,
+        "keyboard_closed": true,
+        "device_scroll": 0,
+        "actual_save": "not-run",
+        "read_state": "unread1 retained"
+      },
+      "latest_preferences_noop_validation": {
+        "scope": "Local anonymous QA workspace, exact current values sent unchanged",
+        "HTTP_status": 200,
+        "preferences_equal": true,
+        "revision_before": 2,
+        "revision_after": 2,
+        "API_PID": 24417,
+        "API_health": 200,
+        "proxy_health": 200,
+        "backup": "/tmp/rescue-prefs-noop-refresh-2026-10-11",
+        "database_count": 7,
+        "food_record_count": 19,
+        "all_food_payloads_preserved": true
+      },
+      "latest_day_step_validation": {
+        "initial_saved_days": 2,
+        "plus_result": 3,
+        "keyboard_on_button_adjustment": false,
+        "button_size_px": 44,
+        "lower_bound": "0 disables minus",
+        "upper_bound": "14 disables plus",
+        "restored_days": 2,
+        "actual_save": "not-run",
+        "device_scroll": 0,
+        "unread_notifications": 1
+      },
+      "latest_settings_relevance": {
+        "push_unavailable_no_saved_hours": "Quiet input count0",
+        "named_settings_region_count": 1,
+        "lead_days": 2,
+        "device_scroll": 0,
+        "actual_save": "not-run",
+        "unread_count": 1,
+        "restored": "Home"
+      },
+      "latest_connection_management_validation": {
+        "frontend_suite": 828,
+        "new_local_cleanup_tests": 4,
+        "build": "passed",
+        "runtime_files": 28,
+        "diff_check": "passed",
+        "real_connection_remove": "not-run"
+      },
+      "latest_push_operation_state_validation": {
+        "frontend_suite": 832,
+        "new_real_handler_regressions": 4,
+        "build": "passed",
+        "runtime_files": 28,
+        "diff_check": "passed",
+        "cases": [
+          "Duplicate subscribe and remove blocked during connection",
+          "Other connection operations blocked during removal",
+          "Failure releases operation guard",
+          "Unsaved settings preserved and successful connection copy matches persisted state"
+        ],
+        "CSS_budget": {
+          "status": "failed",
+          "actual_KB": 291.5,
+          "limit_KB": 260
+        }
+      },
+      "latest_registration_readiness_validation": {
+        "frontend_suite": 834,
+        "focused_push_handlers": 6,
+        "new_cases": 2,
+        "build": "passed",
+        "runtime_files": 28,
+        "diff_check": "passed",
+        "missing_worker": "No permission request, no registration API call, retry shown",
+        "activating_worker": "No subscription API call, busy guard released"
+      },
+      "latest_save_scope_validation": {
+        "frontend_suite": 843,
+        "focused_real_handler_tests": 23,
+        "new_cases": 5,
+        "build": "passed",
+        "runtime_files": 28,
+        "diff_check": "passed"
+      },
+      "latest_refresh_order_validation": {
+        "new_cases": 3,
+        "focused_real_handler_tests": 31,
+        "frontend_suite": 846,
+        "build": "passed",
+        "runtime_files": 28,
+        "diff_check": "passed"
+      },
+      "latest_account_entry": {
+        "frontend_suite": 853,
+        "build": "passed",
+        "runtime_files": 28,
+        "diff_check": "passed",
+        "live_account_path": "Home account control -> login and guest-settings panel -> Home",
+        "live_label": "계정 열기",
+        "live_text": "계정",
+        "live_person_icons": 1,
+        "live_status_dots": 0,
+        "live_touch_height": 44,
+        "device_scroll": 0,
+        "rendered_states": [
+          "connected",
+          "checking",
+          "offline-cached",
+          "auth_required",
+          "fixture"
+        ],
+        "offline_render": "최근 기록 5분 전; explicit cached-data accessibility warning",
+        "fixture_render": "체험 중; reload-loss accessibility warning",
+        "record_writes": "none"
+      },
+      "latest_connected_read_failure_validation": {
+        "before_inventory_count": 5,
+        "failed_read_inventory_count": 5,
+        "offline_header": "최근 기록 plus cache age; cached-data accessible warning",
+        "offline_home": "Read-failure notice and last-confirmed time shown",
+        "offline_detail": "Cabbage2packs retained; only close/date guidance/change-history actions shown; durable mutation controls absent",
+        "recovery": "Cleared request blocking, clicked 식품 목록 다시 불러오기",
+        "recovered_account_label": "계정 열기",
+        "recovered_account_text": "계정",
+        "recovered_inventory_count": 5,
+        "recovered_offline_notice": null,
+        "device_scroll": 0,
+        "food_mutations": "none",
+        "runtime_files": 28,
+        "runtime_integrity": "passed"
+      }
+    },
+    {
+      "flow": "guidance",
+      "status": "partial",
+      "historical_evidence": [
+        "artifacts/detail-density-2026-10-09/iteration-audit.json",
+        "artifacts/guidance-return-2026-10-10/audit.json",
+        "artifacts/guidance-editors-2026-10-10/audit.json",
+        "artifacts/date-meaning-2026-10-10/audit.json",
+        "artifacts/guidance-return-2026-10-11/verification.json"
+      ],
+      "observed_scope": "Storage/product/date draft roundtrip, focus restore, reminder semantics",
+      "unproven": "Every guidance entry and device text-size combination",
+      "latest_guidance_return": {
+        "focused_existing_tests": 13,
+        "build": "passed",
+        "runtime_files": 28,
+        "diff_check": "passed",
+        "live_path": "Home unknown-date summary -> frozen milk detail -> date guide -> same detail",
+        "draft_quantity_before": "100.1234",
+        "draft_quantity_after": "100.1234",
+        "return_focus": "날짜 안내 보기",
+        "guide_keyboard_visible": false,
+        "device_scroll": 0,
+        "restored_draft": "250",
+        "record_writes": "none"
+      }
+    },
+    {
+      "flow": "receipt-queue",
+      "status": "partial",
+      "historical_evidence": [
+        "artifacts/receipt-resume-2026-10-10/audit.json",
+        "artifacts/receipt-resume-states-2026-10-10/verification.json",
+        "artifacts/real-receipt-path-2026-10-10/verification.json",
+        "artifacts/receipt-editor-clarity-2026-10-11/verification.json"
+      ],
+      "observed_scope": "Resume failed read/retry, review, commit, pending count/reload; current synthetic missing/committed GET GUI, next selection and inventory focus validated; actual Paddle/API receipt recognition and product-only commit on synthetic receipt, quantity persistence and unknown-price omission verified",
+      "unproven": "Real merchant photo quality, camera capture and cancelled/owner-switch variants",
+      "latest_editor_clarity": {
+        "frontend_suite": 846,
+        "build": "passed",
+        "runtime_files": 28,
+        "diff_check": "passed",
+        "live_raw_name": "영수증 이름: 국산콩 두부 모",
+        "font_size": "12px",
+        "white_space": "normal",
+        "saved_name": "국산콩 두부",
+        "quantity": "1모",
+        "selected_items": 2,
+        "requires_confirmation": 1,
+        "save_disabled": true,
+        "confirm_action_height": 44,
+        "scrolled_confirm_bottom": 451.15,
+        "save_footer_top": 525.93,
+        "device_scroll": 0,
+        "record_writes": "none"
+      }
+    },
+    {
+      "flow": "recipe-review",
+      "status": "partial",
+      "historical_evidence": [
+        "artifacts/recipe-review-access-2026-10-10/audit.json",
+        "artifacts/recipe-review-edit-2026-10-10/audit.json",
+        "artifacts/recipe-review-recovery-2026-10-10/audit.json",
+        "artifacts/recipe-review-pending-2026-10-10/audit.json",
+        "artifacts/review-scale-2026-10-10/audit.json"
+      ],
+      "observed_scope": "Role denial, local draft claim/save/reload/release, rejection/retry and pending locks",
+      "unproven": "Concurrent reviewer, publication and 320px actual review GUI"
+    }
+  ],
+  "current_validation": {
+    "node_tests": 834,
+    "api_tests": 592,
+    "build": "passed",
+    "protected_runtime_files": 28,
+    "diff_check": "passed",
+    "publication": "not-run",
+    "latest_full_regression": "2026-10-11 push registration readiness before permission",
+    "api_scope": "Full API suite592 passed; identical notification preferences and retries preserve revision. Local no-op PUT returned200 with revision2->2; all19 food payloads preserved after API refresh.",
+    "latest_runtime_verification": "2026-10-11 unavailable/no-quiet-hours settings omits2 empty fields; single region; existing2day preference and unread1 unchanged",
+    "historical_responsive_GUI": {
+      "actual_width": 320,
+      "home_scroll_width": 320,
+      "nav_height": 53.5,
+      "manual_dialog_width": 296,
+      "manual_dialog_scroll_width": 296,
+      "save_target_height": 46,
+      "storage_target_height": 44
+    },
+    "latest_css_validation": {
+      "computed_styles": "2 current notification rows and3 home date-source elements,11 properties each matched before/after",
+      "build": "passed",
+      "runtime_files": 28,
+      "diff_check": "passed",
+      "logic_tests_this_iteration": "not rerun; CSS-only change",
+      "last_frontend_suite": 808,
+      "CSS_budget": {
+        "status": "failed",
+        "before_KB": 291.6,
+        "actual_KB": 291.1,
+        "limit_KB": 260
+      }
+    },
+    "latest_service_worker_validation": {
+      "before": "5 new click tests failed on old implementation",
+      "after": "12 service-worker tests passed, including7 new cases",
+      "draft": "Mock client draft1.1234L retained with0 navigation calls",
+      "external_targets": "Protocol-relative, external HTTPS and javascript targets normalize to app root",
+      "navigation": "Returned/new window focused, disappeared window reopened"
+    },
+    "latest_css_priority_correction": "Restore3 previous selector exclusions: pantry storage-dot exclusion and2 priority date-source-warning exclusions. Removing those conditions also reduced selector specificity; a current screenshot comparison cannot prove all competing future/conditional styles unaffected."
+  },
+  "gates": {
+    "CSS_size_budget": {
+      "status": "failed",
+      "actual_KB": 291.5,
+      "limit_KB": 260
+    },
+    "automatic_browser_suite": "not-run; explicit permission pending"
+  },
+  "source_snapshot": {
+    "apps/web/src/Prototype.tsx": "7617fa04f72a4069f5336e2a1a2f2c9dfdf0c3984d895c4d2dd5ebcda03743fc",
+    "apps/web/src/MealPlanSheet.tsx": "427ffecc416397a47c4c252419e26da1b6ae30ebc47604a1e0202877bd9d02bb",
+    "apps/web/src/AccountSheet.tsx": "3026eda27ce85ac1185f951be1dadd141a3cbf221e0e2dddb2c14ab86b14b5fd",
+    "apps/web/src/AddFoodSheet.tsx": "76f677103e190cef5195a7d189add3d55e91b61a38c44faad2913b634e4c1c10",
+    "apps/web/src/FoodDetailSheet.tsx": "bb27fd5ca51ffa1f3ca3c98c3680917fb6c412a267cdaefd8a87d5e0a0d3f8a9",
+    "apps/web/src/Metadata.tsx": "f2dee5f53d141fbcd74f5b53d72503902df512187b73a45f6bdcb26831cb2a9a",
+    "apps/web/src/RecipeReviewPanel.tsx": "86276c22f2d04ad05107b4875f6cf66cd7d9013fed2d87fcb81af377e40735d1",
+    "services/api/app/main.py": "89450bb3182647e80696b03901686e1eecf9a4fe51b59c821fd24de349b9d2ad",
+    "services/api/app/planner.py": "e4683fe72ae7b4610ea3631ab2a263f3185afad59455fdb953f969a04e904c54",
+    "apps/web/src/prototype.css": "2b848041bc82d01900cd61811c4c9d421fe089c6e1c6622fa5723dd1686ebf96",
+    "apps/web/src/FoodPhoto.tsx": "0c0098d9a6660b0c201f0db151da9b722b5b2537bc4a3b3cb80960229819589d",
+    "apps/web/src/foodQuantityControls.css": "fc61e82c5e83b70c0c8e0583587fddc2e6a775e23db902805aaa66e4c2dbf84e",
+    "apps/web/src/QuantityReferenceEditor.tsx": "8f115f25b11c45d8b92401fa0312a5039e3e4c87ffc150d47aa59967b307701f",
+    "apps/web/src/accountAuthPresentation.ts": "e176bca9c2000228fcad873d85196e832a63a78b369a18baf7ffa282d7f8f03f",
+    "apps/web/src/quantitySelection.ts": "fe1b72826d07a72fa3f86daabad1e870eb089426b7da38b56840dcf58044031b",
+    "apps/web/src/quantityArithmetic.ts": "e4f12c570d10c2ce458204a313e694ed1f47316d87d54bbb7da2f1457376d455",
+    "apps/web/src/mealConsumptionSelection.ts": "5bd44da7533483b1b6b6df41c720efccaeeaa0721116014217cc6a87851dd6e2",
+    "apps/web/src/completedMealAllocations.ts": "d7cd17a4aabd60e76485008113033cdb1a80d7da33a6a7c1f96693e72ae34f3a",
+    "services/api/app/meal_optimizer.py": "913ddf4c37f09942d726e115d1ba4d699b63f0a9e36d4a65e3b8ac90b337522c",
+    "apps/web/src/mealConsumptionDraft.ts": "8bb2018c5215c2dc1c8526baf28432909cabacc00e0446bdc85dcdde800374b5",
+    "apps/web/src/mealShoppingSheets.css": "40ffde1c8e7e378f1d287a650fbb4361fd726c8663c9a67f92420abd643cd740",
+    "apps/web/src/appScroll.ts": "25e2a8a75ae63f9a48de411d473b97f9b4b9d135ddd1f87fd6774fe615501c23",
+    "apps/web/src/inventoryNavigationLayout.ts": "3e861fe84afadefd1daf637440d9ad0857f8e9d82915fc40664ee672b80ccacd",
+    "apps/web/src/homePriorityFoods.ts": "4412326d1fcbe3f126dc072122fb6a8bd908de1ed344765f40ed6683abcf1af2",
+    "apps/web/src/quantityReferenceRecovery.ts": "7512043128d2257671bcbda64e470cc2c191743950dd68a0f21f36fc143a5724",
+    "apps/web/src/manualEntryConvenience.css": "7a42db2612416496c4b43b05d80de612551c9b842fea4849e0bb8348ef026a9a",
+    "apps/web/src/foodPhotoPresentation.ts": "e599e4d36a18462bb82f86dca6ab82f2d7013501efbcc61d136c222214f5dd26",
+    "apps/web/src/foodPhoto.css": "415ce3e4f62751d56207635eae258ce8ab9facce4614131a13a7548bd459cf5d",
+    "apps/web/src/foodPhotos.ts": "ca45534ee56f594677bb6a7165e17e3bd4c18a7cd4e350da6d456ef94ec27818",
+    "apps/web/src/notificationPresentation.ts": "4d168a1aa4b347223a46af6b7b184f999ff62ca6346feb38ede24f12feede871",
+    "apps/web/src/NotificationSheet.tsx": "64c957a99438dac6f158c2b6bc9453f0c73a7090aaec648fdd4d54257701fe89",
+    "services/api/app/notification_delivery.py": "8bd846700f660dbb9a62eaa906b15ffcd1c4d927e6d5d7e17eecd564b3d54231",
+    "apps/web/public/sw.js": "eac739aebcdba01238ab8442046b2c04c0d739eb4a04ee5e3ff7e160ea481494",
+    "apps/web/src/notificationSettingsDraft.ts": "0bd00480e72485e9652e722da689525e5948904ad01c93d64f404285ffea811b",
+    "apps/web/src/notificationSettingsLayout.css": "09f6579105abae16f8c36d17ee945eb314dfe30301ed4e2bca1e3b4ca84c9a54",
+    "apps/web/src/intakeValidation.css": "bb4156fae1b377334a0244a576c2af6a7cb0aae1a049ca3086b51f597fc5746b",
+    "apps/web/src/FoodHistory.tsx": "aac81cc99e4c30d2fea82038dc5d245a5aabfeb3403e88a2e94793be800ee54f",
+    "apps/web/src/ProductInfoHistory.tsx": "d1ee82f35e9c3d5fce0c1fae389acc7317ec4fa701d250aec7a0c6a04ee87d31",
+    "apps/web/src/ProductProvenanceHistory.tsx": "860be3ea503be638e383d64c393fe91b2a2623e728fe6f496597b8eead606015",
+    "apps/web/src/HistoryWindowToggle.tsx": "c93bef0a842503e485585b69aad27cdb1807e828e4ba965cf628deb491a43fb1",
+    "apps/web/src/historyWindow.ts": "90360872751fba75e18be8869b765d592531ab4db2326f01c77e304894aca6d1",
+    "apps/web/src/storageEventPresentation.ts": "1f945af75d194a3de70ad269f379ef4b04c66af5cbc35ce8c60cdbc448317ba6",
+    "apps/web/src/GuidanceSheet.tsx": "a770ec6a2bd9ef77c2dfc42e55c480db0efb148cdb5811a129316f1fcbf8e4b5",
+    "apps/web/src/ConnectionStatus.tsx": "0c7ee1e9b67bf00599c4c8da7f2f56b866a6da01e863c8b7a31f8b9c08bc4702",
+    "apps/web/src/ShoppingListSheet.tsx": "68125c2a4c3ae95b8a13999736ac304d15da9473b93f83fe3b3277991985393d",
+    "apps/web/src/DateAssertionEditor.tsx": "6b11967dcd214a4ebeb16c273d6f1ad07d8ed073225cb51c37126942584c303e",
+    "apps/web/src/dateEditorPresentation.ts": "9de5b97358b17bb5762e7c13f6c4ea442685ecc7121a4c6b8c6a21aec8c8c00f"
+  },
+  "source_snapshot_kind": "Current source with scoped current browser proof; full journey acceptance remains partial",
+  "latest_checkpoint": "artifacts/reminder-edit-2026-10-11/verification.json",
+  "latest_css_audit": {
+    "css_imports": "No repeated bundled stylesheet detected; entry CSS accounts for most size",
+    "additional_minification_dry_run_KB": 0.5498046875,
+    "additional_dominated_declarations_with_equal_specificity_attribute_expansion": 0,
+    "nesting_experiment": "artifacts/css-nesting-experiment-2026-10-11/verification.json",
+    "nesting_actual_build_savings": "none; exact source reverted",
+    "owned_control_cleanup": "artifacts/owned-control-css-2026-10-11/verification.json",
+    "current_total_KB": 291.3
+  },
+  "current_inventory_navigation_validation": {
+    "home_to_food": "First name and quantity fully visible",
+    "all_list_first_row_top": 211.0692138671875,
+    "all_list_toolbar_bottom": 210.375,
+    "review_filter_first_row_top": 329.08575439453125,
+    "review_filter_toolbar_bottom": 328.39154052734375,
+    "detail_return": "Same filtered food row focused; filter retained; no dialog left",
+    "milk_search_results": 3,
+    "clear_search_results": 5,
+    "keyboard": "Kept on clear; dismissed by moving focus out of input",
+    "device_scroll": 0,
+    "data_writes": "None"
+  },
+  "latest_css_cascade_cleanup": {
+    "removed_declarations": 8,
+    "scope": "Earlier custom-property tokens entirely overridden by later equal/higher specificity light and dark declarations; includes two old high-contrast tokens",
+    "selector_media_scope": "Every selector branch covered; later conditions are equal or less restrictive",
+    "function_values": "Custom property declarations accept token streams; later rgba token values replace earlier color-mix streams"
+  },
+  "latest_push_owner_validation": {
+    "frontend_suite": 838,
+    "focused_push_handlers": 14,
+    "new_cases": 4,
+    "build": "passed",
+    "runtime_files": 28,
+    "diff_check": "passed"
+  },
+  "latest_push_owner_scope": [
+    "Real-handler tests mock browser permission, push registration and server responses; no actual permission or subscription changes",
+    "Already-started external operations cannot be cancelled by these ownership checks",
+    "Full journey acceptance remains partial; CSS budget remains failed at 291.5KB versus 260KB"
+  ]
+}

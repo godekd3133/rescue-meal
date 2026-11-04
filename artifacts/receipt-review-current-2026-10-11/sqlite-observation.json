@@ -1,0 +1,148 @@
+{
+  "food_count": 19,
+  "matching_receipts": [
+    {
+      "id": "receipt-f29632521e0e",
+      "committed": false,
+      "lines": [
+        {
+          "type": "product",
+          "name": "국산콩 두부",
+          "quantity": 1.0,
+          "unit": "모",
+          "total_price": null
+        },
+        {
+          "type": "discount",
+          "name": null,
+          "quantity": 1.0,
+          "unit": "식",
+          "total_price": -130
+        },
+        {
+          "type": "subtotal",
+          "name": null,
+          "quantity": 1.0,
+          "unit": "식",
+          "total_price": 6340
+        },
+        {
+          "type": "payment",
+          "name": null,
+          "quantity": 1.0,
+          "unit": "식",
+          "total_price": 6340
+        },
+        {
+          "type": "product",
+          "name": "맛타리버섯",
+          "quantity": 2.0,
+          "unit": "팩",
+          "total_price": null
+        }
+      ]
+    },
+    {
+      "id": "receipt-c5937ede59fe",
+      "committed": true,
+      "lines": [
+        {
+          "type": "product",
+          "name": "국산콩 두부",
+          "quantity": 1.0,
+          "unit": "모",
+          "total_price": null
+        },
+        {
+          "type": "discount",
+          "name": null,
+          "quantity": 1.0,
+          "unit": "식",
+          "total_price": -130
+        },
+        {
+          "type": "subtotal",
+          "name": null,
+          "quantity": 1.0,
+          "unit": "식",
+          "total_price": 6340
+        },
+        {
+          "type": "payment",
+          "name": null,
+          "quantity": 1.0,
+          "unit": "식",
+          "total_price": 6340
+        },
+        {
+          "type": "product",
+          "name": "맛타리버섯",
+          "quantity": 2.0,
+          "unit": "팩",
+          "total_price": null
+        }
+      ]
+    },
+    {
+      "id": "receipt-bd0054c22291",
+      "committed": false,
+      "lines": [
+        {
+          "type": "subtotal",
+          "name": null,
+          "quantity": 1.0,
+          "unit": "식",
+          "total_price": 3000
+        },
+        {
+          "type": "product",
+          "name": "현장검증 식품",
+          "quantity": 3.0,
+          "unit": "팩",
+          "total_price": null
+        }
+      ]
+    },
+    {
+      "id": "receipt-1929f0985603",
+      "committed": false,
+      "lines": [
+        {
+          "type": "product",
+          "name": "국산콩 두부",
+          "quantity": 1.0,
+          "unit": "모",
+          "total_price": null
+        },
+        {
+          "type": "discount",
+          "name": null,
+          "quantity": 1.0,
+          "unit": "식",
+          "total_price": -130
+        },
+        {
+          "type": "subtotal",
+          "name": null,
+          "quantity": 1.0,
+          "unit": "식",
+          "total_price": 6340
+        },
+        {
+          "type": "payment",
+          "name": null,
+          "quantity": 1.0,
+          "unit": "식",
+          "total_price": 6340
+        },
+        {
+          "type": "product",
+          "name": "맛타리버섯",
+          "quantity": 2.0,
+          "unit": "팩",
+          "total_price": null
+        }
+      ]
+    }
+  ]
+}

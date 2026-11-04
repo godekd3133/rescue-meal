@@ -1,0 +1,47 @@
+{
+  "goal_status": "active",
+  "previous_turn": "progress",
+  "interruption": "Prior CDPNetwork.enable call interrupted; no setBlockedURLs command was issued",
+  "changes": [
+    "Stock failure retry binds to original saved plan rather than genericmenu search",
+    "Networkretry retains chosenrecipeandservings",
+    "Authenticationexpiry routes toaccount recovery;recheckblockedwhileexpired",
+    "Unresolvedcompletionwrite recovery is not replaced bystockpreview"
+  ],
+  "checks": {
+    "web": "725passed currentrun",
+    "build": "passed currentrun",
+    "runtime_integrity": "28protectedfilespassed",
+    "diff": "passed",
+    "bundle_log": "> web@0.1.0 check:bundle\n> node scripts/check-bundle-size.mjs\n\nbundle budget exceeded:\n  - total CSS is 293.4KB (budget 260KB)"
+  },
+  "tests_cover": [
+    "Failurethen same-recipe2servingretry",
+    "Networkfailurekeeps original",
+    "Late response doesnotchange another view",
+    "Different/unavailable recipe doesnotreplace original",
+    "Expired auth doesnotperformstockretry",
+    "Pendingcompletionrecovery blocksstockpreview"
+  ],
+  "not_run": [
+    "Livebrowserfaultinjection;CUAtoolsunavailable afterinterruption",
+    "Physicaldevice",
+    "FullPlaywrightCLI/MCPsuite"
+  ],
+  "preview": {
+    "url": "http://127.0.0.1:4184/",
+    "http_status": 200,
+    "api_health": 200,
+    "proxy_health": 200,
+    "same_data_path": "/tmp/rescue-ocr-audit.db",
+    "sessions": {
+      "api": 22012,
+      "proxy": 36216,
+      "frontend": 96649
+    }
+  },
+  "sha256": {
+    "apps/web/src/MealPlanSheet.tsx": "d14f47592a2eef56d6590cb1bbeec7e6745357675780ec6bbad7c2df2cfa42d2",
+    "apps/web/tests/saved-stock-readback.test.mjs": "365d3b7152ef1c17d4e41b05d2fccdc8b33d728a7c87a04b70022815a60a7fa2"
+  }
+}

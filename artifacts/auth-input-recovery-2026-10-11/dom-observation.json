@@ -1,0 +1,16 @@
+{
+  "errorVisible": false,
+  "inputs": [
+    {
+      "disabled": false,
+      "id": "account-email-input",
+      "invalid": "false"
+    },
+    {
+      "disabled": false,
+      "id": "account-password-input",
+      "invalid": "false"
+    }
+  ],
+  "keyboard": "false"
+}

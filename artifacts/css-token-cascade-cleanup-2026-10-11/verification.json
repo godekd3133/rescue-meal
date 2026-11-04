@@ -1,0 +1,51 @@
+{
+  "status": "partial",
+  "changes": {
+    "removed_declarations": 8,
+    "scope": "Earlier custom-property tokens entirely overridden by later equal/higher specificity light and dark declarations; includes two old high-contrast tokens",
+    "selector_media_scope": "Every selector branch covered; later conditions are equal or less restrictive",
+    "function_values": "Custom property declarations accept token streams; later rgba token values replace earlier color-mix streams"
+  },
+  "runtime_comparison": {
+    "selectors": [
+      ".meal-home",
+      ".app-bottom-nav",
+      ".bottom-sheet"
+    ],
+    "properties_per_selector": 9,
+    "modes": [
+      "light normal",
+      "light more contrast",
+      "dark normal",
+      "dark more contrast"
+    ],
+    "all_before_after_equal": true,
+    "device_scroll": 0,
+    "emulation": "Cleared Emulation.setEmulatedMedia features to original browser media",
+    "theme": "Restored light",
+    "data_writes": "none"
+  },
+  "validation": {
+    "build": "passed",
+    "protected_runtime_files": 28,
+    "diff_check": "passed",
+    "latest_node_suite": 783,
+    "node_suite_this_CSS_iteration": "not rerun; no logic change",
+    "CSS_budget": {
+      "status": "failed",
+      "before_KB": 291.5,
+      "actual_KB": 290.8,
+      "limit_KB": 260
+    }
+  },
+  "limits": [
+    "Measured tokens and color styles for 3 current elements; not a full-state visual acceptance",
+    "No loading-speed benchmark"
+  ],
+  "evidence": [
+    "removed-declarations.json",
+    "style-comparison.json",
+    "dark-high-contrast.png",
+    "light-after.png"
+  ]
+}

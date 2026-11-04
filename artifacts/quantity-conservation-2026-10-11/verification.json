@@ -1,0 +1,38 @@
+{
+  "goal_status": "active",
+  "change": "Preserve accepted quantity precision after partial consumption, disposal, movement and opening",
+  "reproduction": {
+    "original": 1.1234,
+    "event_quantity": 0.1,
+    "before_remaining": 1.023,
+    "after_remaining": 1.0234,
+    "before_regression_tests": "4 failed",
+    "log": "/tmp/rescue-quantity-conservation-before.log"
+  },
+  "verification": {
+    "targeted_repository_and_postgres_contract": "42 passed",
+    "sqlite_reconstruction": "passed",
+    "api": "574 passed, 8 existing deprecation warnings",
+    "api_log": "/tmp/rescue-quantity-conservation-api-final.log",
+    "web": "725 passed",
+    "web_log": "/tmp/rescue-quantity-conservation-web.log",
+    "release_manifest_after_final_assertion": "2 passed",
+    "build": "passed",
+    "build_log": "/tmp/rescue-quantity-conservation-build.log",
+    "protected_runtime_integrity": "28 files passed",
+    "git_diff_check": "passed",
+    "migration_shell_syntax_and_posix_dry_run": "passed through 028; no database connection opened",
+    "migration_log": "/tmp/rescue-quantity-migration-posix.log",
+    "bundle_budget": "failed: total CSS 293.4KB exceeds 260KB",
+    "bundle_log": "/tmp/rescue-quantity-conservation-bundle.log",
+    "live_postgres_migration": "not-run",
+    "live_browser_validation": "not-run: browser tools unavailable",
+    "deployment": "not-run"
+  },
+  "limits": [
+    "Previously rounded quantities are not reconstructed",
+    "PostgreSQL precision migration is prepared but has not been applied",
+    "Existing running QA API has not been restarted to load this source change",
+    "Full product journey goal remains active"
+  ]
+}

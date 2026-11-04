@@ -1,0 +1,31 @@
+{
+  "status": "partial",
+  "findings": {
+    "css_imports": "No repeated bundled stylesheet detected; entry CSS accounts for most size",
+    "additional_minification_dry_run_KB": 0.5498046875,
+    "additional_dominated_declarations_with_equal_specificity_attribute_expansion": 0
+  },
+  "change": {
+    "equivalent_shell_selectors_simplified": 7,
+    "source_bytes_removed": 322,
+    "contract": "App.tsx restricts shell to web/native/preview and always includes app-shell; common class has same specificity as original is-list",
+    "protected_runtime_changed": false
+  },
+  "validation": {
+    "build": "passed",
+    "runtime_files": 28,
+    "computed_properties": "9 existing home metadata nodes, 10 properties each matched before/after in current light preview",
+    "unobserved": "Empty shopping selectors and header count selector had no current matches; full dark/native GUI not rerun",
+    "css_budget": {
+      "status": "failed",
+      "actual_KB": 291.3,
+      "limit_KB": 260
+    },
+    "diff_check": "passed"
+  },
+  "performance": "No speed improvement benchmark claimed",
+  "evidence": [
+    "style-comparison.json",
+    "current.png"
+  ]
+}

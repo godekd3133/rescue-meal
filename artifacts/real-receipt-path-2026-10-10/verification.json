@@ -1,0 +1,49 @@
+{
+  "goal": "active",
+  "input_scope": "Standard-font synthetic receipt; actual Paddle worker and API; not real receipt-photo accuracy evidence",
+  "actual_API": {
+    "status": "review_required",
+    "seconds": 2.217,
+    "products": [
+      {
+        "name": "국산콩 두부",
+        "quantity": 1,
+        "unit": "모"
+      },
+      {
+        "name": "맛타리버섯",
+        "quantity": 2,
+        "unit": "팩"
+      }
+    ],
+    "other_rows": [
+      "discount",
+      "subtotal",
+      "payment"
+    ]
+  },
+  "changes": [
+    "Preserve absent total_price as null in review; show quantity without fabricated0원",
+    "Known0 and positive amounts still shown",
+    "Receipt summary/privacy counts label all draft rows as 항목 rather than 상품; API line_count preserved"
+  ],
+  "validation": {
+    "new_price_tests": 3,
+    "full_frontend_tests": 597,
+    "build": "passed",
+    "runtime_protected": 28,
+    "diff_check": "passed",
+    "GUI": "Upload, pending draft reload, product2 and no0원 for missing prices, home항목5, storage selected and fields reviewed, commit2 products, reload shows original1 plus new1모 and2팩; no non-product food created",
+    "real_photos": "not-run",
+    "camera": "not-run"
+  },
+  "remaining_observations": [
+    "Bright sharp synthetic document received brightness and low-edge-energy advisories despite blur_score9.32; validate document versus photo quality heuristics",
+    "Storage edits currently mark a pending line reviewed through existing edit-as-confirm behavior; review UX semantics if uncertain-name cases expand"
+  ],
+  "source_snapshot": {
+    "apps/web/src/Prototype.tsx": "c1767353355d1978ba4d0803c1ac2e2ff1b88491662e3babebfa737b8e52a22f",
+    "apps/web/src/AddFoodSheet.tsx": "a12b1bf1326c228d41328fd7f981e9d0b0d820e2c2bf743b30eab520b9fd0b01",
+    "apps/web/src/AccountSheet.tsx": "c84f507540f5004e12018bc855e0294a76007f10f12040b3909947fef44906fc"
+  }
+}

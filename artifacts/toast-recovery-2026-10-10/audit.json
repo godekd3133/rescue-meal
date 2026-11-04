@@ -1,0 +1,38 @@
+{
+  "scope": "recovery toast presentation",
+  "changes": [
+    "use information icon for retry/readback/external-sync recovery",
+    "apply attention palette to all recovery actions",
+    "keep completed follow-up check icon",
+    "explicit readable foreground for recovery message, metadata and button"
+  ],
+  "runtime": {
+    "environment": "local isolated account IAB",
+    "rejected_operation": "synthetic consume rejection before forward",
+    "state": "recovery",
+    "classes": [
+      "toast",
+      "toast-recovery",
+      "toast-retry"
+    ],
+    "icon_color": "rgb(255, 209, 141)",
+    "retained_after_account_open": true,
+    "retry_committed": true,
+    "remaining_recovery_toasts": 0,
+    "text_color": "rgb(255, 245, 228)",
+    "background": "color(srgb 0.298953 0.291919 0.167933 / 0.969412)",
+    "white_composited_text_contrast": 7.63
+  },
+  "verification": {
+    "node_passed": 527,
+    "new_classification_cases": 4,
+    "build": "passed after color correction",
+    "protected_files": 28,
+    "diff_check": "passed"
+  },
+  "limits": [
+    "completed transient icon screenshot not captured before dismissal",
+    "no production outage or real consumption acceptance",
+    "full goal and CSS gate remain open"
+  ]
+}

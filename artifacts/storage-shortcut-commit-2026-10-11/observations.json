@@ -1,0 +1,30 @@
+{
+  "refrigerated": {
+    "deviceScroll": 0,
+    "firstRowTop": 243.0030975341797,
+    "focus": "SELECT",
+    "nav": "식품",
+    "rows": 3,
+    "scrollTop": 872,
+    "selected": "냉장",
+    "toolbarBottom": 242.30887603759768
+  },
+  "frozen": {
+    "deviceScroll": 0,
+    "firstRowTop": 243.0030975341797,
+    "focus": "SELECT",
+    "nav": "식품",
+    "rows": 1,
+    "selected": "냉동",
+    "toolbarBottom": 242.30887603759768
+  },
+  "ambient": {
+    "deviceScroll": 0,
+    "firstRowTop": 243.0030975341797,
+    "focus": "SELECT",
+    "nav": "식품",
+    "rows": 1,
+    "selected": "실온",
+    "toolbarBottom": 242.30887603759768
+  }
+}

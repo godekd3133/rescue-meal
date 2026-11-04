@@ -1,0 +1,31 @@
+{
+  "scope": "recipe review authorization and empty queue presentation",
+  "changes": [
+    "do not fetch or show source configuration until catalog access succeeds",
+    "replace environment-variable detail with consumer-facing connection state",
+    "hide code form after account-based authorization",
+    "clear cached review identity/data on authorization rejection",
+    "hide empty all-queue filters but retain active-filter recovery",
+    "remove redundant connection and polling explanations"
+  ],
+  "runtime": {
+    "browser": "IAB tab27 review query on local isolated API",
+    "regular_account": "denied, source region absent, internal config absent",
+    "admin_account": "preexisting recipe_admin fixture authenticated, pending queue empty",
+    "authorized_code_inputs": 0,
+    "empty_filters": 0,
+    "internal_config_text": 0
+  },
+  "verification": {
+    "node_passed": 545,
+    "access_cases": 3,
+    "build": "passed",
+    "protected_files": 28,
+    "diff_check": "passed"
+  },
+  "limits": [
+    "draft edit/save/publish not-run: no pending drafts and source unconfigured",
+    "no real catalog publication performed",
+    "full goal and CSS gate remain open"
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "status": "partial",
+  "before_labels": [
+    "양배추 수량 입력",
+    "우유 수량 입력"
+  ],
+  "after_labels": [
+    "양배추 1팩의 양 입력",
+    "우유 1개의 양 입력"
+  ],
+  "changes": [
+    "Planner recovery names the per-unit amount field instead of the remaining stock count",
+    "Shared quantityReferenceUnit logic keeps planner label and editor availability consistent",
+    "Metric units use quantity confirmation wording, not a nonexistent per-package editor"
+  ],
+  "actual_browser": {
+    "entry_device_scroll": 0,
+    "clicked": "양배추 1팩의 양 입력",
+    "editor": "1팩에 들어 있는 양, empty amount, disabled save until amount/unit supplied",
+    "remaining_stock": "2팩 unchanged",
+    "cancel": "No amount entered/saved, returned to original planner action",
+    "inventory_count": 5,
+    "record_writes": "none"
+  },
+  "validation": {
+    "node_tests": 788,
+    "new_recovery_label_tests": 5,
+    "build": "passed",
+    "runtime_files": 28,
+    "diff_check": "passed",
+    "CSS_budget": {
+      "status": "failed",
+      "actual_KB": 290.8,
+      "limit_KB": 260
+    }
+  },
+  "limits": [
+    "Input wording/route only; no real amount saved and no successful cooking flow in this iteration",
+    "Initial before.png had device scroll339 after browser role click; not layout proof",
+    "Post return through role-based cancel observed device scroll62; return focus proved but full frame geometry not accepted"
+  ],
+  "evidence": [
+    "after.png",
+    "editor.png",
+    "observations.json"
+  ]
+}

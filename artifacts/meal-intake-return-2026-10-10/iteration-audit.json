@@ -1,0 +1,30 @@
+{
+  "changes": [
+    "Meal-origin intake returns to meal on cancel/confirmed save",
+    "Related-flow planner session preserves conditions and unsaved view; changed ingredients refresh within same options",
+    "New-food followup preserves meal detail return and date-review intent",
+    "Deferred food lookup uses latest inventory/search snapshot; same-owner lookup no longer closes over obsolete lists",
+    "Old-owner followup remains scope guarded"
+  ],
+  "verification": {
+    "IAB_viewport": "320x740 explicit demo",
+    "before": "Intake cancel returned home",
+    "after_cancel": "meal visible,10min/2servings retained",
+    "after_save": "new food entered and meal visible,10min/2servings retained",
+    "followup_initial_failure": "New food could not resolve through old captured list; source cause traced and fixed",
+    "followup_retest": "New kimchi detail visible, closing returnsmeal10min/2servings",
+    "lookup_cases": 4,
+    "followup_cases": 3,
+    "node_tests": 375,
+    "build": "passed",
+    "runtime_files": 28,
+    "diff_check": "passed",
+    "connected_intake_return": "not-run this iteration"
+  },
+  "remaining": [
+    "Connected intake return and broader planner acceptance",
+    "CSS budget",
+    "Full journey and device/OCR acceptance"
+  ],
+  "goal": "active"
+}

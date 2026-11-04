@@ -1,0 +1,54 @@
+{
+  "status": "partial",
+  "before_order": [
+    "검증용 우유: 참고 날짜 10월16일",
+    "양배추: 내 알림일 모레",
+    "우유: 참고 날짜 10월15일"
+  ],
+  "after_order": [
+    "양배추: 내 알림일 모레",
+    "우유: 참고 날짜 10월15일",
+    "검증용 우유: 참고 날짜 10월16일"
+  ],
+  "selection_policy": "Valid review-hint dates ascending across all loaded foods, then existing rank/id for equal or missing dates; top3. Manufacturing/packaging dates excluded. Unknown dates remain in independent all-inventory review summary. No food safety inference.",
+  "implementation": [
+    "API display date retained separately as priorityDate for estimated hints",
+    "Corrected printed/personal date detail takes precedence over old optional field",
+    "Home selected IDs also drive inventory priority count/status/filter",
+    "Priority filter uses same date order as Home"
+  ],
+  "actual_browser": {
+    "home_and_priority_filter_names": [
+      "양배추",
+      "우유",
+      "검증용 우유"
+    ],
+    "unknown_date_summary_count": 1,
+    "all_inventory_count": 5,
+    "device_scroll": 0,
+    "restored": "All inventory filter, Home",
+    "record_writes": "none"
+  },
+  "validation": {
+    "node_tests": 783,
+    "new_priority_regressions": 6,
+    "build": "passed",
+    "runtime_files": 28,
+    "diff_check": "passed",
+    "CSS_budget": {
+      "status": "failed",
+      "actual_KB": 291.5,
+      "limit_KB": 260
+    }
+  },
+  "limits": [
+    "UI selection and display ordering; API/planner stored rank unchanged",
+    "Actual browser example had the same 3 selected IDs reordered; earlier rank9 entry covered by isolated helper test",
+    "Physical devices and other theme/native combinations not rerun"
+  ],
+  "evidence": [
+    "home.png",
+    "priority-filter.png",
+    "observations.json"
+  ]
+}

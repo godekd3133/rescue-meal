@@ -1,0 +1,13 @@
+{
+  "box": {
+    "height": 88,
+    "width": 88
+  },
+  "photo": {
+    "complete": true,
+    "src": "/assets/food/onion-photo.jpg",
+    "visibility": "hidden",
+    "width": 0
+  },
+  "title": "검증용 양파"
+}

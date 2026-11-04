@@ -1,0 +1,42 @@
+{
+  "goal_status": "active",
+  "previous_turn": "progress",
+  "reproduction": "In the explicit demo browser, clearing a cooking amount immediately rendered 0 and marked the ingredient skipped",
+  "changes": [
+    "Keep raw cooking input separate from the last valid numeric portion",
+    "Distinguish incomplete or empty input from explicitly entered zero",
+    "Block completion when an amount is incomplete, invalid or exceeds its allocation",
+    "Preserve oversized input for correction rather than silently clamping it",
+    "Link quantity validation to its input and reset drafts with recipe/workspace context",
+    "Widen the numeric input, set its font to 16px and provide 44px increment/decrement targets"
+  ],
+  "runtime_verified": {
+    "environment": "Separate explicit demo preview on loopback 49517, no API configured",
+    "valid_input_before_clear": "Completion enabled with other conditions satisfied",
+    "empty_input": "Stayed empty, ingredient not silently skipped and completion disabled",
+    "unfinished_decimal": "0. remained visible and invalid until completed",
+    "completed_decimal": "Sequential typing produced 0.1234 and restored completion availability",
+    "over_allocation": "2.5 remained visible, validation failed and completion disabled",
+    "explicit_zero": "0 intentionally skipped the ingredient; selecting it again restored 0.1234",
+    "readability": "Input client width 81px, font 16px, step buttons 44x44px, device scroll zero",
+    "cooking_completion": "not performed",
+    "real_api_or_food_mutation": "none",
+    "temporary_tab": "closed; only original tab 1 remains",
+    "temporary_server": "stopped",
+    "other_project_cache": "An earlier temporary port served another project's cached page; tab closed and cache left untouched"
+  },
+  "checks": {
+    "web_tests": "763 passed",
+    "web_log": "/tmp/rescue-cooking-draft-web-final.log",
+    "build": "TypeScript and production build passed after final CSS changes",
+    "build_log": "/tmp/rescue-cooking-draft-build-final.log",
+    "protected_runtime_integrity": "28 passed",
+    "git_diff_check": "passed",
+    "bundle_budget": "failed: CSS 292.0KB exceeds 260KB",
+    "bundle_log": "/tmp/rescue-cooking-draft-bundle-final.log",
+    "playwright_cli_specs": "Input role expectations updated; CLI browser suite not-run, existing permission request pending",
+    "deployment": "not-run"
+  },
+  "evidence": ["dom-observation.json", "readable-portion-final.png"],
+  "scope": "Real browser input and validation proof in nonpersistent demo plus completion guard tests; connected real-data completion remains separate."
+}

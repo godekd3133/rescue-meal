@@ -1,0 +1,48 @@
+{
+  "scope": "First-food no-match recovery follows actual planner blocker",
+  "before": "Registered broccoli1 pack had no recipe result; UI always promoted45-minute retry despite longer plan also unavailable",
+  "changes": [
+    "Additive typed recovery distinguishes time, quantity comparison, ingredient coverage, allergen constraints and empty stock",
+    "Time CTA uses actual required recipe time; arbitrary next preset suppressed",
+    "Quantity recovery links matching existing food as primary action; secondary add/conditions retained",
+    "Allergen recovery opens saved conditions without changing them",
+    "Unknown or legacy recovery stays conservative",
+    "Nonfinite stock quantity cannot supply a recipe",
+    "Dynamic time choices show a selected nonpreset supported duration"
+  ],
+  "validation": {
+    "api_tests": 555,
+    "api_failures": 0,
+    "frontend_tests": 680,
+    "frontend_failures": 0,
+    "build": "passed",
+    "protected_runtime_files": 28,
+    "diff_check": "passed",
+    "actual_browser": "After owned local API reload, broccoli1 pack classified quantity comparison; blue broccoli-check action opens exact existing1-pack food and original shelf, no automatic date form. Close returns30 minutes/1 serving and focus to same food action; zero time-expansion CTAs. Inventory quantities not changed.",
+    "actual_blocker": "quantity comparison, not ingredient coverage",
+    "time_allergen_empty_coverage": "Producer API and consumer unit tests; not all live UI variants executed in this loop",
+    "weight_or_unit_correction": "not implemented in this loop; inspect action only",
+    "local_api_reload": {
+      "old_pid": 2743,
+      "new_pid": 93853,
+      "new_session": 97306,
+      "data_path": "same existing /tmp/rescue-ocr-audit.db",
+      "flags": "original OCR/auth/external lookup/CORS values verified and preserved",
+      "ready": "API and preview proxy200"
+    },
+    "physical_device": "not-run",
+    "production_deployment": "not-run",
+    "css_budget": "failed:293.1KB versus260KB"
+  },
+  "sha256": {
+    "services/api/app/main.py": "2f69bb7f2797d13bbe19d594c0e6fecb615dec19ef00c8807252c0b5065b577f",
+    "services/api/app/planner.py": "1b396c402e85cdfcd62f99a06abcd01856d3f1931edc99f0e56afcdabe0ea8cc",
+    "services/api/tests/test_api.py": "f79d18d67c4db91dfca2efd31517d8138a0af5227fe476a7e605c414055a785b",
+    "services/api/tests/test_planner.py": "db0d8e5c85ceaecedf00f8b62c6ee35ba3b8832ea4c6ce86e71ccfd8b1888501",
+    "apps/web/src/MealPlanSheet.tsx": "975cad5c7ad43eb20a787ca76d70a43a30ec22f65615f5e3b5bdead33c5b6868",
+    "apps/web/src/mealApi.ts": "86b4bcbc76afcf89e65c93a17dbf0df99ec5ef327109845b70a78008a801702f",
+    "apps/web/src/mealPlanRecovery.ts": "16d62a4daaffaef620c26c29c4005ddfc1907f8836c8aed3093ce825752dbda1",
+    "apps/web/src/mealShoppingSheets.css": "1d09d8b0f38ec345b7209b2a9d1a643475ba4895a441ab7b65d0f2e570944608",
+    "apps/web/tests/meal-plan-recovery.test.mjs": "07ebb4b773efee29da9cc9ebd6302cb5f04772d3c543d06de2946522c5081c61"
+  }
+}

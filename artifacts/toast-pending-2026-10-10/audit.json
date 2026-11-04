@@ -1,0 +1,35 @@
+{
+  "scope": "explicit saving phase versus confirmed and recovery feedback",
+  "changes": [
+    "pass explicit pending phase from saving producers",
+    "use clock icon for pending state",
+    "do not auto-dismiss pending message while waiting",
+    "switch to notice or recovery after outcome",
+    "use neutral workspace conflict copy without device attribution"
+  ],
+  "runtime": {
+    "environment": "isolated local account IAB",
+    "delay_seconds": 2,
+    "observed_pending": {
+      "state": "pending",
+      "message": "먹은 기록을 저장하고 있어요"
+    },
+    "conflict_outcome": "recovery instead of success",
+    "retry_confirmed": {
+      "state": "notice",
+      "message": "완료 알림 범위 검증을 먹은 기록으로 남겼어요"
+    }
+  },
+  "verification": {
+    "node_passed": 530,
+    "new_phase_cases": 3,
+    "build": "passed",
+    "protected_files": 28,
+    "diff_check": "passed"
+  },
+  "limits": [
+    "pending lifetime beyond the controlled delay not exercised here",
+    "not every producer state rendered in this loop",
+    "full goal and CSS budget remain open"
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "scope": "guest to empty existing account completion and owner presentation",
+  "changes": [
+    "activate account workspace without dismissing transfer choice",
+    "clear prior guest view, toast and revision baselines before preview",
+    "shorten ready transfer notice to guest record persistence"
+  ],
+  "runtime": {
+    "environment": "isolated local SQLite, synthetic account, IAB",
+    "before_login": "guest manually saved 감자 1개 냉장",
+    "after_login_before_import": "account inventory empty, guest preview 식품 1개",
+    "explicit_import": "completed; sheet closes and inventory becomes one",
+    "reload": "감자 1개 냉장 persists",
+    "account_reopen": "no pending transfer panel and no false remote warning"
+  },
+  "verification": {
+    "node": 444,
+    "build": "passed",
+    "protected_files": 28,
+    "diff_check": "passed"
+  },
+  "limits": [
+    "only one-food import GUI covered",
+    "full automated browser suite permission pending",
+    "CSS budget unresolved"
+  ]
+}

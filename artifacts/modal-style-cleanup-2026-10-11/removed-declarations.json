@@ -1,0 +1,299 @@
+[
+  {
+    "line": 5340,
+    "selector": ".recipe-shopping-inline-button",
+    "property": "font-weight",
+    "value": "800",
+    "context": [],
+    "overrides": [
+      {
+        "line": 8195,
+        "selector": ".bottom-sheet .recipe-shopping-inline-button",
+        "value": "820",
+        "context": []
+      }
+    ]
+  },
+  {
+    "line": 5339,
+    "selector": ".recipe-shopping-inline-button",
+    "property": "font-size",
+    "value": "9px",
+    "context": [],
+    "overrides": [
+      {
+        "line": 8194,
+        "selector": ".bottom-sheet .recipe-shopping-inline-button",
+        "value": "10px",
+        "context": []
+      }
+    ]
+  },
+  {
+    "line": 5338,
+    "selector": ".recipe-shopping-inline-button",
+    "property": "color",
+    "value": "#875d4e",
+    "context": [],
+    "overrides": [
+      {
+        "line": 8193,
+        "selector": ".bottom-sheet .recipe-shopping-inline-button",
+        "value": "var(--atelier-coral)",
+        "context": []
+      }
+    ]
+  },
+  {
+    "line": 5336,
+    "selector": ".recipe-shopping-inline-button",
+    "property": "border-radius",
+    "value": "8px",
+    "context": [],
+    "overrides": [
+      {
+        "line": 8191,
+        "selector": ".bottom-sheet .recipe-shopping-inline-button",
+        "value": "11px",
+        "context": []
+      }
+    ]
+  },
+  {
+    "line": 5334,
+    "selector": ".recipe-shopping-inline-button",
+    "property": "padding",
+    "value": "0 8px",
+    "context": [],
+    "overrides": [
+      {
+        "line": 8189,
+        "selector": ".bottom-sheet .recipe-shopping-inline-button",
+        "value": "0 11px",
+        "context": []
+      }
+    ]
+  },
+  {
+    "line": 5333,
+    "selector": ".recipe-shopping-inline-button",
+    "property": "margin-top",
+    "value": "3px",
+    "context": [],
+    "overrides": [
+      {
+        "line": 8188,
+        "selector": ".bottom-sheet .recipe-shopping-inline-button",
+        "value": "5px",
+        "context": []
+      }
+    ]
+  },
+  {
+    "line": 5332,
+    "selector": ".recipe-shopping-inline-button",
+    "property": "min-height",
+    "value": "25px",
+    "context": [],
+    "overrides": [
+      {
+        "line": 8187,
+        "selector": ".bottom-sheet .recipe-shopping-inline-button",
+        "value": "44px",
+        "context": []
+      }
+    ]
+  },
+  {
+    "line": 5023,
+    "selector": ".detail-actions,\n.recipe-actions",
+    "property": "gap",
+    "value": "7px",
+    "context": [],
+    "overrides": [
+      {
+        "line": 8943,
+        "selector": ".bottom-sheet .detail-actions",
+        "value": "8px",
+        "context": []
+      },
+      {
+        "line": 8146,
+        "selector": ".bottom-sheet :is(.recipe-actions,.recipe-complete-actions)",
+        "value": "9px",
+        "context": []
+      }
+    ]
+  },
+  {
+    "line": 5021,
+    "selector": ".detail-actions,\n.recipe-actions",
+    "property": "display",
+    "value": "grid",
+    "context": [],
+    "overrides": [
+      {
+        "line": 8941,
+        "selector": ".bottom-sheet .detail-actions",
+        "value": "grid",
+        "context": []
+      },
+      {
+        "line": 8145,
+        "selector": ".bottom-sheet :is(.recipe-actions,.recipe-complete-actions)",
+        "value": "grid",
+        "context": []
+      }
+    ]
+  },
+  {
+    "line": 808,
+    "selector": ".notification-row:hover",
+    "property": "background",
+    "value": "#fffefa",
+    "context": [],
+    "overrides": [
+      {
+        "line": 7464,
+        "selector": ".bottom-sheet :is(.receipt-line-card:hover,.shopping-sheet-item:hover,.notification-row:hover,.storage-location-row:hover)",
+        "value": "var(--sheet-surface-raised)",
+        "context": []
+      }
+    ]
+  },
+  {
+    "line": 807,
+    "selector": ".notification-row:hover",
+    "property": "border-color",
+    "value": "#cbd6c3",
+    "context": [],
+    "overrides": [
+      {
+        "line": 7463,
+        "selector": ".bottom-sheet :is(.receipt-line-card:hover,.shopping-sheet-item:hover,.notification-row:hover,.storage-location-row:hover)",
+        "value": "var(--sheet-border-strong)",
+        "context": []
+      }
+    ]
+  },
+  {
+    "line": 802,
+    "selector": ".notification-row",
+    "property": "color",
+    "value": "var(--meal-ink)",
+    "context": [],
+    "overrides": [
+      {
+        "line": 7455,
+        "selector": ".bottom-sheet :is(.receipt-line,.receipt-line-card,.receipt-product-candidate,.barcode-candidate-card,.label-result-card,.date-editor,.detail-section,.history-row,.guidance-row,.shopping-sheet-item,.shopping-sheet-manual,.recipe-alternative-row,.recipe-shopping-row,.notification-row,.account-profile,.account-lead,.account-remote-refresh,.storage-location-row,.notification-preferences-card,.privacy-policy-card,.workspace-export-panel,.recipe-details,.recipe-preferences,.recipe-history,.recipe-multi-day)",
+        "value": "var(--atelier-ink)",
+        "context": []
+      }
+    ]
+  },
+  {
+    "line": 801,
+    "selector": ".notification-row",
+    "property": "background",
+    "value": "rgba(255, 254, 250, 0.82)",
+    "context": [],
+    "overrides": [
+      {
+        "line": 14310,
+        "selector": ".bottom-sheet .notification-row,\n.bottom-sheet .notification-row:not(.notification-row-read)",
+        "value": "transparent",
+        "context": []
+      }
+    ]
+  },
+  {
+    "line": 800,
+    "selector": ".notification-row",
+    "property": "border-radius",
+    "value": "12px",
+    "context": [],
+    "overrides": [
+      {
+        "line": 14309,
+        "selector": ".bottom-sheet .notification-row,\n.bottom-sheet .notification-row:not(.notification-row-read)",
+        "value": "0",
+        "context": []
+      }
+    ]
+  },
+  {
+    "line": 799,
+    "selector": ".notification-row",
+    "property": "border",
+    "value": "1px solid var(--meal-line)",
+    "context": [],
+    "overrides": [
+      {
+        "line": 14307,
+        "selector": ".bottom-sheet .notification-row,\n.bottom-sheet .notification-row:not(.notification-row-read)",
+        "value": "0",
+        "context": []
+      }
+    ]
+  },
+  {
+    "line": 798,
+    "selector": ".notification-row",
+    "property": "padding",
+    "value": "10px",
+    "context": [],
+    "overrides": [
+      {
+        "line": 14305,
+        "selector": ".bottom-sheet .notification-row,\n.bottom-sheet .notification-row:not(.notification-row-read)",
+        "value": "12px 0",
+        "context": []
+      }
+    ]
+  },
+  {
+    "line": 796,
+    "selector": ".notification-row",
+    "property": "align-items",
+    "value": "start",
+    "context": [],
+    "overrides": [
+      {
+        "line": 9041,
+        "selector": ".bottom-sheet .notification-row",
+        "value": "flex-start",
+        "context": []
+      }
+    ]
+  },
+  {
+    "line": 795,
+    "selector": ".notification-row",
+    "property": "gap",
+    "value": "8px",
+    "context": [],
+    "overrides": [
+      {
+        "line": 9040,
+        "selector": ".bottom-sheet .notification-row",
+        "value": "10px",
+        "context": []
+      }
+    ]
+  },
+  {
+    "line": 793,
+    "selector": ".notification-row",
+    "property": "display",
+    "value": "grid",
+    "context": [],
+    "overrides": [
+      {
+        "line": 9039,
+        "selector": ".bottom-sheet .notification-row",
+        "value": "flex",
+        "context": []
+      }
+    ]
+  }
+]

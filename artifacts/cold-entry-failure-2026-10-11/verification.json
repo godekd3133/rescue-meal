@@ -1,0 +1,42 @@
+{
+  "status": "partial",
+  "changes": [
+    "Confirmed first-read failure without any cache leaves count unknown and shows no demo inventory",
+    "Hide empty shopping summary when both food and shopping are confirmed empty; first-food actions remain central"
+  ],
+  "validation": {
+    "frontend_suite": 853,
+    "build": "passed",
+    "runtime_files": 28,
+    "diff_check": "passed",
+    "first_failure": "Fresh origin/new guest, dashboard503 from first request; inventory header without count, no storage counters/priority list/sample spinach",
+    "recovery": "Removed agent-owned fault flag then clicked 다시 연결; actual API confirms empty inventory",
+    "empty_home_shopping_summaries": 0,
+    "first_entry_actions": [
+      "직접 입력",
+      "영수증으로 추가"
+    ],
+    "manual_entry": "Direct manual panel opens with empty name, default1개 and no previous-food name suggestions",
+    "primary_inventory_count": 5,
+    "primary_shopping_summaries": 1,
+    "primary_shopping_completed_items": 2,
+    "base_database_food_payload_signature": "unchanged7rows",
+    "device_scroll": 0,
+    "food_mutations": "none"
+  },
+  "proof": [
+    "first-failure.png",
+    "recovered-empty.png"
+  ],
+  "cleanup": [
+    "Temporary browser tab closed",
+    "Task-owned Vite55846 and proxy55847 stopped; listeners absent",
+    "Fault flag deleted",
+    "Primary preview4184 retained"
+  ],
+  "limits": [
+    "New empty QA guest created on local API; no account credential or real-user mutation",
+    "Failure is dashboard503, not complete network/auth-bootstrap outage",
+    "iPhone/light only; standalone web and dark first-entry combinations remain open"
+  ]
+}

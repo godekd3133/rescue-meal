@@ -1,0 +1,25 @@
+{
+  "scope": "Actual API-connected calibrated Pixel10 settings keyboard validation",
+  "code_changes": "none in this loop; prior implementation matched by source hashes",
+  "validation": {
+    "period_edit": "2->4 with keyboard open",
+    "cancel": "One native click restored2 and dismissed keyboard",
+    "save": "One native click saved4 through actual API PUT and displayed success; no dirty actions afterward",
+    "baseline_restore": "Set2 and saved successfully",
+    "time_focus": "Start time field bottom315.2774 above keyboard top465.8630",
+    "close": "One native click while keyboard open returned notification sheet",
+    "save_bottom": 462.5753,
+    "keyboard_top": 465.863,
+    "device_scroll_top": 0,
+    "protected_runtime_files": 28,
+    "diff_check": "passed",
+    "last_full_frontend_tests": 643,
+    "last_build": "passed; settings source hashes match prior validated checkpoint",
+    "physical_device": "not-run",
+    "css_budget": "last check failed:292.7KB versus260KB"
+  },
+  "sha256": {
+    "apps/web/src/AccountSheet.tsx": "4ae56e649adc64ab38c21c1650e23d2d144e253809ed9568bc3e61df4f880ed0",
+    "apps/web/src/notificationSettingsLayout.css": "bcc504aeedf9514a9ec8bc9d0a68440e352e0a3998454e5dab50120bc3ec2ea7"
+  }
+}

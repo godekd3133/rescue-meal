@@ -1,0 +1,35 @@
+{
+  "goal_status": "active",
+  "previous_turn": "progress",
+  "css_investigation": {
+    "exact_shadowed_declarations_safe_to_remove": 0,
+    "report": "/tmp/rescue-css-exact-shadowed.json",
+    "result": "No style removal without stronger visual evidence; CSS budget remains failed"
+  },
+  "changes": [
+    "Shared FoodPhoto for home, inventory, detail, receipt product rows and recipe ingredients",
+    "Keep home priority and detail photographs eager; use native lazy loading for inventory, receipt rows and recipe ingredients",
+    "Decode decorative food photographs asynchronously",
+    "Recover a failed source with an existing name-matched licensed photograph",
+    "Keep the image box but hide a failed fallback instead of showing a broken-image icon",
+    "A different source clears the prior source's failure presentation",
+    "Retain uploaded receipt and label source preview behavior"
+  ],
+  "verification": {
+    "web_tests": "738 passed",
+    "web_log": "/tmp/rescue-food-photo-web.log",
+    "build": "TypeScript and production build passed",
+    "build_log": "/tmp/rescue-food-photo-build.log",
+    "protected_runtime_integrity": "28 files passed",
+    "ssr_and_source_logic": "passed: loading, decoding, drag behavior and four failure/replacement transitions",
+    "recovery_log": "/tmp/rescue-food-photo-recovery.log",
+    "git_diff_check": "passed",
+    "bundle_budget": "failed: total CSS 293.4KB exceeds 260KB",
+    "bundle_log": "/tmp/rescue-food-photo-bundle.log",
+    "browser_image_error_and_visual_validation": "not-run: browser tools unavailable",
+    "measured_loading_performance": "not-run",
+    "physical_device": "not-run",
+    "deployment": "not-run"
+  },
+  "limits": "Native lazy-loading thresholds depend on the browser; no measured transfer or latency reduction is claimed. Full journey acceptance remains partial."
+}

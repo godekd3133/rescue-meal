@@ -1,0 +1,41 @@
+{
+  "goal_status": "active",
+  "previous_turn": "progress",
+  "before_regression": "5 failed: metric recipe allocation rounded to zero or a different amount, and precise cooking portions rounded or skipped",
+  "before_log": "/tmp/rescue-cooking-precision-before.log",
+  "changes": [
+    "Preserve scaled recipe amounts, converted inventory totals and allocations with decimal arithmetic",
+    "Preserve remaining quantities in optimizer and multi-day shopping simulation",
+    "Preserve cooking request quantities and exact summed allocation quotas; reject overage without an arbitrary tolerance",
+    "Keep edited cooking portions and restored selections without three-digit rounding",
+    "Display ingredient, allocation and consumed totals without two/three-digit truncation"
+  ],
+  "verification": {
+    "api_tests": "582 passed, 9 Starlette deprecation warnings",
+    "api_log": "/tmp/rescue-cooking-precision-api-final.log",
+    "metric_recipe_cases": [0.4, 2.5, 1.1234],
+    "unit_conversion_end_to_end": "TestClient save of 0.4g recipe allocated 0.0004kg; overage 0.0004000001 rejected; completion preserved 0.0004kg and remaining 0.4996kg",
+    "selected_portion_cases": [0.1234, 0.0004],
+    "web_tests": "758 passed",
+    "web_log": "/tmp/rescue-cooking-precision-web.log",
+    "build": "TypeScript and production build passed",
+    "build_log": "/tmp/rescue-cooking-precision-build.log",
+    "protected_runtime_integrity": "28 passed",
+    "git_diff_check": "passed",
+    "bundle_budget": "failed: CSS 291.6KB exceeds 260KB",
+    "bundle_log": "/tmp/rescue-cooking-precision-bundle.log"
+  },
+  "local_runtime": {
+    "api_new_process": 70436,
+    "api_and_proxy_health": 200,
+    "backup": "/tmp/rescue-cooking-refresh-2026-10-11",
+    "backup_database_count": 7,
+    "existing_food_id_quantity_and_unit_preserved": 19,
+    "browser_reload": "Guest food list retained five foods and checked shopping history",
+    "browser_cooking_completion": "not-run; completion tests used isolated API fixtures",
+    "user_record_consumption_or_disposal": "not performed",
+    "screenshot": "preserved-preview.png"
+  },
+  "deployment": "not-run",
+  "scope": "Planner, API completion, simulation and frontend quantity integrity proof; current browser cooking interaction is still separate from isolated API tests."
+}

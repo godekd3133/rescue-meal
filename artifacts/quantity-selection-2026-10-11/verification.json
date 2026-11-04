@@ -1,0 +1,28 @@
+{
+  "goal_status": "active",
+  "problem": "Existing quantities with more than three fractional digits could not be selected as a whole lot, and remaining quantities were rounded in the detail preview and local consumption state",
+  "changes": [
+    "Allow exact whole-lot selection for existing positive finite quantities while preserving the three-digit custom partial input restriction",
+    "Preserve source precision in detail and receipt/inventory quantity presentation",
+    "Use decimal-scaled subtraction for remaining quantity preview and local consumed/discarded/completed state",
+    "Keep increment saturation and background whole-lot reconciliation at the exact available quantity"
+  ],
+  "verification": {
+    "quantity_selection_tests": "9 passed",
+    "quantity_selection_log": "/tmp/rescue-quantity-ui-targeted-final.log",
+    "whole_lot_cases": [1.1234, 0.0001, 0.0000001],
+    "partial_case": "1.1234 minus 0.1 equals 1.0234",
+    "web_tests": "727 passed",
+    "web_tests_log": "/tmp/rescue-quantity-ui-web-final.log",
+    "typescript_and_production_build": "passed",
+    "build_log": "/tmp/rescue-quantity-ui-build-final.log",
+    "protected_runtime_integrity": "28 files passed",
+    "git_diff_check": "passed",
+    "bundle_budget": "failed: total CSS 293.4KB exceeds 260KB",
+    "bundle_log": "/tmp/rescue-quantity-ui-bundle-final.log",
+    "browser_interaction_and_visual_validation": "not-run: browser tools unavailable",
+    "physical_device": "not-run",
+    "deployment": "not-run"
+  },
+  "remaining_scope": "Full product journey acceptance and existing CSS budget failure remain open"
+}

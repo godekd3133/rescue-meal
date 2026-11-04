@@ -1,0 +1,21 @@
+{
+  "goal": "active",
+  "problem": "Manual shopping save cleared later edits and its scheduled focus callback could steal focus from a new draft.",
+  "change": "Track draft edits across async save; cancel pending saved-item focus on edits; clear only unchanged draft after success; scheduled focus checks current intent.",
+  "validation": {
+    "tests": 9,
+    "build": "passed",
+    "runtime_protected": 28,
+    "diff_check": "passed",
+    "GUI": {
+      "environment": "Isolated local API fixture",
+      "delay_8s": "Client timeout; next product name, quantity7 and quantity focus preserved; original request later confirmed in list",
+      "delay_5s": "Save success; saved fixture quantity7 visible; next draft name and quantity7 and name focus preserved"
+    },
+    "next_draft_saved": false,
+    "production": "not-run"
+  },
+  "source_sha256": "724be62940bfa06161d954bd1e17281af5871bb749ecc21dc0766a20d208f3e7",
+  "proxy_session": 87729,
+  "delay_flag": "removed"
+}

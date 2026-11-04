@@ -1,0 +1,15 @@
+{
+  "change": [
+    "Receipt intake failures expose human-readable engine availability rather than backend exception names",
+    "Replace repeated manual-entry explanation with working manual-entry action",
+    "Hide progress rail after failed receipt intake"
+  ],
+  "verification": {
+    "build": "passed",
+    "runtime_protected_files": 28,
+    "GUI": "Local connected API; engine unavailable and upload failure both observed; choose another returns idle; direct input opens manual; no food save performed",
+    "real_OCR": "not-run"
+  },
+  "source_sha256": "c07ae39a193df1d6bab0cc22f4ad38de627b7b085ceb329a17e93b19416a2e97",
+  "goal": "active"
+}

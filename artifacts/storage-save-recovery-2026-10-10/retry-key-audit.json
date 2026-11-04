@@ -1,0 +1,7 @@
+{
+  "attempts": 2,
+  "same_idempotency_key": true,
+  "all_nonempty": true,
+  "moved_events": 1,
+  "opened_events": 1
+}

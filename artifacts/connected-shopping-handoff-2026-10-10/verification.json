@@ -1,0 +1,26 @@
+{
+  "scope": "Actual local API meal save, shortage shopping handoff and reload; restored serving selector; source-specific shopping explanation",
+  "validation": {
+    "frontend_tests": 636,
+    "failures": 0,
+    "new_adjustment_tests": 4,
+    "build": "passed",
+    "protected_runtime_files": 28,
+    "diff_check": "passed",
+    "actual_browser": "Saved mushroom/egg meal for2 servings; mushroom required2/available2 packs, egg required4/no stock; added only4 eggs to shopping; reload retained1 unchecked shopping item4 eggs; existing3 foods unchanged; recent history reopened saved2-serving meal; after fix serving selector and note/button all show2",
+    "inventory_consumption": "not-run",
+    "physical_device": "not-run",
+    "production_deploy": "not-run",
+    "css_budget": "last check failed:291.3KB versus260KB"
+  },
+  "findings_fixed": [
+    "Manual shopping addition was incorrectly described as purchase record",
+    "Restored2-serving plan showed1-serving preference as selected"
+  ],
+  "sha256": {
+    "apps/web/src/MealPlanSheet.tsx": "6fc7db4b842f445e0ab6c4654aea67187f05c9b9d326825c9ec669275c4f294e",
+    "apps/web/src/ShoppingListSheet.tsx": "01018e365fe83064c80e1fcb9e3ccd7e2f0ce8d27a11d12a981f5ee663c49ed7",
+    "apps/web/src/shoppingListPresentation.ts": "ae8b721d321ffcb526456005f73cbff0e684be9c5e5226721facb8ea31a85bca",
+    "apps/web/tests/shopping-adjustment-note.test.mjs": "7a18c01decd364a2ccab70cde25b286d51a4c0dc286c46abbc0fcd988a1e0f7b"
+  }
+}

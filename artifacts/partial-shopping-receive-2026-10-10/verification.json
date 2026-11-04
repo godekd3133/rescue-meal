@@ -1,0 +1,26 @@
+{
+  "scope": "Actual API partial shopping receive and detail copy density",
+  "changes": [
+    "Home shopping summary omits zero completed count and uses separate Metadata fields",
+    "Estimated-date safety explanation moved beside date card, before consumption controls",
+    "Exact generated shopping reference note suppressed only with estimated date guidance and purchase details; user warnings preserved",
+    "Duplicate purchase-group date instruction removed"
+  ],
+  "validation": {
+    "frontend_tests": 638,
+    "failures": 0,
+    "build": "passed",
+    "runtime_integrity": "28 protected files passed",
+    "diff_check": "passed",
+    "actual_browser": "Marked test shopping egg item4 as purchased, received2 into refrigerated storage; shopping remaining2 unchecked and new inventory2; readback food action opened exact received lot; reload retained inventory4 foods and shopping2 eggs; no consumption/discard executed",
+    "css_budget": "failed:291.3KB versus260KB",
+    "physical_device": "not-run",
+    "deployed_environment": "not-run"
+  },
+  "sha256": {
+    "apps/web/src/Prototype.tsx": "2c532a3ca2de28e189d99ec61d800a2bad9ebc421da122e72b655a07a814f4e2",
+    "apps/web/src/FoodDetailSheet.tsx": "dc68c4abecbb7374b490f01762e2e56aebe1f58d83c9ea2015e5aa1f05ca7fad",
+    "apps/web/src/detailFoodNotes.ts": "0b9b17429020b014f60f6fa83e91961c8ea00a31df0bf1ff4e28f3c57988ad3d",
+    "apps/web/tests/detail-food-notes.test.mjs": "04a8bb9272a4b683848203c68038b193a179868f226fad01270d5a1f0257c0f6"
+  }
+}

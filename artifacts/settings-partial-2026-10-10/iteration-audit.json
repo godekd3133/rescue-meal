@@ -1,0 +1,25 @@
+{
+  "changes": [
+    "Separate mandatory preference read from optional subscriptions/delivery outcomes",
+    "Optional failures preserve confirmed basic settings and report auxiliary error",
+    "Unknown devices not represented as empty connections; unknown delivery not shown as nohistory",
+    "Auxiliary refresh preserves unsaved basic draft"
+  ],
+  "verification": {
+    "read_result_cases": 4,
+    "actual_refresh_draft_cases": 2,
+    "IAB_partial503": "basic8 editable, deviceinfo unknown, auxiliaryerror/retry present",
+    "IAB_edit": "9 unsaved and save enabled during auxiliary failure",
+    "IAB_retry": "auxiliaryerror0,unsaved9 retained,save stillenabled",
+    "node_tests": 422,
+    "build": "passed",
+    "runtime_files": 28,
+    "diff_check": "passed",
+    "real_device_connection": "not-run"
+  },
+  "remaining": [
+    "CSS size budget",
+    "Other journey and real device/OCR acceptance"
+  ],
+  "goal": "active"
+}

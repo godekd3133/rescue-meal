@@ -1,0 +1,25 @@
+{
+  "changes": [
+    "Default quantity guidance lives only beside quantity input",
+    "Edited valid quantity relies on actual field and save summary; no repeated prose",
+    "Remove unsupported selected-date success badge; preserve example and review states"
+  ],
+  "verification": {
+    "IAB_default_hint_count": 1,
+    "IAB_edited_valid_quantity": "2팩, hint absent, save enabled, exact summary",
+    "IAB_invalid_quantity": "0팩, error present, save disabled",
+    "IAB_existing_lot": "existing1팩 preserved; save summary shows existing lot",
+    "IAB_new_lot_return": "entered2팩 preserved",
+    "build": "passed",
+    "runtime_files": 28,
+    "node_tests": 324,
+    "diff_check": "passed",
+    "real_recognized_badge": "source verified; realOCR runtime not-run"
+  },
+  "remaining": [
+    "RealOCR and browser spec maintenance",
+    "CSS budget",
+    "Full journey/device acceptance"
+  ],
+  "goal": "active"
+}

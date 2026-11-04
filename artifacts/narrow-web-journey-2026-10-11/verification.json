@@ -1,0 +1,77 @@
+{
+  "status": "partial",
+  "environment": "Separate web shell at real320x760 browser viewport, explicit demo mode and empty API URL; no live API food writes",
+  "issues_fixed": [
+    "Long unbroken food title expanded header grid and covered close button",
+    "Manual form and save summary intrinsic grid columns overflowed when a long name was entered",
+    "Demo estimated dates lacked priorityDate and were omitted from date-ordered home selection"
+  ],
+  "changes": [
+    "Bound header/title grid column with minmax0 and allow long title wrapping",
+    "Bound manual form and save-summary grid columns and wrap long summary names",
+    "Added existing displayed dates as priorityDate to4 estimated demo foods"
+  ],
+  "observations": {
+    "title_before": {
+      "sheet_width": 296,
+      "sheet_scroll_width": 506,
+      "title_width": 478
+    },
+    "title_after": {
+      "sheet_width": 296,
+      "sheet_scroll_width": 296,
+      "title_width": 204,
+      "title_scroll_width": 204,
+      "close_button": 44
+    },
+    "manual_after": {
+      "visible_content_width": 281,
+      "scroll_width": 281,
+      "form_and_field_width": 225,
+      "summary_width": 225,
+      "summary_scroll_width": 225,
+      "scroll_left": 0,
+      "unit_button_size": 44,
+      "quantity": "1.1234L"
+    },
+    "demo_home_order": [
+      "시금치",
+      "국산콩 두부",
+      "맛타리버섯"
+    ],
+    "live_preview_after_cleanup": {
+      "viewport": 1280,
+      "mode": "preview",
+      "food_count": 5,
+      "device_scroll": 0
+    }
+  },
+  "validation": {
+    "frontend_suite": 789,
+    "demo_date_regression": "Failed before missing fields, passed after",
+    "build": "passed",
+    "runtime_files": 28,
+    "diff_check": "passed",
+    "CSS_budget": {
+      "status": "failed",
+      "actual_KB": 291.0,
+      "limit_KB": 260
+    }
+  },
+  "cleanup": [
+    "Temporary viewport override reset",
+    "Temporary browser tab closed",
+    "Owned51740 dev server stopped"
+  ],
+  "limits": [
+    "Actual320px web shell demo proof, not physical device or connected320px proof",
+    "Temporary new record existed only in demo memory",
+    "Unknown-name default photograph semantic match not verified"
+  ],
+  "evidence": [
+    "long-name-before.png",
+    "long-name-after.png",
+    "manual-after.png",
+    "observations.json"
+  ]
+}

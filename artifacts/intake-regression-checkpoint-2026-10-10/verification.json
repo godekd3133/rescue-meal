@@ -1,0 +1,29 @@
+{
+  "goal": "active",
+  "previous_turn": "progress",
+  "validation": {
+    "node": 557,
+    "API": 544,
+    "build": "passed; latest /tmp/rescue-manual-date-context-build.log",
+    "runtime_protected": 28,
+    "diff_check": "passed",
+    "CSS_KB": 291.1,
+    "CSS_limit_KB": 260,
+    "automatic_browser_suite": "not-run; permission pending",
+    "device": "not-run",
+    "deployment": "not-run"
+  },
+  "coverage_source": "artifacts/journey-coverage-2026-10-10/coverage.json",
+  "source_snapshot": {
+    "apps/web/src/Prototype.tsx": "061a9aa0b07c86f2eda59a1b06571f05e17bbafc78e80fa95ed4ec95733d7a64",
+    "apps/web/src/MealPlanSheet.tsx": "decff312a500f313b00463d55dbc0698ba1c31fc8a3e77ef25c2aa6789654f86",
+    "apps/web/src/AccountSheet.tsx": "c733a041648ecdf54328e54ea29f86ab8a5601babf1c1e92f78ae0aa3b379bd2",
+    "apps/web/src/AddFoodSheet.tsx": "28a6dbd8a921abea3700637eb9d8bb61583b020799e813c5d2361a4332a8f67f",
+    "apps/web/src/FoodDetailSheet.tsx": "e51c0db2a8736273ff500fbe2797667eb580381d580f4968d1734773989cb3c1",
+    "apps/web/src/Metadata.tsx": "74592409aee6525c1c18667b5eac71f4bee091a48639a3a1cb4f1754a6040aeb",
+    "apps/web/src/RecipeReviewPanel.tsx": "86276c22f2d04ad05107b4875f6cf66cd7d9013fed2d87fcb81af377e40735d1",
+    "services/api/app/main.py": "c6354055fb0338fb2b49a9505ff3c8c387a323c89c5ac554468b3efe9fbc7998",
+    "services/api/app/planner.py": "a4dc6d221ef6a89da6c791b5b3a881a5fc46dd2d3e0f99170d63084ac2af2913",
+    "apps/web/src/prototype.css": "0d3a0b5deeb6f8948b3320855999cdab7a33692c29106f6de8ff6b723e95c6d7"
+  }
+}

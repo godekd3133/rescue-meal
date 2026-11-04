@@ -1,0 +1,32 @@
+{
+  "goal": "active",
+  "changes": [
+    "Omit exact standard purchase note only with purchase details visible; custom warnings retained",
+    "Received-food view opens summary with browse intent rather than forced date review"
+  ],
+  "validation": {
+    "targeted_tests": 41,
+    "build": "passed",
+    "runtime_protected": 28,
+    "diff_check": "passed",
+    "GUI": {
+      "scope": "Explicit demo iPhone preview; native accessibility clicks",
+      "flow": "Manual shopping item1, purchased, cold receive1, detail view, close returns completion",
+      "record": "Quantity1, cold storage, unknown printed date, purchase date and source retained",
+      "copy": "Duplicate standard purchase note omitted; date safety boundary retained",
+      "headerTop": 115.29,
+      "closeTop": 117.72,
+      "statusBottom": 101.06,
+      "screenScroll": "1px from input stage, unchanged during received-detail view",
+      "automation_caveat": "DOM locator shopping-nav click moved protected screen to339px; native accessibility click kept0. Earlier104px movement preceded detail navigation, so date-focus causality was not established",
+      "reset": "Demo reload cleared fixture"
+    },
+    "physical_device": "not-run",
+    "connected_API_mobile": "not-run"
+  },
+  "source_snapshot": {
+    "apps/web/src/Prototype.tsx": "ef5be5c9acd01259a88dfaa5b085b431142467b9c9c24f21eee4edb71abf41b4",
+    "apps/web/src/FoodDetailSheet.tsx": "26c8ed746cb3883695f5b6ae1c026a0e323c8067e4b0865198fa9666be0f285a",
+    "apps/web/src/detailFoodNotes.ts": "ad20c65cf1ae3f13a204d6e458bc403ddd927559b6d56966daecb6cff5f826c1"
+  }
+}

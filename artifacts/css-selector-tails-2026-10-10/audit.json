@@ -1,0 +1,24 @@
+{
+  "scope": "shared-prefix complex selector groups",
+  "changes": [
+    "factor only simple selectors with equal specificity",
+    "skip functional/escaped/namespaced selectors and pseudo-elements"
+  ],
+  "groups": 48,
+  "source_bytes_saved": 1310,
+  "verification": {
+    "build": "passed",
+    "protected_files": 28,
+    "diff_check": "passed",
+    "detail_elements": 137,
+    "computed_differences": 0,
+    "keyboard_focus_outline": "solid",
+    "active_candidate_sha256": "c995a94512e019db5af4986e9aeb53a31c645d183d21ad2acc211de805086077",
+    "css_budget": "still exceeded; exact value in build output"
+  },
+  "rejected_candidate": "initial two groups contained pseudo-elements; restored original source and regenerated with exclusion",
+  "limits": [
+    "one detailed rendered state and focus state, not full product equivalence",
+    "full goal and CSS gate remain open"
+  ]
+}

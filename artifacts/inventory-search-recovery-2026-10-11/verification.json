@@ -1,0 +1,28 @@
+{
+  "goal_status": "active",
+  "previous_turn": "progress",
+  "observed_problem": [
+    "Two duplicate clear-all actions in empty search",
+    "Clear-all discarded search query along with filters",
+    "Joined separator still visible in nested inventory scope string"
+  ],
+  "implemented": [
+    "Inventory scope passed as distinct Metadata fields",
+    "Empty-result filter action retains query",
+    "Query-only empty result focuses and selects search input",
+    "Remove obvious repeated reset instruction and duplicate reset button"
+  ],
+  "verified": [
+    "Actual API: broccoli search + frozen filter -> empty ->clear filters ->broccoli1pack;query retained",
+    "No assumed other-location inventory count",
+    "Query-only no match ->editsearch;inputfocus=true,selection0..4",
+    "683webtests passed",
+    "Build and28runtimeprotectedfilespassed",
+    "gitdiffcheckpassed"
+  ],
+  "not_run": [
+    "Physicaldevice",
+    "PlaywrightCLI/MCPbrowser suite"
+  ],
+  "source_sha256": "e8a31613a70d7ef6422ee8875dfe3171f3c524a7a477b119bbf17a3ab5fc9b71"
+}

@@ -1,0 +1,70 @@
+{
+  "scope": "post-commit response loss during partial storage split and affected-child follow-up",
+  "changes": [
+    "carry final affected food ID from storage sequence or single event",
+    "offer split-child viewing after confirmation",
+    "open follow-up as browsing and keep account-scope guard"
+  ],
+  "runtime": {
+    "environment": "isolated local SQLite synthetic account IAB",
+    "failure_mode": "server returned 200 after committing; proxy replaced acknowledgement with generic 503",
+    "unknown_state": "only same-request retry, no edit recovery, retry focused",
+    "before_retry": {
+      "rows": [
+        {
+          "quantity": 2.0,
+          "storage": "refrigerated",
+          "opened": false
+        },
+        {
+          "quantity": 2.0,
+          "storage": "frozen",
+          "opened": true
+        }
+      ],
+      "total": 4.0,
+      "moved_events": 1,
+      "opened_events": 1
+    },
+    "after_retry": {
+      "rows": [
+        {
+          "quantity": 2.0,
+          "storage": "refrigerated",
+          "opened": false
+        },
+        {
+          "quantity": 2.0,
+          "storage": "frozen",
+          "opened": true
+        }
+      ],
+      "total": 4.0,
+      "moved_events": 1,
+      "opened_events": 1,
+      "same_record_ids": true,
+      "attempts": 2,
+      "same_request_key": true
+    },
+    "follow_up_separate_operation": {
+      "remaining_parent_before": 2,
+      "split_quantity": 1,
+      "opened_child_view": {
+        "quantity": 1,
+        "storage": "frozen",
+        "opened": true
+      }
+    }
+  },
+  "verification": {
+    "node_passed": 494,
+    "affected_child_cases": 2,
+    "build": "passed",
+    "protected_files": 28,
+    "diff_check": "passed"
+  },
+  "limits": [
+    "controlled local acknowledgement replacement, not a production outage",
+    "full goal and CSS gate remain open"
+  ]
+}

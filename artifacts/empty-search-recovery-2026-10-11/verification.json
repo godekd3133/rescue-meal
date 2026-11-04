@@ -1,0 +1,34 @@
+{
+  "status": "partial",
+  "problem": "Empty search with an active storage/status filter offered only clearing filters, hiding direct query editing",
+  "change": "Offer query edit and filter reset together when both apply; otherwise retain the single relevant recovery action",
+  "browser_validation": {
+    "both_actions_height_px": 44,
+    "edit": "Query 아보카도 retained and all 4 characters selected, cold filter retained, keyboard opened",
+    "clear_filters": "Query retained, storage reset to all, keyboard closed",
+    "useful_recovery": "우유 + ambient -> 0 results; clear filters -> 3 milk rows while retaining 우유",
+    "reset": "All 5 rows restored; query cleared; no record writes",
+    "device_scroll": 0
+  },
+  "validation": {
+    "node_tests": 777,
+    "build": "passed",
+    "runtime_files": 28,
+    "diff_check": "passed",
+    "new_usefulness_browser_regression": "Added; CLI execution not-run, permission pending",
+    "CSS_budget": {
+      "status": "failed",
+      "actual_KB": 291.5,
+      "limit_KB": 260
+    }
+  },
+  "limits": [
+    "Current connected light iPhone preview",
+    "No native/320px/dark or failed-search-network validation in this iteration"
+  ],
+  "evidence": [
+    "before.png",
+    "after.png",
+    "recovery.json"
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "changes": [
+    "Hide exact generic no-match instruction repeated by recovery buttons",
+    "Keep allergy preservation note only for configured saved avoidance conditions",
+    "Shorten recovery labels to 조건 바꾸기 and 식품 추가 at narrow width"
+  ],
+  "verification": {
+    "IAB_viewport": "320x740",
+    "IAB_no_match": "10-minute condition shows no-match with direct20-minute recovery",
+    "IAB_20minute_recovery": "selected20, recipe present, save enabled",
+    "IAB_condition_focus": "조건 바꾸기 focuses selected10-minute control",
+    "IAB_add_food": "opensreceipt input withcapture action",
+    "IAB_repeated_instruction_count": 0,
+    "build": "passed",
+    "runtime_files": 28,
+    "node_tests": 368,
+    "diff_check": "passed",
+    "connected_no_match": "not-run this iteration",
+    "empty_pantry_meal": "not-run this iteration"
+  },
+  "remaining": [
+    "Connected/empty meal recovery and return context",
+    "CSS size gate",
+    "Broader journey and device/OCR acceptance"
+  ],
+  "goal": "active"
+}

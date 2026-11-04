@@ -1,0 +1,37 @@
+{
+  "status": "partial",
+  "bug": "Every preferences PUT flushed the workspace, including identical values and duplicate retries, creating a new revision for no logical change",
+  "fix": "Compare current and requested preferences inside the existing workspace mutation lock; return current copy and skip persistence when equal",
+  "regressions": {
+    "before": "2 new revision tests failed; duplicate committed revision advanced2->3",
+    "after": [
+      "Identical settings preserve revision",
+      "Actual change commits; same-value retry preserves committed revision",
+      "An unnecessary flush failure is not triggered for identical settings"
+    ]
+  },
+  "validation": {
+    "full_API_tests": 592,
+    "warnings": 9,
+    "new_cases": 3,
+    "diff_check": "passed"
+  },
+  "live_check": {
+    "scope": "Local anonymous QA workspace, exact current values sent unchanged",
+    "HTTP_status": 200,
+    "preferences_equal": true,
+    "revision_before": 2,
+    "revision_after": 2,
+    "API_PID": 24417,
+    "API_health": 200,
+    "proxy_health": 200,
+    "backup": "/tmp/rescue-prefs-noop-refresh-2026-10-11",
+    "database_count": 7,
+    "food_record_count": 19,
+    "all_food_payloads_preserved": true
+  },
+  "limits": [
+    "Actual preference change and retry tested in isolated TestClient fixtures; live request was unchanged values only",
+    "CSS budget remains failed291.2KB/260KB"
+  ]
+}

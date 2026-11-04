@@ -1,0 +1,42 @@
+{
+  "goal_status": "active",
+  "previous_turn": "progress",
+  "product_source_change": "none; this iteration verifies existing FoodPhoto recovery in the real browser",
+  "fixture": {
+    "scope": "Only read-only JSON responses for the agent-created local QA food food-a383da2d1a5c",
+    "original_backend_path": "/assets/food/groceries-photo.jpg",
+    "injected_path": "/assets/food/intentionally-missing-qa-photo.jpg",
+    "quantity_or_storage_mutation": "none",
+    "trace": "fixture-observation.json"
+  },
+  "runtime_results": {
+    "unloadable_primary": "Existing name-matched onion photograph displayed; naturalWidth 640, visibility visible",
+    "fallback_failure": "In a fresh temporary tab only, Network.setBlockedURLs blocked the exact local onion photograph URL; image naturalWidth 0 and visibility hidden",
+    "layout_preservation": "Image wrapper remained 88 by 88; food title, quantity and actions remained visible",
+    "normal_response_restored": "After removing fixture and restoring requests, onion photograph visible with naturalWidth 640",
+    "screenshots": ["fallback-loaded.png", "all-failed-hidden.png", "restored-photo.png"],
+    "observations": ["all-failed-observation.json", "restored-observation.json"]
+  },
+  "cleanup_verified": {
+    "blocked_urls": "cleared to []",
+    "cache_disabled": "restored to false",
+    "network_domain": "disabled",
+    "temporary_tab": "closed; browser inventory contains only original tab 1",
+    "photo_fault_file": "removed",
+    "temporary_proxy": "stopped",
+    "original_proxy": "restarted from artifacts/first-entry-2026-10-11/proxy.py",
+    "original_proxy_health": 200,
+    "original_preview": "reloaded with normal response and kept open"
+  },
+  "checks": {
+    "previous_full_web_suite": "749 passed at unchanged auth-input checkpoint; not rerun without product changes",
+    "previous_build": "passed at unchanged auth-input checkpoint",
+    "tracked_product_source_snapshot": "unchanged",
+    "runtime_integrity": "28 protected files passed this iteration",
+    "runtime_integrity_log": "/tmp/rescue-photo-failure-runtime-check.log",
+    "git_diff_check": "passed",
+    "css_budget": "still failed: 293.4KB versus 260KB",
+    "deployment": "not-run"
+  },
+  "scope": "Actual photo recovery and double-failure handling in the local preview. No measured loading-speed claim or full-journey completion claim."
+}

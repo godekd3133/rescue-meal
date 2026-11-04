@@ -1,0 +1,51 @@
+{
+  "status": "partial",
+  "issues_fixed": [
+    "Pixel preview toolbar used a bottom-safe-area value of zero for its sticky top and overlapped status chrome",
+    "Reselecting the food tab counted its previous tail spacer as real scrollable content and removed required space"
+  ],
+  "implementation": [
+    "Only app-owned Pixel preview inventory toolbar gets top 64px; protected status bar/frame untouched",
+    "Shared requiredInventoryTailSpace subtracts previous spacer for navigation and resize calculations"
+  ],
+  "observed": {
+    "iPhone_dark": "First row below toolbar; 5 foods retained",
+    "Pixel_dark_before": {
+      "heading_top": 60.801368713378906,
+      "status_bottom": 77.91780853271484
+    },
+    "Pixel_dark_after": {
+      "heading_top": 102.88356018066406,
+      "status_bottom": 77.91780853271484,
+      "first_row_top": 205.7876739501953,
+      "toolbar_bottom": 205.1301422119141
+    },
+    "Pixel_food_reselect": "scrollTop842 and tail181 preserved",
+    "Pixel_review_filter": "1 row visible below toolbar; title below status bar",
+    "iPhone_return": "first row211.069 below toolbar210.375",
+    "restored": "iPhone, light, full food list",
+    "record_writes": "none"
+  },
+  "validation": {
+    "web_tests": 775,
+    "new_tail_regressions": 5,
+    "build": "passed",
+    "runtime_files": 28,
+    "diff_check": "passed",
+    "css_budget": {
+      "status": "failed",
+      "actual_KB": 291.4,
+      "limit_KB": 260
+    },
+    "CLI_browser_suites": "not-run; permission pending"
+  },
+  "limits": [
+    "Calibrated browser previews; no physical Android/iOS validation",
+    "No full 320px/native shell acceptance in this iteration"
+  ],
+  "evidence": [
+    "pixel-before.png",
+    "pixel-dark-after.png",
+    "observations.json"
+  ]
+}

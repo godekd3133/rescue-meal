@@ -1,0 +1,25 @@
+{
+  "scope": "completed toast lifetime during navigation",
+  "changes": [
+    "dismiss prior completion follow-ups when starting a different sheet",
+    "preserve retry/readback/external-sync recovery actions",
+    "consult current sheet and action references for asynchronous openings"
+  ],
+  "runtime": {
+    "environment": "local isolated account IAB",
+    "completed_notice": "food saved with date follow-up visible",
+    "unrelated_detail_open": "previous toast removed",
+    "product_editor_toast_count": 0
+  },
+  "verification": {
+    "node_passed": 523,
+    "navigation_cases": 7,
+    "build": "passed",
+    "protected_runtime_files": 28,
+    "diff_check": "passed"
+  },
+  "limits": [
+    "recovery retention is covered by policy tests, not a new failed transport GUI in this loop",
+    "full goal and CSS budget remain open"
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "goal": "active",
+  "change": "Manual label-date entry does not claim there was a recognized date whose source location could not be found.",
+  "GUI": {
+    "scope": "Connected local API, synthetic existing spinach record",
+    "steps": [
+      "Detail 2.5 packs, date 2026-01-01",
+      "Date recheck with uploaded local fixture",
+      "needs_ocr_engine fallback",
+      "Direct date entry retains selected existing food and 2.5 packs",
+      "Date value blank, kind not selected, save disabled",
+      "Cancelled returns to detail with original date and quantity"
+    ],
+    "saved": false
+  },
+  "validation": {
+    "build": "passed",
+    "runtime_files": 28,
+    "label_recovery_tests": 3,
+    "diff_check": "passed",
+    "real_OCR_success": "not-run"
+  },
+  "source_sha256": "ea9662065022bcee7414920d956ae769904c8159093f907af925a08378b6d742"
+}

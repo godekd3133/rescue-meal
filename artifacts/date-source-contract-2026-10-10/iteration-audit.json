@@ -1,0 +1,30 @@
+{
+  "changes": [
+    "Generated manual-food windows carry category/storage basis separately from printed assertion source",
+    "Web selects estimate basis for displayed use-first date, assertion source for printed/user dates",
+    "Old pending placeholder is not displayed as evidence",
+    "Explicit manual date recovery carries independent review intent and user-input provenance",
+    "API allows explicitly reviewed user-input correction while retaining ordinary overwrite protection"
+  ],
+  "verification": {
+    "node_tests": 368,
+    "API_tests": 539,
+    "API_other_outcomes": 0,
+    "API_result": "passed",
+    "API_cases": [
+      "manual estimate basis separate from pending printed date",
+      "user-input explicit correction retains target identity and old assertion history",
+      "ordinary user input without review intent rejected409"
+    ],
+    "build": "passed",
+    "runtime_files": 28,
+    "diff_check": "passed",
+    "new_connected_UI": "not-run this iteration"
+  },
+  "remaining": [
+    "Connected manual recovery browser acceptance",
+    "CSS budget",
+    "Full journey/device and OCR acceptance"
+  ],
+  "goal": "active"
+}

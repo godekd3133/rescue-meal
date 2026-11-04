@@ -1,0 +1,30 @@
+{
+  "scope": "product edit dirty state and contextual copy",
+  "changes": [
+    "only enable save for changed normalized product fields",
+    "compare legacy placeholder brand against its visible empty value",
+    "remove repeated field-list introduction",
+    "show provenance unlink notice only for changed linked products",
+    "describe unlink for any product field edit consistently with API behavior"
+  ],
+  "runtime": {
+    "environment": "local isolated account IAB",
+    "unchanged_save_enabled": false,
+    "category_change_save_enabled": true,
+    "restore_original_save_enabled": false,
+    "redundant_intro_count": 0,
+    "unnecessary_unlink_notice_count": 0,
+    "actual_save": "not-run; input change reverted and sheet closed"
+  },
+  "verification": {
+    "node_passed": 516,
+    "new_dirty_cases": 6,
+    "build": "passed",
+    "protected_files": 28,
+    "diff_check": "passed"
+  },
+  "limits": [
+    "linked-provenance notice checked against source, not new GUI fixture",
+    "full goal and CSS gate remain open"
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "previous_goal_turn": "progress",
+  "goal_status": "active",
+  "changes": {
+    "overridden_declarations_removed": 1140,
+    "source_bytes_saved": 34118,
+    "advanced_syntax_fallbacks": "retained",
+    "method": "Match same selector/context or app-owned sheet-only selectors with later guaranteed bottom-sheet scope; preserve important priority andfallback block order"
+  },
+  "validation": {
+    "build": "pass",
+    "runtime": "28 protected files pass",
+    "diff": "pass",
+    "computed_style_comparisons": {
+      "receipt-diff": 0,
+      "meal-diff": 0,
+      "dark-detail-diff": 0,
+      "home-diff": 0,
+      "detail-diff": 0,
+      "manual-diff": 0
+    },
+    "comparison_scope": "All computed properties of app-owned home/nav/sheet elements; light desktop home350,detail454,receipt504,manual419,meal475; mobile390x844 darkdetail454",
+    "manual_initial_read": "Logical block-size initially differed before layout calculation; full layout read and recapture had zero differences",
+    "bundle": "FAIL: CSS299.8KB, budget260KB",
+    "previous_css_kb": 326.9,
+    "current_css_kb": 299.8,
+    "early_candidate": "Initial stronger cleanup comparedzero across light screens; final candidate retains93 extra fallback declarations andwascheckedagainstbaseline in dark detail"
+  },
+  "remaining": [
+    "CSS still39.8KB abovebudget",
+    "Further account/browser andnative installeddevice coverage"
+  ]
+}

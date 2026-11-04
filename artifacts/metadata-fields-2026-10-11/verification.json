@@ -1,0 +1,37 @@
+{
+  "goal_status": "active",
+  "previous_turn": "progress",
+  "changes": [
+    "Joined string and fragment metadata split into separate fields in both shared components",
+    "Preserve zero quantities, decimals, emphasis and meaningful intra-word middle dot",
+    "Remove repeated missing ingredient names from safety summary; full quantities remain in list",
+    "Natural all-missing ingredients summary"
+  ],
+  "validation": {
+    "metadata_render_tests": "9passed",
+    "all_web_tests": "692passed before final copy-only adjustment",
+    "build": "passed after final copy adjustment",
+    "runtime_integrity": "28protectedfilespassed",
+    "diff": "passed"
+  },
+  "runtime": {
+    "surface": "explicit demo preview4181,iPhone",
+    "servings": 4,
+    "joined_separator_count": 0,
+    "quantities": [
+      "spinach need4pack have1pack shortage3pack",
+      "tofu need4blocks have1block shortage3blocks",
+      "chicken need4pack have2pack shortage2pack"
+    ],
+    "saved_or_consumed": false
+  },
+  "not_run": [
+    "Physicaldevice",
+    "PlaywrightCLI/MCPfullbrowser suite"
+  ],
+  "sha256": {
+    "apps/web/src/Metadata.tsx": "f2dee5f53d141fbcd74f5b53d72503902df512187b73a45f6bdcb26831cb2a9a",
+    "apps/web/src/MealPlanSheet.tsx": "91ec71f2eeaba7648ad96ceca3efb31a27556442f3e11c430f7d26f8ff0b8ef9",
+    "apps/web/tests/metadata-spacing.test.mjs": "686c8c3bdef3b4ac5340a6d168008b49e3791df6ba19aec522cdb935586f84fe"
+  }
+}

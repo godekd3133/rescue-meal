@@ -1,0 +1,27 @@
+{
+  "changes": [
+    "Missing notification target uses inline warning and refresh action inside notification modal",
+    "No success-check toast for missing target",
+    "Refresh exposes busy/retryable failure state and is scope guarded",
+    "Refresh explicitly leaves related-flow return context before opening inventory",
+    "Light warning ink darkened"
+  ],
+  "verification": {
+    "fixture": "Localproxy fabricated missing target and read acknowledgement; inventory refresh uses real isolatedAPI",
+    "notification_modal_retained": true,
+    "warning_action_focused": true,
+    "duplicate_toasts": 0,
+    "action_height": 44,
+    "refresh_result": "notification modal closed, current3-record inventory visible, issue absent",
+    "node_tests": 390,
+    "build": "passed",
+    "runtime_files": 28,
+    "diff_check": "passed"
+  },
+  "remaining": [
+    "Live owner transition GUI and remaining journeys",
+    "CSS budget",
+    "Real device/OCR acceptance"
+  ],
+  "goal": "active"
+}

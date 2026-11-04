@@ -1,0 +1,17 @@
+{
+  "deviceScroll": 114,
+  "rows": [
+    {
+      "detail": "1모",
+      "id": "api-line-1",
+      "name": "국산콩 두부",
+      "review": "user_confirmed"
+    },
+    {
+      "detail": "2팩",
+      "id": "api-line-5",
+      "name": "맛타리버섯",
+      "review": "auto_read"
+    }
+  ]
+}

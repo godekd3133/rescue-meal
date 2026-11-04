@@ -1,0 +1,27 @@
+{
+  "goal_status": "active",
+  "previous_turn": "progress",
+  "removed": [
+    "11unusedprivateappcustom-propertydeclarations",
+    "2same-valuecolordeclarationsdominatedbylaterequivalentselectors"
+  ],
+  "dependency_scan": "AllsrcCSSnormalpropertyreferencesandTS/JSstrings;worker/publicreferenceschecked;unusedprefixesonlymeal/atelier",
+  "css_bytes_before": 345111,
+  "css_bytes_after": 344608,
+  "built_css_before_kb": 293.7,
+  "built_css_after_kb": 293.3,
+  "budget_kb": 260,
+  "checks": {
+    "build": "passed",
+    "runtime_integrity": "28protectedfilespassed",
+    "diff": "passed",
+    "bundle": "failed,stilloverbudget",
+    "runtime": "Stockrows2counts/coldand250ml/frozen preserved;disabledbuttontoneandshadowpreserved"
+  },
+  "unapplied_analysis": [
+    "Font-valuefactoringonlyabout464rawbytes",
+    "Selectorprefixfactoring244rawbytesmostlywhitespace",
+    "No largersafeoverridecandidatefoundinboundedshoppingnamespace"
+  ],
+  "source_sha256": "3c5accea13a122c77930e53252437787a23b7328261e8b428eeb6a5b5dde29f6"
+}

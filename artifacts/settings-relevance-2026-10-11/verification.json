@@ -1,0 +1,40 @@
+{
+  "status": "partial",
+  "changes": [
+    "Quiet-hour fields shown when push controls are available or saved/local times exist",
+    "Stored times remain editable even when connection is unavailable and draft has been cleared",
+    "Partial local time draft remains visible for correction",
+    "Timezone guidance matches currently visible settings",
+    "Standalone settings removed duplicate outer named region; inner named region retained"
+  ],
+  "runtime": {
+    "push_unavailable_no_saved_hours": "Quiet input count0",
+    "named_settings_region_count": 1,
+    "lead_days": 2,
+    "device_scroll": 0,
+    "actual_save": "not-run",
+    "unread_count": 1,
+    "restored": "Home"
+  },
+  "validation": {
+    "frontend_suite": 824,
+    "new_visibility_cases": 4,
+    "build": "passed",
+    "runtime_files": 28,
+    "diff_check": "passed",
+    "browser_regression_fixture": "Existing saved quiet hours seeded so unavailable-push editing scenario remains valid; CLI execution not-run",
+    "CSS_budget": {
+      "status": "failed",
+      "actual_KB": 291.5,
+      "limit_KB": 260
+    }
+  },
+  "limits": [
+    "Current unavailable-push/no-hours preview exercised live; stored/partial/available cases verified by isolated visibility tests",
+    "No new push permission or connection"
+  ],
+  "evidence": [
+    "after.png",
+    "observations.json"
+  ]
+}

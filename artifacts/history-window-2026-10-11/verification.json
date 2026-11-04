@@ -1,0 +1,49 @@
+{
+  "status": "partial",
+  "findings": [
+    "History panes rendered only4 records while header counted all received records",
+    "No control to reveal older received records",
+    "Empty storage history repeated no-record state in badge and body"
+  ],
+  "changes": [
+    "Shared owner-scoped history window initially shows4 and toggles all received records",
+    "Applied to storage/product-info/provenance history panes",
+    "Header count matches visible events",
+    "Expand preserves sheet scroll; collapse reveals control within app-owned scroll container",
+    "Empty storage-history state has one body message"
+  ],
+  "validation": {
+    "frontend_suite": 849,
+    "new_state_tests": 3,
+    "build": "passed",
+    "runtime_files": 28,
+    "diff_check": "passed",
+    "fixture_component": "Actual FoodHistory, isolated method returning7 synthetic records; no API mutations",
+    "fixture_counts": [
+      4,
+      7,
+      4
+    ],
+    "fixture_header_counts": [
+      "4개",
+      "7개",
+      "4개"
+    ],
+    "expand_scroll_top": 0,
+    "toggle_height": 46,
+    "current_food": "양배추",
+    "current_history_empty": true,
+    "device_scroll": 0,
+    "record_writes": "none",
+    "cleanup": "Temporary fixture browser tab closed; primary detail retained"
+  },
+  "proof": [
+    "current-empty.png",
+    "fixture-expanded.png"
+  ],
+  "limits": [
+    "Nonempty GUI verified only for storage history; product/provenance panes share tested window but not exercised with nonempty GUI this iteration",
+    "Shows all received events; no claim of fetching unreturned older records",
+    "Full journey acceptance and CSS budget remain open"
+  ]
+}

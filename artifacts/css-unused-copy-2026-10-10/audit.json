@@ -1,0 +1,28 @@
+{
+  "scope": "remove styles for confirmed deleted copy",
+  "unused_classes": [
+    "hero-description",
+    "recipe-review-source-disabled",
+    "recipe-review-sync-hint",
+    "status-dot-warning"
+  ],
+  "changes": {
+    "rule_groups": 11,
+    "source_bytes_removed": 1068
+  },
+  "method": [
+    "checked literal and dynamic class usage in current source",
+    "remove only required positive dead classes outside functions",
+    "preserve negations and uncertain mixed functional selectors"
+  ],
+  "verification": {
+    "build": "passed",
+    "protected_runtime_files": 28,
+    "diff_check": "passed",
+    "css_budget": "still exceeded; exact output in run log"
+  },
+  "limits": [
+    "source reference audit and build proof; not full runtime visual equivalence",
+    "full goal and CSS gate remain open"
+  ]
+}

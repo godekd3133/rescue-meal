@@ -1,0 +1,32 @@
+{
+  "changes": [
+    "Receipt retention copy explicitly scoped to original files and food records, including PDFs",
+    "Remove repeated label preview retention sentence; one privacy note at capture or preview",
+    "Label preview title and privacy note stack separately at13px/12px"
+  ],
+  "source_evidence": [
+    "API receipt intake reads bytes, extracts observations, persists parsed draft fields; response contains filename/hash, not raw image",
+    "API label intake returns parsed date/product fields and metadata",
+    "OCR worker NamedTemporaryFile context wraps predict consumption and releases input",
+    "Web previews use in-memory objectURLs and revoke on replace/unmount"
+  ],
+  "verification": {
+    "IAB_viewport": "320x740",
+    "IAB_privacy_note_count_after_file_selection": 1,
+    "IAB_header_layout": "grid",
+    "IAB_header_title": "13px",
+    "IAB_header_note": "12px",
+    "build": "passed",
+    "runtime_files": 28,
+    "node_tests": 332,
+    "diff_check": "passed",
+    "deployed_provider_retention": "not inspected; this audit covers current repository implementation",
+    "real_camera_OCR": "not-run"
+  },
+  "remaining": [
+    "CSS budget",
+    "Deployment and full journey/device acceptance",
+    "Guest transfer/browser spec maintenance"
+  ],
+  "goal": "active"
+}

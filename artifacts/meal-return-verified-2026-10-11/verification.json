@@ -1,0 +1,36 @@
+{
+  "goal_status": "active",
+  "previous_turn": "progress",
+  "verifies_pending_checkpoint": "artifacts/meal-quantity-cancel-2026-10-11/verification.json",
+  "browser": "Codex In-app Browser 2, tab 1",
+  "preview_url": "http://127.0.0.1:4184/",
+  "actual_sequence": [
+    "Reopened the cabbage quantity-reference editor",
+    "Typed draft amount 200; keyboard data-visible was true",
+    "Clicked Cancel exactly once",
+    "Editor disappeared and focus returned to 1팩의 양 입력",
+    "Closed cabbage detail",
+    "Returned to the original meal quantity recovery screen"
+  ],
+  "runtime_results": {
+    "one_tap_cancel": "passed",
+    "time_condition": "30분 retained",
+    "serving_condition": "2인분 retained",
+    "focus": "양배추 수량 입력",
+    "keyboard": "false",
+    "quantity_reference_editor_visible": false,
+    "quantity_reference_save": "not performed",
+    "food_consumption": "not performed",
+    "new_source_change": "none; this iteration verifies the previous pointer-down fix"
+  },
+  "proof": {
+    "screenshot": "meal-return.png",
+    "dom_observation": "dom-observation.json",
+    "source_snapshot": "matches previous coverage checkpoint",
+    "prior_web_tests": "744 passed at quantity-cancel checkpoint; not rerun without source changes",
+    "prior_build": "passed at quantity-cancel checkpoint",
+    "protected_runtime_integrity": "28 passed at previous unchanged-source checkpoint",
+    "bundle_budget": "still failed: CSS 293.4KB exceeds 260KB"
+  },
+  "remaining_scope": "Full product journey acceptance, photo error injection, account flows, CSS budget and production migration remain separate open items"
+}

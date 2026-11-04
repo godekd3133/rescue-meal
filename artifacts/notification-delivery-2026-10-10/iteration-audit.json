@@ -1,0 +1,25 @@
+{
+  "changes": [
+    "Hide delivery summary when neither device nor processing history exists",
+    "Linked device with empty history shows confirmed no-history state",
+    "Unconfigured delivery shows setup requirement rather than indefinite preparation",
+    "Past worker record labelled recent processing, not currently enabled"
+  ],
+  "verification": {
+    "presentation_cases": 5,
+    "IAB_connected_device_count": 0,
+    "IAB_delivery_summary_count": 0,
+    "IAB_false_read_failure_count": 0,
+    "node_tests": 409,
+    "build": "passed",
+    "runtime_files": 28,
+    "diff_check": "passed",
+    "actual_push_delivery": "not-run"
+  },
+  "remaining": [
+    "Unsupported push connection affordance could be simplified",
+    "CSS budget",
+    "Other journeys/device/OCR acceptance"
+  ],
+  "goal": "active"
+}

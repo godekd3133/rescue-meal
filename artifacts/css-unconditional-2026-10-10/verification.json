@@ -1,0 +1,20 @@
+{
+  "goal": "active",
+  "change": "Remove earlier media-scoped declarations covered by later unconditional identical selectors; importance and shorthand coverage checked.",
+  "removed_declarations": 10,
+  "source_bytes_saved": 621,
+  "verification": {
+    "build": "passed",
+    "runtime_protected": 28,
+    "diff_check": "passed",
+    "home_computed_style": {
+      "elements": 345,
+      "changed": 0
+    },
+    "CSS_KB": 290.6,
+    "CSS_limit_KB": 260,
+    "CSS_gate": "failed",
+    "all_viewports_GUI": "not-run"
+  },
+  "source_sha256": "832394931fe365d53c129bc918906157cdacffe9ccbd269aafd4b0119b05c5ab"
+}

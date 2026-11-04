@@ -1,0 +1,26 @@
+{
+  "goal": "active",
+  "cause": "Tall detail snap0.993 overlapped device status region even with page and device screen scroll0.",
+  "change": "Bound preview sheet snap by top status area even with keyboard closed; web/native shells retain original snap when no simulated keyboard exists.",
+  "validation": {
+    "full_node_tests": 579,
+    "sheet_geometry_tests": 6,
+    "build": "passed",
+    "runtime_protected": 28,
+    "diff_check": "passed",
+    "GUI": {
+      "scope": "Explicit demo preview with iPhone/Pixel10 presets",
+      "before_iPhone": "Header85.20-121.30 overlaps status ending101.75; close starts87.63; both scroll offsets0",
+      "after_iPhone": "Header starts116.85; close starts119.28; status ends101.75; both scroll offsets0",
+      "after_Pixel": "Header starts103.95; close starts106.25; status ends77.92; both scroll offsets0",
+      "data": "Printed date2026-10-09 and quantity1pack preserved; no mutation",
+      "restored": "iPhone preset"
+    },
+    "physical_device": "not-run",
+    "received_food_transition": "not-revalidated"
+  },
+  "source_snapshot": {
+    "apps/web/src/Prototype.tsx": "ea1c6a78bd07bf3d5ba28f7a1c5bcb7ca69e57bf6e40d974dca03f34ca3126d0",
+    "apps/web/src/keyboardSheetPresentation.ts": "3537de4ac852ff598b94afcc0b485f880ce7e93e48e50431563b8b9a15bc5d71"
+  }
+}

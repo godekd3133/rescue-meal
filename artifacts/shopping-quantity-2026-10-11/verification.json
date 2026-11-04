@@ -1,0 +1,41 @@
+{
+  "goal_status": "active",
+  "previous_turn": "progress",
+  "reproduction": {
+    "requested_1_1234": "stored as 1.123",
+    "requested_0_0001": "rounded to zero and manual save returned 503",
+    "before_tests": "2 failed",
+    "before_log": "/tmp/rescue-shopping-precision-before.log"
+  },
+  "changes": [
+    "Preserve request precision in manual shopping and receiving inventory",
+    "Sum shopping sources using decimal arithmetic instead of three-digit rounding",
+    "Preserve legacy three-digit idempotency fingerprints while distinguishing more precise quantities",
+    "Reject different quantities on same-key receive replay without a numeric tolerance",
+    "Display exact shopping quantities and allow native number fields to accept API-supported precision"
+  ],
+  "verification": {
+    "api": "576 passed, 8 existing deprecation warnings; final run exit 0",
+    "api_log": "/tmp/rescue-shopping-precision-api-verified.log",
+    "api_log_note": "Copied through final summary only because the interrupted superseded run wrote trailing output to the original log",
+    "shopping_quantity_cases": [1.1234, 0.0001],
+    "covered_behavior": "Manual create, identical update, list readback, exact receive quantity, same-key replay without extra lot, and quantity difference of 1e-10 rejected with 409",
+    "web_tests": "728 passed",
+    "web_log": "/tmp/rescue-shopping-precision-web-complete.log",
+    "ssr": "Precise shopping rows and native manual number-field min, max and step attributes passed",
+    "build": "TypeScript and production build passed",
+    "build_log": "/tmp/rescue-shopping-precision-build-complete.log",
+    "protected_mobile_files": "28 passed",
+    "git_diff_check": "passed",
+    "bundle_budget": "failed: CSS 293.4KB exceeds 260KB",
+    "bundle_log": "/tmp/rescue-shopping-precision-bundle.log",
+    "live_browser_flow": "not-run: browser tools unavailable",
+    "deployment": "not-run"
+  },
+  "limitations": [
+    "Previously rounded shopping quantities are not reconstructed",
+    "Production PostgreSQL precision migration remains unapplied",
+    "Running QA API was not restarted for this change",
+    "Full product journey acceptance remains partial"
+  ]
+}

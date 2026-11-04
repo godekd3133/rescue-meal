@@ -1,0 +1,12 @@
+[
+  {
+    "id": "shopping-lot-idem-7da3ff8f0e1a8d6678d76354dceb20ca",
+    "name": "우유",
+    "quantity": 2.0,
+    "unit": "개",
+    "storage_type": "refrigerated",
+    "date_kind": "unknown",
+    "date_value": null,
+    "purchased_at": "2026-10-10T16:00:17.906467Z"
+  }
+]

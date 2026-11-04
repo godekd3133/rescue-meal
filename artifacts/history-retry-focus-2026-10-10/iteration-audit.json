@@ -1,0 +1,22 @@
+{
+  "changes": [
+    "Keep history section and prior rows visible during retry",
+    "Retain error state until confirmed readback, while showing status/busy during retry",
+    "After retry focus recovered history; empty result returns focus to enclosing disclosure",
+    "Reset error/focus memory on food owner change"
+  ],
+  "verification": {
+    "actual_focus_effect_cases": 12,
+    "node_tests": 363,
+    "build": "passed",
+    "runtime_files": 28,
+    "diff_check": "passed",
+    "IAB_runtime": "not-run this iteration; prior error/recovery flow verified before focus change"
+  },
+  "remaining": [
+    "Browser retry progress/focus acceptance",
+    "CSS budget",
+    "Full journey/device and realOCR acceptance"
+  ],
+  "goal": "active"
+}

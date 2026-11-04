@@ -1,0 +1,50 @@
+{
+  "goal_status": "active",
+  "previous_turn": "progress",
+  "api_refresh": {
+    "old_process_started": "2026-10-11 10:37:07 local; predated quantity changes",
+    "new_process": 68410,
+    "same_configuration": "SQLite /tmp/rescue-ocr-audit.db, loopback 8088, existing dev auth and lookup settings, OCR URL 8002 and approved CORS origin 4182",
+    "backup": "/tmp/rescue-api-refresh-2026-10-11",
+    "backup_database_count": 7,
+    "backup_permissions": "directory 0700, databases 0600",
+    "health": "API and original preview proxy 200",
+    "pre_existing_foods_preserved_after_restart_and_testing": 18
+  },
+  "runtime_verified": {
+    "shopping_create": "검증용 우유 1.1234L entered and stored without rounding",
+    "shopping_reload": "1.1234L retained after reload",
+    "receive": "One QA stock lot received at 1.1234L, refrigerated",
+    "before_step_fix": "0.1L decrease changed 1.1234 to 1.023 and left 0.1004 in preview",
+    "after_step_fix": "0.1L decrease changed 1.1234 to 1.0234 and left 0.1",
+    "half": "0.5617 selected and 0.5617 remaining",
+    "actual_consumption_or_disposal": "not performed; whole selection restored",
+    "qa_food_id": "shopping-lot-idem-b5349b495922f70944549a5f07e4b5dc",
+    "persisted_qa_food_quantity": 1.1234,
+    "preview_device_scroll": "0 in final frame-safe screenshot"
+  },
+  "source_changes": [
+    "Remove artificial three-fractional-digit restriction for valid positive portions",
+    "Reject a portion when remaining stock cannot represent a decrease",
+    "Preserve decimal arithmetic in steppers and support smaller practical steps for small lots",
+    "Render generated quantity drafts as plain decimal notation so small half presets remain valid"
+  ],
+  "verification": {
+    "web_tests": "751 passed",
+    "web_log": "/tmp/rescue-precise-step-web-final.log",
+    "build": "TypeScript and production build passed",
+    "build_log": "/tmp/rescue-precise-step-build-final.log",
+    "protected_runtime_integrity": "28 passed",
+    "git_diff_check": "passed",
+    "bundle_budget": "failed: CSS 291.6KB versus 260KB",
+    "bundle_log": "/tmp/rescue-precise-step-bundle.log",
+    "postgres_migration": "not-run",
+    "deployment": "not-run"
+  },
+  "proof": [
+    "precise-step-frame-safe.png",
+    "dom-observation.json",
+    "sqlite-observation.json"
+  ],
+  "scope": "Latest local API and actual browser shopping/receive/quantity selection proof; no claim of full product completion."
+}

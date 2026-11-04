@@ -1,0 +1,35 @@
+{
+  "scope": "review panel readable controls",
+  "changes": [
+    "minimum button and link target height44px",
+    "button and link font13px",
+    "supporting copy12px line-height1.5",
+    "terms label minimum44px"
+  ],
+  "runtime": {
+    "environment": "IAB review tab27 local catalog",
+    "viewport_width": 1280,
+    "before_small_controls_px": [
+      12,
+      15,
+      30,
+      32,
+      35,
+      40
+    ],
+    "after_control_height_min": 44,
+    "after_font_px": 13,
+    "measured_controls": 12,
+    "viewport_attempt": "browser override applied to another selected tab; review tab remained1280, override reset"
+  },
+  "verification": {
+    "build": "passed",
+    "protected_runtime_files": 28,
+    "diff_check": "passed"
+  },
+  "limits": [
+    "320px review viewport not-run",
+    "physical device and increased text size not-run",
+    "full goal and CSS budget remain open"
+  ]
+}

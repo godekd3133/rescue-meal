@@ -1,0 +1,37 @@
+{
+  "scope": "recipe review claim, edit, save, reload and release",
+  "fixture": {
+    "draft": "local-review-ux-check",
+    "database": "isolated /tmp workspace.db",
+    "backup": "/tmp/rescue-before-recipe-fixture.db",
+    "catalog": "shared local review catalog",
+    "source": "synthetic local data; no external import"
+  },
+  "changes": [
+    "human-readable known source-license states without altering standard license declarations",
+    "disable publication until source terms confirmation"
+  ],
+  "runtime": {
+    "claim": "fields disabled before claim, enabled after claim",
+    "saved_title": "검증용 두부 한 그릇 수정",
+    "saved_note": "로컬 화면 저장 확인",
+    "reload": "title and reviewer note preserved",
+    "license_raw_code_count": 0,
+    "publish_without_terms": false,
+    "release": "fields disabled, claim released",
+    "durable_status": "pending; no publication"
+  },
+  "verification": {
+    "node_passed": 548,
+    "new_license_cases": 3,
+    "build": "passed",
+    "protected_files": 28,
+    "diff_check": "passed"
+  },
+  "limits": [
+    "save failure and concurrent reviewer GUI not exercised here",
+    "original service still unconfigured",
+    "actual catalog publication not performed",
+    "full goal and CSS gate remain open"
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "goal": "active",
+  "cause": "Editing canonical receipt name retained prior verified/provider matchSource and matchCandidates, so new typed name inherited old provenance.",
+  "changes": [
+    "Name edits set unmatched, clear previous candidates and require review; other edits retain matching metadata",
+    "Explicitly confirmed unmatched names display human-confirmed provenance",
+    "Confirmed badge distinguishes human confirmation from OCR read",
+    "Pending generic matching warning not duplicated beside action badge"
+  ],
+  "validation": {
+    "targeted_tests": 7,
+    "full_frontend_tests": 604,
+    "build": "passed",
+    "runtime_protected": 28,
+    "diff_check": "passed",
+    "GUI": "Existing real-OCR draft with previously confirmed alias; replace name; previous matching label disappears, review needed and save disabled; confirm yields direct human-confirmed label; raw original name retained; other matched item unchanged",
+    "stock_saved": false,
+    "physical_photo": "not-run"
+  },
+  "source_sha256": "fd2675ebcae80f4c1f1b22f27c9bf1a21f9cf63c32495f729b73a08772645077"
+}

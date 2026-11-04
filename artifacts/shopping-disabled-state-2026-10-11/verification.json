@@ -1,0 +1,34 @@
+{
+  "goal_status": "active",
+  "previous_turn": "progress",
+  "observed": "Disabled manual shopping update button retained blue active background and shadow",
+  "change": "Reuse existing disabled receive-button appearance for manual submit with sufficient theme-selector specificity",
+  "runtime": {
+    "light_disabled": {
+      "background": "color(srgb 0.938431 0.943529 0.939216)",
+      "color": "rgb(98,111,100)",
+      "shadow": "none",
+      "height": 46
+    },
+    "dark_disabled": {
+      "background": "color(srgb 0.165882 0.193333 0.22)",
+      "color": "rgb(180,187,174)",
+      "shadow": "none",
+      "height": 46
+    },
+    "enabled": "Blue background and existing shadow preserved",
+    "quantity_saved": false,
+    "theme_restored": "light"
+  },
+  "checks": {
+    "build": "passed",
+    "runtime_integrity": "28protectedfilespassed",
+    "diff": "passed",
+    "bundle": "failed:293.2KBCSSversus260KBbudget"
+  },
+  "not_run": [
+    "Physicaldevice",
+    "Newtests for cosmetic-only selector change"
+  ],
+  "source_sha256": "d594fc456b17dfbea8309a026abc8173c30ad091d1d3d428fc64b13c460ecbcf"
+}
