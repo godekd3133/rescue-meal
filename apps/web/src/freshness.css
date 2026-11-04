@@ -1,0 +1,415 @@
+/*
+ * Rescue Meal "cold shelf" direction.
+ * A fridge reads cool, not cream: frost background, basil for actions, and one
+ * warm-to-cool scale that only ever means "how soon to look at this".
+ */
+html[data-rescue-theme="light"] {
+  --fresh-bg: #eef5ec;
+  --fresh-surface: #ffffff;
+  --fresh-ink: #1d2e24;
+  --fresh-muted: #66786d;
+  --fresh-line: rgba(29, 46, 36, 0.08);
+  --fresh-primary: #2f9a5f;
+  /* Filled actions and small green text need 4.5:1; #2f9a5f only reaches 3.5:1 against white. */
+  --fresh-primary-strong: #24804c;
+  --fresh-shadow: 0 6px 20px rgba(42, 84, 58, 0.08);
+  --fresh-primary-ink: #ffffff;
+  --fresh-past: #f25c4f;
+  --fresh-today: #ff9442;
+  --fresh-soon: #f5b82e;
+  --fresh-week: #3fb26e;
+  --fresh-later: #7ccbb0;
+  --fresh-unknown: #b9c4bd;
+}
+
+html[data-rescue-theme="dark"] {
+  --fresh-bg: #0e1813;
+  --fresh-surface: #16231c;
+  --fresh-ink: #e6efe9;
+  --fresh-muted: #9aaea3;
+  --fresh-line: rgba(230, 239, 233, 0.1);
+  --fresh-primary: #5fd197;
+  --fresh-primary-strong: #5fd197;
+  --fresh-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+  --fresh-primary-ink: #0e1813;
+  --fresh-past: #ff7a6b;
+  --fresh-today: #ffa25a;
+  --fresh-soon: #f2c94c;
+  --fresh-week: #5cc98d;
+  --fresh-later: #8fcab4;
+  --fresh-unknown: #5d6b64;
+}
+
+html[data-rescue-theme] :is(.meal-home,.bottom-sheet,.app-bottom-nav,.toast) {
+  --atelier-deep: var(--fresh-bg);
+  --atelier-surface: var(--fresh-surface);
+  --atelier-surface-raised: var(--fresh-surface);
+  --atelier-ink: var(--fresh-ink);
+  --atelier-muted: var(--fresh-muted);
+  --atelier-border: var(--fresh-line);
+  --atelier-pistachio: var(--fresh-primary);
+  --atelier-pistachio-deep: var(--fresh-primary);
+  --atelier-primary-action: var(--fresh-primary-strong);
+  --atelier-primary-action-ink: var(--fresh-primary-ink);
+  --atelier-primary-action-hover: color-mix(in srgb, var(--fresh-primary-strong) 86%, black);
+  --atelier-primary-action-shadow: 0 10px 22px color-mix(in srgb, var(--fresh-primary-strong) 22%, transparent);
+  --atelier-coral: var(--fresh-past);
+  --fresh-display: "Jua", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+}
+
+html[data-rescue-theme] .bottom-sheet {
+  --sheet-surface: var(--fresh-surface);
+  --sheet-surface-raised: var(--fresh-surface);
+  --sheet-border: var(--fresh-line);
+  background: var(--fresh-bg);
+}
+
+html[data-rescue-theme] .app-screen,
+html[data-rescue-theme] .app-screen .mobile-scroll-content,
+html[data-rescue-theme] .meal-home {
+  background: var(--fresh-bg) !important;
+}
+
+/* ---------- Home overview ---------- */
+
+.freshness-overview {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.freshness-bar {
+  display: flex;
+  height: 12px;
+  gap: 4px;
+  overflow: hidden;
+  border-radius: 999px;
+}
+
+.freshness-segment {
+  min-width: 10px;
+  border-radius: 999px;
+  background: var(--fresh-bucket);
+}
+
+.freshness-tiles {
+  display: flex;
+  gap: 6px;
+  margin: 0 -2px;
+  padding: 2px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.freshness-tiles::-webkit-scrollbar {
+  display: none;
+}
+
+.freshness-tile {
+  display: grid;
+  flex: 1 0 68px;
+  gap: 4px;
+  min-height: 66px;
+  padding: 10px 12px 9px;
+  border: 0;
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--fresh-bucket) 15%, var(--fresh-surface));
+  color: var(--fresh-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.freshness-tile {
+  /* Anchor the shared home focus ring (::after) to the tile itself. */
+  position: relative;
+}
+
+/* The tile row scrolls horizontally and would clip an outside ring, so draw it inside the tile edge. */
+html[data-rescue-theme] .meal-home .freshness-tile:focus-visible {
+  outline: none;
+}
+
+html[data-rescue-theme] .meal-home .freshness-tile:focus-visible::after {
+  inset: 0;
+  border-color: var(--fresh-primary-strong);
+}
+
+.freshness-tile-head {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  /* Plain muted ink drops to 3.9:1 on the tinted tiles; lean toward ink to keep 4.5:1. */
+  color: color-mix(in srgb, var(--fresh-muted) 60%, var(--fresh-ink));
+  white-space: nowrap;
+}
+
+.freshness-dot {
+  flex: 0 0 auto;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--fresh-bucket);
+}
+
+.freshness-tile-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.freshness-tile-count {
+  font-family: var(--fresh-display);
+  font-size: 27px;
+  font-weight: 400;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.freshness-tile-faces {
+  display: flex;
+}
+
+.freshness-tile-faces .freshness-face {
+  width: 20px;
+  height: 20px;
+  margin-left: -7px;
+  border: 2px solid var(--fresh-surface);
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.freshness-tile-faces .freshness-face:first-child {
+  margin-left: 0;
+}
+
+.freshness-past { --fresh-bucket: var(--fresh-past); }
+.freshness-today { --fresh-bucket: var(--fresh-today); }
+.freshness-soon { --fresh-bucket: var(--fresh-soon); }
+.freshness-week { --fresh-bucket: var(--fresh-week); }
+.freshness-later { --fresh-bucket: var(--fresh-later); }
+.freshness-unknown { --fresh-bucket: var(--fresh-unknown); }
+
+.freshness-tile-count {
+  color: color-mix(in srgb, var(--fresh-bucket) 70%, var(--fresh-ink));
+}
+
+/* ---------- Days-left chip (rows, cards, detail) ---------- */
+
+.freshness-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 46px;
+  height: 26px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--fresh-bucket);
+  /* Dark ink keeps every bucket color at 5.5:1 or more; white text dropped to 1.9:1 on yellow. */
+  color: #0e1813;
+  font-family: var(--fresh-display);
+  font-size: 13px;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Priority-card date text rules (prototype.css) also target this <strong>; keep the chip ink. */
+html[data-rescue-theme][data-rescue-theme] .freshness-chip {
+  color: #0e1813;
+}
+
+/* An estimate is never drawn as solid as a printed date. */
+html[data-rescue-theme][data-rescue-theme] .freshness-chip[data-estimated="true"] {
+  border: 1.5px dashed var(--fresh-bucket);
+  background: transparent;
+  color: var(--fresh-ink);
+}
+
+html[data-rescue-theme][data-rescue-theme] .freshness-chip.freshness-unknown {
+  border: 1.5px dashed var(--fresh-unknown);
+  background: transparent;
+  color: var(--fresh-muted);
+  font-weight: 700;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .freshness-segment {
+    transition: flex-grow 240ms ease;
+  }
+}
+
+/* Date-review food shortcuts sit on one wrapping line instead of a stack. */
+.bottom-sheet .recipe-date-review-callout > span {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.bottom-sheet .recipe-date-review-callout > span > strong {
+  flex: 1 0 100%;
+}
+
+.bottom-sheet .recipe-thaw-note {
+  align-items: center;
+  padding: 7px 10px;
+}
+
+
+/* ---------- Softer, rounder surfaces (overrides prototype.css, which loads later) ---------- */
+
+html[data-rescue-theme][data-rescue-theme] .meal-home :is(h1, h2),
+html[data-rescue-theme][data-rescue-theme] .bottom-sheet :is(h2, h3),
+html[data-rescue-theme][data-rescue-theme] .meal-home .meal-plan-button strong,
+html[data-rescue-theme][data-rescue-theme] .meal-home .add-food-button strong,
+html[data-rescue-theme][data-rescue-theme] .pantry-shortcuts strong,
+html[data-rescue-theme][data-rescue-theme] :is(.priority-card, .inventory-row) .food-name-line strong,
+html[data-rescue-theme][data-rescue-theme] .inventory-row .inventory-copy > strong,
+html[data-rescue-theme][data-rescue-theme] .detail-quantity-summary,
+html[data-rescue-theme][data-rescue-theme] .recipe-time {
+  font-family: var(--fresh-display) !important;
+  font-weight: 400 !important;
+  letter-spacing: -0.01em;
+}
+
+html[data-rescue-theme][data-rescue-theme] .greeting-block h1 {
+  /* rem so the greeting follows a larger text preference (34px at the default root size). */
+  font-size: 2.125rem;
+  line-height: 1.18;
+}
+
+html[data-rescue-theme][data-rescue-theme] .greeting-block h1 em {
+  font-style: normal;
+  color: var(--fresh-primary);
+}
+
+html[data-rescue-theme][data-rescue-theme] .pantry-shortcuts button {
+  border: 0 !important;
+  border-radius: 18px !important;
+  background: var(--fresh-surface) !important;
+  box-shadow: var(--fresh-shadow);
+}
+
+html[data-rescue-theme][data-rescue-theme] .meal-home .meal-plan-button {
+  border-radius: 24px !important;
+  background: var(--fresh-primary-strong) !important;
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--fresh-primary-strong) 30%, transparent) !important;
+}
+
+html[data-rescue-theme][data-rescue-theme] .meal-home .add-food-button {
+  border: 0 !important;
+  border-radius: 24px !important;
+  background: var(--fresh-surface) !important;
+  box-shadow: var(--fresh-shadow);
+}
+
+html[data-rescue-theme][data-rescue-theme] .meal-home .priority-list-items {
+  display: grid;
+  gap: 10px;
+}
+
+html[data-rescue-theme][data-rescue-theme] .meal-home .priority-card {
+  border: 0 !important;
+  border-radius: 22px !important;
+  background: var(--fresh-surface) !important;
+  box-shadow: var(--fresh-shadow);
+  padding: 10px 14px 10px 10px !important;
+}
+
+html[data-rescue-theme][data-rescue-theme] .meal-home :is(.priority-card, .inventory-row) :is(.food-image, .inventory-image) {
+  border-radius: 50% !important;
+}
+
+html[data-rescue-theme][data-rescue-theme] .meal-home .section-heading {
+  border-bottom: 0 !important;
+}
+
+html[data-rescue-theme][data-rescue-theme] .meal-home .inventory-list {
+  display: grid;
+  gap: 8px;
+}
+
+html[data-rescue-theme][data-rescue-theme] .meal-home .inventory-row {
+  border: 0 !important;
+  border-radius: 20px !important;
+  background: var(--fresh-surface) !important;
+  box-shadow: var(--fresh-shadow);
+}
+
+html[data-rescue-theme][data-rescue-theme] .meal-home .storage-pill {
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: color-mix(in srgb, var(--fresh-primary) 12%, transparent) !important;
+  color: color-mix(in srgb, var(--fresh-primary) 70%, var(--fresh-ink)) !important;
+}
+
+html[data-rescue-theme][data-rescue-theme] .app-bottom-nav {
+  border-top: 0 !important;
+  border-radius: 26px 26px 0 0;
+  box-shadow: 0 -6px 24px rgba(42, 84, 58, 0.08);
+}
+
+html[data-rescue-theme][data-rescue-theme] .bottom-sheet {
+  border-radius: 28px 28px 0 0 !important;
+}
+
+html[data-rescue-theme][data-rescue-theme] .bottom-sheet :is(.primary-sheet-button, .secondary-sheet-button) {
+  border-radius: 999px !important;
+}
+
+html[data-rescue-theme][data-rescue-theme] .bottom-sheet :is(.date-proof-card, .detail-hero, .recipe-details, .recipe-ingredients, .detail-section) {
+  border-radius: 20px !important;
+}
+
+html[data-rescue-theme][data-rescue-theme] .app-header :is(.connection-pill, .theme-toggle-button, .notification-button) {
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: var(--fresh-surface) !important;
+  box-shadow: var(--fresh-shadow) !important;
+  color: var(--fresh-ink) !important;
+}
+
+html[data-rescue-theme][data-rescue-theme] .meal-home .text-button {
+  color: var(--fresh-primary-strong) !important;
+}
+
+html[data-rescue-theme][data-rescue-theme] .meal-home :is(.food-image-wrap, .inventory-image-wrap) {
+  border: 0 !important;
+  border-radius: 50% !important;
+  background: color-mix(in srgb, var(--fresh-primary) 8%, var(--fresh-surface)) !important;
+  overflow: hidden;
+}
+
+html[data-rescue-theme][data-rescue-theme] .app-bottom-nav {
+  background: var(--fresh-surface) !important;
+}
+
+/* The safe-area tail under the nav must continue the same white/dark surface, not the old cream. */
+html[data-rescue-theme][data-rescue-theme] :is(.app-shell-preview,.app-shell-native) .app-bottom-nav::after {
+  background: var(--fresh-surface) !important;
+}
+
+html[data-rescue-theme][data-rescue-theme] .app-bottom-nav .app-bottom-nav-item-active {
+  border-radius: 18px !important;
+  background: color-mix(in srgb, var(--fresh-primary) 14%, transparent) !important;
+  color: color-mix(in srgb, var(--fresh-primary) 75%, var(--fresh-ink)) !important;
+}
+
+html[data-rescue-theme][data-rescue-theme] .app-bottom-nav .app-bottom-nav-item-active::after {
+  display: none !important;
+}
+
+html[data-rescue-theme][data-rescue-theme] .meal-home .meal-plan-button strong {
+  font-size: 1.0625rem;
+}
+
+html[data-rescue-theme][data-rescue-theme] .app-header .brand-lockup {
+  font-family: var(--fresh-display) !important;
+  font-weight: 400 !important;
+  color: var(--fresh-primary);
+}

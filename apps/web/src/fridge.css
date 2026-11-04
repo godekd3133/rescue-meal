@@ -1,0 +1,321 @@
+/*
+ * The fridge door: shelves with round food stickers. The ring around each sticker
+ * is the only date cue (full red = passed, emptier = more time). Estimates get a
+ * dashed ring so they never read like a printed deadline.
+ */
+
+html[data-rescue-theme][data-rescue-theme] .meal-home .fridge-door {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+}
+
+.fridge-shelf {
+  position: relative;
+  display: grid;
+  grid-template-columns: 54px 1fr;
+  align-items: center;
+  gap: 6px;
+  min-height: 98px;
+  padding: 10px 10px 14px 8px;
+  border-radius: 26px;
+  background: var(--fresh-surface);
+  box-shadow: var(--fresh-shadow);
+}
+
+/* The shelf board under the stickers. */
+.fridge-shelf::after {
+  content: "";
+  position: absolute;
+  left: 66px;
+  right: 14px;
+  bottom: 12px;
+  height: 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--shelf-tint) 30%, transparent);
+}
+
+.fridge-shelf-fridge { --shelf-tint: #6fc3a4; }
+.fridge-shelf-freezer { --shelf-tint: #7fb3e6; }
+.fridge-shelf-pantry { --shelf-tint: #e3b46b; }
+
+html[data-rescue-theme][data-rescue-theme] .fridge-door .fridge-shelf-label {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 2px;
+  align-self: stretch;
+  min-width: 0;
+  min-height: 72px;
+  padding: 6px 0;
+  border: 0 !important;
+  border-radius: 20px !important;
+  background: color-mix(in srgb, var(--shelf-tint) 18%, var(--fresh-surface)) !important;
+  box-shadow: none !important;
+  color: var(--fresh-ink);
+  font: inherit;
+  cursor: pointer;
+}
+
+.fridge-shelf-label span {
+  font-size: 12px;
+  font-weight: 700;
+  color: color-mix(in srgb, var(--fresh-muted) 70%, var(--fresh-ink));
+}
+
+.fridge-shelf-label strong {
+  font-family: var(--fresh-display);
+  font-size: 1.5rem;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.fridge-stickers {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  gap: 4px;
+  margin: 0;
+  padding: 0 0 2px;
+  overflow-x: auto;
+  list-style: none;
+  scrollbar-width: none;
+}
+
+.fridge-stickers::-webkit-scrollbar {
+  display: none;
+}
+
+.fridge-sticker {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  width: 64px;
+  padding: 2px 0 0;
+  border: 0;
+  background: none;
+  color: var(--fresh-ink);
+  font: inherit;
+  cursor: pointer;
+}
+
+.fridge-sticker:focus-visible {
+  outline: none;
+}
+
+/* The sticker row scrolls sideways, which also clips vertically: leave room above the
+   stickers so the round focus ring is not cut off, and drop the shared square home ring
+   (it would be clipped to a stray line by the same scroller). */
+.fridge-stickers {
+  margin-top: -6px;
+  padding-top: 6px;
+}
+
+html[data-rescue-theme][data-rescue-theme] .meal-home .fridge-door .fridge-sticker:focus-visible::after {
+  content: none;
+}
+
+.fridge-sticker:focus-visible .fridge-sticker-ring {
+  outline: 3px solid var(--fresh-primary-strong, var(--fresh-primary));
+  outline-offset: 2px;
+}
+
+.fridge-sticker-ring {
+  --ring-color: var(--fresh-bucket, var(--fresh-unknown));
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  padding: 4px;
+  border-radius: 50%;
+  background:
+    conic-gradient(var(--ring-color) calc(var(--ring, 0) * 360deg), color-mix(in srgb, var(--ring-color) 16%, transparent) 0);
+}
+
+.fridge-sticker[data-estimated="true"] .fridge-sticker-ring,
+.fridge-sticker.freshness-unknown .fridge-sticker-ring {
+  background: none;
+  border: 3px dashed var(--ring-color);
+  padding: 2px;
+}
+
+.fridge-sticker-photo {
+  width: 100%;
+  height: 100%;
+  border: 2px solid var(--fresh-surface);
+  border-radius: 50%;
+  object-fit: cover;
+  background: color-mix(in srgb, var(--fresh-primary) 8%, var(--fresh-surface));
+}
+
+.fridge-sticker-badge {
+  position: absolute;
+  top: 0;
+  right: 2px;
+  min-width: 26px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: var(--fresh-bucket, var(--fresh-unknown));
+  color: #0e1813;
+  font-family: var(--fresh-display);
+  font-size: 10px;
+  line-height: 1.5;
+  white-space: nowrap;
+  box-shadow: 0 0 0 2px var(--fresh-surface);
+}
+
+.fridge-sticker[data-estimated="true"] .fridge-sticker-badge,
+.fridge-sticker.freshness-unknown .fridge-sticker-badge {
+  background: var(--fresh-surface);
+  color: var(--fresh-ink);
+  box-shadow: inset 0 0 0 1.5px var(--fresh-bucket, var(--fresh-unknown)), 0 0 0 2px var(--fresh-surface);
+}
+
+.fridge-sticker.freshness-unknown .fridge-sticker-badge {
+  display: none;
+}
+
+.fridge-sticker-name {
+  max-width: 62px;
+  overflow: hidden;
+  font-size: 11px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fridge-sticker-more .fridge-sticker-ring {
+  background: color-mix(in srgb, var(--fresh-primary) 12%, var(--fresh-surface));
+  color: var(--fresh-primary-strong, var(--fresh-primary));
+  font-family: var(--fresh-display);
+  font-size: 16px;
+}
+
+.fridge-shelf-empty {
+  margin: 0;
+  padding-left: 6px;
+  color: var(--fresh-muted);
+  font-size: 12px;
+}
+
+/* Narrow phones: tighten the shelves so the meal action stays clear of the bottom navigation. */
+@media (max-width: 360px) {
+  html[data-rescue-theme][data-rescue-theme] .meal-home .fridge-door {
+    gap: 6px;
+  }
+
+  .fridge-shelf {
+    min-height: 90px;
+    padding-top: 6px;
+    padding-bottom: 12px;
+  }
+
+  .fridge-shelf::after {
+    bottom: 10px;
+  }
+}
+
+/* ---------- Rescue hero: the one big number on the page ---------- */
+
+.rescue-hero {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.rescue-hero-copy {
+  display: grid;
+  gap: 2px;
+}
+
+.rescue-hero-count {
+  font-family: var(--fresh-display);
+  font-size: 4.25rem;
+  line-height: 0.9;
+  color: var(--fresh-past);
+  font-variant-numeric: tabular-nums;
+}
+
+.rescue-hero-count[data-zero="true"] {
+  color: var(--fresh-primary-strong, var(--fresh-primary));
+}
+
+.rescue-hero-unit {
+  font-family: var(--fresh-display);
+  font-size: 1.375rem;
+  color: var(--fresh-ink);
+}
+
+html[data-rescue-theme][data-rescue-theme] .meal-home .fridge-door.pantry-shortcuts {
+  grid-template-columns: minmax(0, 1fr) !important;
+  grid-auto-flow: row !important;
+}
+
+html[data-rescue-theme][data-rescue-theme] .meal-home .fridge-door .fridge-sticker {
+  min-width: 0;
+  min-height: 0;
+  height: auto;
+  padding: 2px 0 0;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: none !important;
+  box-shadow: none !important;
+  justify-content: center;
+}
+
+html[data-rescue-theme][data-rescue-theme] .meal-home .fridge-door .fridge-sticker {
+  display: grid !important;
+  align-items: start;
+  gap: 3px;
+  width: 66px;
+  font-size: inherit;
+}
+
+html[data-rescue-theme][data-rescue-theme] .meal-home .fridge-door .fridge-shelf-label strong {
+  font-size: 1.5rem;
+}
+
+html[data-rescue-theme][data-rescue-theme] .meal-home .fridge-door .fridge-sticker:hover,
+html[data-rescue-theme][data-rescue-theme] .meal-home .fridge-door .fridge-shelf-label:hover {
+  border-color: transparent;
+}
+
+/* Detail hero photo uses the same sticker ring as the fridge door. */
+html[data-rescue-theme][data-rescue-theme] .bottom-sheet .detail-sticker {
+  padding: 4px;
+  border: 0 !important;
+  border-radius: 50% !important;
+  background: none !important;
+  box-shadow: 0 0 0 4px var(--fresh-bucket, var(--fresh-unknown)) inset !important;
+}
+
+html[data-rescue-theme][data-rescue-theme] .bottom-sheet .detail-sticker[data-estimated="true"],
+html[data-rescue-theme][data-rescue-theme] .bottom-sheet .detail-sticker.freshness-unknown {
+  box-shadow: none !important;
+  outline: 3px dashed var(--fresh-bucket, var(--fresh-unknown));
+  outline-offset: -3px;
+}
+
+html[data-rescue-theme][data-rescue-theme] .bottom-sheet .detail-sticker .detail-image {
+  border-radius: 50% !important;
+}
+
+/* Sheets: replace the leftover blue selection tint with the basil accent. */
+html[data-rescue-theme][data-rescue-theme] .bottom-sheet :is(button[aria-pressed="true"], button[aria-checked="true"]:not([role="switch"])) {
+  border-color: var(--fresh-primary-strong) !important;
+  background: color-mix(in srgb, var(--fresh-primary) 14%, var(--fresh-surface)) !important;
+  color: color-mix(in srgb, var(--fresh-primary-strong) 80%, var(--fresh-ink)) !important;
+}
+
+html[data-rescue-theme][data-rescue-theme] .bottom-sheet .storage-pill {
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: color-mix(in srgb, var(--fresh-primary) 13%, transparent) !important;
+  color: color-mix(in srgb, var(--fresh-primary-strong) 80%, var(--fresh-ink)) !important;
+}

@@ -11,7 +11,11 @@ const ASSETS_DIR = new URL("../dist/client/assets/", import.meta.url).pathname;
 const ENTRY_BUDGET_KB = 420;
 const CHUNK_BUDGET_KB = 500;
 const TOTAL_JS_BUDGET_KB = 1500;
-const TOTAL_CSS_BUDGET_KB = 260;
+// Raised from 260KB on 2026-11-02: the shipped stylesheet measures 286KB (45KB gzip)
+// and has no duplicate overridden declarations left to drop. 300KB stops further growth.
+// Raised to 320KB on 2026-11-04 for the freshness redesign (overview tiles, days-left
+// chips, softer surfaces in src/freshness.css): ~304KB shipped.
+const TOTAL_CSS_BUDGET_KB = 320;
 
 let files;
 try {
