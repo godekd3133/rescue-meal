@@ -1,8 +1,27 @@
 from pathlib import Path
+from decimal import Decimal
+import pytest
 
 from app.main import _seed_foods
 import app.planner as planner
 from app.planner import RecipeIngredient, RecipeSpec, load_recipe_specs, plan_recipe
+
+
+@pytest.mark.parametrize("amount", [0.4, 2.5, 1.1234])
+def test_metric_allocation_preserves_recipe_amount_in_original_stock_unit(amount):
+    food = _seed_foods()[0].model_copy(update={"quantity": 0.5, "unit": "kg"})
+    spec = RecipeSpec(id="precise-spinach", title="수량 검증", minutes=10,
+        ingredients=(RecipeIngredient(canonical_name="시금치", amount=amount, unit="g"),),
+        steps=("조리합니다.",), safety_note="상태를 확인하세요.")
+    plan = plan_recipe([food], 30, specs=(spec,))
+    assert plan is not None and plan.ingredients[0].available
+    allocation = plan.ingredients[0].allocations[0]
+    assert allocation.quantity > 0
+    assert Decimal(str(allocation.quantity)) * 1000 == Decimal(str(amount))
+    assert plan.ingredients[0].amount == amount
+    from app.meal_optimizer import _remaining_foods
+    remaining = _remaining_foods([food], plan)[0].quantity
+    assert Decimal(str(remaining)) + Decimal(str(allocation.quantity)) == Decimal("0.5")
 
 
 def test_recipe_fixture_resolves_from_a_container_app_layout(tmp_path: Path) -> None:
@@ -106,9 +125,13 @@ def test_planner_does_not_relax_time_limit_when_all_recipes_take_longer() -> Non
     assert recipe.minutes == 15
     assert plan_recipe(foods, 10, specs=(recipe,)) is None
     assert plan_recipe(foods, 10, specs=(recipe,), preferred_recipe_id=recipe.id) is None
-    planned = plan_recipe(foods, 15, specs=(recipe,))
+    # chicken-1 is a frozen seed lot: the 15-minute recipe needs a quick thaw
+    # first, so a 15-minute budget is not enough either.
+    assert plan_recipe(foods, 15, specs=(recipe,)) is None
+    planned = plan_recipe(foods, 15 + planner.DEFAULT_THAW_MINUTES, specs=(recipe,))
     assert planned is not None
     assert planned.recipe_id == recipe.id
+    assert planned.total_minutes == 15 + planner.DEFAULT_THAW_MINUTES
 
 
 def test_planner_score_and_coverage_do_not_increase_when_stock_is_split_into_lots() -> None:
@@ -306,7 +329,9 @@ def test_planner_filters_curated_allergen_recipes() -> None:
     assert planned.allergens is not None
     assert "soy" not in planned.allergens
     soy_recipe = next(recipe for recipe in load_recipe_specs() if recipe.id == "mushroom-onion-soy")
-    assert soy_recipe.allergens == ("soy",)
+    # 간장 1큰술 is now an explicit pantry seasoning; brewed soy sauce carries
+    # both soy and wheat.
+    assert soy_recipe.allergens == ("soy", "wheat")
 
 
 def test_planner_abstains_when_recipe_allergen_metadata_is_unknown() -> None:
@@ -322,3 +347,56 @@ def test_planner_abstains_when_recipe_allergen_metadata_is_unknown() -> None:
     )
 
     assert plan_recipe([_seed_foods()[0]], 30, specs=specs, avoid_allergens={"soy"}) is None
+
+
+def test_quantity_review_only_targets_named_noncomparable_foods() -> None:
+    food = _seed_foods()[0]
+    spec = RecipeSpec(id="grams", title="시금치", minutes=10,
+        ingredients=(RecipeIngredient(canonical_name="시금치", amount=500, unit="g"),),
+        steps=(), safety_note="", allergens=())
+    assert planner.recipe_quantity_review_food_ids([food], specs=(spec,)) == (food.id,)
+    comparable = food.model_copy(update={"quantity":100,"unit":"g"})
+    assert planner.recipe_quantity_review_food_ids([comparable], specs=(spec,)) == ()
+    unrelated = food.model_copy(update={"canonical_name":"브로콜리"})
+    assert planner.recipe_quantity_review_food_ids([unrelated], specs=(spec,)) == ()
+    assert planner.recipe_quantity_review_food_ids([food], specs=(spec,), exclude_recipe_ids={"grams"}) == ()
+
+
+def test_quantity_review_respects_avoided_and_unknown_allergens() -> None:
+    food = _seed_foods()[0]
+    spec = RecipeSpec(id="grams", title="시금치", minutes=10,
+        ingredients=(RecipeIngredient(canonical_name="시금치", amount=500, unit="g"),),
+        steps=(), safety_note="", allergens=("egg",))
+    assert planner.recipe_quantity_review_food_ids([food], specs=(spec,), avoid_allergens={"egg"}) == ()
+
+
+def test_nonfinite_quantity_cannot_supply_a_recipe() -> None:
+    food = _seed_foods()[0].model_copy(update={"quantity":float("nan"),"unit":"g"})
+    spec = RecipeSpec(id="grams", title="시금치", minutes=10,
+        ingredients=(RecipeIngredient(canonical_name="시금치", amount=500, unit="g"),),
+        steps=(), safety_note="", allergens=())
+    assert plan_recipe([food],30,specs=(spec,)) is None
+    assert planner.recipe_quantity_review_food_ids([food],specs=(spec,)) == (food.id,)
+
+
+def test_confirmed_pack_weight_allocates_in_original_unit_without_density_guess():
+    from app.main import QuantityReference
+    food = _seed_foods()[0].model_copy(update={"quantity": 1, "unit": "팩", "quantity_reference": QuantityReference(amount=500, unit="g")})
+    specs = (RecipeSpec(id="weight", title="채소 요리", minutes=10, ingredients=(RecipeIngredient(canonical_name=food.canonical_name, amount=200, unit="g"),), steps=("조리",), safety_note="상태 확인"),)
+    plan = plan_recipe([food], 30, specs=specs)
+    assert plan is not None
+    assert plan.ingredients[0].allocations[0].quantity == 0.4
+    assert plan.ingredients[0].allocations[0].unit == "팩"
+    assert food.quantity == 1
+    assert planner.food_conversion_to_unit(food, "ml") is None
+    assert planner.recipe_quantity_review_food_ids([food], specs=specs) == ()
+
+
+def test_pack_count_reference_matches_count_recipe_and_preserves_pack_allocation():
+    from app.main import QuantityReference
+    food = _seed_foods()[0].model_copy(update={"quantity": 1, "unit": "팩", "quantity_reference": QuantityReference(amount=2, unit="개")})
+    specs = (RecipeSpec(id="count", title="채소 요리", minutes=10, ingredients=(RecipeIngredient(canonical_name=food.canonical_name, amount=1, unit="개"),), steps=("조리",), safety_note="상태 확인"),)
+    plan = plan_recipe([food], 30, specs=specs)
+    assert plan.ingredients[0].allocations[0].quantity == 0.5
+    assert plan.ingredients[0].allocations[0].unit == "팩"
+    assert planner.food_conversion_to_unit(food, "g") is None

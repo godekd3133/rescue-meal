@@ -207,6 +207,10 @@ probe 실패는 기존 queue를 지우지 않습니다. 이는 server push나 �
 
 승격은 protected review API에서 operator 확인을 거친 뒤 이루어집니다. canonical fixture로 복사하는 경우에는 코드 review와 테스트가 포함된 별도 변경으로 수행합니다. importer 결과를 cron이나 사용자 요청마다 fixture에 덮어쓰는 자동 sync는 지원하지 않습니다.
 
+## 키 발급 후 기존 카탈로그에 이어 붙이는 방법
+
+`import_cookrcp.py`와 adapter 코드는 바꾸지 않고, 키는 `FOODSAFETY_COOKRCP_API_KEY` 환경변수로만 주입한 뒤 `GET /api/integrations/recipes/cookrcp/status`가 `ready`인지 확인합니다. 그다음 `?review=1` 화면이나 `POST /api/recipe-review/drafts/import`로 1~100행 범위의 pending draft를 만들고, `recipe_admin` 계정이 claim → canonical 재료·수량·단위·예상 시간·안전 메모 입력 → 이용조건 확인 → approve 순서로 검토하면, 승인된 draft만 `recipe_catalog` source의 `RecipeSpec`(`catalog-<draft id>`)으로 팀 작성 `recipes-v1.json` 53개 뒤에 합쳐져 planner 후보가 됩니다(`load_recipe_specs() + store.approved_recipe_specs()`). 주의할 점은 2026-11 `recipes-v1`부터 밥·간장·소금·식용유 같은 기본 양념/주식을 매칭·장보기에서 빼는 `pantry` 필드와 단계별 `stage`·`heat`·`minutes`를 쓰지만, review draft 모델과 `approved_recipe_spec()`은 아직 이 둘을 모르기 때문에 승인된 COOKRCP 재료는 전부 `ingredients`로 들어가 재고 매칭·부족 재료·장보기에 잡힌다는 것입니다. 따라서 그 전까지는 (1) 검토자가 기본 양념을 canonical 재료로 승인하지 않도록 운영 규칙으로 막거나, (2) 승인된 draft를 `recipes-v1.json` 형식(`pantry`, 구조화된 `steps`, 명시적 `allergens`, `provenance.source_name/source_url/license/revision`은 COOKRCP 값 유지)으로 옮겨 적고 `services/api/tests/test_recipe_catalog_quality.py`를 통과시키는 별도 코드 변경으로 승격합니다. 장기적으로는 draft 재료에 `pantry` 여부를 표시하는 review 필드와 `approved_recipe_spec()`의 `pantry` 변환을 추가해야 합니다. 이 경우에도 `license`를 `project-authored`로 바꾸지 않으며, 알레르기 metadata가 확인되지 않은 draft는 `allergens`를 비워 회피 조건이 있는 사용자에게는 추천을 보류하는 기존 원칙을 유지합니다.
+
 ## 운영 미검증 항목
 
 - API key 발급·호출량·상세 이용조건은 운영 계정으로 별도 확인해야 합니다.

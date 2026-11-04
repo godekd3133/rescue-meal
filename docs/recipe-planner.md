@@ -33,19 +33,27 @@
 
 ## 레시피 fixture 계약
 
-각 레시피는 다음 필드를 가져야 합니다. `aliases`는 검토된 상품명 연결 후보이며, 모델이 임의로 생성한 동의어 목록이 아닙니다. `allergens`를 명시하면 해당 metadata를 사용하고, 생략된 팀 작성 fixture는 canonical ingredient와 검토된 제목·조리 단계에 대한 curated rule로 계산합니다. 외부 승인 recipe가 `allergens`를 생략하면 unknown으로 남습니다.
+각 레시피는 다음 필드를 가집니다. `aliases`는 검토된 상품명 연결 후보이며, 모델이 임의로 생성한 동의어 목록이 아닙니다. `allergens`를 명시하면 해당 metadata를 사용하고, 생략한 recipe는 canonical ingredient·`pantry`·제목·조리 단계에 대한 curated rule로 계산합니다. 2026-11 이후 팀 작성 53개 recipe는 모두 `allergens`를 명시합니다. 외부 승인 recipe가 `allergens`를 생략하면 unknown으로 남습니다.
+
+- `ingredients`: 재고 lot과 매칭·allocation·부족 재료·장보기 계산에 쓰는 재료(1인분 분량). `thaw_minutes`는 이 재료를 냉동 lot으로 쓸 때 필요한 빠른 해동 시간이며, 생략하면 `DEFAULT_THAW_MINUTES`(10분), `0`이면 얼린 채로 조리해도 되는 재료입니다.
+- `pantry`: 밥·간장·소금·식용유·설탕·참기름·고춧가루·다진 마늘·물처럼 집에 있다고 보는 기본 양념/주식입니다. 매칭·allocation·`missing_ingredients`·장보기에 절대 들어가지 않고, 인원수만큼 분량을 곱해 응답 `pantry_items`로만 보여 주며 알레르기 계산에는 포함합니다(간장·국간장·고추장·된장 → `soy`+`wheat`, 버터 → `milk`).
+- `steps`: `손질 → 조리 → 마무리` 4~7단계 객체(`stage`, `heat`, `minutes`, `text`). `text`는 불 세기·시간·양념 분량을 포함한 완결된 문장이고, 단계 `minutes` 합은 recipe `minutes` 이하입니다. 날짜·상태 확인 문구는 단계가 아니라 `safety_note`에만 둡니다. 문자열 배열도 계속 읽습니다(외부 승인 recipe 호환).
 
 ```json
 {
   "id": "spinach-tofu-chicken-bowl",
   "title": "시금치 두부 닭가슴살 덮밥",
   "minutes": 15,
+  "servings": 1,
   "ingredients": [
-    {"canonical_name": "시금치", "aliases": ["국내산 시금치"], "amount": 1, "unit": "팩"}
+    {"canonical_name": "닭가슴살", "aliases": ["무항생제 닭가슴살"], "amount": 1, "unit": "팩"}
   ],
-  "allergens": ["soy"],
-  "steps": ["재료의 상태와 날짜를 확인합니다."],
-  "safety_note": "날짜와 상태가 이상하면 조리하지 마세요."
+  "pantry": [{"name": "밥", "amount": 1, "unit": "공기"}, {"name": "간장", "amount": 1.5, "unit": "큰술"}],
+  "steps": [
+    {"stage": "조리", "heat": "중불", "minutes": 5, "text": "팬을 중불로 달궈 식용유 1큰술을 두르고 닭가슴살을 4~5분 속까지 익힙니다."}
+  ],
+  "allergens": ["soy", "wheat"],
+  "safety_note": "날짜와 상태가 이상하면 조리하지 말고 포장지 안내와 폐기 여부를 확인하세요."
 }
 ```
 
@@ -213,7 +221,9 @@ source 기여분을 제거하고, 다른 source의 부족분이 남아 있으면
 
 ## 조리 가능 시간
 
-프론트는 `10·20·30·45분` 중 하나를 선택하고 `max_minutes`로 API에 전달합니다. planner는 해당 시간 이하의 recipe 후보를 먼저 사용하며, 후보가 하나도 없을 때만 전체 fixture에서 가장 적합한 후보를 선택합니다. 저장된 계획 response에도 `max_minutes`를 보존하고 snapshot hash 계산에 포함하므로, 30분 plan을 10분 화면에 잘못 복원하지 않습니다.
+프론트는 `10·20·30·45분` 중 하나를 선택하고 `max_minutes`로 API에 전달합니다. 시간 상한은 엄격합니다. planner는 `minutes + thaw_minutes`가 `max_minutes` 이하인 후보만 사용하며, 후보가 없으면 `recovery.kind="time"`과 실제로 필요한 최소 시간(해동 포함 `minimum_minutes`)을 돌려줍니다.
+
+냉동 lot 처리: 같은 재료의 냉장·실온 lot이 있으면 먼저 배정하고, 냉동 lot을 써야 할 때만 해당 재료의 `thaw_minutes`(기본 10분, 1인분 육류·해산물을 전자레인지 해동 모드로 녹이는 기준)를 조리 시간에 더합니다. 냉장 해동은 몇 시간, 찬물 해동은 30분 이상 걸려 같은 끼니 시간 예산에 넣을 수 없으므로, 즉시 조리를 전제로 한 빠른 해동 시간만 계산하고 전날 냉장 해동은 단계 문구의 대안으로만 안내합니다. 해동 단계(`stage="해동"`)는 `steps`·`step_details` 맨 앞에 붙고, 포장지 해동 안내를 우선하라고 적습니다. 해동 시간은 후보 자격(시간 상한)에만 쓰고 순위 점수에는 넣지 않습니다. 이미 고른 recipe의 재고만 다시 확인하는 장보기 재조정 경로는 시간 상한 없이(180분) 재계산합니다. 저장된 계획 response에도 `max_minutes`를 보존하고 snapshot hash 계산에 포함하므로, 30분 plan을 10분 화면에 잘못 복원하지 않습니다.
 
 ## 매칭 규칙
 

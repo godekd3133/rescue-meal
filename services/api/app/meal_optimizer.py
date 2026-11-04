@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from decimal import Decimal
 import math
 from typing import Any, Literal, Sequence
 
@@ -59,6 +60,8 @@ class _WorkingFood:
     priority: int
     quantity: float
     unit: str
+    # Carried so the planner can add frozen-lot thaw time and steps.
+    storage_type: str | None = None
 
 
 def optimize_multi_day_plans(
@@ -301,17 +304,14 @@ def _remaining_foods(foods: Sequence[FoodLike], plan: PlannedRecipe) -> list[_Wo
     consumed_by_food_id: dict[str, float] = {}
     for ingredient in plan.ingredients:
         for allocation in ingredient.allocations:
-            consumed_by_food_id[allocation.food_id] = round(
-                consumed_by_food_id.get(allocation.food_id, 0) + allocation.quantity,
-                3,
-            )
+            consumed_by_food_id[allocation.food_id] = float(Decimal(str(consumed_by_food_id.get(allocation.food_id, 0))) + Decimal(str(allocation.quantity)))
     return [
         food
         for food in (
-            _with_quantity(food, round(food.quantity - consumed_by_food_id.get(food.id, 0), 3))
+            _with_quantity(food, float(Decimal(str(food.quantity)) - Decimal(str(consumed_by_food_id.get(food.id, 0)))))
             for food in foods
         )
-        if food.quantity > 1e-9
+        if food.quantity > 0
     ]
 
 
@@ -333,6 +333,7 @@ def _as_planner_food(food: FoodLike) -> _WorkingFood:
         priority=int(food.priority),
         quantity=float(food.quantity),
         unit=str(food.unit),
+        storage_type=getattr(food, "storage_type", None),
     )
 
 
@@ -343,6 +344,7 @@ def _with_quantity(food: FoodLike, quantity: float) -> _WorkingFood:
         priority=food.priority,
         quantity=quantity,
         unit=food.unit,
+        storage_type=getattr(food, "storage_type", None),
     )
 
 

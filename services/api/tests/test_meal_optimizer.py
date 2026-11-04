@@ -31,7 +31,9 @@ def test_cp_sat_selects_distinct_plans_without_exceeding_lot_capacity() -> None:
         for ingredient in plan.ingredients
         if ingredient.canonical_name == "맛타리버섯"
     ]
-    assert mushroom_availability == [2.0, 1.0]
+    # recipes-v1 single-serving mushroom dishes use ½팩, so the second
+    # mushroom day sees the 2팩 lot minus the first day's ½팩.
+    assert mushroom_availability == [2.0, 1.5]
 
     capacities = {food.id: food.quantity for food in _seed_foods()}
     usage: dict[str, float] = {}
