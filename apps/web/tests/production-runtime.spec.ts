@@ -10,21 +10,13 @@ test("production boot never presents demo inventory when the API is unreachable"
 
   await page.goto("/");
 
-  await expect(page.locator(".connection-pill")).toHaveText("오프라인");
-  await expect(page.getByRole("heading", { name: "식품 목록을 불러오지 못했어요", exact: true })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "내 식품 목록을 불러오지 못했어요" })).toBeVisible();
-  await expect(page.locator(".connection-retry-callout")).toContainText("인터넷에 연결되지 않았어요");
-  await expect(page.locator(".connection-retry-callout")).toContainText("식품 목록을 불러오지 못했어요.");
-  await expect(page.locator(".trust-card")).toHaveAttribute("data-trust-state", "neutral");
-  await expect(page.locator(".trust-card strong")).toHaveText("먼저 살펴볼 날짜는 소비기한이 아니에요");
-  await expect(page.locator(".trust-card small")).toHaveText("포장지 날짜와 식품 상태를 보고 직접 판단해 주세요.");
-  await expect(page.locator(".priority-empty-copy strong")).toHaveText("식품 목록을 불러오지 못했어요");
-  await expect(page.locator(".priority-empty-copy small")).toHaveText("연결되면 먼저 살펴볼 식품을 보여드려요.");
-  await expect(page.locator(".inventory-empty-copy strong")).toHaveText("인터넷에 연결되지 않았어요");
+  await expect(page.locator(".connection-pill")).toHaveText("연결 안 됨");
+  await expect(page.getByRole("heading", { name: "내 식품 목록", exact: true })).toBeVisible();
+  await expect(page.locator(".inventory-unknown-state")).toHaveAttribute("role", "alert");
+  await expect(page.locator(".inventory-empty-copy strong")).toHaveText("식품 목록을 불러오지 못했어요");
   await expect(page.locator(".inventory-empty-copy small")).toHaveText("다시 연결하면 식품 목록을 불러올 수 있어요.");
-  await expect(page.locator(".meal-plan-button small")).toHaveText("인터넷에 다시 연결한 뒤 식단을 만들 수 있어요.");
-  await expect(page.locator(".mini-summary")).toContainText("식품 목록을 볼 수 없어요");
-  await expect(page.locator(".mini-summary")).not.toContainText("0개");
+  await expect(page.getByRole("button", { name: "다시 연결", exact: true })).toHaveCount(1);
+  await expect(page.locator(".connection-retry-callout, .priority-section, .trust-card, .inventory-status-filters")).toHaveCount(0);
   await expect(page.getByText("아직 식품을 등록하지 않았어요")).toHaveCount(0);
   await expect(page.getByText("아직 등록된 식품이 없어요")).toHaveCount(0);
   await expect(page.getByText("시금치", { exact: true })).toHaveCount(0);
@@ -35,8 +27,8 @@ test("production boot never presents demo inventory when the API is unreachable"
     const rect = (selector: string) => document.querySelector<HTMLElement>(selector)?.getBoundingClientRect().toJSON() ?? null;
     return {
       screen: rect("[data-testid=device-screen]"),
-      callout: rect(".connection-retry-callout"),
-      cta: rect(".meal-plan-button"),
+      callout: rect(".inventory-unknown-state"),
+      cta: rect(".inventory-empty-action"),
       navigation: rect(".app-bottom-nav"),
     };
   });
@@ -44,6 +36,7 @@ test("production boot never presents demo inventory when the API is unreachable"
   expect(layout.callout).toBeTruthy();
   expect(layout.cta).toBeTruthy();
   expect(layout.navigation).toBeTruthy();
+  expect(layout.cta!.height).toBeGreaterThanOrEqual(44);
   expect(layout.cta!.bottom).toBeLessThanOrEqual(layout.navigation!.top + 1);
   expect(layout.navigation!.bottom).toBeLessThanOrEqual(layout.screen!.bottom + 1);
 

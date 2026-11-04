@@ -17,12 +17,16 @@ const databasePath = path.join(temporaryDirectory, "workspace.db");
 
 const child = spawn(
   uvCommand,
-  ["run", "--project", apiProjectDirectory, "--no-dev", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", String(apiPort)],
+  ["run", "--project", apiProjectDirectory, "--no-dev", "uvicorn", "app.e2e_fixture:app", "--host", "127.0.0.1", "--port", String(apiPort)],
   {
     cwd: apiProjectDirectory,
     env: {
       ...process.env,
+      RESCUE_MEAL_DATABASE_URL: "",
       RESCUE_MEAL_SQLITE_PATH: databasePath,
+      RESCUE_MEAL_E2E_FIXTURES: "1",
+      GROCY_BASE_URL: "",
+      GROCY_API_KEY: "",
       RESCUE_MEAL_AUTH_REQUIRED: "false",
       RESCUE_MEAL_CORS_ORIGINS: `http://127.0.0.1:${webPort}`,
       RESCUE_MEAL_ACCESS_LOG: "false",

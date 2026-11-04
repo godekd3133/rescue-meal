@@ -63,8 +63,14 @@ test("primary home action text meets contrast in light and dark themes", async (
     }
     await expect(page.locator("html")).toHaveAttribute("data-rescue-theme", theme);
 
-    if (theme === "dark") {
-      const priorityStateColors = await page.evaluate(() => {
+    {
+      // Days-left chips carry the review urgency now; every chip state must stay readable.
+      // Card surfaces transition after a theme change; measure the settled colors.
+      await page.evaluate(() => Promise.race([
+        Promise.all(document.getAnimations().filter((animation) => animation.effect?.getTiming().iterations !== Infinity).map((animation) => animation.finished)),
+        new Promise((resolve) => setTimeout(resolve, 2_000)),
+      ]));
+      const chipContrasts = await page.evaluate(() => {
         const context = document.createElement("canvas").getContext("2d")!;
         context.canvas.width = 1;
         context.canvas.height = 1;
@@ -96,17 +102,18 @@ test("primary home action text meets contrast in light and dark themes", async (
               / (Math.min(foregroundLuminance, backgroundLuminance) + 0.05),
           };
         };
-        return {
-          review: measure(".priority-state-review"),
-          action: measure(".priority-state-action"),
-        };
+        const chips = Array.from(document.querySelectorAll<HTMLElement>(".priority-card .freshness-chip, .inventory-row .freshness-chip"));
+        chips.forEach((chip, index) => chip.setAttribute("data-contrast-probe", String(index)));
+        return chips.map((chip, index) => ({ text: `${chip.className} ${chip.textContent}`, ...measure(`[data-contrast-probe="${index}"]`) }));
       });
-      expect(priorityStateColors.review.color).toBe("rgb(255, 184, 166)");
-      expect(priorityStateColors.action.color).toBe("rgb(255, 211, 138)");
-      expect(priorityStateColors.review.contrast).toBeGreaterThanOrEqual(4.5);
-      expect(priorityStateColors.action.contrast).toBeGreaterThanOrEqual(4.5);
+      expect(chipContrasts.length, `${theme} days-left chips render`).toBeGreaterThan(0);
+      for (const chip of chipContrasts) {
+        expect(chip.contrast, `${theme} ${chip.text} chip contrast`).toBeGreaterThanOrEqual(4.5);
+      }
     }
 
+    // The action's background transitions after a theme change; measure the settled colors.
+    await page.locator(".meal-plan-button").evaluate((button) => Promise.all(button.getAnimations().map((animation) => animation.finished)));
     const ratios = await page.locator(".meal-plan-button").evaluate((button) => {
       const luminance = (color: string) => {
         const channels = color.match(/[\d.]+/g)?.slice(0, 3).map(Number);
@@ -192,7 +199,7 @@ test("printed-date recheck keeps its current record clear with system high contr
       const currentRecord = dateRecheck.getByRole("group", { name: /현재 기록된 날짜 포장 소비기한/ });
       await expect(currentRecord).toBeVisible();
       await expect(currentRecord).toBeInViewport();
-      await expect(currentRecord.locator("span")).toHaveCSS("font-size", "10px");
+      await expect(currentRecord.getByText("현재 기록")).toHaveCSS("font-size", "10px");
       await expect(currentRecord.locator("strong")).toHaveCSS("font-size", "12px");
       await expect.poll(() => currentRecord.evaluate((group) => {
         const value = group.querySelector<HTMLElement>("strong");
@@ -226,14 +233,14 @@ test("printed-date recheck keeps its current record clear with system high contr
 
 test("account and notification surfaces pass axe audit", async ({ page }) => {
   await page.locator(".connection-pill").click();
-  await openSheet(page, "내 계정");
+  await openSheet(page, "체험 안내");
   await expectNoViolations(page, "account sheet");
   await page.keyboard.press("Escape");
   // The exit animation keeps the closed sheet mounted (and aria-hidden) for
   // ~160ms; scanning inside that window flags a transient focus race.
-  await expect(page.getByRole("dialog", { name: "내 계정" })).toHaveCount(0);
+  await expect(page.getByRole("dialog", { name: "체험 안내" })).toHaveCount(0);
 
-  await page.locator(".mobile-hero-notification").click();
+  await page.locator(".notification-button").click();
   await openSheet(page, "알림");
   await expectNoViolations(page, "notification center");
 });
@@ -241,7 +248,31 @@ test("account and notification surfaces pass axe audit", async ({ page }) => {
 test("receipt review sheet passes axe audit", async ({ page }) => {
   await page.getByRole("button", { name: /식품 추가하기/ }).click();
   await openSheet(page, "영수증으로 추가");
-  await page.getByRole("button", { name: "샘플 영수증으로 시작" }).click();
+  await page.getByRole("button", { name: "예시 영수증 보기" }).click();
   await expect(page.getByRole("button", { name: "3개 식품 저장하기" })).toBeVisible();
+  await page.waitForTimeout(250);
   await expectNoViolations(page, "receipt review");
+  // axe usually reports this tinted control as "incomplete" (overlapping sheet layers), so measure it directly.
+  const activeStorageContrast = await page.locator(".storage-option-active").first().evaluate((option) => {
+    const channels = (color: string) => {
+      const values = color.match(/[\d.]+/g)!.map(Number);
+      return color.startsWith("color(srgb")
+        ? { rgb: values.slice(0, 3).map((value) => value * 255), alpha: values[3] ?? 1 }
+        : { rgb: values.slice(0, 3), alpha: values[3] ?? 1 };
+    };
+    const luminance = (rgb: number[]) => {
+      const [red, green, blue] = rgb.map((channel) => {
+        const normalized = channel / 255;
+        return normalized <= 0.04045 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
+      });
+      return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+    };
+    const tint = channels(getComputedStyle(option).backgroundColor);
+    const sheet = channels(getComputedStyle(option.closest(".bottom-sheet")!).backgroundColor);
+    const background = tint.rgb.map((channel, index) => channel * tint.alpha + sheet.rgb[index] * (1 - tint.alpha));
+    const foreground = channels(getComputedStyle(option).color).rgb;
+    const [lighter, darker] = [luminance(background), luminance(foreground)].sort((a, b) => b - a);
+    return (lighter + 0.05) / (darker + 0.05);
+  });
+  expect(activeStorageContrast, "active storage option contrast").toBeGreaterThanOrEqual(4.5);
 });

@@ -73,6 +73,8 @@ When any text-entry control loses focus, dismiss the simulated keyboard. If the 
 
 ## Current product visual direction
 
+- Example foods belong to the explicit demo preview. New guest and account record spaces start empty; a configured API must not show demo food while waiting for personal records. Preserve existing saved records and owner-scoped offline snapshots. Background workspace refreshes must not invent a device or food-change attribution.
+
 - Do not join visible metadata with bullet or middle-dot separators. Lay out status, period, quantity, storage, and provenance as separate fields, lines, or controls with spacing. Avoid obvious or repeated explanatory copy; retain material date meaning, safety, storage mismatch, unsaved-state, and persistence information where the relevant action happens.
 
 - The selected direction is **Emerald Atelier**: deep forest/charcoal background, warm ivory type, the user-requested blue primary accent (light `#3182f6`, dark `#6f8dff`), coral review/safety state, amber pending state, and slate-blue supporting metadata. The accent still uses the legacy `--atelier-pistachio` token in theme CSS; do not revert it to green without a new user direction.

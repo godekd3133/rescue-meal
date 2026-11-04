@@ -38,6 +38,7 @@ test("one pack can be halved without bypassing the date review confirmation", as
   await detail.getByRole("button", { name: "절반 0.5팩", exact: true }).click();
   await detail.locator(".detail-consume-action").click();
   await expect(detail.getByRole("group", { name: "이번 소비 기록" })).toContainText("0.5팩");
+  await expect(detail.locator(".consume-confirm-remaining")).toContainText("0.5팩");
   await expect(page.locator(".priority-card").filter({ hasText: "시금치" })).toContainText("1팩");
   await detail.getByRole("button", { name: "먹었어요", exact: true }).click();
   await expect(detail).toHaveCount(0);
@@ -49,7 +50,7 @@ test("meal ingredient exclusion restores the edited amount and blocks an empty c
   await page.getByRole("button", { name: "오늘 식단 만들기", exact: true }).click();
   const meal = page.getByRole("dialog", { name: "오늘의 식단" });
   await meal.getByRole("button", { name: "임시 저장", exact: true }).click();
-  const spinach = meal.getByRole("spinbutton", { name: "시금치 사용할 양", exact: true });
+  const spinach = meal.getByRole("textbox", { name: "시금치 사용할 양", exact: true });
   await spinach.fill("0.5");
   await meal.getByRole("button", { name: "시금치 이번엔 안 씀", exact: true }).click();
   await expect(spinach).toHaveValue("0");

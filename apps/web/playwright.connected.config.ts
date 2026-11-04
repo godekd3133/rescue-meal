@@ -41,7 +41,9 @@ export default defineConfig({
       },
     },
     {
-      command: `./node_modules/.bin/vite --host 127.0.0.1 --port ${webPort}`,
+      // strictPort: another app on this port must fail fast. Without it Vite moves to the
+      // next port and Playwright polls the other app's 404 until the startup timeout.
+      command: `./node_modules/.bin/vite --host 127.0.0.1 --port ${webPort} --strictPort`,
       cwd: webDirectory,
       url: webUrl,
       timeout: 120_000,
