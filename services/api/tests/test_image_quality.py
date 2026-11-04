@@ -1,7 +1,7 @@
 from io import BytesIO
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFilter
+from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 from app.pipeline import image_quality as image_quality_module
 from app.pipeline.image_quality import assess_image_quality, normalize_image_orientation, prepare_ocr_image
@@ -63,7 +63,7 @@ def test_readable_image_gets_a_quality_report() -> None:
 
 
 def test_project_food_asset_is_accepted_for_ocr_intake() -> None:
-    asset = Path(__file__).resolve().parents[3] / "apps" / "web" / "public" / "assets" / "food" / "spinach.png"
+    asset = Path(__file__).resolve().parents[3] / "apps" / "web" / "public" / "assets" / "food" / "spinach-photo.jpg"
     report = assess_image_quality(asset.read_bytes())
 
     assert report.status in {"pass", "review_required"}
@@ -139,3 +139,46 @@ def test_blur_warning_does_not_apply_an_unverified_sharpening_pass() -> None:
     assert any("흔들려" in warning for warning in report.warnings)
     assert preparation.profile == "source"
     assert preparation.image_bytes == buffer.getvalue()
+
+
+def _sparse_document(*, ink="black", blur=0) -> bytes:
+    image = Image.new("RGB", (1100, 1350), "white")
+    draw = ImageDraw.Draw(image)
+    font = ImageFont.load_default(size=48)
+    for index, text in enumerate(["ITEM 001 TOFU 1", "2490 1 2490", "ITEM 002 MUSHROOM 2", "TOTAL 6340"]):
+        draw.text((60, 60 + index * 150), text, font=font, fill=ink)
+    if blur:
+        image = image.filter(ImageFilter.GaussianBlur(blur))
+    buffer = BytesIO()
+    image.save(buffer, format="PNG")
+    return buffer.getvalue()
+
+
+def test_sharp_sparse_white_document_does_not_get_glare_or_focus_advice() -> None:
+    report = assess_image_quality(_sparse_document())
+    assert report.brightness > 238
+    assert report.edge_energy < 7
+    assert report.contrast >= 12 and report.blur_score >= 1
+    assert report.status == "pass"
+    assert report.warnings == []
+
+
+def test_blurred_sparse_white_document_keeps_focus_advice() -> None:
+    report = assess_image_quality(_sparse_document(blur=4))
+    assert report.status == "review_required"
+    assert report.blur_score < 1
+    assert any("흔들려" in warning for warning in report.warnings)
+
+
+def test_washed_out_sparse_white_document_keeps_contrast_and_brightness_advice() -> None:
+    report = assess_image_quality(_sparse_document(ink="#f1f1f1"))
+    assert report.status == "review_required"
+    assert any("대비가 낮" in warning for warning in report.warnings)
+    assert any("너무 밝" in warning for warning in report.warnings)
+
+
+def test_blank_white_image_does_not_pass_as_readable_document() -> None:
+    image = Image.new("RGB", (1100, 1350), "white")
+    buffer = BytesIO()
+    image.save(buffer, format="PNG")
+    assert assess_image_quality(buffer.getvalue()).status == "review_required"

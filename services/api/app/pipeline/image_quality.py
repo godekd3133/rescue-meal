@@ -144,13 +144,18 @@ def assess_image_quality(image_bytes: bytes) -> ImageQualityReport:
     short_side = min(width, height)
     if short_side < 320:
         return ImageQualityReport("reject", width, height, image_format, brightness, contrast, edge_energy, blur_score, ["짧은 변이 320px보다 작아 글자를 읽기 어렵습니다."], orientation_corrected)
+    # White document margins dilute whole-image edge density and raise mean
+    # brightness. Contrast plus high-frequency detail separates a readable
+    # sparse scan from washed-out or blurred input without suppressing those
+    # independent warnings.
+    visible_detail = contrast >= 12 and blur_score >= 1
     if brightness < 25:
         warnings.append("사진이 너무 어두워요. 밝은 곳에서 다시 촬영해 주세요.")
-    elif brightness > 238:
+    elif brightness > 238 and not visible_detail:
         warnings.append("사진이 너무 밝거나 반사되어 있어요. 빛을 비껴 촬영해 주세요.")
     if contrast < 12:
         warnings.append("문자 대비가 낮아요. 종이를 평평하게 펴고 다시 촬영해 주세요.")
-    if edge_energy < 7:
+    if edge_energy < 7 and not visible_detail:
         warnings.append("문자 윤곽이 약해요. 초점을 맞춘 뒤 다시 촬영해 주세요.")
     if blur_score < 1:
         warnings.append("사진이 흔들려 문자 윤곽이 흐려요. 휴대폰을 고정하고 다시 촬영해 주세요.")
