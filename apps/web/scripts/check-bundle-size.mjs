@@ -15,7 +15,10 @@ const TOTAL_JS_BUDGET_KB = 1500;
 // and has no duplicate overridden declarations left to drop. 300KB stops further growth.
 // Raised to 320KB on 2026-11-04 for the freshness redesign (overview tiles, days-left
 // chips, softer surfaces in src/freshness.css): ~304KB shipped.
-const TOTAL_CSS_BUDGET_KB = 320;
+// Raised to 335KB on 2026-11-05 for the "inside the fridge" layer (kitchen.css +
+// rescueDeck.css, ~15KB) that re-points the legacy atelier tokens instead of rewriting
+// prototype.css; shrinking prototype.css is the way back under 320KB.
+const TOTAL_CSS_BUDGET_KB = 335;
 
 let files;
 try {

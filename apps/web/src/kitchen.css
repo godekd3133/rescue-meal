@@ -1,0 +1,462 @@
+/*
+ * "Inside the fridge" — the app-wide visual layer.
+ *
+ * One bold move: Home opens on a deep leek-green panel (the inside of the fridge)
+ * where the rescue count and food photo cards live. Everything else stays a quiet
+ * paper surface. Tomato / orange / yolk only ever mean "how soon to look at this";
+ * leek green is the only action colour. No blue anywhere.
+ *
+ * Selectors use a tripled theme attribute so this layer wins over prototype.css
+ * (which loads later and still carries the old blue atelier tokens) and over
+ * freshness.css without sprinkling !important on token definitions.
+ */
+
+html[data-rescue-theme="light"][data-rescue-theme][data-rescue-theme] {
+  --fresh-bg: #f3f5f0;
+  --fresh-surface: #ffffff;
+  --fresh-ink: #16221b;
+  --fresh-muted: #5d6d64;
+  --fresh-line: rgba(22, 34, 27, 0.08);
+  --fresh-primary: #22804f;
+  --fresh-primary-strong: #1b6c42;
+  --fresh-primary-ink: #ffffff;
+  --fresh-shadow: 0 8px 24px rgba(21, 57, 42, 0.08);
+  --fresh-past: #ec5a43;
+  --fresh-today: #fb8b3c;
+  --fresh-soon: #f4b72f;
+  --fresh-week: #4fb57a;
+  --fresh-later: #8ccdb3;
+  --fresh-unknown: #b8c3bc;
+  --kitchen-hero: #15392a;
+  --kitchen-hero-raised: rgba(255, 255, 255, 0.1);
+  --kitchen-hero-ink: #f5f1e4;
+  --kitchen-hero-muted: rgba(245, 241, 228, 0.68);
+  --kitchen-yolk: #ffc845;
+}
+
+html[data-rescue-theme="dark"][data-rescue-theme][data-rescue-theme] {
+  --fresh-bg: #0c1210;
+  --fresh-surface: #161f1a;
+  --fresh-ink: #e9f0eb;
+  --fresh-muted: #9cb0a4;
+  --fresh-line: rgba(233, 240, 235, 0.1);
+  --fresh-primary: #63cf94;
+  --fresh-primary-strong: #63cf94;
+  --fresh-primary-ink: #0c1210;
+  --fresh-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  --fresh-past: #ff7a66;
+  --fresh-today: #ffa25a;
+  --fresh-soon: #f6cc54;
+  --fresh-week: #5cc98d;
+  --fresh-later: #8fcab4;
+  --fresh-unknown: #5d6b64;
+  --kitchen-hero: #10291e;
+  --kitchen-hero-raised: rgba(255, 255, 255, 0.08);
+  --kitchen-hero-ink: #f5f1e4;
+  --kitchen-hero-muted: rgba(245, 241, 228, 0.64);
+  --kitchen-yolk: #ffd261;
+}
+
+/* Re-point every legacy token (atelier / sheet / meal) at the kitchen palette. */
+html[data-rescue-theme][data-rescue-theme][data-rescue-theme] :is(.meal-home,.bottom-sheet,.app-bottom-nav,.toast) {
+  --atelier-deep: var(--fresh-bg);
+  --atelier-surface: var(--fresh-surface);
+  --atelier-surface-raised: var(--fresh-surface);
+  --atelier-ink: var(--fresh-ink);
+  --atelier-soft: var(--fresh-ink);
+  --atelier-muted: var(--fresh-muted);
+  --atelier-dim: var(--fresh-muted);
+  --atelier-border: var(--fresh-line);
+  --atelier-border-strong: color-mix(in srgb, var(--fresh-ink) 18%, transparent);
+  --atelier-pistachio: var(--fresh-primary-strong);
+  --atelier-pistachio-deep: var(--fresh-primary-strong);
+  --atelier-primary-action: var(--fresh-primary-strong);
+  --atelier-primary-action-ink: var(--fresh-primary-ink);
+  --atelier-primary-action-hover: color-mix(in srgb, var(--fresh-primary-strong) 86%, black);
+  --atelier-primary-action-shadow: 0 10px 22px color-mix(in srgb, var(--fresh-primary-strong) 24%, transparent);
+  --atelier-coral: var(--fresh-past);
+  --atelier-amber: color-mix(in srgb, var(--fresh-soon) 70%, var(--fresh-ink));
+  --atelier-blue: var(--fresh-muted);
+  --meal-blue-soft: color-mix(in srgb, var(--fresh-primary) 10%, transparent);
+  --sheet-surface: var(--fresh-surface);
+  --sheet-surface-raised: var(--fresh-surface);
+  --sheet-border: var(--fresh-line);
+  --sheet-border-strong: color-mix(in srgb, var(--fresh-ink) 18%, transparent);
+}
+
+/* On light paper the 70% yolk mix reads at ~4:1; darken the amber text tone for 4.5:1. */
+html[data-rescue-theme="light"][data-rescue-theme][data-rescue-theme] :is(.meal-home,.bottom-sheet,.app-bottom-nav,.toast) {
+  --atelier-amber: color-mix(in srgb, var(--fresh-soon) 45%, var(--fresh-ink));
+}
+
+/* System high contrast: the re-pointed legacy tokens above would otherwise mask
+   prototype.css's high-contrast block, so raise the kitchen tokens themselves. */
+@media (prefers-contrast: more) {
+  html[data-rescue-theme="light"][data-rescue-theme][data-rescue-theme] {
+    --fresh-muted: #3f4d45;
+    --fresh-line: rgba(22, 34, 27, 0.22);
+  }
+
+  html[data-rescue-theme="dark"][data-rescue-theme][data-rescue-theme] {
+    --fresh-muted: #c4d3ca;
+    --fresh-line: rgba(233, 240, 235, 0.38);
+  }
+
+  html[data-rescue-theme="light"][data-rescue-theme][data-rescue-theme] :is(.meal-home,.bottom-sheet,.app-bottom-nav,.toast) {
+    --atelier-dim: #52615a;
+    --atelier-border-strong: rgba(22, 34, 27, 0.42);
+    --sheet-border-strong: rgba(22, 34, 27, 0.42);
+  }
+
+  html[data-rescue-theme="dark"][data-rescue-theme][data-rescue-theme] :is(.meal-home,.bottom-sheet,.app-bottom-nav,.toast) {
+    --atelier-dim: #a9bdb1;
+    --atelier-border-strong: rgba(233, 240, 235, 0.58);
+    --sheet-border-strong: rgba(233, 240, 235, 0.58);
+  }
+}
+
+/* ---------- Home: the fridge interior panel ---------- */
+
+html[data-rescue-theme][data-rescue-theme][data-rescue-theme] :is(.app-shell-preview,.app-shell-native) .meal-home {
+  --kitchen-gutter: 15px;
+  padding-top: 0;
+}
+
+/* Phone-width web: the panel bleeds to the screen edges like the native shells. */
+@media (max-width: 640px) {
+  html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .app-shell-web .meal-home {
+    --kitchen-gutter: 16px;
+    padding-top: 0;
+  }
+
+  html[data-rescue-theme] .app-shell-web .kitchen-hero {
+    padding-top: 20px;
+    border-radius: 0 0 36px 36px;
+  }
+}
+
+.kitchen-hero {
+  position: relative;
+  margin: 0 calc(-1 * var(--kitchen-gutter, 0px)) 18px;
+  padding: 22px var(--kitchen-gutter, 20px) 24px;
+  border-radius: 0 0 36px 36px;
+  background: var(--kitchen-hero);
+  color: var(--kitchen-hero-ink);
+}
+
+:is(.app-shell-preview) .kitchen-hero {
+  padding-top: 44px;
+}
+
+:is(.app-shell-native) .kitchen-hero {
+  padding-top: calc(env(safe-area-inset-top, 0px) + 18px);
+}
+
+:is(.app-shell-web) .kitchen-hero {
+  border-radius: 36px;
+}
+
+/* A soft shelf light at the top of the fridge. */
+.kitchen-hero::before {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 140px;
+  border-radius: inherit;
+  background: radial-gradient(120% 100% at 50% 0%, rgba(255, 255, 255, 0.09), transparent 70%);
+  content: "";
+  pointer-events: none;
+}
+
+html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .kitchen-hero :is(.home-hero-copy,.greeting-block) {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none !important;
+  box-shadow: none !important;
+}
+
+html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .kitchen-hero .app-header .brand-lockup,
+html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .kitchen-hero .app-header .brand-name {
+  color: var(--kitchen-hero-ink) !important;
+}
+
+html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .kitchen-hero .app-header :is(.connection-pill,.theme-toggle-button,.notification-button) {
+  background: var(--kitchen-hero-raised) !important;
+  box-shadow: none !important;
+  color: var(--kitchen-hero-ink) !important;
+}
+
+html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .kitchen-hero .app-header :is(.connection-pill,.theme-toggle-button,.notification-button) :is(span,small,strong,svg) {
+  color: inherit !important;
+}
+
+/* Header controls sit directly on the deep green panel: the shared leek-green focus ring
+   would vanish there, so ring them in yolk. */
+html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .kitchen-hero .app-header button:focus-visible::after {
+  border-color: var(--kitchen-yolk);
+}
+
+html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .kitchen-hero .eyebrow {
+  margin-top: 18px;
+  color: var(--kitchen-hero-muted) !important;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .kitchen-hero h1 {
+  color: var(--kitchen-hero-ink) !important;
+  font-family: var(--fresh-display) !important;
+  font-weight: 400 !important;
+}
+
+html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .kitchen-hero h1 em {
+  color: var(--kitchen-yolk) !important;
+  font-style: normal;
+}
+
+html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .kitchen-hero .rescue-hero {
+  align-items: flex-end;
+  margin-top: 4px;
+}
+
+html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .kitchen-hero .rescue-hero-copy {
+  font-size: 1.75rem;
+  line-height: 1.2;
+}
+
+html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .kitchen-hero .rescue-hero-count {
+  color: var(--kitchen-yolk);
+  font-size: 5rem;
+}
+
+html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .kitchen-hero .rescue-hero-count[data-zero="true"] {
+  color: #8fe0b2;
+}
+
+html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .kitchen-hero .rescue-hero-unit {
+  color: var(--kitchen-hero-ink);
+}
+
+/* Callouts that land inside the panel keep their own surface so they stay legible. */
+html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .kitchen-hero :is(.service-bootstrap-status,.session-expired-callout,.connection-retry-callout,.receipt-review-entry-card) {
+  margin-top: 14px;
+  border-radius: 20px;
+}
+
+/* ---------- Home: shelves and actions below the panel ---------- */
+
+html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .meal-home .fridge-door {
+  margin-top: 0;
+}
+
+html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .meal-home .fridge-shelf {
+  min-height: 84px;
+  border-radius: 24px;
+  box-shadow: none;
+  border: 1px solid var(--fresh-line);
+}
+
+html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .meal-home .meal-plan-button {
+  border-radius: 999px !important;
+  background: var(--fresh-primary-strong) !important;
+  color: var(--fresh-primary-ink) !important;
+  box-shadow: 0 12px 26px color-mix(in srgb, var(--fresh-primary-strong) 28%, transparent) !important;
+}
+
+html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .meal-home .meal-plan-button :is(strong,small,svg,.meal-plan-icon) {
+  color: inherit !important;
+}
+
+html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .meal-home .meal-plan-button strong {
+  font-family: var(--fresh-display);
+  font-weight: 400;
+}
+
+html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .meal-home .meal-plan-button .meal-plan-icon {
+  background: rgba(255, 255, 255, 0.16) !important;
+}
+
+html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .meal-home .section-heading h2 {
+  font-family: var(--fresh-display);
+  font-weight: 400;
+}
+
+html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .meal-home .priority-card {
+  border: 1px solid var(--fresh-line) !important;
+  border-radius: 24px !important;
+  background: var(--fresh-surface) !important;
+  box-shadow: none !important;
+}
+
+/* ---------- Floating bottom bar with the add button ---------- */
+
+html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .app-bottom-nav {
+  right: 14px;
+  left: 14px;
+  bottom: calc(var(--device-safe-area-bottom, 34px) + 6px);
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) 64px repeat(2, minmax(0, 1fr)) !important;
+  gap: 2px !important;
+  align-items: center;
+  min-height: 64px;
+  padding: 6px 8px !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: var(--kitchen-hero) !important;
+  box-shadow: 0 14px 34px rgba(12, 30, 21, 0.3) !important;
+  color: var(--kitchen-hero-muted);
+}
+
+/* Android preview already shrinks the app viewport above the system navigation
+   bar; reserving --device-safe-area-bottom again would float the pill 48px too high. */
+html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .app-shell-preview .mobile-app-viewport[data-platform="android"] .app-bottom-nav {
+  bottom: 6px;
+}
+
+html[data-rescue-theme="dark"][data-rescue-theme][data-rescue-theme] .app-bottom-nav {
+  background: #1b2a22 !important;
+  box-shadow: 0 0 0 1px rgba(245, 241, 228, 0.08), 0 14px 34px rgba(0, 0, 0, 0.5) !important;
+}
+
+html[data-rescue-theme][data-rescue-theme][data-rescue-theme] :is(.app-shell-preview,.app-shell-native) .app-bottom-nav::after {
+  display: none !important;
+}
+
+html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .app-bottom-nav .app-bottom-nav-item {
+  width: auto !important;
+  min-width: 0 !important;
+  min-height: 52px;
+  border-radius: 999px !important;
+  background: transparent !important;
+  color: var(--kitchen-hero-muted) !important;
+}
+
+html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .app-bottom-nav .app-bottom-nav-item span {
+  color: inherit !important;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .app-bottom-nav .app-bottom-nav-item-active {
+  background: var(--kitchen-hero-raised) !important;
+  color: var(--kitchen-yolk) !important;
+}
+
+/* One focus ring on the dark pill: the shared ::before ring, recoloured yolk because the
+   leek-green default all but disappears on the light theme's deep green bar. */
+html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .app-bottom-nav .app-bottom-nav-item:focus-visible {
+  outline: none !important;
+}
+
+html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .app-bottom-nav .app-bottom-nav-item:focus-visible::before {
+  inset: 2px;
+  border-color: var(--kitchen-yolk);
+}
+
+html[data-rescue-theme] .app-bottom-nav .app-bottom-nav-add {
+  display: grid;
+  place-items: center;
+  justify-self: center;
+  width: 58px !important;
+  min-width: 58px !important;
+  height: 58px !important;
+  margin-top: -26px;
+  padding: 0;
+  border: 4px solid var(--fresh-bg);
+  border-radius: 50%;
+  background: var(--kitchen-yolk);
+  color: #1b1a10;
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.26);
+  cursor: pointer;
+  transition: transform 140ms ease;
+}
+
+.app-bottom-nav-add:active {
+  transform: scale(0.94);
+}
+
+/* The add button straddles the pill and the page, so its ring is two-tone: a yolk ring
+   that reads on the dark pill, banded by the theme ink that reads on the paper page.
+   The device screen strips outlines and box-shadows from focused elements, so draw it
+   on ::after like the app's other focus rings. */
+html[data-rescue-theme] .app-bottom-nav .app-bottom-nav-add {
+  position: relative;
+}
+
+html[data-rescue-theme] .app-bottom-nav .app-bottom-nav-add:focus-visible::after {
+  position: absolute;
+  inset: -9px;
+  border: 3px solid var(--kitchen-yolk);
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--fresh-ink), inset 0 0 0 2px var(--fresh-ink);
+  content: "";
+  pointer-events: none;
+}
+
+html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .nav-shopping-count {
+  background: var(--kitchen-yolk) !important;
+  color: #1b1a10 !important;
+}
+
+/* The web shell keeps its own side navigation; the floating bar is a phone pattern. */
+.app-shell-web .app-bottom-nav-add {
+  margin-top: 0;
+}
+
+/* ---------- Sheets: same paper, leek actions, Jua titles ---------- */
+
+html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .bottom-sheet {
+  background: var(--fresh-bg) !important;
+}
+
+html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .bottom-sheet :is(.sheet-title,.sheet-header h2,[data-sheet-title]) {
+  font-family: var(--fresh-display) !important;
+  font-weight: 400 !important;
+  letter-spacing: 0;
+}
+
+html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .bottom-sheet :is(.primary-sheet-button,.recipe-primary-action,.meal-primary-action,.recipe-steps-toggle) {
+  border-color: transparent !important;
+  background: var(--fresh-primary-strong) !important;
+  color: var(--fresh-primary-ink) !important;
+  box-shadow: 0 10px 22px color-mix(in srgb, var(--fresh-primary-strong) 22%, transparent) !important;
+}
+
+html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .bottom-sheet :is(.primary-sheet-button,.recipe-primary-action,.meal-primary-action,.recipe-steps-toggle) :is(span,small,strong,svg) {
+  color: inherit !important;
+}
+
+html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .bottom-sheet :is(.secondary-sheet-button) {
+  border-color: var(--fresh-line) !important;
+  background: var(--fresh-surface) !important;
+  color: var(--fresh-ink) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-bottom-nav-add {
+    transition: none;
+  }
+}
+
+/* In dark mode the cards need to lift off the dark panel. */
+html[data-rescue-theme="dark"][data-rescue-theme][data-rescue-theme] .kitchen-hero .rescue-card {
+  background: #22302a;
+}
+
+html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .app-bottom-nav .app-bottom-nav-item span {
+  white-space: nowrap;
+}
+
+@media (max-width: 360px) {
+  html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .app-bottom-nav {
+    right: 10px;
+    left: 10px;
+    padding: 6px 4px !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) 60px repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+html[data-rescue-theme] .app-bottom-nav .app-bottom-nav-add:disabled {
+  opacity: 0.55;
+  cursor: progress;
+}
