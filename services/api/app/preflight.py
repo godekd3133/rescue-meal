@@ -89,7 +89,14 @@ def _valid_url(value: str | None, *, https_only: bool = False) -> bool:
     return not https_only or parsed.scheme == "https"
 
 
+# The Capacitor iOS shell serves the bundled web app from this fixed origin. WKWebView
+# cannot register a custom "https" scheme, so it is the only non-HTTPS origin allowed.
+NATIVE_APP_CORS_ORIGINS = frozenset({"capacitor://localhost"})
+
+
 def _valid_cors_origin(value: str) -> bool:
+    if value in NATIVE_APP_CORS_ORIGINS:
+        return True
     parsed = urlparse(value)
     return (
         parsed.scheme == "https"

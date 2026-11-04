@@ -51,6 +51,12 @@ def test_production_rejects_sqlite_auth_off_and_insecure_cors():
     assert {"database-not-postgres", "auth-disabled", "auth-secret", "cors-wildcard"} <= codes
 
 
+def test_production_allows_the_capacitor_ios_origin_but_no_other_plain_origin():
+    assert production_preflight(secure_env(RESCUE_MEAL_CORS_ORIGINS="https://meal.example.com,capacitor://localhost")) == []
+    issues = production_preflight(secure_env(RESCUE_MEAL_CORS_ORIGINS="https://meal.example.com,http://localhost"))
+    assert "cors-origin" in {issue.code for issue in issues}
+
+
 def test_production_requires_normalized_inventory_and_https_reset_delivery():
     issues = production_preflight(
         secure_env(
