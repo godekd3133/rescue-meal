@@ -1677,19 +1677,8 @@ test("echoes the existing printed date before starting a label recheck", async (
   const methodTabs = labelReview.getByRole("tablist", { name: "식품 추가 방법" });
   await expect(methodTabs.getByRole("tab", { name: "영수증" }).locator("span[aria-hidden='true']")).toHaveCount(0);
   const recommendedTab = methodTabs.getByRole("tab", { name: "라벨" });
-  const recommendationBadge = recommendedTab.locator("span[aria-hidden='true']");
-  await expect(recommendedTab).toHaveAccessibleName("라벨, 추천");
-  await expect(recommendationBadge).toHaveText("추천");
-  await expect(recommendationBadge).toHaveCSS("font-size", "10px");
-  const recommendationColors = await recommendationBadge.evaluate((element) => {
-    const sheet = element.closest<HTMLElement>("[data-testid=bottom-sheet]");
-    if (!sheet) throw new Error("Date-recheck sheet was not found for the recommendation badge.");
-    return {
-      foreground: getComputedStyle(element).color,
-      background: getComputedStyle(sheet).backgroundColor,
-    };
-  });
-  expect(contrastRatio(recommendationColors.foreground, recommendationColors.background)).toBeGreaterThanOrEqual(4.5);
+  await expect(recommendedTab).toHaveAccessibleName("라벨");
+  await expect(recommendedTab.locator(".mode-tab-recommendation")).toHaveCount(0);
   const currentDate = labelReview.getByRole("group", { name: "현재 기록된 날짜 포장 소비기한 · 2026년 9월 2일 (수) · 포장지 표시" });
   await expect(currentDate).toBeVisible();
   await expect(currentDate).toBeInViewport();
@@ -1741,18 +1730,8 @@ test("keeps dark native date recheck readable and inside a 320px viewport", asyn
   await waitForSheetSettled(page);
   const labelReview = page.getByRole("dialog", { name: "날짜 다시 살펴보기" });
   const recommendedTab = labelReview.getByRole("tab", { name: "라벨" });
-  const recommendationBadge = recommendedTab.locator("span[aria-hidden='true']");
-  await expect(recommendedTab).toHaveAccessibleName("라벨, 추천");
-  await expect(recommendationBadge).toHaveCSS("font-size", "10px");
-  const recommendationColors = await recommendationBadge.evaluate((element) => {
-    const sheet = element.closest<HTMLElement>("[data-testid=bottom-sheet]");
-    if (!sheet) throw new Error("Date-recheck sheet was not found for the recommendation badge.");
-    return {
-      foreground: getComputedStyle(element).color,
-      background: getComputedStyle(sheet).backgroundColor,
-    };
-  });
-  expect(contrastRatio(recommendationColors.foreground, recommendationColors.background)).toBeGreaterThanOrEqual(4.5);
+  await expect(recommendedTab).toHaveAccessibleName("라벨");
+  await expect(recommendedTab.locator(".mode-tab-recommendation")).toHaveCount(0);
   await expect(labelReview.getByRole("group", { name: "현재 기록된 날짜 포장 소비기한 · 2026년 9월 2일 (수) · 포장지 표시" })).toBeInViewport();
   await expect(labelReview.locator(".sheet-description")).toContainText("저장 전까지 기록은 그대로예요");
   await expect(labelReview.locator(".sheet-description")).toHaveCSS("font-size", "12px");
@@ -3428,9 +3407,8 @@ test("date recheck active tab uses the selected theme ink and a full touch targe
     await expect(activeLabelTab).toHaveAttribute("aria-selected", "true");
     await expect(activeLabelTab).toHaveCSS("color", theme === "light" ? "rgb(22, 34, 27)" : "rgb(233, 240, 235)"); // kitchen --fresh-ink
     expect((await activeLabelTab.boundingBox())?.height).toBeGreaterThanOrEqual(44);
-    await expect(activeLabelTab).toHaveAccessibleName("라벨, 추천");
-    await expect(activeLabelTab.locator("span[aria-hidden='true']")).toHaveText("추천");
-    await expect(activeLabelTab.locator("span[aria-hidden='true']")).toHaveCSS("font-size", "10px");
+    await expect(activeLabelTab).toHaveAccessibleName("라벨");
+    await expect(activeLabelTab.locator(".mode-tab-recommendation")).toHaveCount(0);
     await expect(dateReview.getByRole("heading", { name: "날짜가 보이는 면을 선택해 주세요" })).toBeVisible();
     const imageGuidance = dateReview.locator(".input-flow > p").first();
     await expect(imageGuidance).toHaveText("사진은 식품 기록에 저장하지 않아요.");

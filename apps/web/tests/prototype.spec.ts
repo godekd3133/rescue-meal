@@ -670,8 +670,8 @@ test("bottom sheets expose modal semantics and restore focus after closing", asy
   const dialog = page.getByRole("dialog");
   await expect(dialog).toHaveAccessibleName("영수증으로 추가");
   await expect(dialog.getByRole("tab", { name: "영수증" })).toBeFocused();
-  await expect(dialog.getByRole("tab", { name: "영수증" }).locator("span[aria-hidden='true']")).toHaveText("추천");
-  await expect(dialog.getByRole("tab", { name: "영수증" })).toHaveAccessibleName("영수증, 추천");
+  await expect(dialog.getByRole("tab", { name: "영수증" })).toHaveAccessibleName("영수증");
+  await expect(dialog.locator(".mode-tab-recommendation")).toHaveCount(0);
   const intakeFlow = dialog.locator(".intake-flow-rail");
   const intakeMethodDetail = intakeFlow.locator(".intake-flow-rail-heading small");
   await expect(intakeFlow).toHaveAttribute("aria-label", "식품 추가 1단계");

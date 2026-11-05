@@ -2449,7 +2449,6 @@ export default function AddFoodSheet({
           ["label", "라벨", CalendarIcon, "날짜 읽기"],
           ["manual", "직접 입력", PlusIcon, "이름 입력"],
         ] as const).map(([tabMode, label, Icon, purpose]) => {
-          const recommendForCurrentTask = initialLabelTargetFoodId ? tabMode === "label" : tabMode === "receipt";
           return <button
             key={tabMode}
             ref={(element) => { modeTabRefs.current[tabMode] = element; }}
@@ -2458,7 +2457,6 @@ export default function AddFoodSheet({
             type="button"
             disabled={foodSubmitting || foodSaveUncertain || receiptSubmitting || receiptSaveUncertain}
             role="tab"
-            aria-label={recommendForCurrentTask ? `${label}, 추천` : undefined}
             aria-selected={mode === tabMode}
             aria-controls={`add-mode-panel-${tabMode}`}
             tabIndex={mode === tabMode ? 0 : -1}
@@ -2466,7 +2464,7 @@ export default function AddFoodSheet({
             onKeyDown={handleModeTabKeyDown}
             onClick={() => focusModeTab(tabMode)}
           >
-            <Icon width={16} height={16} /><span>{label}</span><small className="mode-tab-purpose" aria-hidden="true">{purpose}</small>{recommendForCurrentTask ? <span className="mode-tab-recommendation" aria-hidden="true">추천</span> : null}
+            <Icon width={16} height={16} /><span>{label}</span><small className="mode-tab-purpose" aria-hidden="true">{purpose}</small>
           </button>
         })}
       </div>

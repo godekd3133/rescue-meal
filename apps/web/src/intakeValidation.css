@@ -289,7 +289,7 @@ html[data-rescue-theme="light"] .bottom-sheet :is(.label-result-fields, .manual-
   line-height: var(--leading-body);
 }
 
-:root:root:root:root .bottom-sheet :is(.mode-tab > span:not(.mode-tab-recommendation), .storage-picker .storage-option, .receipt-line-enrich-button, .label-date-kind-edit, .intake-flow-rail-heading strong, .review-summary strong, .receipt-review-contract strong, .label-recapture-details summary strong, .label-result-more summary strong, .result-callout strong, .barcode-candidate-heading strong) {
+:root:root:root:root .bottom-sheet :is(.mode-tab > span, .storage-picker .storage-option, .receipt-line-enrich-button, .label-date-kind-edit, .intake-flow-rail-heading strong, .review-summary strong, .receipt-review-contract strong, .label-recapture-details summary strong, .label-result-more summary strong, .result-callout strong, .barcode-candidate-heading strong) {
   font-size: var(--text-14);
 }
 
@@ -338,18 +338,6 @@ html[data-rescue-theme="light"] .bottom-sheet :is(.label-result-fields, .manual-
     grid-column: 3;
     justify-self: start;
   }
-}
-
-/* The recommended input method is marked in the tab's corner (its accessible name says 추천). */
-.bottom-sheet .mode-tab-recommendation {
-  position: absolute;
-  top: 2px;
-  right: 4px;
-  color: var(--action-text);
-  font-size: 10px;
-  font-weight: var(--weight-bold);
-  line-height: 1;
-  pointer-events: none;
 }
 
 /* The 14px tab label keeps the tab row at its previous height. */
