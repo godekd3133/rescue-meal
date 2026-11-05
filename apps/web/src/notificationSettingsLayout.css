@@ -70,8 +70,7 @@
   gap: 6px;
   padding: 8px 0 4px;
   border-top: 1px solid var(--sheet-border);
-  background: var(--atelier-surface);
-  box-shadow: 0 -10px 18px color-mix(in srgb, var(--atelier-ink) 8%, transparent);
+  background: var(--surface-2);
 }
 
 .app-shell-preview .device-screen:has(.mobile-app-viewport[data-keyboard-visible="true"]) .bottom-sheet:has(.notification-preferences-actions) .sheet-content {
@@ -92,7 +91,7 @@
   height: 44px;
   padding: 0;
   border: 1px solid var(--atelier-border-strong);
-  border-radius: 9px;
+  border-radius: var(--radius-control);
   background: var(--atelier-surface-raised);
   color: var(--atelier-ink);
   font-size: 20px;
@@ -111,15 +110,76 @@
 .notification-push-mode-options button {
   min-height: 44px;
   padding: 0 12px;
-  border: 1px solid var(--sheet-border);
-  border-radius: 999px;
-  background: var(--sheet-surface);
-  color: var(--atelier-ink);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--ink);
   font: inherit;
-  font-weight: 700;
+  font-weight: var(--weight-semibold);
 }
 
 .notification-push-mode-options .notification-push-mode-active {
-  border-color: var(--atelier-pistachio-deep);
-  background: color-mix(in srgb, var(--atelier-pistachio) 18%, transparent);
+  border-color: var(--action);
+  background: var(--action-soft);
+  color: var(--action-text);
+}
+
+/* Inside the 나 sheet's 알림 row: one surface, sections divided by hairlines, no nested cards. */
+:root[data-rescue-theme]:root:root .set .notification-preferences-intro {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 4px;
+  padding: 0;
+}
+
+:root[data-rescue-theme]:root:root .set .notification-preferences-intro p {
+  color: var(--ink-muted);
+  font-size: var(--text-14);
+}
+
+:root[data-rescue-theme]:root:root .set .notification-preferences-panel :is(.notification-preferences-card, .push-subscription-card) {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+:root[data-rescue-theme]:root:root .set .notification-preferences-panel .push-subscription-card {
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+:root[data-rescue-theme]:root:root .set .notification-preferences-panel :is(.notification-preference-row, .notification-preference-toggle-row) {
+  padding: 12px 0;
+  border: 0;
+  background: transparent;
+}
+
+:root[data-rescue-theme]:root:root .set .notification-preferences-panel :is(.notification-preference-row, .notification-preference-toggle-row) + :is(.notification-preference-row, .notification-preference-toggle-row) {
+  border-top: 1px solid var(--line);
+}
+
+:root[data-rescue-theme]:root:root .set .notification-preferences-panel :is(.notification-preference-row, .notification-preference-toggle-row, .push-subscription-heading) strong {
+  color: var(--ink);
+  font-size: var(--text-16);
+  font-weight: var(--weight-semibold);
+}
+
+:root[data-rescue-theme]:root:root .set .notification-preferences-panel :is(.notification-preference-row, .notification-preference-toggle-row, .push-subscription-heading) small {
+  color: var(--ink-muted);
+  font-size: var(--text-14);
+}
+
+:root[data-rescue-theme]:root:root .set .notification-preferences-panel .push-subscription-heading .receipt-privacy-badge {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink-muted);
+  font-size: var(--text-14);
+  font-weight: var(--weight-medium);
 }

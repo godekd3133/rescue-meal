@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { CalendarIcon, CheckIcon } from "@radix-ui/react-icons";
+import { CheckIcon } from "@radix-ui/react-icons";
 import { FoodPhoto } from "./FoodPhoto";
 import { foodFreshness, freshnessSpokenLabel, type FreshnessFood } from "./freshness";
 import { FreshnessChip } from "./screens/FreshnessChip";
@@ -69,14 +69,14 @@ export default function RescueDeck<T extends DeckFood>({
 
   return (
     <Carousel ariaLabel="오늘 구할 음식" className="rescue-deck" contentClassName="rescue-deck-track">
-      {deck.map(({ food, freshness }, index) => {
+      {deck.map(({ food, freshness }) => {
         const dateCheck = needsDateCheck(food) || freshness.bucket === "past";
         const confirming = confirmingId === food.id;
         // Date-check-first: a food whose printed date passed or needs review is never frozen
         // (or eaten) in one tap; the person checks the date first.
         const freezable = !dateCheck && Boolean(onFreeze && canFreeze?.(food));
         return (
-          <article key={food.id} className={`rescue-card freshness-${freshness.bucket}`} data-rescue-food-id={food.id} style={{ "--deal-i": index } as React.CSSProperties} aria-label={`${food.name}, ${freshnessSpokenLabel(freshness)}`}>
+          <article key={food.id} className={`rescue-card freshness-${freshness.bucket}`} data-rescue-food-id={food.id} aria-label={`${food.name}, ${freshnessSpokenLabel(freshness)}`}>
             <button className="rescue-card-photo" type="button" data-priority-food-id={food.id} onClick={() => onOpen(food, "browse")} aria-label={`${food.name} 자세히 보기`}>
               <FoodPhoto src={food.image} foodName={food.name} alt="" className="rescue-card-image" draggable={false} />
               <FreshnessChip food={food} referenceDate={referenceDate} className="rescue-card-chip" decorative />
@@ -88,7 +88,7 @@ export default function RescueDeck<T extends DeckFood>({
             <div className={`rescue-card-actions${freezable ? " rescue-card-actions-stacked" : ""}`}>
               {dateCheck ? (
                 <button className="rescue-card-action rescue-card-action-check" type="button" onClick={() => onOpen(food, "date-review")} aria-label={`${food.name} 날짜 확인`}>
-                  <CalendarIcon width={15} height={15} aria-hidden="true" />날짜 확인
+                  날짜 확인
                 </button>
               ) : (
                 <button
@@ -101,7 +101,7 @@ export default function RescueDeck<T extends DeckFood>({
                     onConsume(food);
                   }}
                 >
-                  <CheckIcon width={15} height={15} aria-hidden="true" />{confirming ? "다 먹음" : "먹었어요"}
+                  {confirming ? "다 먹음" : "먹었어요"}
                 </button>
               )}
               <button className="rescue-card-action rescue-card-action-cook" type="button" onClick={() => onCook(food)} aria-label={`${food.name} 넣어 요리하기`}>요리</button>

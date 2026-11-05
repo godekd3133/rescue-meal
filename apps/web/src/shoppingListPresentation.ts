@@ -48,7 +48,7 @@ export function validateShoppingReceive({
     return { error: "구매 수량은 0보다 큰 숫자로 입력해 주세요." };
   }
   if (!purchased) return { error: "구매를 마치면 수량과 보관 위치를 입력해 주세요." };
-  if (!storageType) return { error: "포장지의 보관 방법을 보고 냉장·냉동·실온 중 하나를 선택해 주세요." };
+  if (!storageType) return { error: "포장지의 보관 방법을 보고 냉장, 냉동, 실온 중 하나를 선택해 주세요." };
   return { quantity, storageType, error: null };
 }
 
@@ -102,13 +102,13 @@ export function getShoppingListProgressCopy({
   return remainingCount > 0
     ? {
       tone: "active",
-      title: "구매 현황",
+      title: `${remainingCount}개 남았어요`,
       description: "",
       countLabel: `${completedCount}/${itemCount}`,
     }
     : {
       tone: "complete",
-      title: "장보기를 마쳤어요",
+      title: "다 샀어요",
       description: "",
       countLabel: `${completedCount}/${itemCount}`,
     };
@@ -126,4 +126,33 @@ export function shoppingAdjustmentNote(items: readonly Pick<ApiShoppingListItem,
 export function shoppingFoodAction(item: Pick<ApiShoppingListItem, "received_food_id">, foods: readonly Pick<ShoppingInventoryFood, "id">[], canOpen: boolean): "receive" | "view" | "recorded" {
   if (!item.received_food_id) return "receive";
   return canOpen && foods.some((food) => food.id === item.received_food_id) ? "view" : "recorded";
+}
+
+/** Visible source badges: 식단 (from a saved meal plan) and/or 직접 (typed in). */
+export function shoppingSourceBadges(item: Pick<ApiShoppingListItem, "sources">): Array<"식단" | "직접"> {
+  const badges: Array<"식단" | "직접"> = [];
+  if (item.sources.some((source) => source.source_type !== "manual")) badges.push("식단");
+  if (item.sources.some((source) => source.source_type === "manual")) badges.push("직접");
+  return badges;
+}
+
+const STORAGE_TYPE_LABEL: Record<ApiStorageType, string> = { refrigerated: "냉장", frozen: "냉동", ambient: "실온" };
+
+export function shoppingStorageLabel(type: ApiStorageType) {
+  return STORAGE_TYPE_LABEL[type];
+}
+
+export type ShoppingBulkReceiveEntry = {
+  item: ApiShoppingListItem;
+  input: { quantity: number; storageType: ApiStorageType; storageLocationId: null };
+};
+
+/**
+ * "산 것 모두 냉장고에 넣기": every bought item that has not been put away yet, with its full
+ * listed quantity and the default storage (where the same food already lives, else a guess).
+ */
+export function shoppingBulkReceivePlan(items: readonly ApiShoppingListItem[], foods: ShoppingInventoryFood[]): ShoppingBulkReceiveEntry[] {
+  return items
+    .filter((item) => item.checked && !item.received_food_id && Number.isFinite(item.quantity) && item.quantity > 0)
+    .map((item) => ({ item, input: { quantity: item.quantity, storageType: defaultReceiveStorage(item.canonical_name, foods), storageLocationId: null } }));
 }

@@ -41,7 +41,7 @@ test("production boot never presents demo inventory when the API is unreachable"
   expect(layout.cta!.bottom).toBeLessThanOrEqual(layout.navigation!.top + 1);
   expect(layout.navigation!.bottom).toBeLessThanOrEqual(layout.screen!.bottom + 1);
 
-  await page.getByRole("button", { name: "식품 목록에 추가" }).click();
+  await page.getByTestId("nav-add-food").click();
   await chooseAddMethod(page, "영수증");
   const intake = page.getByRole("dialog", { name: "영수증으로 추가" });
   await expect(intake).toBeVisible();
@@ -62,7 +62,7 @@ test("production boot never presents demo inventory when the API is unreachable"
 
 test("production label intake never exposes the demo result shortcut", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "식품 목록에 추가" }).click();
+  await page.getByTestId("nav-add-food").click();
   await chooseAddMethod(page, "영수증");
 
   const intake = page.getByRole("dialog", { name: "영수증으로 추가" });

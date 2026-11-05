@@ -23,7 +23,7 @@ export type Freshness = {
 
 export const FRESHNESS_BUCKETS: ReadonlyArray<{ bucket: FreshnessBucket; label: string }> = [
   { bucket: "past", label: "지남" },
-  { bucket: "today", label: "오늘·내일" },
+  { bucket: "today", label: "오늘과 내일" },
   { bucket: "soon", label: "3일 안" },
   { bucket: "week", label: "이번 주" },
   { bucket: "later", label: "여유" },

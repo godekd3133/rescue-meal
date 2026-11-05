@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { chooseAddMethod } from "./add-flow-helpers";
-import { gotoTab, mealScreen, openFridgeFood, shoppingScreen } from "./ia-helpers";
+import { cookingSheet, gotoTab, mealScreen, openFridgeFood, shoppingScreen } from "./ia-helpers";
 
 test("shopping navigation opens directly from inventory and returns to it", async ({ page }) => {
   await page.goto("/");
@@ -39,15 +39,16 @@ test("manual name and unit shortcuts only change the draft and preserve decimals
 test("one pack can be halved without bypassing the date review confirmation", async ({ page }) => {
   await page.goto("/");
   const detail = await openFridgeFood(page, "시금치");
+  await detail.getByRole("button", { name: "일부 먹음", exact: true }).click();
   await detail.getByRole("button", { name: "절반 0.5팩", exact: true }).click();
-  await expect(detail.getByRole("textbox", { name: "기록할 수량", exact: true })).toHaveValue("0.5");
+  await expect(detail.getByRole("textbox", { name: "먹은 양", exact: true })).toHaveValue("0.5");
   await expect(detail.locator(".detail-quantity-note")).toContainText("0.5팩 남아요");
-  await detail.getByRole("textbox", { name: "기록할 수량", exact: true }).fill("2");
-  await expect(detail.locator(".detail-consume-action")).toBeDisabled();
+  await detail.getByRole("textbox", { name: "먹은 양", exact: true }).fill("2");
+  await expect(detail.locator(".food-partial-submit")).toBeDisabled();
   await detail.getByRole("button", { name: "절반 0.5팩", exact: true }).click();
-  await detail.locator(".detail-consume-action").click();
+  await detail.locator(".food-partial-submit").click();
   await expect(detail.getByRole("group", { name: "이번 소비 기록" })).toContainText("0.5팩");
-  await expect(detail.locator(".consume-confirm-remaining")).toContainText("0.5팩");
+  await expect(detail.locator(".consume-confirm [role='status']")).toContainText("0.5팩");
   await expect(page.locator(".inventory-row").filter({ hasText: "시금치" })).toContainText("1팩");
   await detail.getByRole("button", { name: "먹었어요", exact: true }).click();
   await expect(detail).toHaveCount(0);
@@ -57,8 +58,8 @@ test("one pack can be halved without bypassing the date review confirmation", as
 test("meal ingredient exclusion restores the edited amount and blocks an empty completion", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "오늘 뭐 먹지", exact: true }).click();
-  const meal = mealScreen(page);
-  await meal.getByRole("button", { name: "임시 저장", exact: true }).click();
+  await mealScreen(page).getByRole("button", { name: "이미 만들었어요", exact: true }).click();
+  const meal = cookingSheet(page);
   const spinach = meal.getByRole("textbox", { name: "시금치 사용할 양", exact: true });
   await spinach.fill("0.5");
   await meal.getByRole("button", { name: "시금치 이번엔 안 씀", exact: true }).click();

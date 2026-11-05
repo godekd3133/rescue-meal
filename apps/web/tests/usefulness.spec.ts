@@ -4,7 +4,7 @@ import { gotoTab, shoppingScreen } from "./ia-helpers";
 test("storage shortcuts clear previous review and search filters", async ({ page }) => {
   await page.goto("/");
   await gotoTab(page, "fridge");
-  const reviewFilter = page.locator(".inventory-status-filters button").filter({ hasText: "날짜·보관 확인" });
+  const reviewFilter = page.locator(".inventory-status-filters button").filter({ hasText: "확인 필요" });
   await reviewFilter.click();
   await expect(reviewFilter).toHaveAttribute("aria-pressed", "true");
   await page.getByRole("searchbox").fill("시금치");
@@ -32,27 +32,27 @@ test("shopping shows existing stock and preselects where that food is already st
   // An empty list has no home card; the bottom navigation opens it.
   await page.getByTestId("shopping-nav").click();
   const shopping = shoppingScreen(page);
-  await shopping.getByRole("textbox", { name: "직접 추가 상품명" }).fill("시금치");
-  await expect(shopping.locator(".shopping-sheet-manual-stock")).toContainText("1팩 냉장");
-  await shopping.getByRole("spinbutton", { name: "직접 추가 수량" }).fill("1000.5");
-  await shopping.getByRole("textbox", { name: "직접 추가 단위" }).fill("g");
-  await shopping.locator(".shopping-sheet-manual-submit").click();
-  await shopping.locator(".shopping-sheet-item").click();
-  await shopping.getByRole("button", { name: "시금치 식품 목록에 추가", exact: true }).click();
-  const panel = shopping.getByRole("form", { name: "시금치 식품 목록에 추가" });
+  await shopping.getByRole("textbox", { name: "살 것 이름" }).fill("시금치");
+  await expect(shopping.locator(".shop-add-stock")).toContainText("1팩 냉장");
+  await shopping.getByRole("spinbutton", { name: "살 것 수량" }).fill("1000.5");
+  await shopping.getByRole("textbox", { name: "살 것 단위" }).fill("g");
+  await shopping.locator(".shop-add-submit").click();
+  await shopping.locator(".shop-toggle").click();
+  await shopping.getByRole("button", { name: "시금치 냉장고에 넣기", exact: true }).click();
+  const panel = shopping.getByRole("form", { name: "시금치 냉장고에 넣기" });
   await expect(panel.getByRole("spinbutton")).toHaveValue("1000.5");
-  await expect(panel.locator(".shopping-sheet-quantity-with-unit")).toContainText("g");
+  await expect(panel.locator(".shop-qty-unit")).toContainText("g");
   // Storage starts where the same food already lives (시금치 is kept 냉장) and stays editable.
   await expect(panel.getByRole("button", { name: "냉장", exact: true })).toHaveAttribute("aria-pressed", "true");
-  await expect(panel.locator(".shopping-sheet-save-summary")).toContainText("냉장");
+  await expect(panel.locator(".shop-receive-summary")).toContainText("냉장");
   await panel.getByRole("button", { name: "냉동", exact: true }).click();
-  await expect(panel.locator(".shopping-sheet-receive-submit")).toBeEnabled();
-  await expect(panel.locator(".shopping-sheet-save-summary")).toContainText("냉동");
-  await panel.locator(".shopping-sheet-receive-submit").click();
+  await expect(panel.locator(".shop-receive-submit")).toBeEnabled();
+  await expect(panel.locator(".shop-receive-summary")).toContainText("냉동");
+  await panel.locator(".shop-receive-submit").click();
   await shopping.getByRole("button", { name: "식품 보기", exact: true }).click();
   const detail = page.getByRole("dialog", { name: "시금치", exact: true });
-  await expect(detail.locator(".detail-hero-copy")).toContainText("1,000.5g");
-  await expect(detail.getByRole("button", { name: "냉동", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(detail.locator(".food-top-copy")).toContainText("1,000.5g");
+  await expect(detail.getByRole("radio", { name: "냉동", exact: true })).toHaveAttribute("aria-checked", "true");
 });
 
 test("empty filtered search offers query editing and preserves it when filters are cleared", async ({ page }) => {

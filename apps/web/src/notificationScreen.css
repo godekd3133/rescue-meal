@@ -1,0 +1,335 @@
+/*
+ * 알림 sheet (NotificationSheet). Day groups of plain rows. A short bar on the left says how
+ * soon (urgency tokens only), unread rows are bold with a dot, read rows step back.
+ */
+
+:root[data-rescue-theme]:root:root .inbox {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+  color: var(--ink);
+  font-family: var(--font-body);
+  line-height: var(--leading-body);
+  word-break: keep-all;
+  text-wrap: pretty;
+}
+
+.inbox :is(h3, h4, p, ul) {
+  margin: 0;
+}
+
+.inbox ul {
+  padding: 0;
+  list-style: none;
+}
+
+:root[data-rescue-theme]:root:root .inbox .inbox-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+:root[data-rescue-theme]:root:root .inbox .inbox-heading h3 {
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--text-16);
+  font-weight: var(--weight-bold);
+}
+
+.inbox-heading:focus-visible {
+  outline: 2px solid var(--action-text);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+:root[data-rescue-theme]:root:root .inbox .inbox-quiet {
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  box-shadow: none;
+  color: var(--action-text);
+  font: inherit;
+  font-size: var(--text-14);
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+}
+
+/* ---------- Day groups ---------- */
+
+.inbox-days {
+  display: grid;
+  gap: 20px;
+}
+
+.inbox-day {
+  display: grid;
+  gap: 6px;
+}
+
+:root[data-rescue-theme]:root:root .inbox .inbox-day h4 {
+  padding: 0 2px;
+  color: var(--ink-muted);
+  font-size: var(--text-14);
+  font-weight: var(--weight-semibold);
+}
+
+:root[data-rescue-theme]:root:root .inbox .inbox-day ul {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--surface-2);
+}
+
+.inbox-day li + li {
+  border-top: 1px solid var(--line);
+}
+
+:root[data-rescue-theme]:root:root .inbox .notification-row {
+  --bar: transparent;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 60px;
+  margin: 0;
+  padding: 12px 12px 12px 20px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+:root[data-rescue-theme]:root:root .inbox .notification-row::before {
+  position: absolute;
+  top: 14px;
+  bottom: 14px;
+  left: 8px;
+  width: 4px;
+  border-radius: 2px;
+  background: var(--bar);
+  content: "";
+}
+
+:root[data-rescue-theme]:root:root .inbox .notification-row[data-urgency="past"] { --bar: var(--urgency-past); }
+:root[data-rescue-theme]:root:root .inbox .notification-row[data-urgency="today"] { --bar: var(--urgency-today); }
+:root[data-rescue-theme]:root:root .inbox .notification-row[data-urgency="soon"] { --bar: var(--urgency-soon); }
+:root[data-rescue-theme]:root:root .inbox .notification-row[data-urgency="caution"] { --bar: var(--notice-caution-accent); }
+:root[data-rescue-theme]:root:root .inbox .notification-row[data-urgency="neutral"] { --bar: var(--line-strong); }
+
+.inbox .notification-row-copy {
+  display: grid;
+  flex: 1 1 auto;
+  gap: 2px;
+  min-width: 0;
+}
+
+:root[data-rescue-theme]:root:root .inbox .notification-row-copy strong {
+  overflow-wrap: anywhere;
+  color: var(--ink);
+  font-size: var(--text-16);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-snug);
+}
+
+:root[data-rescue-theme]:root:root .inbox .notification-row-copy small {
+  color: var(--ink-muted);
+  font-size: var(--text-14);
+  line-height: var(--leading-body);
+}
+
+.inbox .notification-row-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  color: var(--ink-muted);
+  font-size: var(--text-12);
+}
+
+.inbox .notification-unread-dot {
+  flex: 0 0 8px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--action);
+}
+
+.inbox .notification-row-chevron {
+  flex: 0 0 auto;
+  color: var(--ink-muted);
+}
+
+:root[data-rescue-theme]:root:root .inbox .notification-row-read .notification-row-copy strong {
+  color: var(--ink-muted);
+  font-weight: var(--weight-medium);
+}
+
+:root[data-rescue-theme]:root:root .inbox .notification-row-read::before {
+  opacity: 0.45;
+}
+
+.inbox .notification-row:focus-visible {
+  outline: 2px solid var(--action-text);
+  outline-offset: -3px;
+}
+
+/* Returning from a food opened here: mark where the person was. */
+:root[data-rescue-theme]:root:root .inbox .notification-row[data-notification-returned] {
+  background: var(--action-soft);
+}
+
+/* ---------- Inventory-app sync summary ---------- */
+
+.inbox-sync {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.inbox-sync-counts {
+  display: grid;
+  flex: 1 1 auto;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+:root[data-rescue-theme]:root:root .inbox .notification-sync-summary-item {
+  display: grid;
+  justify-items: start;
+  gap: 0;
+  min-width: 0;
+  min-height: 56px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--surface-2);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.inbox .notification-sync-summary-item strong {
+  font-size: var(--text-16);
+  font-weight: var(--weight-bold);
+  font-variant-numeric: tabular-nums;
+}
+
+.inbox .notification-sync-summary-item small {
+  overflow: hidden;
+  max-width: 100%;
+  color: var(--ink-muted);
+  font-size: var(--text-12);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.inbox .notification-sync-summary-item[data-notification-sync-summary="action_required"]:not(:disabled) {
+  border-color: var(--notice-caution-line);
+}
+
+.inbox .notification-sync-summary-item:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+/* ---------- Status, loading, empty ---------- */
+
+:root[data-rescue-theme]:root:root .inbox .inbox-status {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink-muted);
+  font-size: var(--text-14);
+}
+
+.inbox-loading {
+  display: grid;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--surface-2);
+}
+
+.inbox-skeleton {
+  display: grid;
+  gap: 8px;
+  padding: 16px 20px;
+}
+
+.inbox-skeleton + .inbox-skeleton {
+  border-top: 1px solid var(--line);
+}
+
+.inbox-skeleton :is(b, i) {
+  display: block;
+  height: 12px;
+  border-radius: 6px;
+  background: var(--surface-3);
+}
+
+.inbox-skeleton b {
+  width: 58%;
+}
+
+.inbox-skeleton i {
+  width: 82%;
+}
+
+:root[data-rescue-theme]:root:root .inbox .inbox-empty {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 40px 16px;
+  border: 0;
+  background: transparent;
+  text-align: center;
+}
+
+.inbox-empty:focus-visible {
+  outline: 2px solid var(--action-text);
+  outline-offset: 2px;
+  border-radius: var(--radius-card);
+}
+
+.inbox-empty-icon {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  margin-bottom: 6px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--surface-3);
+  color: var(--ink-muted);
+}
+
+:root[data-rescue-theme]:root:root .inbox .inbox-empty strong {
+  color: var(--ink);
+  font-size: var(--text-16);
+  font-weight: var(--weight-bold);
+}
+
+:root[data-rescue-theme]:root:root .inbox .inbox-empty small {
+  max-width: 260px;
+  color: var(--ink-muted);
+  font-size: var(--text-14);
+}
+
+:root[data-rescue-theme]:root:root .inbox .inbox-footnote {
+  display: block;
+  padding: 0 2px;
+  color: var(--ink-muted);
+  font-size: var(--text-12);
+}

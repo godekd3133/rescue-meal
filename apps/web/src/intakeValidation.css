@@ -115,3 +115,244 @@ html[data-rescue-theme="light"] .bottom-sheet :is(.label-result-fields, .manual-
   white-space: normal;
   line-height: 1.25;
 }
+
+/* ---------- Intake review surfaces (receipt lines, label result, save bars) ----------
+   One card per receipt line with its editor inside it; quiet text actions; the save bar is an
+   opaque, edge-to-edge strip with a hairline so rows never show through or get cut behind it. */
+
+:root:root:root .bottom-sheet .receipt-lines {
+  display: grid;
+  gap: 8px;
+}
+
+:root:root:root .bottom-sheet .receipt-line-card {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--surface-2);
+  box-shadow: none;
+}
+
+:root:root:root .bottom-sheet .receipt-line-card-needs-confirmation {
+  border-color: var(--notice-caution-line);
+}
+
+:root:root:root .bottom-sheet .receipt-line-card-source-active {
+  border-color: var(--action-text);
+}
+
+:root:root:root .bottom-sheet .receipt-line-card :is(.receipt-line, .receipt-line-editor) {
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+:root:root:root .bottom-sheet .receipt-line {
+  padding: 10px 8px 10px 12px;
+}
+
+:root:root:root .bottom-sheet .receipt-line-editor {
+  padding: 12px 14px 14px;
+  border-top: 1px solid var(--line);
+}
+
+:root:root:root .bottom-sheet .receipt-line-edit-button {
+  min-width: 52px;
+  min-height: 44px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  box-shadow: none;
+  color: var(--action-text);
+  font: var(--weight-bold) var(--text-14) / 1 var(--font-body);
+}
+
+:root:root:root .bottom-sheet .receipt-line-confirm-button {
+  width: calc(100% - 28px);
+  min-height: 44px;
+  margin: 0 14px 14px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: var(--action-soft);
+  box-shadow: none;
+  color: var(--action-text);
+  font: var(--weight-bold) var(--text-14) / 1 var(--font-body);
+}
+
+:root:root:root .bottom-sheet .receipt-review-submit-bar {
+  position: sticky;
+  z-index: 5;
+  bottom: var(--device-safe-area-bottom, 0px);
+  display: grid;
+  gap: 6px;
+  margin-top: 4px;
+  padding: 8px 0 4px;
+  border: 0;
+  border-top: 1px solid transparent;
+  border-image: linear-gradient(var(--line), var(--line)) 1 0 0 / 1px 0 0 / 0 20px;
+  background: var(--surface-1);
+  /* Paint the strip down through the sticky inset and the sheet's bottom padding (about 90px) so rows never show below it. */
+  box-shadow: 0 0 0 20px var(--surface-1), 0 100px 0 20px var(--surface-1);
+  clip-path: inset(0 -20px -124px);
+  backdrop-filter: none;
+}
+
+:root:root:root .bottom-sheet .receipt-review-submit-bar :is(.receipt-review-submit-status, .receipt-review-submit-hint, .label-result-action-summary) {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+:root:root:root .bottom-sheet .receipt-review-submit-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0;
+}
+
+:root:root:root .bottom-sheet :is(.receipt-review-submit-hint, .label-result-action-summary) {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: var(--text-12);
+  font-weight: var(--weight-regular);
+  line-height: var(--leading-body);
+}
+
+:root:root:root .bottom-sheet .receipt-review-submit-hint > span { display: block; }
+:root:root:root .bottom-sheet .receipt-review-submit-hint-warning > span:first-child { color: var(--notice-caution-accent); font-weight: var(--weight-semibold); }
+:root:root:root .bottom-sheet .receipt-review-submit-hint-error > span:first-child { color: var(--intake-error-ink, var(--urgency-past-text)); font-weight: var(--weight-semibold); }
+
+:root:root:root .bottom-sheet .receipt-review-fix-button {
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 0 4px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  box-shadow: none;
+  color: var(--action-text);
+  font: var(--weight-bold) var(--text-14) / 1 var(--font-body);
+  white-space: nowrap;
+}
+
+:root:root:root .bottom-sheet .receipt-review-submit-bar .primary-sheet-button {
+  width: 100%;
+}
+
+:root:root:root .bottom-sheet .label-result-card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--surface-2);
+  box-shadow: none;
+}
+
+/* Existing-food choices read as one line of facts, not a stack of fragments. */
+:root:root:root .bottom-sheet .label-lot-target-option :is(strong, small) .metadata-parts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 8px;
+}
+
+:root:root:root .bottom-sheet .label-lot-target-option .metadata-part {
+  display: inline;
+}
+
+/* The keyboard owns the lower viewport: the save bar returns to the flow so the field stays visible. */
+:root:root:root:root .device-screen:has(.mobile-app-viewport[data-keyboard-visible="true"]) .bottom-sheet .receipt-review-submit-bar {
+  position: static;
+}
+
+/* ---------- Input method tabs: one underline row, no box around it ---------- */
+
+:root:root:root .bottom-sheet .mode-tabs {
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+/* ---------- Type scale in the intake flows ----------
+   The legacy sheet layers sized these at 9, 10, 11, 13 and 15px. Field labels and notes take the
+   12px caption step, controls and small headings the 14px step, the date field value the body step. */
+
+:root:root:root:root .bottom-sheet :is(.manual-lot-note, .receipt-line-editor-field > span, .label-result-date-field > span, .label-result-quantity-field > span, .label-result-name-field > span, .sheet-description) {
+  font-size: var(--text-12);
+  line-height: var(--leading-body);
+}
+
+:root:root:root:root .bottom-sheet :is(.mode-tab > span:not(.mode-tab-recommendation), .storage-picker .storage-option, .receipt-line-enrich-button, .label-date-kind-edit, .intake-flow-rail-heading strong, .review-summary strong, .receipt-review-contract strong, .label-recapture-details summary strong, .label-result-more summary strong, .result-callout strong, .barcode-candidate-heading strong) {
+  font-size: var(--text-14);
+}
+
+:root:root:root:root .bottom-sheet .korean-date-field-display span {
+  font-size: var(--text-16);
+}
+
+/* The receipt summary's clear action is a quiet 44px target like every other control. */
+:root:root:root:root .bottom-sheet .review-summary > button {
+  display: grid;
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  box-shadow: none;
+  color: var(--ink-muted);
+}
+
+/* The file mark is a neutral fact, not a white tile in dark mode. */
+:root:root:root:root .bottom-sheet .review-file-icon {
+  background: var(--surface-3);
+  color: var(--ink);
+}
+
+/* Narrow phones: 수정 stays beside the line instead of taking a row of its own; the review badge
+   drops under the name inside the line so the name keeps its width. */
+@media (max-width: 374px) {
+  :root:root:root:root .bottom-sheet .receipt-line {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "toggle edit";
+    align-items: center;
+  }
+
+  :root:root:root:root .bottom-sheet .receipt-line-toggle {
+    display: grid;
+    grid-template-columns: 19px 36px minmax(0, 1fr);
+    align-items: center;
+    column-gap: 8px;
+    row-gap: 4px;
+  }
+
+  :root:root:root:root .bottom-sheet .receipt-line-toggle > :not(.check-box, img, .food-photo-placeholder, .receipt-line-copy) {
+    grid-column: 3;
+    justify-self: start;
+  }
+}
+
+/* The recommended input method is marked in the tab's corner (its accessible name says 추천). */
+.bottom-sheet .mode-tab-recommendation {
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  color: var(--action-text);
+  font-size: 10px;
+  font-weight: var(--weight-bold);
+  line-height: 1;
+  pointer-events: none;
+}
+
+/* The 14px tab label keeps the tab row at its previous height. */
+:root:root:root:root .bottom-sheet .mode-tabs .mode-tab {
+  padding-block: 6px;
+}

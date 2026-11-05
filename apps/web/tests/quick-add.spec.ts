@@ -39,7 +39,7 @@ test("the add sheet opens on quick add with photo methods one tap away", async (
   await expect(chips.first()).toHaveAttribute("data-source", /recent|frequent/);
   const heights = await chips.evaluateAll((elements) => elements.map((element) => element.getBoundingClientRect().height));
   expect(Math.min(...heights)).toBeGreaterThanOrEqual(44);
-  const methods = dialog.getByRole("group", { name: "사진으로 정확하게" });
+  const methods = dialog.getByRole("group", { name: "다른 방법으로 추가" });
   for (const name of ["영수증", "라벨", "바코드", "직접 입력"]) await expect(methods.getByRole("button", { name, exact: true })).toBeVisible();
 
   await methods.getByRole("button", { name: "라벨", exact: true }).click();
@@ -154,7 +154,7 @@ test("a blocked receipt save names what to fix and moves there", async ({ page }
   await page.getByRole("button", { name: "예시 영수증 보기" }).click();
   const hint = page.locator("#receipt-review-submit-hint > span").first();
   await expect(hint).toContainText("맛타리버섯");
-  await expect(hint).toContainText("내용이 맞아요");
+  await expect(hint).toContainText("읽은 이름이 맞는지 확인해 주세요");
   const move = page.getByRole("button", { name: "확인할 항목으로 이동" });
   const box = await move.boundingBox();
   expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);

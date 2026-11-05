@@ -5,7 +5,7 @@ import HistoryReadError from "./HistoryReadError";
 import "./detailHistory.css";
 import { MetadataText } from "./Metadata";
 import { useEffect, useRef, useState } from "react";
-import { ArchiveIcon, CheckCircledIcon, CrossCircledIcon, ReaderIcon, SewingPinIcon, TrashIcon } from "@radix-ui/react-icons";
+import { ArchiveIcon, CheckCircledIcon, CrossCircledIcon, SewingPinIcon, TrashIcon } from "@radix-ui/react-icons";
 import { mealApi, type ApiGrocyOutboxStatus, type ApiGrocyOutboxStatusHistory, type ApiGrocySyncStatus, type ApiStorageEvent, type ApiStorageLocation, type ApiStorageType } from "./mealApi";
 import { formatHistoryTime, groupHistoryByDay, sortHistoryNewest } from "./historyDates";
 import { scrollTargetWithinNearestContainer } from "./appScroll";
@@ -21,7 +21,7 @@ function eventLabel(event: ApiStorageEvent) {
   if (event.event_type === "moved") return "보관 위치 변경";
   if (event.event_type === "opened") return "개봉 기록";
   if (event.event_type === "consumed") return "먹은 기록";
-  if (event.event_type === "discarded") return "폐기 기록";
+  if (event.event_type === "discarded") return "버림 기록";
   if (event.event_type === "frozen") return "냉동 기록";
   return "해동 기록";
 }
@@ -265,10 +265,10 @@ export default function FoodHistory({ foodId, unit, storageLocations = [], histo
     <div ref={historyRootRef} className="detail-history" tabIndex={-1} aria-busy={loading}>
       <span className="sr-only" role="status" aria-live="polite">{syncStatusNotice}</span>
       <div className="detail-section-heading">
-        <span><ReaderIcon width={16} height={16} /> 보관·사용 기록</span>
+        <span>보관과 사용</span>
         {loading || history.length || readError ? <small>{loading ? "불러오는 중" : history.length ? `${historyWindow.events.length}개` : "확인 필요"}</small> : null}
       </div>
-      {readError ? <HistoryReadError message="보관·사용 기록을 불러오지 못했어요." busy={loading} onRetry={retryHistoryRead} /> : null}
+      {readError ? <HistoryReadError message="보관과 사용 기록을 불러오지 못했어요." busy={loading} onRetry={retryHistoryRead} /> : null}
       {groups.length ? (
         <div className="history-list" role="list">
           {groups.map((group) => (
@@ -315,7 +315,7 @@ export default function FoodHistory({ foodId, unit, storageLocations = [], histo
             </div>
           ))}
         </div>
-      ) : readError || loading ? null : <p className="history-empty">아직 보관·사용 기록이 없어요.</p>}
+      ) : readError || loading ? null : <p className="history-empty">아직 보관하거나 먹은 기록이 없어요.</p>}
       <HistoryWindowToggle remaining={historyWindow.remaining} expanded={historyWindow.expanded} onToggle={historyWindow.toggle} />
     </div>
   );

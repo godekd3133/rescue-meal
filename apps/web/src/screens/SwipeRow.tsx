@@ -194,7 +194,8 @@ export function SwipeRow({ foodName, actions, disabled = false, children }: {
         {actions.freeze ? <button className="swipe-row-action swipe-row-action-freeze" type="button" tabIndex={open ? 0 : -1} aria-label={`${foodName} 냉동 보관하기`} onClick={() => run(actions.freeze!.run)}>냉동</button> : null}
         <button className="swipe-row-action swipe-row-action-discard" type="button" tabIndex={open ? 0 : -1} aria-label={`${foodName} 버린 기록 남기기`} onClick={() => run(actions.discard.run)}>버림</button>
       </div>
-      <div className="swipe-row-front" style={{ transform: offset ? `translate3d(${offset}px, 0, 0)` : undefined }}>
+      {/* While dragging the row slides; once revealed it narrows instead, so the photo and name stay readable beside 버림 / 냉동. */}
+      <div className="swipe-row-front" style={open ? { width: `calc(100% - ${revealWidth}px)` } : { transform: offset ? `translate3d(${offset}px, 0, 0)` : undefined }}>
         {children}
         <button
           ref={menuButtonRef}

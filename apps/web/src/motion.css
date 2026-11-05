@@ -1,212 +1,59 @@
 /*
- * Motion layer: one choreography for the whole app.
+ * Motion answers an action; nothing moves just to decorate.
  *
- * - Home opens like a fridge door: the green panel drops in, the headline arrives
- *   letter by letter (first open of the day only), the count pops, then the photo
- *   cards are dealt from the right. Everything settles within ~700ms.
- * - Every button and heading wipes in left to right on mount, so labels read as if
- *   they are being written. Fill mode is `backwards` everywhere: nothing lingers after
- *   the animation, so clip paths never cut focus rings or shadows.
- * - Sheet content rises in order after the sheet's own spring settles.
- * - Generic rules use :where() (zero specificity) so any component that already owns
- *   its animation keeps it.
+ * - Press feedback: buttons and rows scale to --press-scale while held.
+ * - Screen change: the incoming tab fades up 6px in 180ms (playScreenEntrance, Web Animations).
+ * - Confirmation: the second tap on 먹었어요 settles with one short pulse.
+ * - Toast: rises into place above the bar (and its undo countdown).
+ * - Sheets keep the runtime's own spring; nothing inside them animates on mount.
  * Everything sits behind prefers-reduced-motion: no-preference and html[data-motion="on"]
- * (set by Prototype.tsx for real users, not automated browsers); otherwise the app is
- * exactly as static as before.
+ * (set by motion.ts for people, not automated browsers).
  */
-
-:root {
-  --m-out: cubic-bezier(0.16, 1, 0.3, 1);
-  --m-pop: cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-@keyframes m-curtain {
-  from { clip-path: inset(0 0 100% 0); }
-  to { clip-path: inset(0 0 0 0); }
-}
-
-@keyframes m-wipe {
-  from { clip-path: inset(0 100% 0 0); opacity: 0.2; }
-  to { clip-path: inset(0 0 0 0); opacity: 1; }
-}
-
-@keyframes m-char {
-  from { opacity: 0; transform: translateY(0.55em) rotate(8deg); filter: blur(4px); }
-  to { opacity: 1; transform: none; filter: none; }
-}
-
-@keyframes m-rise {
-  from { opacity: 0; transform: translateY(14px); }
-  to { opacity: 1; transform: none; }
-}
-
-@keyframes m-pop {
-  from { opacity: 0; transform: scale(0.4); }
-  to { opacity: 1; transform: none; }
-}
-
-@keyframes m-deal {
-  from { opacity: 0; transform: translateX(64px) rotate(5deg) scale(0.94); }
-  to { opacity: 1; transform: none; }
-}
-
-@keyframes m-dock {
-  from { opacity: 0; transform: translateY(140%); }
-  to { opacity: 1; transform: none; }
-}
-
-@keyframes m-pill {
-  0% { transform: scale(0.72); }
-  60% { transform: scale(1.06); }
-  100% { transform: none; }
-}
-
-@keyframes m-nudge {
-  0%, 100% { transform: none; }
-  30% { transform: translateY(-5px) rotate(-8deg); }
-  60% { transform: translateY(1px) rotate(4deg); }
-}
 
 @keyframes m-confirm {
   0% { transform: scale(1); }
-  40% { transform: scale(1.1); }
+  45% { transform: scale(1.04); }
   100% { transform: none; }
 }
 
-@keyframes m-fab {
-  from { opacity: 0; transform: scale(0.3) rotate(-120deg); }
+@keyframes m-toast {
+  from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: none; }
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  /* ---------- Home: the fridge opens ---------- */
-  html[data-motion="on"] .kitchen-hero {
-    animation: m-curtain 420ms var(--m-out) backwards;
+  html[data-motion="on"] .rescue-card-action-ate.is-confirming {
+    animation: m-confirm 220ms var(--ease-out);
   }
 
-  html[data-motion="on"] .kitchen-hero .app-header,
-  html[data-motion="on"] .kitchen-hero .eyebrow {
-    animation: m-rise 360ms var(--m-out) 90ms backwards;
+  html[data-motion="on"] .toast {
+    animation: m-toast 180ms var(--ease-out) backwards;
   }
 
-  html[data-motion="on"] .reveal-char {
-    display: inline-block;
-    animation: m-char 420ms var(--m-pop) backwards;
-    animation-delay: calc(var(--reveal-delay, 0ms) + var(--i, 0) * var(--reveal-step, 18ms));
+  html[data-motion="on"] :is(.app-bottom-nav-item, .app-bottom-nav-add, .rescue-card-action, .home-shelf-row, .priority-card, .inventory-row, .meal-plan-button, .fridge-chip, .fridge-status-segment button, .primary-sheet-button, .secondary-sheet-button, .quick-add-chip, .quick-add-method, .toast-undo, .toast-action) {
+    transition: transform 120ms var(--ease-out), background-color 160ms ease, color 160ms ease;
   }
 
-  html[data-motion="on"] .kitchen-hero .rescue-hero-count {
-    display: inline-block;
-    animation: m-pop 440ms var(--m-pop) 240ms backwards;
+  html[data-motion="on"] :is(.app-bottom-nav-item, .rescue-card-action, .meal-plan-button, .fridge-chip, .fridge-status-segment button, .primary-sheet-button, .secondary-sheet-button, .quick-add-chip, .quick-add-method, .toast-undo, .toast-action):active:not(:disabled) {
+    transform: scale(var(--press-scale));
   }
 
-  html[data-motion="on"] .kitchen-hero .rescue-hero-unit {
-    animation: m-rise 300ms var(--m-out) 360ms backwards;
+  /* Rows press less: they are large and the whole surface moves. */
+  html[data-motion="on"] :is(.home-shelf-row, .priority-card, .inventory-row):active {
+    transform: scale(0.99);
   }
 
-  html[data-motion="on"] .rescue-deck-track > .rescue-card {
-    animation: m-deal 440ms var(--m-out) backwards;
-    animation-delay: calc(140ms + min(var(--deal-i, 0), 4) * 45ms);
+  html[data-motion="on"] .app-bottom-nav .app-bottom-nav-add:active:not(:disabled) {
+    transform: scale(0.92);
   }
 
-  html[data-motion="on"] .rescue-deck-track > .rescue-card .rescue-card-chip {
-    animation: m-pop 320ms var(--m-pop) backwards;
-    animation-delay: calc(360ms + min(var(--deal-i, 0), 4) * 45ms);
-  }
-
-  html[data-motion="on"] .rescue-deck-clear {
-    animation: m-rise 360ms var(--m-out) 200ms backwards;
-  }
-
-  /* Second tap: the button swells once as it turns yolk. */
-  html[data-motion="on"][data-rescue-theme] .meal-home .rescue-card-action-ate.is-confirming {
-    animation: m-confirm 320ms var(--m-pop);
-  }
-
-  /* Storage rows slide up one after another under the panel. */
-  html[data-motion="on"] .home-shelves li {
-    animation: m-rise 380ms var(--m-out) backwards;
-  }
-  html[data-motion="on"] .home-shelves li:nth-child(2) { animation-delay: 40ms; }
-  html[data-motion="on"] .home-shelves li:nth-child(3) { animation-delay: 80ms; }
-
-  html[data-motion="on"][data-rescue-theme] .home-shelves .home-shelf-photo {
-    animation: m-pop 340ms var(--m-pop) 120ms backwards;
-  }
-
-  html:where([data-motion="on"]) :where(.inventory-row) {
-    animation: m-rise 420ms var(--m-out) backwards;
-  }
-  html:where([data-motion="on"]) :where(li:nth-child(2) > .inventory-row, .inventory-row:nth-child(2)) { animation-delay: 30ms; }
-  html:where([data-motion="on"]) :where(li:nth-child(3) > .inventory-row, .inventory-row:nth-child(3)) { animation-delay: 60ms; }
-  html:where([data-motion="on"]) :where(li:nth-child(4) > .inventory-row, .inventory-row:nth-child(4)) { animation-delay: 90ms; }
-  html:where([data-motion="on"]) :where(li:nth-child(n + 5) > .inventory-row, .inventory-row:nth-child(n + 5)) { animation-delay: 120ms; }
-
-  /* ---------- Every label writes itself in ---------- */
-  html:where([data-motion="on"]) :where(.app-screen, .bottom-sheet) :where(button, h2, h3, h4) {
-    animation: m-wipe 340ms var(--m-out) 40ms backwards;
-  }
-
-  html:where([data-motion="on"]) :where(.bottom-sheet) .sheet-title {
-    animation: m-wipe 380ms var(--m-out) 60ms backwards;
-  }
-
-  /* ---------- Sheets: content rises after the spring ---------- */
-  html:where([data-motion="on"]) :where(.bottom-sheet .sheet-content > * > *) {
-    animation: m-rise 360ms var(--m-out) backwards;
-    animation-delay: 100ms;
-  }
-  html:where([data-motion="on"]) :where(.bottom-sheet .sheet-content > * > :nth-child(2)) { animation-delay: 140ms; }
-  html:where([data-motion="on"]) :where(.bottom-sheet .sheet-content > * > :nth-child(n + 3)) { animation-delay: 180ms; }
-
-  /* ---------- Floating dock ---------- */
-  html[data-motion="on"][data-rescue-theme] .app-bottom-nav {
-    animation: m-dock 460ms var(--m-out) 100ms backwards;
-  }
-
-  html[data-motion="on"][data-rescue-theme] .app-bottom-nav .app-bottom-nav-add {
-    animation: m-fab 460ms var(--m-pop) 220ms backwards;
-  }
-
-  /* Changing tabs: the pill pops under the new tab and its icon gives a nudge. */
-  html[data-motion="on"][data-rescue-theme] .app-bottom-nav .app-bottom-nav-item-active {
-    animation: m-pill 420ms var(--m-pop);
-  }
-  html[data-motion="on"][data-rescue-theme] .app-bottom-nav .app-bottom-nav-item-active svg {
-    animation: m-nudge 520ms var(--m-out);
-  }
-
-  html[data-motion="on"][data-rescue-theme][data-rescue-theme] .app-bottom-nav .app-bottom-nav-add {
-    transition: transform 220ms var(--m-pop);
-  }
-  html[data-motion="on"][data-rescue-theme][data-rescue-theme] .app-bottom-nav .app-bottom-nav-add:active:not(:disabled) {
-    transform: scale(0.9) rotate(90deg);
-  }
-
-  html[data-motion="on"][data-rescue-theme] :is(.primary-sheet-button, .secondary-sheet-button, .app-bottom-nav-item, .home-shelf-row) {
-    transition: transform 180ms var(--m-pop), background-color 160ms ease, color 160ms ease;
-  }
-  html[data-motion="on"][data-rescue-theme] :is(.primary-sheet-button, .secondary-sheet-button, .app-bottom-nav-item, .home-shelf-row):active:not(:disabled) {
-    transform: scale(0.95);
+  /* The undo window is visible: a hairline that empties over the 5s it lasts. */
+  html[data-motion="on"] .toast-has-undo::after {
+    animation: m-undo-window 5s linear backwards;
   }
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  /* Deck buttons write in once their card has landed. */
-  html[data-motion="on"] .rescue-deck-track > .rescue-card .rescue-card-action {
-    animation: m-wipe 300ms var(--m-out) backwards;
-    animation-delay: calc(340ms + min(var(--deal-i, 0), 4) * 45ms);
-  }
+@keyframes m-undo-window {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
 }
-
-/*
- * Tabs are hidden panels, and display:none -> block restarts CSS animations. A tab that is
- * shown again keeps its settled layout: only the short screen rise (playScreenEntrance,
- * Web Animations) plays, never the first-open choreography or the letter intro.
- */
-html[data-motion="on"] [data-tab-panel][data-revisit] :not(.is-confirming),
-html[data-motion="on"] [data-tab-panel][data-revisit] :not(.is-confirming)::before,
-html[data-motion="on"] [data-tab-panel][data-revisit] :not(.is-confirming)::after {
-  animation: none !important;
-}
-

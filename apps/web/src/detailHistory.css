@@ -1,22 +1,125 @@
-.bottom-sheet .detail-history .detail-section-heading > span {
-  font-size: 13px;
-  font-weight: 650;
+/* Food page history: day groups with a timeline rail; each event is a dot on the rail. */
+
+.food-page .detail-history {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
 }
 
-.bottom-sheet .detail-history .history-row strong {
-  font-size: 13px;
-  line-height: 1.45;
+.food-page .detail-history:focus-visible {
+  outline: 2px solid var(--action-text);
+  outline-offset: 4px;
 }
 
-.bottom-sheet .detail-history .history-row :is(small,time) {
-  font-size: 12px;
-  line-height: 1.5;
+.food-page .detail-history > .detail-section-heading,
+.food-page .history-day-group > .detail-section-heading,
+.food-page .history-list > [role="group"] > .detail-section-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
 }
 
-.bottom-sheet .product-info-history .history-row > span:last-child > small:first-of-type .metadata-parts {
+.food-page .detail-history > .detail-section-heading > span {
+  color: var(--ink);
+  font-size: var(--text-14);
+  font-weight: var(--weight-bold);
+}
+
+.food-page .history-list .detail-section-heading > span,
+.food-page .detail-history .detail-section-heading > small {
+  color: var(--ink-muted);
+  font-size: var(--text-12);
+  font-weight: var(--weight-semibold);
+}
+
+.food-page .history-list {
+  display: grid;
+  gap: 14px;
+}
+
+.food-page .history-list > [role="group"] {
+  display: grid;
+  gap: 0;
+}
+
+.food-page .history-list > [role="group"] > .detail-section-heading {
+  padding-bottom: 6px;
+}
+
+.food-page .history-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  gap: 2px 12px;
+  padding: 0 0 14px;
+  border: 0;
+  background: transparent;
+}
+
+/* The rail joins one dot to the next inside a day. */
+.food-page .history-row:not(:last-child)::before {
+  position: absolute;
+  top: 26px;
+  bottom: 2px;
+  left: 11.5px;
+  width: 1px;
+  background: var(--line-strong);
+  content: "";
+}
+
+.food-page .history-icon {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-1) !important;
+}
+
+.food-page .history-row > span:not(.history-icon) {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding-top: 2px;
+}
+
+.food-page .history-row strong {
+  color: var(--ink);
+  font-size: var(--text-14);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-snug);
+}
+
+.food-page .history-row :is(small, time) {
+  color: var(--ink-muted);
+  font-size: var(--text-12);
+  line-height: var(--leading-body);
+}
+
+.food-page .history-row-highlighted .history-icon {
+  border-color: var(--action-text);
+  box-shadow: 0 0 0 2px var(--action-soft);
+}
+
+.food-page .history-row > details {
+  grid-column: 2;
+}
+
+.food-page .history-empty {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: var(--text-14);
+}
+
+.product-info-history .history-row > span:last-child > small:first-of-type .metadata-parts {
   display: grid;
   gap: 3px;
 }
 
 .history-read-error { display: flex; gap: 12px; align-items: center; justify-content: space-between; font-size: 13px; line-height: 1.45; }
-.history-read-error button { flex: 0 0 auto; min-height: 44px; padding: 0 12px; border: 1px solid var(--atelier-border); border-radius: 10px; background: transparent; color: var(--atelier-blue); font-size: 13px; }
+.history-read-error button { flex: 0 0 auto; min-height: 44px; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: var(--radius-control); background: transparent; color: var(--ink); font-size: 13px; }

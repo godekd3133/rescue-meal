@@ -16,7 +16,7 @@ function render(inventoryFoods, quantity=2){
 }
 test('shopping rows preserve precise quantities instead of rounding a positive purchase to zero',()=>{
  for(const quantity of [1.1234,0.0001]) assert.match(render([],quantity),new RegExp(String(quantity).replace('.', '\\.')));
- const input=render([]).match(/<input[^>]*aria-label="직접 추가 수량"[^>]*>/)?.[0];
+ const input=render([]).match(/<input[^>]*aria-label="살 것 수량"[^>]*>/)?.[0];
  assert.ok(input);
  assert.match(input,/min="0"/);
  assert.match(input,/step="any"/);
@@ -24,17 +24,17 @@ test('shopping rows preserve precise quantities instead of rounding a positive p
 });
 test('a recorded purchase with no live lot renders a status, not a disabled viewing action',()=>{
  const html=render([]);
- assert.match(html,/shopping-sheet-recorded-state[^>]*>식품 추가 완료/);
- assert.doesNotMatch(html,/aria-label="우유 추가한 식품 보기"/);
- assert.doesNotMatch(html,/aria-label="우유 식품 목록에 추가"/);
+ assert.match(html,/shop-recorded[^>]*>넣었어요/);
+ assert.doesNotMatch(html,/aria-label="우유 식품 보기"/);
+ assert.doesNotMatch(html,/aria-label="우유 냉장고에 넣기"/);
 });
 test('a different lot with the same name does not offer the wrong record',()=>{
  const html=render([{id:'different-lot',name:'우유',quantity:'1개',storage:'냉장'}]);
- assert.match(html,/shopping-sheet-recorded-state/);
- assert.doesNotMatch(html,/aria-label="우유 추가한 식품 보기"/);
+ assert.match(html,/shop-recorded/);
+ assert.doesNotMatch(html,/aria-label="우유 식품 보기"/);
 });
 test('the exact recorded lot keeps its viewing action',()=>{
  const html=render([{id:'received-lot',name:'우유',quantity:'2개',storage:'냉장'}]);
- assert.match(html,/aria-label="우유 추가한 식품 보기"/);
- assert.doesNotMatch(html,/shopping-sheet-recorded-state/);
+ assert.match(html,/aria-label="우유 식품 보기"/);
+ assert.doesNotMatch(html,/shop-recorded/);
 });

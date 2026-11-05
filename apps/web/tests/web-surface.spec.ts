@@ -198,7 +198,7 @@ test("compact web food detail keeps its safety guidance readable at 320px", asyn
   await page.locator(".inventory-row").filter({ hasText: "시금치" }).click();
 
   const detail = page.getByRole("dialog", { name: "시금치" });
-  const warningCopy = detail.locator(".date-review-callout-compact > span:nth-child(2) > small");
+  const warningCopy = detail.locator(".date-review-callout > span > small");
   await expect(warningCopy).toHaveText(/표시 날짜가 (?:오늘이에요|어제 지났어요|\d+일 지났어요|오늘이거나 지났어요)\. 보관 방법과 개봉 상태도 확인해 주세요\./);
   const warningLayout = await warningCopy.evaluate((element) => ({
     height: element.getBoundingClientRect().height,
@@ -206,8 +206,7 @@ test("compact web food detail keeps its safety guidance readable at 320px", asyn
   }));
   expect(warningLayout.height).toBeLessThanOrEqual(warningLayout.lineHeight * 2 + 1);
 
-  // The product-info action no longer carries a helper line; its label names the action and must stay on one line.
-  await expect(detail.locator(".product-info-edit-button small")).toHaveCount(0);
+  // The product row shows the food name on one line and keeps a 44px target.
   const productInfoAction = detail.getByRole("button", { name: "상품 정보 수정" });
   await expect(productInfoAction).toBeVisible();
   const productInfoLabelLayout = await productInfoAction.locator("strong").evaluate((element) => ({
@@ -218,9 +217,9 @@ test("compact web food detail keeps its safety guidance readable at 320px", asyn
   expect(productInfoLabelLayout.height).toBeLessThan(productInfoLabelLayout.fontSize * 2);
   // Read the settled sheet: the entry spring can leave a sub-pixel scale for a frame.
   await expect.poll(async () => (await productInfoAction.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
-  // The unsaved-storage note appears only once a storable change exists.
-  await expect(detail.locator(".detail-save-hint")).toHaveCount(0);
-  await detail.getByRole("button", { name: "냉동", exact: true }).click();
-  await expect(detail.locator(".detail-save-hint")).toContainText("저장하지 않고 닫으면 보관 상태가 바뀌지 않아요.");
-  await expect(detail.locator(".detail-save-hint")).toHaveCSS("font-size", "12px");
+  // Storage saves on tap; there is never an unsaved-storage state to warn about.
+  await expect(detail.getByRole("button", { name: /변경 저장/ })).toHaveCount(0);
+  await detail.getByRole("radio", { name: "냉동" }).click();
+  await expect(detail.getByRole("radio", { name: "냉동" })).toHaveAttribute("aria-checked", "true");
+  await expect(page.locator(".toast")).toContainText("시금치를 냉동으로 옮겼어요.");
 });

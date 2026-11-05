@@ -1,0 +1,79 @@
+/* 날짜를 읽는 방법 (GuidanceSheet): a lead sentence, three plain terms, one danger notice. */
+
+:root[data-rescue-theme]:root:root .guide {
+  display: grid;
+  gap: 20px;
+  color: var(--ink);
+  font-family: var(--font-body);
+  line-height: var(--leading-body);
+  word-break: keep-all;
+  text-wrap: pretty;
+}
+
+.guide :is(p, ul) {
+  margin: 0;
+}
+
+.guide ul {
+  padding: 0;
+  list-style: none;
+}
+
+:root[data-rescue-theme]:root:root .guide .guide-intro {
+  color: var(--ink);
+  font-size: var(--text-16);
+}
+
+.guide-terms {
+  display: grid;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--surface-2);
+}
+
+.guide-terms > li {
+  display: grid;
+  gap: 2px;
+  padding: 14px 16px;
+}
+
+.guide-terms > li + li {
+  border-top: 1px solid var(--line);
+}
+
+.guide-terms strong {
+  font-size: var(--text-16);
+  font-weight: var(--weight-bold);
+}
+
+:root[data-rescue-theme]:root:root .guide .guide-terms p {
+  color: var(--ink-muted);
+  font-size: var(--text-14);
+}
+
+:root[data-rescue-theme]:root:root .guide .guide-warning {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid var(--notice-danger-line);
+  border-radius: var(--radius-card);
+  background: var(--notice-danger);
+  color: var(--ink);
+}
+
+.guide-warning > svg {
+  margin-top: 3px;
+  color: var(--notice-danger-accent);
+}
+
+:root[data-rescue-theme]:root:root .guide .guide-warning p {
+  color: var(--ink);
+  font-size: var(--text-14);
+}
+
+.guide-warning strong {
+  display: block;
+  font-size: var(--text-16);
+}

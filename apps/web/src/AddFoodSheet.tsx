@@ -22,6 +22,8 @@ import { DATE_CONFIRMATION_OPTIONS, formatKoreanDate, KoreanDateField, type Date
 import { QUICK_ADD_STARTER_FOODS } from "./quickAddParse";
 import type { QuickAddApiItem } from "./quickAddApi";
 import type { QuickAddSaveResult } from "./quickAddSave";
+import { withKoreanTopicParticle } from "./koreanParticles";
+import { withKoreanDates } from "./koreanDate";
 import "./intakeSourcePreview.css";
 import "./intakeValidation.css";
 
@@ -633,7 +635,7 @@ function ReceiptReview({
   const submitHintMessage = submitState === "invalid"
     ? `${namedLines(invalidSelectedLines)}: ${receiptLineError(invalidSelectedLines[0])}${invalidSelectedLines.length > 1 ? ` 등 입력 내용 ${invalidSelectedLines.length}개를 고쳐 주세요.` : ""}${selectedReviewCount > 0 ? ` 읽은 이름 확인도 ${selectedReviewCount}개 남았어요.` : ""}`
     : submitState === "needs-confirmation"
-      ? `${namedLines(linesNeedingConfirmation)}: 이름이 맞으면 '내용이 맞아요', 아니면 고치거나 선택 해제`
+      ? `${withKoreanTopicParticle(namedLines(linesNeedingConfirmation))} 읽은 이름이 맞는지 확인해 주세요`
       : "";
   const focusFirstNeedingConfirmation = () => {
     const target = linesNeedingConfirmation[0];
@@ -776,19 +778,29 @@ function ReceiptReview({
         });
       } else {
         // "nearest" ignores the sticky save bar and can park the editor's
-        // fields under it; keep the card's bottom above the bar (its top wins
-        // when the card is taller than the visible area).
+        // fields under it.
         const container = card?.closest<HTMLElement>(".sheet-content");
         if (card && container) {
           const containerBox = container.getBoundingClientRect();
           const cardBox = card.getBoundingClientRect();
           const scale = container.clientHeight > 0 && containerBox.height > 0 ? containerBox.height / container.clientHeight : 1;
-          const saveBarHeight = reviewRef.current?.querySelector<HTMLElement>(".receipt-review-submit-bar")?.getBoundingClientRect().height ?? 0;
-          const visibleBottom = containerBox.bottom - saveBarHeight;
-          const delta = cardBox.top < containerBox.top
-            ? cardBox.top - containerBox.top
-            : cardBox.bottom > visibleBottom ? Math.min(cardBox.bottom - visibleBottom, cardBox.top - containerBox.top) : 0;
-          if (delta) container.scrollTo({ top: container.scrollTop + delta / scale, behavior: getMobileScrollBehavior() });
+          // The sticky bar may rest above the sheet's bottom padding, so its own
+          // top edge (not its height) is where the readable area ends.
+          const saveBarTop = reviewRef.current?.querySelector<HTMLElement>(".receipt-review-submit-bar")?.getBoundingClientRect().top ?? containerBox.bottom;
+          const visibleBottom = Math.min(containerBox.bottom, saveBarTop);
+          // Scroll as little as possible so the card stays clear of the bar:
+          // the whole card when it fits, else its head and every field (the
+          // lookup and confirm actions may wait below), else the fields alone.
+          const fieldsBottom = card.querySelector<HTMLElement>(".receipt-line-storage-field")?.getBoundingClientRect().bottom ?? cardBox.bottom;
+          const editorTop = card.querySelector<HTMLElement>(".receipt-line-editor")?.getBoundingClientRect().top ?? cardBox.top;
+          const viewHeight = visibleBottom - containerBox.top;
+          const [low, high] = cardBox.height <= viewHeight
+            ? [cardBox.bottom - visibleBottom, cardBox.top - containerBox.top]
+            : fieldsBottom - cardBox.top <= viewHeight
+              ? [fieldsBottom - visibleBottom, cardBox.top - containerBox.top]
+              : [fieldsBottom - visibleBottom, editorTop - containerBox.top];
+          const delta = low > high ? high : Math.min(Math.max(0, low), high);
+          if (delta) container.scrollTo({ top: container.scrollTop + (delta > 0 ? Math.ceil(delta / scale) : Math.floor(delta / scale)), behavior: getMobileScrollBehavior() });
         } else {
           scrollTargetWithinNearestContainer(card, "nearest", getMobileScrollBehavior());
         }
@@ -882,7 +894,7 @@ function ReceiptReview({
           const productLookup = productNameLookups[line.id];
           const receiptBarcodeLookup = barcodeLookups[line.id];
           return (
-              <div ref={(element) => { lineCardRefs.current[line.id] = element; }} className={`receipt-line-card ${checked ? "receipt-line-card-checked" : ""} ${editing ? "receipt-line-card-editing" : ""} ${checked && line.requiresReview && !userConfirmedLineIds.includes(line.id) ? "receipt-line-card-needs-confirmation" : ""} ${checked && line.requiresReview && userConfirmedLineIds.includes(line.id) ? "receipt-line-card-confirmed" : ""} ${reviewObservations.length && line.sourceObservationIds?.length && activeSourceLineId === line.id ? "receipt-line-card-source-active" : ""}`} style={editing ? { scrollMarginBottom: "96px" } : undefined} data-line-id={line.id} data-receipt-review-state={line.requiresReview ? userConfirmedLineIds.includes(line.id) ? "user_confirmed" : "needs_confirmation" : "auto_read"} key={line.id}>
+              <div ref={(element) => { lineCardRefs.current[line.id] = element; }} className={`receipt-line-card ${checked ? "receipt-line-card-checked" : ""} ${editing ? "receipt-line-card-editing" : ""} ${checked && line.requiresReview && !userConfirmedLineIds.includes(line.id) ? "receipt-line-card-needs-confirmation" : ""} ${checked && line.requiresReview && userConfirmedLineIds.includes(line.id) ? "receipt-line-card-confirmed" : ""} ${reviewObservations.length && line.sourceObservationIds?.length && activeSourceLineId === line.id ? "receipt-line-card-source-active" : ""}`} style={editing ? { scrollMarginBottom: "184px" } : undefined} data-line-id={line.id} data-receipt-review-state={line.requiresReview ? userConfirmedLineIds.includes(line.id) ? "user_confirmed" : "needs_confirmation" : "auto_read"} key={line.id}>
               <div className="receipt-line">
                 <button className="receipt-line-toggle" type="button" aria-pressed={checked} aria-label={`${line.name} ${formatReceiptLineDetail(line).replace(/\s+[·•]\s+/g, ", ")}${line.requiresReview ? ` ${userConfirmed ? "내용이 맞아요" : "내용을 살펴봐 주세요"}` : ""}`} aria-describedby={`receipt-line-status-${line.id}`} onPointerDown={(event) => event.preventDefault()} onClick={() => { keyboard.hide(); setActiveSourceLineId(line.id); onToggle(line.id); }}>
                   <span className={`check-box ${checked ? "check-box-checked" : ""}`}>{checked ? <CheckIcon width={13} height={13} /> : null}</span>
@@ -943,7 +955,7 @@ function ReceiptReview({
           {submitState === "needs-confirmation" || submitState === "invalid" ? <button className="receipt-review-fix-button" type="button" aria-describedby={submitHintId} onPointerDown={(event) => event.preventDefault()} onClick={() => submitState === "invalid" ? openFirstInvalidLine() : focusFirstNeedingConfirmation()}>{submitState === "invalid" ? "고칠 항목으로 이동" : "확인할 항목으로 이동"}</button> : null}
         </div>
         {saveError ? <p className="intake-save-error" id="receipt-save-error" role="alert">{saveError}</p> : null}
-        <button className="primary-sheet-button" type="button" aria-busy={saving} aria-describedby={[reviewCount > 0 ? submitHintId : "", saveError ? "receipt-save-error" : ""].filter(Boolean).join(" ") || undefined} disabled={!canSubmit || saving} onPointerDown={(event) => event.preventDefault()} onClick={() => { keyboard.hide(); onSubmit(); }}><CheckIcon width={17} height={17} /> {saving ? "저장 확인 중" : saveUncertain ? "저장 확인" : saveError ? "다시 시도" : `${reviewCount}개 식품 저장하기`}</button>
+        <button className="primary-sheet-button" type="button" aria-busy={saving} aria-describedby={[reviewCount > 0 ? submitHintId : "", saveError ? "receipt-save-error" : ""].filter(Boolean).join(" ") || undefined} disabled={!canSubmit || saving} onPointerDown={(event) => event.preventDefault()} onClick={() => { keyboard.hide(); onSubmit(); }}>{saving ? "저장 확인 중" : saveUncertain ? "저장 확인" : saveError ? "다시 시도" : `${reviewCount}개 식품 저장하기`}</button>
       </div>
     </div>
   );
@@ -956,6 +968,7 @@ export default function AddFoodSheet({
   onAddReceipt,
   onQuickAdd,
   quickAddScope = "local",
+  quickAddSeed,
   resumeReceiptId,
   onViewInventory,
   initialLabelTargetFoodId,
@@ -979,6 +992,8 @@ export default function AddFoodSheet({
   onAddReceipt: (payload: ReceiptCommitPayload) => Promise<FoodSaveResult>;
   onQuickAdd?: (items: QuickAddApiItem[]) => Promise<QuickAddSaveResult>;
   quickAddScope?: string;
+  /** Foods to list in quick add when the sheet opens (starter foods tapped on an empty Home). */
+  quickAddSeed?: readonly string[];
   resumeReceiptId?: string | null;
   onViewInventory?: () => void;
   initialLabelTargetFoodId?: string | null;
@@ -1198,8 +1213,8 @@ export default function AddFoodSheet({
     : "날짜는 저장하지 않았어요. 화면을 닫고 식품 목록을 다시 불러와 주세요.";
   const labelActionDateSummary = isCompleteLabelDate(labelDetectedDate)
     ? labelDateKind
-      ? `${labelDateKindChoiceLabel(labelDateKind)} · ${labelDetectedDate}`
-      : `날짜 종류를 골라 주세요 · ${labelDetectedDate}`
+      ? `${labelDateKindChoiceLabel(labelDateKind)} · ${withKoreanDates(labelDetectedDate)}`
+      : `날짜 종류를 골라 주세요 · ${withKoreanDates(labelDetectedDate)}`
     : "포장지 날짜를 입력해 주세요";
   const labelActionLotSummary = labelLotAction === "create"
     ? labelQuantityInvalid ? "새 식품 수량을 입력해 주세요" : `새 식품 ${labelQuantity.trim() || "1개"}`
@@ -1967,7 +1982,7 @@ export default function AddFoodSheet({
       const dateCandidate = parsed.date_assertions[0] ?? null;
       setBarcodeParse(parsed);
       if (dateCandidate) {
-        setBarcodeResult(`바코드에서 ${dateCandidate.value.replaceAll("-", ".")}로 읽었어요. 포장지의 날짜와 비교해 주세요.`);
+        setBarcodeResult(`바코드에서 ${formatKoreanDate(dateCandidate.value) || dateCandidate.value}로 읽었어요. 포장지의 날짜와 비교해 주세요.`);
       }
       if (parsed.barcode_type === "restricted_circulation") {
         setBarcodeResult("매장용 바코드일 수 있어요. 상품명과 중량을 확인해 주세요.");
@@ -2357,7 +2372,7 @@ export default function AddFoodSheet({
     : "";
   const manualDateIncomplete = !barcodeDateCandidate && Boolean(manualDate) && !manualDateKind;
   const manualDateSummary = barcodeDateCandidate
-    ? ` · ${barcodeDateKindLabel(barcodeDateCandidate.kind)} ${barcodeDateCandidate.value.replaceAll("-", ".")}`
+    ? ` · ${barcodeDateKindLabel(barcodeDateCandidate.kind)} ${formatKoreanDate(barcodeDateCandidate.value) || barcodeDateCandidate.value}`
     : manualDate && manualDateKind
       ? ` · ${DATE_CONFIRMATION_OPTIONS.find(([kind]) => kind === manualDateKind)?.[1] ?? "날짜"} ${formatKoreanDate(manualDate)}`
       : "";
@@ -2397,7 +2412,7 @@ export default function AddFoodSheet({
               ? "찾은 상품명과 보관 위치를 살펴봐 주세요."
               : "찾은 상품명과 보관 방법을 확인해 식품 목록에 담아요."
         : mode === "manual" && productProvenance
-          ? "바코드에서 찾은 상품 정보예요. 이름·수량·보관 위치를 살펴봐 주세요."
+          ? "바코드에서 찾은 상품 정보예요. 이름과 수량, 보관 위치를 살펴봐 주세요."
           : mode === "manual" && priorityInference
             ? "입력한 내용은 참고용이에요. 소비기한이나 먹어도 되는지를 알려주지 않아요."
             : "살펴본 내용만 식품 기록에 저장돼요.";
@@ -2414,10 +2429,11 @@ export default function AddFoodSheet({
 
   return (
     <div ref={addSheetContentRef} className={`add-sheet-content${initialLabelTargetFoodId ? " add-sheet-content-date-recheck" : ""}`}>
-      {initialLabelTargetFoodId && initialLabelTargetDateSummary && mode === "label" ? <div className="date-recheck-current-date" role="group" aria-label={`현재 기록된 날짜 ${initialLabelTargetDateSummary}`}><span>현재 기록</span><strong><MetadataText text={initialLabelTargetDateSummary} /></strong></div> : null}
+      {initialLabelTargetFoodId && initialLabelTargetDateSummary && mode === "label" ? <div className="date-recheck-current-date" role="group" aria-label={`현재 기록된 날짜 ${withKoreanDates(initialLabelTargetDateSummary)}`}><span>현재 기록</span><strong><MetadataText text={withKoreanDates(initialLabelTargetDateSummary)} /></strong></div> : null}
       <div className="quick-add-host" hidden={mode !== "quick"}>
         <QuickAdd
           scope={quickAddScope}
+          seedNames={quickAddSeed}
           existingFoods={existingFoods}
           imageForFoodName={imageForFoodName}
           formatApiDate={formatApiDate}
@@ -2504,7 +2520,7 @@ export default function AddFoodSheet({
           {barcodeResult && !barcodeManualFallback && !barcodeDateCandidate ? barcodeResultCallout : null}
           {!mealApi.isConfigured && barcodeResult === DEMO_BARCODE_FOUND_MESSAGE ? <div className="barcode-candidate-list" aria-label="바코드로 찾은 상품 정보"><div className="barcode-candidate-heading"><strong>찾은 상품 정보</strong><small>상품명과 보관 방법을 살펴본 뒤 적용해 주세요</small></div><div className="barcode-candidate-card"><div className="barcode-candidate-copy"><strong>풀무원 국산콩 두부</strong><small><MetadataText text={<>샘플 정보 · 냉장 보관 기준</>} /></small><small>소비기한은 포장지에서 살펴봐 주세요.</small></div><button ref={barcodeCandidateActionRef} className={`candidate-apply-button${barcodeProductApplyIsPrimary ? " barcode-candidate-apply-primary" : ""}`} type="button" onClick={applyDemoBarcodeCandidate}>상품 정보 적용</button></div></div> : null}
           {barcodeProviderNotice ? <div className="barcode-provider-warning" role="status"><InfoCircledIcon width={16} height={16} /><span><strong>상품 정보를 모두 찾지는 못했어요</strong><small>{barcodeProviderNotice}</small></span></div> : null}
-          {barcodeDateCandidate ? <div className="barcode-date-candidate" data-date-state="actual_printed" data-date-confirmation="candidate" role="group" aria-live="polite" aria-label="바코드에서 읽은 날짜"><div><strong><MetadataText text={<>{barcodeDateKindLabel(barcodeDateCandidate.kind)} · {barcodeDateCandidate.value.replaceAll("-", ".")}</>} /></strong><small>바코드에서 읽은 날짜예요.</small><small>포장지와 식품 이름을 비교한 뒤 입력해 주세요.</small></div><button className={`candidate-apply-button${barcodeDateApplyIsPrimary ? " barcode-candidate-apply-primary" : ""}`} type="button" onClick={applyBarcodeDateCandidate}>상품·날짜 입력하기</button></div> : null}
+          {barcodeDateCandidate ? <div className="barcode-date-candidate" data-date-state="actual_printed" data-date-confirmation="candidate" role="group" aria-live="polite" aria-label="바코드에서 읽은 날짜"><div><strong><MetadataText text={<>{barcodeDateKindLabel(barcodeDateCandidate.kind)} · {formatKoreanDate(barcodeDateCandidate.value) || barcodeDateCandidate.value}</>} /></strong><small>바코드에서 읽은 날짜예요.</small><small>포장지와 식품 이름을 비교한 뒤 입력해 주세요.</small></div><button className={`candidate-apply-button${barcodeDateApplyIsPrimary ? " barcode-candidate-apply-primary" : ""}`} type="button" onClick={applyBarcodeDateCandidate}>상품과 날짜 입력하기</button></div> : null}
           {barcodeLookup?.candidates.length ? (
             <div className="barcode-candidate-list" aria-label="바코드로 찾은 상품 정보" aria-live="polite">
               <div className="barcode-candidate-heading"><strong>찾은 상품 정보</strong><small>상품명과 보관 방법을 살펴본 뒤 적용해 주세요</small></div>
@@ -2560,7 +2576,7 @@ export default function AddFoodSheet({
                   <fieldset className="label-result-fields" disabled={foodSaveUncertain}>
                     {labelDateKind ? (
                       <div className="label-date-kind-summary">
-                        <strong data-label-date-candidate="true">{labelDateKindChoiceLabel(labelDateKind)} {labelDetectedDate}</strong>
+                        <strong data-label-date-candidate="true">{labelDateKindChoiceLabel(labelDateKind)} {withKoreanDates(labelDetectedDate)}</strong>
                         <button className="label-date-kind-edit" type="button" onPointerDown={(event) => event.preventDefault()} onClick={() => { keyboard.hide(); setLabelDateKind(null); window.requestAnimationFrame(() => document.querySelector<HTMLElement>('.label-date-kind-options [role="radio"]')?.focus({ preventScroll: true })); }}>날짜 의미 변경</button>
                       </div>
                     ) : (
@@ -2573,7 +2589,7 @@ export default function AddFoodSheet({
                       </div>
                     )}
                     <label className="label-result-date-field"><span>포장지 날짜</span><KoreanDateField value={labelDateInputValue(labelDetectedDate)} ariaLabel="포장지 날짜" ariaDescribedBy={labelDateKind && labelDateReviewGuidance(labelDateKind) ? "label-result-date-readable label-date-review-guidance" : "label-result-date-readable"} onChange={(value) => setLabelDetectedDate(value.replaceAll("-", "."))} onFocus={(event) => revealFocusedInput(event, "center")} /></label>
-                    <small id="label-result-date-readable" className="label-result-date-readable sr-only"><MetadataText text={<>{isCompleteLabelDate(labelDetectedDate) ? `선택한 날짜 · ${labelDetectedDate}` : "날짜를 선택해 주세요"}</>} /></small>
+                    <small id="label-result-date-readable" className="label-result-date-readable sr-only"><MetadataText text={<>{isCompleteLabelDate(labelDetectedDate) ? `선택한 날짜 · ${withKoreanDates(labelDetectedDate)}` : "날짜를 선택해 주세요"}</>} /></small>
                     {labelDateKind && labelDateReviewGuidance(labelDateKind) ? <small id="label-date-review-guidance" className="label-date-review-guidance">{labelDateReviewGuidance(labelDateKind)}</small> : null}
                     {!labelDetectedProductName.trim() || labelRecheckMismatch ? labelNameField : null}
                     {labelTargetSelectionStale && !labelRecheckMismatch && !foodSaveUncertain ? <div className="result-callout result-callout-warning label-stale-lot-target" role="alert"><InfoCircledIcon width={17} height={17} /><span><strong>선택한 식품 기록을 목록에서 찾지 못했어요.</strong><small>{labelTargetSelectionStaleGuidance}</small></span></div> : null}
@@ -2639,7 +2655,7 @@ export default function AddFoodSheet({
                               ? labelTargetCandidates.length
                                 ? labelLotAction === "correct" ? "기존 식품 날짜 바꾸기" : "새 식품 추가하기"
                                 : "식품 목록에 추가하기"
-                              : "날짜·보관 위치를 선택해 주세요"}
+                              : "날짜와 보관 위치를 선택해 주세요"}
                   </button>
                 </div>
               </div>
@@ -2674,7 +2690,7 @@ export default function AddFoodSheet({
                   : "포장지에 적힌 날짜 이름을 골라 주세요. 확실하지 않으면 날짜를 비워 두세요."}</small>
             </div>
           ) : null}
-          {barcodeDateCandidate ? <div className="manual-date-candidate" role="status"><span><strong>바코드에서 읽은 {barcodeDateKindLabel(barcodeDateCandidate.kind)}</strong><small><MetadataText text={<>{barcodeDateCandidate.value.replaceAll("-", ".")} · 포장지 날짜와 식품 이름을 비교한 뒤 저장해 주세요.</>} /></small></span><button type="button" onPointerDown={(event) => event.preventDefault()} onClick={() => setBarcodeParse(null)}>날짜 지우기</button></div> : null}
+          {barcodeDateCandidate ? <div className="manual-date-candidate" role="status"><span><strong>바코드에서 읽은 {barcodeDateKindLabel(barcodeDateCandidate.kind)}</strong><small><MetadataText text={<>{formatKoreanDate(barcodeDateCandidate.value) || barcodeDateCandidate.value} · 포장지 날짜와 식품 이름을 비교한 뒤 저장해 주세요.</>} /></small></span><button type="button" onPointerDown={(event) => event.preventDefault()} onClick={() => setBarcodeParse(null)}>날짜 지우기</button></div> : null}
           </fieldset>
           {foodName.trim() || manualQuantityInvalid ? (
             <div className="receipt-review-submit-bar manual-submit-bar" style={{ position: "static", top: "auto", bottom: "auto", marginTop: 0, marginBottom: 2, padding: "7px 0 8px" }}>

@@ -12,10 +12,7 @@ const cases=[
  ['loadAlternatives','  const loadMultiDayPreview','options'],
  ['loadMultiDayPreview','  const persistMultiDayPlan','preview'],
  ['toggleMultiDayHistory','  const openSavedMultiDayPlan','history'],
- ['refreshShoppingList','  const toggleShoppingList','shopping'],
- ['addShoppingSource','  const toggleShoppingItem','addShoppingList'],
- ['toggleShoppingItem','  const removeShoppingItem','updateShoppingListItem'],
- ['removeShoppingItem','  useEffect(() => {','deleteShoppingListItem'],
+ ['addShoppingSource','  const addMissingToShopping','addShoppingList'],
  ['toggleAudit','  const toggleHistory','events'],
  ['toggleHistory','  const setConsumptionValue','history'],
 ];
@@ -24,7 +21,7 @@ function setup(name,end,method,pending){let current=true;const events=[];const p
  capturePlannerMutationScope:()=>()=>current,capturePlannerReadScope:()=>()=>current,
  ingredients:[{id:'food'}],loading:false,saving:false,saved:name==='completePlan'||name==='toggleAudit',plan,hasRecipe:true,completed:false,completing:false,stockChecking:false,
  mealPreferencesSaving:false,mealPreferencesLoading:false,mealPreferencesLoaded:true,mealPreferencesDraft:[],
- multiDayPreview:{id:'bundle',days:[{status:'preview',plan}],inventory_ids:['food'],snapshot_hash:'hash',max_minutes:30,servings:1},multiDaySaving:false,multiDaySaved:false,multiDayOpen:false,multiDayLoading:false,
+ multiDayPreview:name==='loadMultiDayPreview'?null:{id:'bundle',days:[{status:'preview',plan}],inventory_ids:['food'],snapshot_hash:'hash',max_minutes:30,servings:1},multiDaySaving:false,multiDaySaved:false,multiDayOpen:false,multiDayLoading:false,
  alternativesLoading:false,alternativesOpen:false,maxMinutes:30,servings:1,
  multiDayHistoryLoading:false,multiDayHistoryOpen:false,shoppingLoading:false,shoppingMutating:false,
  auditLoading:false,auditOpen:false,historyLoading:false,historyOpen:false,
@@ -37,7 +34,7 @@ const handler=new Function('environment',`with(environment){${extract(name,end)}
 return {handler,events,values,switchContext:()=>{current=false;events.length=0;}};}
 for(const [name,end,method] of cases)for(const outcome of ['success','failure']){
  test(`${name}: late ${outcome} cannot update a different planner scope`,async()=>{
-  const pending=deferred(),c=setup(name,end,method,pending);const task=c.handler(...(name === "addShoppingSource" ? ["meal_plan", "old-plan"] : name === "toggleShoppingItem" || name === "removeShoppingItem" ? [{id:"item",checked:false}] : []));c.switchContext();
+  const pending=deferred(),c=setup(name,end,method,pending);const task=c.handler(...(name === "addShoppingSource" ? ["meal_plan", "old-plan"] : []));c.switchContext();
   if(outcome==='success')pending.resolve({current:true,value:{options:[]}});else pending.reject(new Error('old request failed'));
   await task;assert.deepEqual(c.events,[]);
  });
@@ -52,7 +49,7 @@ test('a normal same-account plan save still applies and finishes',async()=>{
 });
 
 
-for (const [name, end, method] of cases.filter(([name]) => ['loadAlternatives','loadMultiDayPreview','toggleMultiDayHistory','refreshShoppingList','toggleAudit','toggleHistory'].includes(name))) {
+for (const [name, end, method] of cases.filter(([name]) => ['loadAlternatives','loadMultiDayPreview','toggleMultiDayHistory','toggleAudit','toggleHistory'].includes(name))) {
  test(`${name}: a superseded same-context read cannot finish a newer request`, async () => {
   const pending=deferred(),c=setup(name,end,method,pending);const task=c.handler();c.events.length=0;
   pending.resolve({current:false});await task;assert.deepEqual(c.events,[]);
@@ -60,10 +57,7 @@ for (const [name, end, method] of cases.filter(([name]) => ['loadAlternatives','
 }
 
 for (const [name,end,method,value,state] of [
- ['addShoppingSource','  const toggleShoppingItem','addShoppingList',{items:[]},'setShoppingList'],
- ['toggleShoppingItem','  const removeShoppingItem','updateShoppingListItem',{id:'item',checked:true},'setShoppingList'],
- ['removeShoppingItem','  useEffect(() => {','deleteShoppingListItem',{removed:true},'setShoppingList'],
- ['refreshShoppingList','  const toggleShoppingList','shopping',{current:true,value:[]},'setShoppingList'],
+ ['addShoppingSource','  const addMissingToShopping','addShoppingList',{items:[],added_count:1,updated_count:0},'setShoppingAddedCount'],
  ['toggleHistory','  const setConsumptionValue','history',{current:true,value:[]},'setHistoryPlans'],
 ]) test(`${name}: current owner results still apply`,async()=>{
  const pending=deferred(),c=setup(name,end,method,pending);
@@ -73,7 +67,7 @@ for (const [name,end,method,value,state] of [
  assert.ok(c.events.some(([key,value])=>['setShoppingMutating','setShoppingLoading','setHistoryLoading'].includes(key)&&value===false));
 });
 test('shopping retry callbacks cannot act in a replacement workspace',async()=>{
- const pending=deferred(),c=setup('addShoppingSource','  const toggleShoppingItem','addShoppingList',pending);
+ const pending=deferred(),c=setup('addShoppingSource','  const addMissingToShopping','addShoppingList',pending);
  const task=c.handler('meal_plan','old-plan');pending.reject(new Error('temporary failure'));await task;
  const retry=c.events.find(([name,value])=>name==='setShoppingRetryAction'&&value)?.[1];assert.ok(retry);
  c.switchContext();retry.onRetry();assert.deepEqual(c.events,[]);

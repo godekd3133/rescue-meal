@@ -1,0 +1,102 @@
+/* Date assertion editor (food page date card, label/manual intake). Kind first, then the date. */
+
+.bottom-sheet .date-editor {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+/* Inside the food page the editor replaces the card's action, so it drops its own frame. */
+.food-page .food-date-shell .date-editor {
+  padding: 12px 0 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+}
+
+.bottom-sheet .date-editor-heading {
+  display: block;
+  color: var(--ink);
+  font-size: var(--text-16);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-snug);
+}
+
+.bottom-sheet .date-editor-heading strong {
+  color: inherit;
+  font-size: inherit;
+}
+
+.bottom-sheet .date-editor-heading small {
+  display: block;
+  color: var(--ink-muted);
+  font-size: var(--text-12);
+  font-weight: var(--weight-regular);
+}
+
+.bottom-sheet .date-kind-picker {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  padding: 4px;
+  border-radius: var(--radius-control);
+  background: var(--surface-3);
+}
+
+.bottom-sheet .date-kind-picker button {
+  min-height: 44px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: calc(var(--radius-control) - 3px);
+  background: transparent;
+  color: var(--ink-muted);
+  font: var(--weight-semibold) var(--text-14)/var(--leading-tight) var(--font-body);
+}
+
+.bottom-sheet .date-kind-picker button.date-kind-active {
+  background: var(--segment-on);
+  box-shadow: 0 1px 3px rgba(12, 30, 21, 0.14);
+  color: var(--ink);
+  font-weight: var(--weight-bold);
+}
+
+.bottom-sheet :is(.date-kind-selection-hint, .date-input-readable, .date-editor-footnote) {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: var(--text-12);
+  line-height: var(--leading-body);
+}
+
+.bottom-sheet .date-input-label {
+  color: var(--ink);
+  font-size: var(--text-14);
+  font-weight: var(--weight-semibold);
+}
+
+.bottom-sheet .date-editor-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+  gap: 8px;
+}
+
+.bottom-sheet .date-editor-actions > button {
+  min-height: 48px;
+  font-size: var(--text-16);
+}
+
+.bottom-sheet .date-editor-loading {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: var(--text-14);
+}
+
+@media (prefers-contrast: more) {
+  .bottom-sheet .date-kind-picker button.date-kind-active {
+    box-shadow: inset 0 0 0 2px var(--ink);
+  }
+}

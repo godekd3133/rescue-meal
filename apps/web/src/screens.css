@@ -1,224 +1,327 @@
 /*
- * Tab screens (홈 / 냉장고 / 식단 / 장보기) and the 나 additions.
- * Kitchen tokens only (kitchen.css): deep leek-green hero, paper surfaces, leek-green
- * actions, Jua display numbers. `:root[data-rescue-theme]:root:root` out-ranks both the
- * legacy prototype.css layer and kitchen.css's tripled html selector, at a third of the bytes.
+ * Tab screens (홈 / 냉장고 / 식단 / 장보기), the shared header, the bottom bar and the toast.
+ * Kitchen tokens only (kitchen.css). `:root[data-rescue-theme]:root:root` (written `:root:root`
+ * below where a legacy rule still competes) out-ranks the prototype.css layer.
+ *
+ * Shapes: grouped lists are one card with hairline rows (no row shadows); primary actions use
+ * --radius-action; quiet and secondary buttons --radius-control; only the nav bar, filter
+ * chips and date badges are pills; only floating layers cast --shadow-float.
  */
 
 .tab-panel[hidden] {
   display: none !important;
 }
 
-/* ---------- Shared screen header (냉장고 / 식단 / 장보기) ---------- */
+:root:root:root :is(.app-shell-preview,.app-shell-native) .meal-home {
+  --kitchen-gutter: 16px;
+  padding-top: 0;
+  padding-right: var(--kitchen-gutter);
+  padding-left: var(--kitchen-gutter);
+}
 
-:root[data-rescue-theme]:root:root .tab-screen,
-:root[data-rescue-theme]:root:root .fridge-screen {
+:root:root:root :is(.app-shell-preview,.app-shell-native) .app-bottom-nav::after {
+  display: none;
+}
+
+:root:root:root .meal-home {
+  color: var(--ink);
+  font-size: var(--text-16);
+  line-height: var(--leading-body);
+}
+
+:root:root:root :is(.home-screen,.fridge-screen,.tab-screen) {
+  padding-bottom: calc(var(--device-safe-area-bottom, 34px) + 112px);
+}
+
+:root[data-rescue-theme]:root:root :is(.tab-screen,.fridge-screen) {
   min-height: 100%;
-  background: var(--fresh-bg) !important;
-  color: var(--fresh-ink);
+  background: var(--surface-1) !important;
 }
 
 :root[data-rescue-theme]:root:root .tab-screen {
-  padding: 0 var(--kitchen-gutter, 16px) calc(var(--device-safe-area-bottom, 34px) + 112px);
+  padding-right: var(--kitchen-gutter, 16px);
+  padding-left: var(--kitchen-gutter, 16px);
 }
 
-:is(.app-shell-preview) .tab-screen,
-:is(.app-shell-preview) .fridge-screen {
-  --kitchen-gutter: 15px;
-}
+/* ---------- Header: brand or screen title, then bell and 나 ---------- */
 
-:root[data-rescue-theme]:root:root .screen-header {
+:root:root:root .app-header {
+  position: relative;
+  z-index: 4;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  min-height: 48px;
+  margin: 0;
+}
+
+:root:root:root .screen-header {
   min-height: 56px;
+  padding: 8px 0 4px;
+  background: transparent;
+}
+
+:root:root:root :is(.app-shell-preview) .screen-header { padding-top: 46px; }
+:root:root:root :is(.app-shell-native) .screen-header { padding-top: calc(env(safe-area-inset-top, 0px) + 10px); }
+
+:root:root:root .screen-title {
   margin: 0;
-  padding: 8px 0 6px;
-  background: transparent !important;
-  box-shadow: none !important;
-}
-
-:is(.app-shell-preview) .screen-header {
-  padding-top: 46px !important;
-}
-
-:is(.app-shell-native) .screen-header {
-  padding-top: calc(env(safe-area-inset-top, 0px) + 10px) !important;
-}
-
-:root[data-rescue-theme]:root:root .screen-header .screen-title {
-  margin: 0;
-  color: var(--fresh-ink) !important;
-  font-family: var(--fresh-display);
-  font-size: 1.75rem;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: var(--text-28);
   font-weight: 400;
-  line-height: 1.2;
-  letter-spacing: 0;
+  line-height: var(--leading-tight);
 }
 
-/* Bell + 나 on paper: raised neutral chips that still read as one pair with the hero's. */
-:root[data-rescue-theme]:root:root :is(.screen-header, .kitchen-hero) :is(.connection-pill,.notification-button) {
-  border-radius: 999px !important;
+.brand-lockup {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
-:root[data-rescue-theme]:root:root .screen-header :is(.connection-pill,.notification-button) {
-  border: 1px solid var(--fresh-line) !important;
-  background: var(--fresh-surface) !important;
-  box-shadow: none !important;
-  color: var(--fresh-ink) !important;
+:root:root:root .brand-mark {
+  display: none;
 }
 
-:root[data-rescue-theme]:root:root .screen-header :is(.connection-pill,.notification-button) :is(span,small,strong,svg) {
-  color: inherit !important;
+:root:root:root .brand-name {
+  color: var(--hero-ink);
+  font: var(--weight-bold) var(--text-20) / 1 var(--font-body);
+  letter-spacing: -0.02em;
+  white-space: nowrap;
 }
 
-/* ---------- The 나 avatar (connection pill) ---------- */
+:root:root:root .app-header .header-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+}
 
-:root[data-rescue-theme]:root:root .connection-pill .me-avatar {
+:root:root:root .app-header :is(.notification-button,.connection-pill) {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 44px;
+  height: 44px;
+  margin: 0;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-2);
+  box-shadow: none;
+  color: var(--ink);
+  font-size: var(--text-14);
+  font-weight: var(--weight-semibold);
+}
+
+:root:root:root .app-header .notification-button {
+  width: 44px;
+  padding: 0;
+}
+
+:root:root:root .app-header .connection-pill {
+  max-width: 132px;
+  padding: 0 4px 0 12px;
+}
+
+:root:root:root .app-header .connection-pill.connection-connected {
+  width: 44px;
+  padding: 0;
+}
+
+:root:root:root .connection-pill .me-avatar {
   display: inline-grid;
   flex: 0 0 auto;
   place-items: center;
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   background: var(--surface-3);
-  font-family: var(--fresh-display);
-  font-size: 0.9375rem;
-  font-weight: 400;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: var(--text-14);
   line-height: 1;
 }
 
-:root[data-rescue-theme]:root:root .kitchen-hero .connection-pill .me-avatar {
+:root:root:root .kitchen-hero .app-header :is(.notification-button,.connection-pill) {
+  border-color: transparent;
+  background: var(--hero-raised);
+  color: var(--hero-ink);
+}
+
+:root:root:root .kitchen-hero .app-header :is(.notification-button,.connection-pill) :is(span,small,strong,svg):not(.me-avatar, .notification-dot) {
+  color: inherit;
+}
+
+:root:root:root .kitchen-hero .connection-pill .me-avatar {
   background: var(--hero-ink);
-  color: var(--hero) !important;
+  color: var(--hero);
 }
 
-:root[data-rescue-theme]:root:root .connection-pill.connection-connected {
-  width: 44px;
-  min-width: 44px;
-  height: 44px;
-  min-height: 44px;
-  justify-content: center;
-  padding: 0 !important;
-  border-radius: 50% !important;
-}
-
-/* ---------- 홈 ---------- */
-
-:root[data-rescue-theme]:root:root .kitchen-hero .rescue-hero-calm {
+:root:root:root .notification-dot {
+  position: absolute;
+  top: 2px;
+  right: 0;
   display: grid;
-  gap: 2px;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 9px;
+  color: #fff;
+  font: var(--weight-bold) var(--text-12) / 1 var(--font-body);
 }
 
-:root[data-rescue-theme]:root:root .kitchen-hero .rescue-hero-calm .rescue-hero-copy {
-  font-size: 1.875rem;
+/* Header controls on the deep green panel get a cream ring; the leek default vanishes there. */
+:root:root:root .kitchen-hero .app-header button:focus-visible::after {
+  border-color: var(--hero-ink);
 }
 
-:root[data-rescue-theme]:root:root .kitchen-hero .rescue-hero-calm .rescue-hero-copy + .rescue-hero-copy {
+@media (max-width: 360px) {
+  /* 나 shrinks to the avatar; its accessible name still carries the connection state. */
+  :root:root:root .app-header .connection-pill :is(.connection-label,.connection-dot) { display: none; }
+  :root:root:root .app-header .connection-pill { width: 44px; padding: 0; }
+}
+
+/* ---------- 홈: the panel ---------- */
+
+.kitchen-hero {
+  position: relative;
+  margin: 0 calc(-1 * var(--kitchen-gutter, 16px)) 20px;
+  padding: 18px var(--kitchen-gutter, 16px) 22px;
+  border-radius: 0 0 var(--radius-sheet) var(--radius-sheet);
+  background: var(--hero);
   color: var(--hero-ink);
 }
 
-:root[data-rescue-theme]:root:root .home-rescued-stat {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 36px;
-  margin: 12px 0 0;
-  padding: 4px 14px 4px 12px;
-  border-radius: 999px;
-  background: var(--kitchen-hero-raised);
-  color: var(--kitchen-hero-muted);
-  font-size: 0.8125rem;
-  font-weight: 700;
+:is(.app-shell-preview) .kitchen-hero { padding-top: 46px; }
+:is(.app-shell-native) .kitchen-hero { padding-top: calc(env(safe-area-inset-top, 0px) + 12px); }
+:is(.app-shell-web) .kitchen-hero { border-radius: var(--radius-sheet); }
+
+@media (max-width: 640px) {
+  :root:root:root .app-shell-web .meal-home { --kitchen-gutter: 16px; padding-top: 0; }
+  :root:root:root .app-shell-web .kitchen-hero { padding-top: 20px; border-radius: 0 0 var(--radius-sheet) var(--radius-sheet); }
 }
 
-:root[data-rescue-theme]:root:root .home-rescued-value {
-  color: var(--kitchen-hero-ink);
-  font-family: var(--fresh-display);
-  font-size: 0.9375rem;
-  font-weight: 400;
-}
-
-:root[data-rescue-theme]:root:root .home-rescued-value strong {
-  margin-right: 1px;
-  color: var(--hero-ink);
-  font-size: 1.375rem;
-  font-weight: 400;
-}
-
-:root[data-rescue-theme]:root:root .home-body {
-  display: grid;
-  gap: 18px;
-}
-
-:root[data-rescue-theme]:root:root .home-body > .trust-card {
-  margin-top: 0 !important;
-  border: 1px solid var(--fresh-line) !important;
-  border-radius: 20px !important;
-}
-
-:root[data-rescue-theme]:root:root .home-section-title,
-:root[data-rescue-theme]:root:root .home-upcoming .section-heading h2 {
-  margin: 0 0 10px;
-  color: var(--fresh-ink);
-  font-family: var(--fresh-display);
-  font-size: 1.1875rem;
-  font-weight: 400;
-  letter-spacing: 0;
-}
-
-:root[data-rescue-theme]:root:root .home-upcoming {
-  margin: 0;
-}
-
-:root[data-rescue-theme]:root:root .home-upcoming .priority-list-items {
-  display: grid;
-  gap: 8px;
-}
-
-/* One line per storage place. */
-:root[data-rescue-theme]:root:root .home-shelves ul {
-  display: grid;
-  gap: 8px;
+:root:root:root .kitchen-hero :is(.home-hero-copy,.greeting-block) {
   margin: 0;
   padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+}
+
+:root:root:root .kitchen-hero h1 {
+  margin: 22px 0 0;
+  color: var(--hero-ink);
+  font-family: var(--font-display);
+  font-size: var(--text-28);
+  font-weight: 400;
+  line-height: var(--leading-tight);
+  letter-spacing: -0.01em;
+}
+
+:root:root:root .kitchen-hero h1:focus-visible { outline: none; }
+
+/* The count is part of the sentence: same face, size and colour. */
+.rescue-hero-count {
+  font-variant-numeric: tabular-nums;
+}
+
+:root:root:root :is(.home-rescued-stat,.home-hero-note) {
+  margin: 6px 0 0;
+  color: var(--hero-muted);
+  font-size: var(--text-14);
+  line-height: var(--leading-body);
+}
+
+:root:root:root .home-rescued-value strong {
+  color: var(--hero-ink);
+  font-weight: inherit;
+}
+
+:root:root:root .home-rescued-value {
+  color: var(--hero-ink);
+}
+
+/* Callouts inside the panel keep their own Notice surface. */
+:root:root:root .kitchen-hero :is(.service-bootstrap-status,.session-expired-callout,.connection-retry-callout,.receipt-review-entry-card) {
+  margin-top: 14px;
+}
+
+/* ---------- 홈: below the panel ---------- */
+
+:root:root:root .home-body {
+  display: grid;
+  gap: 24px;
+}
+
+:root:root:root .home-section-title {
+  margin: 0 0 10px;
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--text-20);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-snug);
+}
+
+/* One grouped list: a card with hairline rows. */
+:root:root:root :is(.home-group,.inventory-list,.skeleton-list) {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--surface-2);
   list-style: none;
 }
 
-:root[data-rescue-theme]:root:root .home-shelf-row {
-  position: relative;
+:root:root:root:root :is(.home-group,.inventory-list,.skeleton-list) > * + * {
+  border-top: 1px solid var(--line);
+}
+
+:root:root:root :is(.home-shelf-row,.priority-card,.inventory-row) {
   display: grid;
-  grid-template-columns: 3.25rem minmax(0, 1fr) auto 16px;
   align-items: center;
-  gap: 10px;
   width: 100%;
-  min-height: 60px;
-  padding: 8px 12px 8px 16px;
-  border: 1px solid var(--fresh-line);
-  border-radius: 20px;
-  background: var(--fresh-surface);
-  color: var(--fresh-ink);
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: var(--surface-2);
+  box-shadow: none;
+  color: var(--ink);
+  font: inherit;
   text-align: left;
   cursor: pointer;
 }
 
-:root[data-rescue-theme]:root:root .home-shelf-row:focus-visible {
-  outline: none;
+:root:root:root :is(.home-shelf-row,.priority-card,.inventory-row):focus-visible::after {
+  inset: 2px;
+  border-radius: 12px;
 }
 
-:root[data-rescue-theme]:root:root .home-shelf-row:focus-visible::after {
-  position: absolute;
-  inset: -4px;
-  border: 2px solid var(--fresh-primary-strong);
-  border-radius: 24px;
-  content: "";
-  pointer-events: none;
+:root:root:root .food-thumb {
+  display: block;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: var(--surface-3);
+  object-fit: cover;
+}
+
+:root:root:root .home-shelf-row {
+  grid-template-columns: 3.5rem minmax(0, 1fr) auto 16px;
+  gap: 10px;
+  min-height: 64px;
+  padding: 8px 14px 8px 16px;
 }
 
 .home-shelf-name {
-  font-family: var(--fresh-display);
-  font-size: 1.0625rem;
+  font-size: var(--text-16);
+  font-weight: var(--weight-bold);
 }
 
 .home-shelf-photos {
@@ -227,12 +330,12 @@
   overflow: hidden;
 }
 
-:root[data-rescue-theme]:root:root .home-shelf-photo {
+:root:root:root .home-shelf-photo {
   flex: 0 0 auto;
-  width: 36px !important;
-  height: 36px !important;
-  margin-right: -8px;
-  border: 2px solid var(--fresh-surface);
+  width: 32px;
+  height: 32px;
+  margin-right: -6px;
+  border: 2px solid var(--surface-2);
   border-radius: 50%;
   object-fit: cover;
 }
@@ -241,127 +344,827 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  font-size: var(--text-16);
 }
 
 .home-shelf-counts strong {
-  min-width: 1.5ch;
-  font-family: var(--fresh-display);
-  font-size: 1.375rem;
-  font-weight: 400;
-  text-align: right;
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
 }
 
-:root[data-rescue-theme]:root:root .home-shelf-soon {
-  padding: 3px 8px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--fresh-today) 18%, transparent);
-  color: color-mix(in srgb, var(--fresh-today) 55%, var(--fresh-ink));
-  font-size: 0.75rem;
-  font-weight: 800;
+/* The count and its unit read as one word (5개), apart from the 곧 badge. */
+.home-shelf-count { white-space: nowrap; }
+
+:root:root:root .home-shelf-soon {
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: var(--notice-caution);
+  color: var(--notice-caution-accent);
+  font-size: var(--text-12);
+  font-weight: var(--weight-bold);
   white-space: nowrap;
 }
 
 .home-shelf-chevron {
-  color: var(--fresh-muted);
+  color: var(--ink-muted);
 }
 
-:root[data-rescue-theme]:root:root .home-action-row {
+:root:root:root .priority-card {
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  gap: 12px;
+  min-height: 68px;
+  padding: 10px 14px;
+}
+
+.priority-copy {
+  display: grid;
+  min-width: 0;
+}
+
+.priority-copy strong {
+  overflow: hidden;
+  font-size: var(--text-16);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-snug);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+:root:root:root .priority-copy small {
+  color: var(--ink-muted);
+  font-size: var(--text-14);
+}
+
+/* The one primary action on Home. */
+:root:root:root .meal-home .meal-plan-button {
+  display: grid;
+  justify-items: start;
+  gap: 2px;
+  width: 100%;
+  min-height: 60px;
   margin: 0;
+  padding: 10px 18px;
+  border: 0;
+  border-radius: var(--radius-action);
+  background: var(--action);
+  box-shadow: none;
+  color: var(--action-ink);
+  text-align: left;
+  cursor: pointer;
 }
 
-:root[data-rescue-theme]:root:root .home-body .home-demo-note {
+:root:root:root .meal-home .meal-plan-button > span {
+  display: grid;
+  gap: 2px;
+}
+
+:root:root:root .meal-home .meal-plan-button strong {
+  font-family: var(--font-body);
+  font-size: var(--text-16);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-snug);
+}
+
+:root:root:root .meal-home .meal-plan-button small {
+  color: var(--action-ink);
+  font-size: var(--text-14);
+  font-weight: var(--weight-regular);
+  opacity: 1;
+}
+
+:root:root:root .meal-home .meal-plan-button:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+:root:root:root .home-action-row { margin: 0; }
+
+/* The review summary is the caution Notice; its action is a word, not a chevron. */
+:root:root:root .meal-home .trust-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 52px;
   margin: 0;
+  padding: 10px 14px;
+  text-align: left;
+  cursor: pointer;
 }
 
-/* Space for the floating bar under the last Home row. */
-:root[data-rescue-theme]:root:root .home-screen {
-  padding-bottom: calc(var(--device-safe-area-bottom, 34px) + 112px);
+.trust-card-copy {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: var(--text-14);
+  font-weight: var(--weight-semibold);
+}
+
+:root:root:root .meal-home .trust-card .trust-card-action {
+  flex: 0 0 auto;
+  color: var(--action-text);
+  font-size: var(--text-14);
+  font-weight: var(--weight-bold);
+}
+
+.trust-icon {
+  display: inline-flex;
+}
+
+/* Empty workspace: a few starter foods under the one add action. */
+.home-starters ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+:root:root:root .home-starter {
+  min-width: 64px;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-control);
+  background: var(--surface-2);
+  color: var(--ink);
+  font: var(--weight-semibold) var(--text-14) / 1 var(--font-body);
+  cursor: pointer;
+}
+
+:root:root:root .home-demo-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: var(--text-12);
 }
 
 /* ---------- 냉장고 ---------- */
 
-:root[data-rescue-theme]:root:root .fridge-screen {
-  padding-bottom: calc(var(--device-safe-area-bottom, 34px) + 112px);
+:root:root:root .fridge-screen .inventory-section {
+  margin: 0;
+  padding: 0;
+  border: 0;
 }
 
-:root[data-rescue-theme]:root:root .fridge-screen .inventory-section {
-  margin-top: 0 !important;
-  padding-top: 0 !important;
-  border-top: 0 !important;
+/* Search, place and status stay in reach while scrolling: one compact sticky block. */
+:root:root:root .inventory-toolbar {
+  position: sticky;
+  z-index: 8;
+  top: 0;
+  display: grid;
+  gap: 8px;
+  margin: 0 calc(-1 * var(--kitchen-gutter, 16px)) 12px;
+  padding: 6px var(--kitchen-gutter, 16px) 10px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-1);
 }
 
-:root[data-rescue-theme]:root:root .fridge-screen .inventory-heading {
+/* It sticks below the status bar (the same inset the tab header clears), keyboard or not. */
+:root:root:root .app-shell-preview .inventory-toolbar { top: 46px; }
+:root:root:root .app-shell-native .inventory-toolbar { top: env(safe-area-inset-top, 0px); }
+:root:root:root .app-shell-preview .device-screen[data-device="pixel-10"] .inventory-toolbar { top: 64px; }
+
+:root:root:root .inventory-search {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 8px;
+  height: 44px;
+  margin: 0;
+  padding: 0 0 0 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-control);
+  background: var(--surface-2);
+  color: var(--ink-muted);
 }
 
-:root[data-rescue-theme]:root:root .fridge-screen .inventory-add-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  width: auto;
-  min-width: 62px;
-  height: 44px;
-  padding: 0 12px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: var(--surface-2);
-  box-shadow: none;
-  color: var(--action-text);
-  white-space: nowrap;
+:root:root:root .inventory-search:focus-within {
+  border-color: var(--action-text);
+  box-shadow: inset 0 0 0 1px var(--action-text);
+}
+
+:root:root:root .inventory-search-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--ink);
+  font: var(--weight-regular) var(--text-16) / 1 var(--font-body);
+}
+
+:root:root:root .inventory-search-input::placeholder { color: var(--ink-muted); }
+
+:root:root:root .inventory-search button {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 44px;
+  height: 42px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--ink-muted);
 }
 
 .fridge-storage-chips {
-  margin: 10px calc(-1 * var(--kitchen-gutter, 16px)) 0;
+  margin: 0 calc(-1 * var(--kitchen-gutter, 16px));
 }
 
-.fridge-chip-rail {
-  width: 100%;
-}
+.fridge-chip-rail { width: 100%; }
 
-:root[data-rescue-theme]:root:root .fridge-chip-track {
+:root:root:root .fridge-chip-track {
   display: flex;
-  gap: 8px;
-  padding: 2px var(--kitchen-gutter, 16px) 4px;
+  gap: 6px;
+  padding: 4px var(--kitchen-gutter, 16px);
 }
 
-:root[data-rescue-theme]:root:root .fridge-chip {
+/* Filter chips are the one pill-shaped control on the page. */
+:root:root:root .fridge-chip {
   position: relative;
   flex: 0 0 auto;
   min-width: 52px;
   min-height: 44px;
-  padding: 0 16px;
-  border: 1px solid var(--fresh-line);
+  padding: 0 14px;
+  border: 1px solid var(--line-strong);
   border-radius: 999px;
-  background: var(--fresh-surface);
-  color: var(--fresh-ink);
-  font-size: 0.875rem;
-  font-weight: 800;
+  background: transparent;
+  color: var(--ink);
+  font: var(--weight-semibold) var(--text-14) / 1 var(--font-body);
   white-space: nowrap;
   cursor: pointer;
 }
 
-:root[data-rescue-theme]:root:root .fridge-chip-active {
-  border-color: transparent;
-  background: var(--fresh-primary-strong);
-  color: var(--fresh-primary-ink);
+:root:root:root .fridge-chip-active {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--surface-2);
 }
 
-:root[data-rescue-theme]:root:root .fridge-chip:focus-visible {
-  outline: none;
-}
+:root:root:root .fridge-chip:focus-visible { outline: none; }
 
-:root[data-rescue-theme]:root:root .fridge-chip:focus-visible::after {
+:root:root:root .fridge-chip:focus-visible::after {
   position: absolute;
   inset: -4px;
-  border: 2px solid var(--fresh-primary-strong);
+  border: 2px solid var(--action-text);
   border-radius: 999px;
-  box-shadow: 0 0 0 2px var(--fresh-bg);
   content: "";
   pointer-events: none;
+}
+
+/* Status: one Segmented track. */
+:root:root:root .fridge-status-segment {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 2px;
+  margin: 0;
+  padding: 3px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: var(--surface-3);
+}
+
+:root:root:root .fridge-status-segment[data-scope-state="stale"] { opacity: 0.64; }
+
+:root:root:root .fridge-status-segment > button {
+  position: relative;
+  min-width: 0;
+  min-height: 44px;
+  margin: 0;
+  padding: 0 4px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  box-shadow: none;
+  color: var(--ink-muted);
+  font: var(--weight-semibold) var(--text-14) / 1.2 var(--font-body);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+:root:root:root .fridge-status-segment > button span {
+  margin-left: 2px;
+  font-weight: var(--weight-regular);
+  font-variant-numeric: tabular-nums;
+}
+
+:root:root:root .fridge-status-segment > button[aria-pressed="true"] {
+  background: var(--segment-on);
+  box-shadow: 0 1px 2px rgba(12, 30, 21, 0.14);
+  color: var(--ink);
+}
+
+:root:root:root .fridge-status-segment > button:focus-visible { outline: none; }
+
+:root:root:root .fridge-status-segment > button:focus-visible::after {
+  position: absolute;
+  inset: 0;
+  border: 2px solid var(--action-text);
+  border-radius: 9px;
+  content: "";
+  pointer-events: none;
+}
+
+:root:root:root .inventory-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 2px 0 0;
+}
+
+:root:root:root .inventory-heading h2 {
+  margin: 0;
+  color: var(--ink-muted);
+  font: var(--weight-semibold) var(--text-14) / var(--leading-snug) var(--font-body);
+}
+
+:root:root:root .inventory-heading h2 span { font-variant-numeric: tabular-nums; }
+
+:root:root:root .inventory-filter-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 0;
+  margin: -4px 0 0;
+  color: var(--ink-muted);
+  font-size: var(--text-12);
+}
+
+:root:root:root .inventory-filter-summary button {
+  min-height: 44px;
+  margin: -10px 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--action-text);
+  font: var(--weight-bold) var(--text-14) / 1 var(--font-body);
+}
+
+:root:root:root .inventory-row {
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  gap: 12px;
+  min-height: 72px;
+  padding: 12px 16px 12px 14px;
+}
+
+:root:root:root .inventory-copy {
+  display: grid;
+  grid-template-columns: minmax(0, auto) auto;
+  justify-content: start;
+  align-content: center;
+  column-gap: 8px;
+  min-width: 0;
+}
+
+:root:root:root .inventory-copy > strong {
+  grid-column: 1 / -1;
+  overflow: hidden;
+  font-size: var(--text-16);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-snug);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+:root:root:root .inventory-copy > small {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ink-muted);
+  font-size: var(--text-12);
+  line-height: var(--leading-body);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+:root:root:root .inventory-copy > small.inventory-storage-meta { flex: 0 0 auto; }
+
+/* Row metadata stays on one line and ends in an ellipsis on narrow phones instead of wrapping or clipping a word. */
+:root:root:root .inventory-copy > small :is(.metadata-parts, .metadata-part) { display: inline; }
+:root:root:root .inventory-copy > small .metadata-part + .metadata-part { margin-left: 8px; }
+
+:root:root:root .inventory-status {
+  display: grid;
+  justify-items: end;
+  gap: 4px;
+}
+
+:root:root:root .inventory-review-detail {
+  color: var(--notice-caution-accent);
+  font-size: var(--text-12);
+  font-weight: var(--weight-bold);
+  white-space: nowrap;
+}
+
+/* Empty, no result, unknown: one centred block with one next step. */
+:root:root:root .meal-home .inventory-empty-state {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  margin: 8px 0 0;
+  padding: 32px 20px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-card);
+  background: transparent;
+  text-align: center;
+}
+
+:root:root:root .inventory-empty-icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--surface-3);
+  color: var(--ink-muted);
+}
+
+:root:root:root .inventory-empty-copy {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+}
+
+:root:root:root .inventory-empty-copy strong {
+  font-size: var(--text-16);
+  font-weight: var(--weight-semibold);
+}
+
+:root:root:root .inventory-empty-copy small {
+  max-width: 28ch;
+  color: var(--ink-muted);
+  font-size: var(--text-14);
+}
+
+.inventory-empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+:root:root:root .inventory-empty-action {
+  min-height: 44px;
+  margin-top: 6px;
+  padding: 0 18px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-control);
+  background: var(--surface-2);
+  color: var(--ink);
+  font: var(--weight-semibold) var(--text-14) / 1 var(--font-body);
+}
+
+:root:root:root .inventory-empty-copy > .inventory-empty-action:only-of-type:last-child {
+  border-color: transparent;
+  background: var(--action);
+  color: var(--action-ink);
+}
+
+:root:root:root .home-unknown-notice {
+  padding: 20px;
+}
+
+:root:root:root .inventory-search-state {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--surface-2);
+  color: var(--ink-muted);
+  font-size: var(--text-14);
+}
+
+:root:root:root .inventory-search-state > span { display: grid; gap: 2px; }
+:root:root:root .inventory-search-state strong { color: var(--ink); font-size: var(--text-14); }
+:root:root:root .inventory-search-state small { font-size: var(--text-12); }
+.inventory-search-loading-icon { display: inline-flex; }
+
+:root:root:root :is(.inventory-search-state,.inventory-search-inline-error) button {
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-control);
+  background: var(--surface-2);
+  color: var(--ink);
+  font: var(--weight-semibold) var(--text-14) / 1 var(--font-body);
+}
+
+:root:root:root .inventory-search-inline-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 10px;
+  padding: 8px 8px 8px 14px;
+  border: 1px solid var(--notice-danger-line);
+  border-radius: var(--radius-control);
+  background: var(--notice-danger);
+  color: var(--ink);
+  font-size: var(--text-14);
+}
+
+:root:root:root .inventory-load-more {
+  width: 100%;
+  min-height: 48px;
+  margin-top: 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-control);
+  background: var(--surface-2);
+  color: var(--ink);
+  font: var(--weight-semibold) var(--text-14) / 1 var(--font-body);
+}
+
+/* Skeleton rows while the first list loads. */
+:root:root:root .skeleton-row {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  grid-template-rows: 14px 12px;
+  align-content: center;
+  gap: 8px 12px;
+  min-height: 72px;
+  padding: 12px 14px;
+}
+
+:root:root:root .skeleton-row span {
+  border-radius: 6px;
+  background: var(--surface-3);
+}
+
+:root:root:root .skeleton-row span:first-child { grid-row: span 2; height: 48px; border-radius: 12px; align-self: center; }
+:root:root:root .skeleton-row span:nth-child(2) { width: 46%; }
+:root:root:root .skeleton-row span:last-child { width: 72%; }
+
+@media (prefers-reduced-motion: no-preference) {
+  html[data-motion="on"] .skeleton-row span { animation: skeleton-pulse 1.2s ease-in-out infinite alternate; }
+}
+
+@keyframes skeleton-pulse {
+  from { opacity: 1; }
+  to { opacity: 0.5; }
+}
+
+/* Needs-review: the check order beside the flagged rows (info Notice). */
+:root:root:root .inventory-review-guide {
+  display: grid;
+  gap: 8px;
+  margin: 16px 0 0;
+  padding: 14px 16px;
+  border: 1px solid var(--notice-info-line);
+  border-radius: var(--radius-card);
+  background: var(--notice-info);
+  color: var(--ink);
+}
+
+:root:root:root .inventory-review-guide-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+:root:root:root .inventory-review-guide-icon { display: inline-flex; color: var(--notice-info-accent); }
+
+:root:root:root .inventory-review-guide h3 {
+  flex: 1 1 auto;
+  margin: 0;
+  font: var(--weight-bold) var(--text-16) / var(--leading-snug) var(--font-body);
+}
+
+:root:root:root .inventory-review-guide-action {
+  min-height: 44px;
+  margin: -8px -4px -8px 0;
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+  color: var(--action-text);
+  font: var(--weight-bold) var(--text-14) / 1 var(--font-body);
+}
+
+:root:root:root .inventory-review-guide-list {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-14);
+}
+
+:root:root:root .inventory-review-guide-list li { display: flex; gap: 10px; }
+:root:root:root .inventory-review-guide-list span { color: var(--ink-muted); font-variant-numeric: tabular-nums; }
+:root:root:root .inventory-review-guide-list strong { font-weight: var(--weight-medium); }
+:root:root:root .inventory-review-guide-note { margin: 0; color: var(--ink-muted); font-size: var(--text-12); }
+
+/* ---------- Bottom bar: a dark pill with the centre + ---------- */
+
+:root:root:root .app-bottom-nav {
+  z-index: 20;
+  right: 14px;
+  left: 14px;
+  bottom: calc(var(--device-safe-area-bottom, 34px) + 6px);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) 64px repeat(2, minmax(0, 1fr));
+  gap: 2px;
+  align-items: center;
+  min-height: 64px;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--nav-pill);
+  box-shadow: var(--shadow-float);
+  color: var(--hero-muted);
+}
+
+.app-bottom-nav { position: absolute; }
+:root:root:root .app-shell-preview .mobile-app-viewport[data-platform="android"] .app-bottom-nav { bottom: 6px; }
+
+:root:root:root .app-bottom-nav-item {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 2px;
+  min-width: 0;
+  min-height: 52px;
+  padding: 4px 2px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--hero-muted);
+}
+
+:root:root:root .app-bottom-nav-item svg { width: 20px; height: 20px; }
+
+:root:root:root .app-bottom-nav-item span:not(.nav-shopping-count) {
+  color: inherit;
+  font: var(--weight-semibold) var(--text-12) / 1.2 var(--font-body);
+  white-space: nowrap;
+}
+
+:root:root:root .app-bottom-nav-item-active {
+  background: var(--hero-raised);
+  color: var(--hero-ink);
+}
+
+:root:root:root .app-bottom-nav-item:focus-visible { outline: none; }
+
+:root:root:root .app-bottom-nav-item:focus-visible::before {
+  position: absolute;
+  inset: 2px;
+  border: 2px solid var(--hero-ink);
+  border-radius: inherit;
+  content: "";
+  pointer-events: none;
+}
+
+:root:root:root .app-bottom-nav .app-bottom-nav-add {
+  position: relative;
+  display: grid;
+  place-items: center;
+  justify-self: center;
+  width: 58px;
+  min-width: 58px;
+  height: 58px;
+  margin-top: -26px;
+  padding: 0;
+  border: 4px solid var(--fab-ring);
+  border-radius: 50%;
+  background: var(--action);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.24);
+  color: var(--action-ink);
+  cursor: pointer;
+}
+
+:root:root:root .app-bottom-nav .app-bottom-nav-add:disabled { opacity: 0.55; cursor: progress; }
+
+/* Two-tone ring: cream reads on the pill, theme ink on the page. */
+:root:root:root .app-bottom-nav .app-bottom-nav-add:focus-visible::after {
+  position: absolute;
+  inset: -9px;
+  border: 3px solid var(--hero-ink);
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--ink), inset 0 0 0 2px var(--ink);
+  content: "";
+  pointer-events: none;
+}
+
+.app-shell-web .app-bottom-nav-add { margin-top: 0; }
+
+/* While the preview keyboard owns the lower viewport, the bar steps aside (hidden from hit
+   testing and the accessibility tree) instead of sitting under the keyboard. */
+:root:root:root .app-shell-preview .mobile-page[data-keyboard-visible="true"] ~ .app-bottom-nav {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.nav-shopping-icon { position: relative; display: inline-flex; }
+
+:root:root:root .nav-shopping-count {
+  position: absolute;
+  top: -6px;
+  right: -12px;
+  display: grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 9px;
+  background: var(--hero-ink);
+  color: var(--hero);
+  font: var(--weight-bold) var(--text-12) / 1 var(--font-body);
+}
+
+@media (max-width: 360px) {
+  :root:root:root .app-bottom-nav {
+    right: 10px;
+    left: 10px;
+    padding: 6px 4px;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) 60px repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* ---------- Toast: one inverse bar above the bottom bar, with 되돌리기 ---------- */
+
+:root:root:root .toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 6px 6px 6px 14px;
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--radius-action);
+  background: var(--inverse-bg);
+  box-shadow: var(--shadow-float);
+  color: var(--inverse-ink);
+  font: var(--weight-medium) var(--text-14) / var(--leading-snug) var(--font-body);
+  letter-spacing: 0;
+}
+
+.toast {
+  position: absolute;
+  right: 16px;
+  bottom: calc(var(--device-safe-area-bottom, 34px) + 84px);
+  left: 16px;
+}
+
+.app-shell-preview .mobile-app-viewport[data-platform="android"] .toast { bottom: 84px; }
+
+/* Over a sheet the bar is covered; the toast moves to the top so it never hides the sheet's action. */
+:is(.app-shell-preview,.app-shell-native) .toast-layer:not([data-active-sheet="none"]) .toast {
+  top: calc(var(--mobile-safe-area-height, 44px) + 8px);
+  bottom: auto;
+}
+
+:root:root:root .toast svg { flex: 0 0 auto; color: var(--inverse-accent); }
+:root:root:root .toast :is(.toast-retry,.toast-recovery) svg, :root:root:root .toast:is(.toast-retry,.toast-recovery) svg { color: var(--inverse-caution); }
+
+.toast-message { flex: 1 1 auto; min-width: 0; }
+
+:root:root:root .toast :is(.toast-undo,.toast-action) {
+  flex: 0 0 auto;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--inverse-accent);
+  font: var(--weight-bold) var(--text-14) / 1 var(--font-body);
+  cursor: pointer;
+}
+
+:root:root:root .toast :is(.toast-undo,.toast-action):focus-visible {
+  outline: 2px solid var(--inverse-accent);
+  outline-offset: -2px;
+}
+
+:root:root:root .toast .toast-action[aria-busy="true"] { opacity: 0.7; }
+
+/* The label is drawn here so the live status text stays the record message itself;
+   the button's accessible name comes from aria-label="되돌리기". */
+.toast-undo::before { content: "되돌리기"; }
+
+/* The 5s undo window, drawn as a hairline that empties (motion.css animates it). */
+:root:root:root .toast-has-undo::after {
+  position: absolute;
+  right: 14px;
+  bottom: 0;
+  left: 14px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--inverse-accent);
+  content: "";
+  transform: scaleX(0);
+  transform-origin: left;
 }
 
 /* ---------- 식단 / 장보기: sheet content as a screen ---------- */
@@ -395,101 +1198,7 @@
 
 /* ---------- 나: theme row above the account content ---------- */
 
-:root[data-rescue-theme]:root:root .me-section {
-  margin: 0 0 14px;
-  padding: 12px 14px 12px 16px;
-  border: 1px solid var(--fresh-line);
-  border-radius: 20px;
-  background: var(--fresh-surface);
-}
-
-.me-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.me-row-copy {
-  display: grid;
-  gap: 2px;
-}
-
-.me-row-copy strong {
-  font-size: 0.9375rem;
-}
-
-:root[data-rescue-theme]:root:root .me-row-copy small {
-  color: var(--fresh-muted);
-  font-size: 0.75rem;
-}
-
-:root[data-rescue-theme]:root:root .bottom-sheet .me-theme-toggle {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  width: auto !important;
-  min-width: 44px;
-  height: 44px !important;
-  min-height: 44px;
-  padding: 0 14px !important;
-  border: 1px solid var(--fresh-line) !important;
-  border-radius: 999px !important;
-  background: var(--fresh-bg) !important;
-  color: var(--fresh-ink) !important;
-  font-size: 0.8125rem;
-  font-weight: 800;
-}
-
-/* ---------- Bottom bar: 냉장고 is the longest label ---------- */
-
-:root[data-rescue-theme]:root:root .app-bottom-nav .app-bottom-nav-item span {
-  white-space: nowrap;
-}
-
-@media (max-width: 340px) {
-  :root[data-rescue-theme]:root:root .home-shelf-row {
-    grid-template-columns: 2.75rem minmax(0, 1fr) auto 14px;
-    gap: 8px;
-    padding-left: 12px;
-  }
-
-  :root[data-rescue-theme]:root:root .app-bottom-nav .app-bottom-nav-item span {
-    font-size: 0.6875rem;
-  }
-}
-
 @media (prefers-contrast: more) {
-  :root[data-rescue-theme]:root:root :is(.home-shelf-row,.fridge-chip,.me-section) {
-    border-color: color-mix(in srgb, var(--fresh-ink) 45%, transparent);
-  }
-
-  :root[data-rescue-theme]:root:root .home-rescued-stat {
-    color: var(--kitchen-hero-ink);
-  }
-}
-
-/* ---------- Header actions: bell then 나, one row at every phone width ---------- */
-
-:root[data-rescue-theme]:root:root .app-header .header-actions {
-  display: flex;
-  flex: 0 0 auto;
-  flex-wrap: nowrap;
-  align-items: center;
-  gap: 6px;
-}
-
-@media (max-width: 360px) {
-  /* The legacy narrow-hero rule floated the bell below the header; it now sits beside 나. */
-  :root[data-rescue-theme]:root:root .app-header .header-actions .notification-button {
-    position: relative !important;
-    top: auto !important;
-    right: auto !important;
-  }
-
-  /* 나 shrinks to the avatar; its accessible name still carries the connection state. */
-  :root[data-rescue-theme]:root:root .app-header .connection-pill .connection-label {
-    display: none !important;
-  }
+  :root:root:root :is(.home-group,.inventory-list,.fridge-chip,.home-starter) { border-color: var(--line-strong); }
+  :root:root:root :is(.home-rescued-stat,.home-hero-note) { color: var(--hero-ink); }
 }

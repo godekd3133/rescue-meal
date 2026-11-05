@@ -68,6 +68,12 @@ test("rescue cards offer 냉동 only without a date question, and freezing leave
   await expect(tofu).toHaveCount(0);
   await expect(toast.getByRole("button", { name: "되돌리기" })).toBeVisible();
   await shot(page, "03-undo-toast");
+  // Freezing re-estimates the use-first date later (a week out for tofu), never sooner.
+  await gotoTab(page, "fridge");
+  const frozenChip = page.locator(".inventory-row").filter({ hasText: "국산콩 두부" }).locator(".freshness-chip");
+  await expect(frozenChip).toHaveText("D-7");
+  await expect(frozenChip).toHaveAttribute("data-estimated", "true");
+  await gotoTab(page, "home");
 
   await toast.getByRole("button", { name: "되돌리기" }).click();
   await expect(toast).toContainText("국산콩 두부 냉동 기록을 되돌렸어요");
@@ -111,7 +117,7 @@ test("swiping left reveals 버림 / 냉동; vertical drags still scroll without 
   await expect(tofuRow.getByRole("button", { name: "국산콩 두부 냉동 보관하기" })).toBeVisible();
   await shot(page, "02-swiped-row");
   await tofuRow.getByRole("button", { name: "국산콩 두부 버린 기록 남기기" }).click();
-  await expect(page.locator(".toast")).toContainText("국산콩 두부 폐기 기록을 남겼어요");
+  await expect(page.locator(".toast")).toContainText("국산콩 두부 버림 기록을 남겼어요");
   await expect(page.locator(".inventory-row").filter({ hasText: "국산콩 두부" })).toHaveCount(0);
 
   const scrollTop = () => page.getByTestId("mobile-scroll").evaluate((element) => element.scrollTop);
@@ -211,4 +217,22 @@ test("the undo offer expires while a primary follow-up stays", async ({ page }) 
   await page.clock.runFor(5_500);
   await expect(toast.getByRole("button", { name: "되돌리기" })).toHaveCount(0);
   await expect(toast.locator(".toast-action")).toHaveText(/날짜 확인할 식품/);
+});
+
+test("a toast raised while a sheet is open stays reachable by assistive tech and its 되돌리기 works", async ({ page }) => {
+  await gotoTab(page, "fridge");
+  await page.locator(".inventory-row").filter({ hasText: "시금치" }).first().click();
+  const dialog = page.getByRole("dialog", { name: "시금치" });
+  await expect(dialog).toBeVisible();
+  // The toast appears after the modal sheet hid the rest of the app; it must not be swept into that.
+  await dialog.getByRole("radio", { name: "냉동" }).click();
+  const status = page.getByRole("status").filter({ hasText: "시금치를 냉동으로 옮겼어요." });
+  await expect(status).toBeVisible();
+  expect(await status.evaluate((element) => Boolean(element.closest('[aria-hidden="true"]')))).toBe(false);
+  const undo = page.getByRole("button", { name: "되돌리기" });
+  await expect(undo).toHaveCount(1);
+  await undo.click();
+  // Undo keeps the food page open and puts the lot back where it was.
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole("radio", { name: "냉장" })).toHaveAttribute("aria-checked", "true");
 });

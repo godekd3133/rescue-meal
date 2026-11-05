@@ -1,28 +1,29 @@
 import type { ReactNode } from "react";
 import { ChevronRightIcon } from "@radix-ui/react-icons";
 import { FoodPhoto } from "../FoodPhoto";
-import RevealText, { CountUp } from "../RevealText";
 import type { FoodItem } from "../Prototype";
 import { FreshnessChip } from "./FreshnessChip";
 import { summarizeShelves } from "./homeSummary";
 
 export type HomeScreenState = "unknown" | "empty" | "ready";
 
+/** Foods offered on an empty Home; each one opens quick add with that food already listed. */
+export const HOME_STARTER_FOODS = ["우유", "계란", "두부", "대파"] as const;
+
 /**
  * 홈: what to look at today, nothing more. The full list lives on the 냉장고 tab.
  *
- * - Green hero: today's count (`오늘 살펴볼`) and what was eaten this week (`이번 주 구한`).
- *   Only rescues are counted; discards are never shown.
- * - Urgent foods ride the RescueDeck. With nothing urgent there is no giant "0개": the
- *   hero says so calmly and `이번 주 먼저 볼 것` lists the next few foods instead.
- * - One line per storage place (empty shelves collapse), then one action.
+ * - Green panel: one sentence with today's count in it, the week's rescued count as a plain
+ *   line under it, then the food photos (RescueDeck) lead.
+ * - With nothing urgent the sentence says so and `이번 주 먼저 볼 것` lists the next foods.
+ * - An empty workspace gets one add action and a few starter foods.
+ * - One grouped list of storage places (empty shelves collapse), then one action.
  */
 export default function HomeScreen({
   state,
   dataUnknown,
   header,
   callouts,
-  eyebrow,
   urgentCount,
   rescuedThisWeek,
   deck,
@@ -34,6 +35,7 @@ export default function HomeScreen({
   footer,
   onOpenFood,
   onOpenStorage,
+  onStarterFood,
   reviewReasonFor,
   unknownNotice,
 }: {
@@ -41,7 +43,6 @@ export default function HomeScreen({
   dataUnknown: boolean;
   header: ReactNode;
   callouts: ReactNode;
-  eyebrow: string;
   urgentCount: number;
   rescuedThisWeek: number | null;
   deck: ReactNode;
@@ -53,6 +54,8 @@ export default function HomeScreen({
   footer: ReactNode;
   onOpenFood: (food: FoodItem) => void;
   onOpenStorage: (storage: FoodItem["storage"]) => void;
+  /** Empty workspace only: opens quick add with this food listed. Omitted when adding is unavailable. */
+  onStarterFood?: (name: string) => void;
   reviewReasonFor: (food: FoodItem) => string | null;
   /** Configured API without a readable inventory: why Home is empty, and whether to announce it. */
   unknownNotice: { title: string; label: string; description: string; urgent: boolean } | null;
@@ -69,24 +72,25 @@ export default function HomeScreen({
         {callouts}
         <div className="home-hero-copy">
           <section className="greeting-block" aria-labelledby="greeting-title">
-            <div>
-              <p className="eyebrow">{eyebrow}</p>
-              {state === "unknown" && unknownNotice ? (
-                <h1 id="greeting-title" tabIndex={-1}>{unknownNotice.title}</h1>
-              ) : !ready ? (
-                <h1 id="greeting-title" tabIndex={-1}><RevealText text="첫 식품을" delay={160} /><br /><em><RevealText text="기록해 보세요." delay={330} /></em></h1>
-              ) : calm ? (
-                <h1 id="greeting-title" tabIndex={-1} className="rescue-hero rescue-hero-calm"><span className="rescue-hero-copy"><RevealText text="오늘은 서둘러 볼" delay={160} /></span><span className="rescue-hero-copy"><RevealText text="음식이 없어요" delay={300} /></span></h1>
-              ) : (
-                <h1 id="greeting-title" tabIndex={-1} className="rescue-hero" aria-label={`오늘 살펴볼 음식 ${urgentCount}개`}><span className="rescue-hero-copy"><RevealText text="오늘 살펴볼 음식" delay={160} /></span><span><span className="rescue-hero-count"><CountUp value={urgentCount} /></span><span className="rescue-hero-unit">개</span></span></h1>
-              )}
-              {showRescued ? (
-                <p className="home-rescued-stat" data-testid="home-rescued-stat">
-                  <span className="home-rescued-label">이번 주 구한 음식</span>{" "}
-                  <span className="home-rescued-value"><strong>{rescuedThisWeek}</strong>개</span>
-                </p>
-              ) : null}
-            </div>
+            {state === "unknown" && unknownNotice ? (
+              <h1 id="greeting-title" tabIndex={-1}>{unknownNotice.title}</h1>
+            ) : !ready ? (
+              <h1 id="greeting-title" tabIndex={-1}>냉장고가 비어 있어요</h1>
+            ) : calm ? (
+              <h1 id="greeting-title" tabIndex={-1} className="rescue-hero rescue-hero-calm">오늘은 서둘러 볼 음식이 없어요</h1>
+            ) : (
+              <h1 id="greeting-title" tabIndex={-1} className="rescue-hero" aria-label={`오늘 살펴볼 음식 ${urgentCount}개`}>
+                오늘 살펴볼 음식 <span className="rescue-hero-count">{urgentCount}</span>개
+              </h1>
+            )}
+            {showRescued ? (
+              <p className="home-rescued-stat" data-testid="home-rescued-stat">
+                <span className="home-rescued-label">이번 주 구한 음식</span>{" "}
+                <span className="home-rescued-value"><strong>{rescuedThisWeek}</strong>개</span>
+              </p>
+            ) : state === "empty" ? (
+              <p className="home-hero-note">산 식품을 적어 두면 먼저 먹을 순서대로 보여 드려요.</p>
+            ) : null}
           </section>
           {ready && !calm ? deck : null}
         </div>
@@ -104,23 +108,19 @@ export default function HomeScreen({
         {reviewSummary}
 
         {calm && upcomingFoods.length ? (
-          <section className="priority-section home-upcoming" aria-labelledby="priority-title">
-            <div className="section-heading">
-              <h2 id="priority-title">이번 주 먼저 볼 것</h2>
-            </div>
-            <div className="priority-list">
-              <div className="priority-list-items">
-                {upcomingFoods.map((food) => (
-                  <button key={food.id} className="priority-card" type="button" data-priority-food-id={food.id} data-priority-state={reviewReasonFor(food) ? "needs-review" : "use-next"} onClick={() => onOpenFood(food)}>
-                    <div className="food-image-wrap"><FoodPhoto src={food.image} foodName={food.name} loading="eager" alt="" className="food-image" draggable={false} /></div>
-                    <span className="priority-copy">
-                      <span className="food-name-line"><strong>{food.name}</strong></span>
-                      <span className="food-subline">{food.quantity}</span>
-                    </span>
-                    <span className="priority-date"><FreshnessChip food={food} referenceDate={referenceDate} /></span>
-                  </button>
-                ))}
-              </div>
+          <section className="home-upcoming" aria-labelledby="priority-title">
+            <h2 id="priority-title" className="home-section-title">이번 주 먼저 볼 것</h2>
+            <div className="home-group">
+              {upcomingFoods.map((food) => (
+                <button key={food.id} className="priority-card" type="button" data-priority-food-id={food.id} data-priority-state={reviewReasonFor(food) ? "needs-review" : "use-next"} onClick={() => onOpenFood(food)}>
+                  <FoodPhoto src={food.image} foodName={food.name} loading="eager" alt="" className="food-thumb" draggable={false} />
+                  <span className="priority-copy">
+                    <strong>{food.name}</strong>
+                    <small>{food.quantity}</small>
+                  </span>
+                  <FreshnessChip food={food} referenceDate={referenceDate} />
+                </button>
+              ))}
             </div>
           </section>
         ) : null}
@@ -128,7 +128,7 @@ export default function HomeScreen({
         {shelves.length ? (
           <nav className="home-shelves" aria-labelledby="home-shelves-title">
             <h2 id="home-shelves-title" className="home-section-title">보관 장소</h2>
-            <ul>
+            <ul className="home-group">
               {shelves.map((shelf) => (
                 <li key={shelf.storage}>
                   <button
@@ -144,9 +144,9 @@ export default function HomeScreen({
                     </span>
                     <span className="home-shelf-counts" aria-hidden="true">
                       {shelf.soonCount ? <span className="home-shelf-soon">곧 {shelf.soonCount}</span> : null}
-                      <strong>{shelf.count}</strong>
+                      <span className="home-shelf-count"><strong>{shelf.count}</strong>개</span>
                     </span>
-                    <ChevronRightIcon className="home-shelf-chevron" width={15} height={15} aria-hidden="true" />
+                    <ChevronRightIcon className="home-shelf-chevron" width={16} height={16} aria-hidden="true" />
                   </button>
                 </li>
               ))}
@@ -155,6 +155,19 @@ export default function HomeScreen({
         ) : null}
 
         <div className="home-action-row">{primaryAction}</div>
+
+        {state === "empty" && onStarterFood ? (
+          <section className="home-starters" aria-labelledby="home-starters-title">
+            <h2 id="home-starters-title" className="home-section-title">자주 사는 식품부터</h2>
+            <ul>
+              {HOME_STARTER_FOODS.map((name) => (
+                <li key={name}>
+                  <button className="home-starter" type="button" aria-label={`${name} 추가하기`} onClick={() => onStarterFood(name)}>{name}</button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
 
         {footer}
       </div>

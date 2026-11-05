@@ -1,9 +1,13 @@
 import { dateEditorPresentation } from "./dateEditorPresentation";
 import { MetadataText } from "./Metadata";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
-import { CalendarIcon, CheckIcon } from "@radix-ui/react-icons";
+import { CalendarIcon } from "@radix-ui/react-icons";
 import { KeyboardInput, useKeyboard } from "./mobile";
+import { formatKoreanDate } from "./koreanDate";
 import "./koreanDateField.css";
+import "./dateAssertionEditor.css";
+
+export { formatKoreanDate };
 
 export type DateConfirmationKind = "sell_by" | "use_by" | "best_before" | "user_reminder";
 
@@ -17,18 +21,6 @@ export const DATE_CONFIRMATION_OPTIONS: Array<[DateConfirmationKind, string]> = 
 ];
 const options = DATE_CONFIRMATION_OPTIONS;
 const DATE_KIND_COLUMNS = 2;
-const KOREAN_WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
-
-/** `2026-11-09` (or `2026.11.09`) → `2026년 11월 9일 (월)`; anything else → "". */
-export function formatKoreanDate(value: string) {
-  const match = value.trim().match(/^(\d{4})[-.](\d{2})[-.](\d{2})$/);
-  if (!match) return "";
-  const [year, month, day] = match.slice(1).map(Number);
-  const date = new Date(Date.UTC(year, month - 1, day, 12));
-  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return "";
-  return `${year}년 ${month}월 ${day}일 (${KOREAN_WEEKDAYS[date.getUTCDay()]})`;
-}
-
 /**
  * A date field that reads in the app's Korean style instead of the OS locale format.
  * The native date input stays on top (transparent) so the platform picker, form
@@ -124,7 +116,7 @@ export default function DateAssertionEditor({
     return () => window.clearTimeout(timer);
   }, []);
 
-  const readableDate = /^\d{4}-\d{2}-\d{2}$/.test(value) ? `선택한 날짜 · ${value.replaceAll("-", ".")}` : "";
+  const readableDate = /^\d{4}-\d{2}-\d{2}$/.test(value) ? `선택한 날짜 · ${formatKoreanDate(value)}` : "";
   const presentation = dateEditorPresentation(kind, value, title, description, originalKind !== undefined ? originalKind : originalKindRef.current);
 
   const handleDateKindKeyDown = (event: KeyboardEvent<HTMLButtonElement>, currentIndex: number) => {
@@ -156,7 +148,6 @@ export default function DateAssertionEditor({
   return (
     <div className="date-editor" role="group" aria-label="확인한 날짜 입력">
       <div className="date-editor-heading">
-        <CalendarIcon width={17} height={17} />
         <span><strong>{presentation.title}</strong>{presentation.description ? <small>{presentation.description}</small> : null}</span>
       </div>
       <div className="date-kind-picker" role="radiogroup" aria-label="날짜 종류" aria-describedby={!kind ? "date-kind-selection-hint" : undefined}>
@@ -170,16 +161,13 @@ export default function DateAssertionEditor({
             }}
             key={option}
             className={active ? "date-kind-active" : ""}
-            style={active
-              ? { borderColor: "var(--atelier-pistachio)", background: "var(--meal-blue-soft)", color: "var(--atelier-pistachio)" }
-              : { borderColor: "var(--atelier-border)", background: "var(--atelier-surface)", color: "var(--atelier-muted)" }}
             type="button"
             role="radio"
             aria-checked={active}
             tabIndex={active || (!kind && index === 0) ? 0 : -1}
             onKeyDown={(event) => handleDateKindKeyDown(event, index)}
             onClick={() => setKind(option)}
-          >{active ? <CheckIcon width={12} height={12} /> : null}{label}</button>;
+          >{label}</button>;
         })}
       </div>
       {!kind ? <small id="date-kind-selection-hint" className="date-kind-selection-hint" role="note">포장지에 적힌 날짜 이름을 그대로 골라 주세요. 확실하지 않으면 소비기한으로 짐작하지 않아도 돼요.</small> : null}

@@ -35,8 +35,8 @@ html[data-rescue-theme] .meal-home {
   background: var(--fresh-bucket);
   /* Dark ink reads at 5:1+ on every urgency fill and on the neutral fill. */
   color: #0e1813;
-  font-family: var(--fresh-display);
-  font-size: 13px;
+  font-family: var(--font-display);
+  font-size: var(--text-14);
   font-weight: 400;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -63,91 +63,20 @@ html[data-rescue-theme] .meal-home {
   border-color: var(--line-strong);
   background: transparent;
   color: var(--ink-muted);
-  font-family: inherit;
-  font-size: 12px;
-  font-weight: 700;
+  font-family: var(--font-body);
+  font-size: var(--text-12);
+  font-weight: var(--weight-bold);
 }
 
-/* ---------- Recipe date-review shortcuts ---------- */
+/* ---------- Jua: screen titles and the brand only (rows and buttons use the body face) ---------- */
 
-.bottom-sheet .recipe-date-review-callout > span {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  align-items: center;
-}
-
-.bottom-sheet .recipe-date-review-callout > span > strong {
-  flex: 1 0 100%;
-}
-
-.bottom-sheet .recipe-thaw-note {
-  align-items: center;
-  padding: 7px 10px;
-}
-
-/* ---------- Jua for titles and numbers ---------- */
-
-html[data-rescue-theme][data-rescue-theme] .meal-home :is(h1, h2),
-html[data-rescue-theme][data-rescue-theme] .bottom-sheet :is(h2, h3),
-html[data-rescue-theme][data-rescue-theme] .meal-home .meal-plan-button strong,
-html[data-rescue-theme][data-rescue-theme] :is(.priority-card, .inventory-row) .food-name-line strong,
-html[data-rescue-theme][data-rescue-theme] .inventory-row .inventory-copy > strong,
-html[data-rescue-theme][data-rescue-theme] .detail-quantity-summary,
-html[data-rescue-theme][data-rescue-theme] .app-header .brand-lockup {
-  font-family: var(--fresh-display) !important;
+html[data-rescue-theme][data-rescue-theme] .meal-home h1,
+html[data-rescue-theme][data-rescue-theme] .bottom-sheet .sheet-title {
+  font-family: var(--font-display) !important;
   font-weight: 400 !important;
   letter-spacing: -0.01em;
 }
 
-/* ---------- Home and 냉장고 rows: one card surface ---------- */
-
-html[data-rescue-theme][data-rescue-theme] .meal-home :is(.priority-list-items, .inventory-list) {
-  display: grid;
-  gap: 8px;
-}
-
-html[data-rescue-theme][data-rescue-theme] .meal-home :is(.priority-card, .inventory-row) {
-  border: 1px solid var(--line) !important;
-  border-radius: var(--radius-card) !important;
-  background: var(--surface-2) !important;
-  box-shadow: none !important;
-}
-
-html[data-rescue-theme][data-rescue-theme] .meal-home .priority-card {
-  padding: 10px 14px 10px 10px !important;
-}
-
-html[data-rescue-theme][data-rescue-theme] .meal-home :is(.food-image-wrap, .inventory-image-wrap) {
-  border: 0 !important;
-  border-radius: 50% !important;
-  background: var(--surface-3) !important;
-  overflow: hidden;
-}
-
-html[data-rescue-theme][data-rescue-theme] .meal-home :is(.priority-card, .inventory-row) :is(.food-image, .inventory-image) {
-  border-radius: 50% !important;
-}
-
-html[data-rescue-theme][data-rescue-theme] .meal-home .section-heading {
-  border-bottom: 0 !important;
-}
-
-html[data-rescue-theme][data-rescue-theme] .meal-home .storage-pill {
-  border: 0 !important;
-  border-radius: 999px !important;
-  background: var(--surface-3) !important;
-  color: var(--ink) !important;
-}
-
-html[data-rescue-theme][data-rescue-theme] .meal-home .meal-plan-button strong {
-  font-size: 1.0625rem;
-}
-
 html[data-rescue-theme][data-rescue-theme] .bottom-sheet {
-  border-radius: 28px 28px 0 0 !important;
-}
-
-html[data-rescue-theme][data-rescue-theme] .bottom-sheet :is(.primary-sheet-button, .secondary-sheet-button) {
-  border-radius: 999px !important;
+  border-radius: var(--radius-sheet) var(--radius-sheet) 0 0 !important;
 }

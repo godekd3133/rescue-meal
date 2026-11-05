@@ -144,13 +144,14 @@ test("primary home action text meets contrast in light and dark themes", async (
 
    expect(ratios.label, `${theme} primary label contrast`).toBeGreaterThanOrEqual(4.5);
    expect(ratios.supportingCopy, `${theme} primary supporting-copy contrast`).toBeGreaterThanOrEqual(4.5);
-    const primaryShadow = await page.locator(".meal-plan-button").evaluate((button) => ({
-      value: getComputedStyle(button).boxShadow,
-      token: getComputedStyle(button.closest(".meal-home")!).getPropertyValue("--atelier-primary-action-shadow"),
+    // Shape, not shadow, says "primary": only floating layers cast a shadow (anti-generic rules).
+    const primary = await page.locator(".meal-plan-button").evaluate((button) => ({
+      shadow: getComputedStyle(button).boxShadow,
+      radius: getComputedStyle(button).borderTopLeftRadius,
+      token: getComputedStyle(document.documentElement).getPropertyValue("--radius-action").trim(),
     }));
-    expect(primaryShadow.value, `${theme} primary action keeps its depth`).not.toBe("none");
-    // The kitchen palette tints the action's depth with its own leek green instead of the old blue.
-    expect(primaryShadow.token, `${theme} primary shadow token`).toContain(theme === "light" ? "#1b6c42" : "#237a4b");
+    expect(primary.shadow, `${theme} primary action has no decorative shadow`).toBe("none");
+    expect(primary.radius, `${theme} primary action uses the action radius`).toBe(primary.token);
   }
 });
 
@@ -258,12 +259,12 @@ test("printed-date recheck keeps its current record clear with system high contr
 
 test("account and notification surfaces pass axe audit", async ({ page }) => {
   await page.locator(".connection-pill").click();
-  await openSheet(page, "체험 안내");
+  await openSheet(page, "나");
   await expectNoViolations(page, "account sheet");
   await page.keyboard.press("Escape");
   // The exit animation keeps the closed sheet mounted (and aria-hidden) for
   // ~160ms; scanning inside that window flags a transient focus race.
-  await expect(page.getByRole("dialog", { name: "체험 안내" })).toHaveCount(0);
+  await expect(page.getByRole("dialog", { name: "나", exact: true })).toHaveCount(0);
 
   await page.locator(".notification-button").click();
   await openSheet(page, "알림");

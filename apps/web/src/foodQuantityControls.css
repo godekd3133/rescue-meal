@@ -1,108 +1,74 @@
-.detail-quantity-controls {
-  display: grid;
-  gap: 9px;
+/* 일부 먹음 panel inside the food page: presets track, stepper, note. Shapes come from kitchen.css. */
+
+.food-partial {
   min-width: 0;
-  padding: 12px 0 2px;
-  border-top: 1px solid var(--sheet-border);
 }
 
-.detail-quantity-heading,
+.food-partial-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 12px;
+}
+
+.food-partial-heading > span,
+.detail-quantity-note {
+  color: var(--ink-muted);
+  font-size: var(--text-14);
+  line-height: var(--leading-body);
+}
+
 .detail-quantity-presets,
 .detail-quantity-editor {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
   min-width: 0;
-}
-
-.detail-quantity-heading {
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 4px 8px;
-}
-
-.detail-quantity-heading label {
-  color: var(--atelier-ink);
-  font-size: 13px;
-  font-weight: 650;
-}
-
-.detail-quantity-heading span,
-.detail-quantity-note {
-  color: var(--atelier-muted);
-  font-size: 12px;
-  line-height: 1.45;
-}
-
-.detail-quantity-presets button,
-.detail-quantity-editor > button {
-  min-height: 44px;
-  min-width: 44px;
-  border: 1px solid var(--sheet-border);
-  border-radius: 12px;
-  color: var(--atelier-ink);
-  background: var(--atelier-surface);
-  font: inherit;
-  cursor: pointer;
 }
 
 .detail-quantity-presets button {
   flex: 1;
-  padding: 8px 12px;
-  font-size: 13px;
-}
-
-.detail-quantity-presets button[aria-pressed="true"] {
-  color: var(--atelier-pistachio);
-  border-color: var(--atelier-pistachio);
-  background: color-mix(in srgb, var(--atelier-pistachio) 10%, var(--atelier-surface));
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 10px;
+  font: inherit;
+  font-size: var(--text-14);
+  cursor: pointer;
 }
 
 .detail-quantity-editor > button {
-  flex: 0 0 44px;
+  flex: 0 0 48px;
+  min-height: 48px;
   font-size: 22px;
+  cursor: pointer;
 }
 
 .detail-quantity-input-wrap {
   display: flex;
+  flex: 1;
   align-items: center;
   gap: 6px;
   min-width: 0;
-  flex: 1;
-  min-height: 44px;
-  padding-right: 12px;
-  border: 1px solid var(--sheet-border);
-  border-radius: 12px;
-  background: var(--atelier-surface);
-  color: var(--atelier-muted);
-  font-size: 13px;
-}
-
-.detail-quantity-input-wrap:focus-within {
-  outline: 2px solid var(--atelier-pistachio);
-  outline-offset: 2px;
-}
-
-.detail-quantity-input-wrap > span {
-  max-width: 45%;
-  overflow-wrap: anywhere;
+  color: var(--ink-muted);
+  font-size: var(--text-14);
 }
 
 .detail-quantity-input-wrap input {
   flex: 1 1 0;
   width: 0;
   min-width: 0;
-  min-height: 44px;
-  padding: 8px 0 8px 12px;
-  border: 0;
-  outline: none;
-  background: transparent;
-  color: var(--atelier-ink);
-  font: inherit;
-  font-size: 16px;
-  font-weight: 600;
+  min-height: 48px;
+  padding: 0 0 0 12px;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: var(--text-20);
   font-variant-numeric: tabular-nums;
   text-align: center;
+}
+
+.detail-quantity-input-wrap > span {
+  padding-right: 4px;
 }
 
 .detail-quantity-presets button:disabled,
@@ -111,11 +77,11 @@
   cursor: default;
 }
 
-.detail-quantity-controls .detail-quantity-note {
+.food-partial .detail-quantity-note {
+  min-height: 21px;
   margin: 0;
-  word-break: keep-all;
 }
 
-.detail-quantity-controls .detail-quantity-error {
-  color: var(--atelier-coral);
+.food-partial .detail-quantity-error {
+  color: var(--urgency-past-text);
 }

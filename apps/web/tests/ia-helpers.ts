@@ -12,6 +12,19 @@ export function mealScreen(page: Page) {
   return page.getByRole("region", { name: "오늘의 식단" });
 }
 
+/** 요리 모드: the near-full-height sheet that holds the steps and the amount check. */
+export function cookingSheet(page: Page) {
+  return page.getByRole("dialog").filter({ has: page.locator(".cook-mode") });
+}
+
+/** The time/serving pickers sit folded behind the 식단 filter chips. */
+export async function openMealConditions(page: Page) {
+  const meal = mealScreen(page);
+  const chip = meal.getByRole("button", { name: /^조리 시간 / });
+  if (await chip.getAttribute("aria-expanded") !== "true") await chip.click();
+  await expect(meal.getByRole("group", { name: "조리 가능 시간" })).toBeVisible();
+}
+
 export function shoppingScreen(page: Page) {
   return page.getByRole("region", { name: "장보기 목록" });
 }

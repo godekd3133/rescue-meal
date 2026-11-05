@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowRightIcon, Pencil1Icon } from "@radix-ui/react-icons";
 import { KeyboardInput, useKeyboard } from "./mobile";
 import type { FoodItem } from "./Prototype";
 import { revealAndFocusWithinNearestContainer } from "./appScroll";
@@ -64,16 +63,16 @@ export function QuantityReferenceEditor({ food, onSave, initiallyEditing = false
   };
 
   if (!editing) return (
-    <button ref={actionRef} type="button" className="product-info-edit-button" onClick={() => {
+    <button ref={actionRef} type="button" className="food-row food-row-button quantity-reference-row" aria-label={food.quantityReference ? `1${originalUnit}의 양 수정` : `1${originalUnit}의 양 입력`} onClick={() => {
       keyboard.hide();
       setAmount(String(food.quantityReference?.amount ?? ""));
       setUnit(food.quantityReference?.unit ?? "");
       setError("");
       setEditing(true);
     }}>
-      <Pencil1Icon width={15} height={15} />
-      <span><strong>{food.quantityReference ? `1${originalUnit} = ${food.quantityReference.amount}${food.quantityReference.unit}` : `1${originalUnit}의 양 입력`}</strong></span>
-      <ArrowRightIcon width={15} height={15} />
+      <span className="food-row-label">1{originalUnit}의 양</span>
+      <span className="food-row-value">{food.quantityReference ? <strong>{food.quantityReference.amount}{food.quantityReference.unit}</strong> : <small>식단에서 양을 계산할 때 써요</small>}</span>
+      <span className="food-row-edit" aria-hidden="true">{food.quantityReference ? "수정" : "입력"}</span>
     </button>
   );
   return (
@@ -92,11 +91,11 @@ export function QuantityReferenceEditor({ food, onSave, initiallyEditing = false
       </label>
       {amount && !valid ? <p role="alert">0보다 크고 1,000,000 이하인 숫자를 입력해 주세요.</p> : null}
       {error ? <p className="account-error" role="alert">{error}</p> : null}
-      <div className="product-info-editor-actions">
+      <div className="food-inline-buttons">
         <button type="button" className="secondary-sheet-button" disabled={saving} onPointerDown={(event) => event.preventDefault()} onClick={close}>취소</button>
-        <button type="button" className="primary-sheet-button" disabled={!valid || !unit || !changed || saving} aria-busy={saving} onPointerDown={(event) => event.preventDefault()} onClick={() => { if (unit) void save({ amount: value, unit }); }}>{saving ? "저장 중" : returnToMeal ? "저장하고 식단 보기" : "저장"}</button>
+        <button type="button" className="primary-sheet-button" disabled={!valid || !unit || !changed || saving} aria-busy={saving} onPointerDown={(event) => event.preventDefault()} onClick={() => { if (unit) void save({ amount: value, unit }); }}>{saving ? "저장하는 중" : returnToMeal ? "저장하고 식단 보기" : "저장"}</button>
       </div>
-      {food.quantityReference ? <button type="button" className="danger-text-button" disabled={saving} onPointerDown={(event) => event.preventDefault()} onClick={() => void save(null)}>입력한 양 지우기</button> : null}
+      {food.quantityReference ? <button type="button" className="food-text-button food-text-button-danger" disabled={saving} onPointerDown={(event) => event.preventDefault()} onClick={() => void save(null)}>입력한 양 지우기</button> : null}
     </div>
   );
 }

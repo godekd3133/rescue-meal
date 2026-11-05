@@ -1,5 +1,6 @@
 import { expect } from "@playwright/test";
 import { chooseAddMethod } from "./add-flow-helpers";
+import { cookingSheet, openMealConditions } from "./ia-helpers";
 import { test } from "./fixtures/connected-workspace";
 import { AxeBuilder } from "@axe-core/playwright";
 import { expectExternalSyncState, expectInventoryScopeState, expectMealShoppingLiveState, expectReadbackState } from "./readback-state-assertions";
@@ -52,14 +53,16 @@ test("convenience exact partial food consumption persists after reload", async (
     await page.locator('[data-nav-tab="fridge"]').click();
     await page.locator(".inventory-row").filter({ hasText: entry.name }).click();
     const detail = page.getByRole("dialog", { name: entry.name, exact: true });
-    const input = detail.getByRole("textbox", { name: "기록할 수량", exact: true });
+    await detail.getByRole("button", { name: "일부 먹음", exact: true }).click();
+    const input = detail.getByRole("textbox", { name: "먹은 양", exact: true });
     await input.fill("0");
-    await expect(detail.locator(".detail-consume-action")).toBeDisabled();
+    await expect(detail.locator(".food-partial-submit")).toBeDisabled();
     if (entry.half) await detail.getByRole("button", { name: entry.half, exact: true }).click();
     else { await input.fill(entry.quantity); await input.press("Enter"); }
     await expect(input).toHaveValue(entry.quantity);
-    const action = detail.locator(".detail-consume-action");
-    const confirmationRequired = (await action.getAttribute("aria-describedby")) === "consume-safety-hint";
+    const action = detail.locator(".food-partial-submit");
+    // A food with a date question asks for the safety confirmation before recording.
+    const confirmationRequired = (await detail.locator(".detail-consume-action-review").count()) > 0;
     const consumed = page.waitForResponse((response) => response.url().endsWith("/storage-events") && response.request().method() === "POST");
     await action.click();
     if (confirmationRequired) {
@@ -84,12 +87,16 @@ test("convenience excluded meal ingredient stays in inventory after completion",
   await page.locator('[data-nav-tab="meal"]').click();
   const meal = page.getByRole("region", { name: "오늘의 식단" });
   await expect(meal.getByRole("heading", { name: "시금치 두부 닭가슴살 덮밥" })).toBeVisible();
-  await meal.getByRole("button", { name: "식단 저장", exact: true }).click();
-  await meal.getByRole("button", { name: "시금치 이번엔 안 씀", exact: true }).click();
-  await expect(meal.getByRole("textbox", { name: "시금치 사용할 양", exact: true })).toHaveValue("0");
-  await meal.getByRole("button", { name: "포장지와 재료를 살펴봤어요", exact: true }).click();
+  // 이미 만들었어요 saves the plan on the way and opens the amount check.
+  const implicitSave = page.waitForResponse((response) => /\/api\/meal-plans$/.test(response.url()) && response.request().method() === "POST");
+  await meal.getByRole("button", { name: "이미 만들었어요", exact: true }).click();
+  expect((await implicitSave).ok()).toBe(true);
+  const cooking = cookingSheet(page);
+  await cooking.getByRole("button", { name: "시금치 이번엔 안 씀", exact: true }).click();
+  await expect(cooking.getByRole("textbox", { name: "시금치 사용할 양", exact: true })).toHaveValue("0");
+  await cooking.getByRole("button", { name: "포장지와 재료를 살펴봤어요", exact: true }).click();
   const completed = page.waitForResponse((response) => /\/api\/meal-plans\/[^/]+\/complete$/.test(response.url()) && response.request().method() === "POST");
-  await meal.getByRole("button", { name: "조리 완료 기록", exact: true }).click();
+  await cooking.getByRole("button", { name: "조리 완료 기록", exact: true }).click();
   const response = await completed;
   expect(response.ok()).toBe(true);
   expect(response.request().postDataJSON().consumptions).toEqual(expect.arrayContaining([{ food_id: "spinach-1", quantity: 0 }]));
@@ -122,20 +129,20 @@ test("usefulness shopping refresh updates pantry quantities without losing the d
   // An empty list has no home card; the bottom navigation opens it.
   await page.getByTestId("shopping-nav").click();
   const shopping = page.getByRole("region", { name: "장보기 목록" });
-  await shopping.getByRole("textbox", { name: "직접 추가 상품명" }).fill("시금치");
-  await shopping.getByRole("spinbutton", { name: "직접 추가 수량" }).fill("2.5");
-  await expect(shopping.locator(".shopping-sheet-manual-stock")).toContainText("1팩");
+  await shopping.getByRole("textbox", { name: "살 것 이름" }).fill("시금치");
+  await shopping.getByRole("spinbutton", { name: "살 것 수량" }).fill("2.5");
+  await expect(shopping.locator(".shop-add-stock")).toContainText("1팩");
   inventoryQuantity = 0.25;
   const beforeRefresh = dashboardReads;
-  await shopping.getByRole("button", { name: "보관 수량 새로고침" }).click();
+  await shopping.getByRole("button", { name: "집에 있는 양 새로고침" }).click();
   await expect.poll(() => dashboardReads).toBeGreaterThan(beforeRefresh);
-  await expect(shopping.locator(".shopping-sheet-manual-stock")).toContainText("0.25팩");
-  await expect(shopping.getByRole("spinbutton", { name: "직접 추가 수량" })).toHaveValue("2.5");
+  await expect(shopping.locator(".shop-add-stock")).toContainText("0.25팩");
+  await expect(shopping.getByRole("spinbutton", { name: "살 것 수량" })).toHaveValue("2.5");
   failDashboard = true;
-  await shopping.getByRole("button", { name: "보관 수량 새로고침" }).click();
-  await expect(shopping.locator(".shopping-sheet-manual-stock")).toHaveCount(0);
-  await expect(shopping.getByRole("textbox", { name: "직접 추가 상품명" })).toHaveValue("시금치");
-  await expect(shopping.getByRole("spinbutton", { name: "직접 추가 수량" })).toHaveValue("2.5");
+  await shopping.getByRole("button", { name: "집에 있는 양 새로고침" }).click();
+  await expect(shopping.locator(".shop-add-stock")).toHaveCount(0);
+  await expect(shopping.getByRole("textbox", { name: "살 것 이름" })).toHaveValue("시금치");
+  await expect(shopping.getByRole("spinbutton", { name: "살 것 수량" })).toHaveValue("2.5");
 });
 
 test("usefulness connected purchase records the chosen quantity and storage", async ({ page }) => {
@@ -144,30 +151,30 @@ test("usefulness connected purchase records the chosen quantity and storage", as
   // An empty list has no home card; the bottom navigation opens it.
   await page.getByTestId("shopping-nav").click();
   const shopping = page.getByRole("region", { name: "장보기 목록" });
-  await shopping.getByRole("textbox", { name: "직접 추가 상품명" }).fill("입고 확인 쌀");
-  await shopping.getByRole("spinbutton", { name: "직접 추가 수량" }).fill("1000.5");
-  await shopping.getByRole("textbox", { name: "직접 추가 단위" }).fill("g");
-  await shopping.locator(".shopping-sheet-manual-submit").click();
-  const row = shopping.locator(".shopping-sheet-row-group").filter({ hasText: "입고 확인 쌀" });
-  await row.locator(".shopping-sheet-item").click();
-  await row.getByRole("button", { name: "입고 확인 쌀 식품 목록에 추가" }).click();
+  await shopping.getByRole("textbox", { name: "살 것 이름" }).fill("입고 확인 쌀");
+  await shopping.getByRole("spinbutton", { name: "살 것 수량" }).fill("1000.5");
+  await shopping.getByRole("textbox", { name: "살 것 단위" }).fill("g");
+  await shopping.locator(".shop-add-submit").click();
+  const row = shopping.locator(".shop-row").filter({ hasText: "입고 확인 쌀" });
+  await row.locator(".shop-toggle").click();
+  await row.getByRole("button", { name: "입고 확인 쌀 냉장고에 넣기" }).click();
   const panel = row.getByRole("form");
   await expect(panel.getByRole("spinbutton")).toHaveValue("1000.5");
   // Storage is preselected from the food name (rice keeps at room temperature), so saving is ready at once.
   await expect(panel.getByRole("button", { name: "실온", exact: true })).toHaveAttribute("aria-pressed", "true");
-  await expect(panel.locator(".shopping-sheet-receive-submit")).toBeEnabled();
+  await expect(panel.locator(".shop-receive-submit")).toBeEnabled();
   // A changed choice is what gets saved.
   await panel.getByRole("button", { name: "냉동", exact: true }).click();
   await expect(panel.getByRole("button", { name: "냉동", exact: true })).toHaveAttribute("aria-pressed", "true");
   const received = page.waitForResponse((response) => response.url().includes("/receive") && response.request().method() === "POST");
-  await panel.locator(".shopping-sheet-receive-submit").click();
+  await panel.locator(".shop-receive-submit").click();
   const response = await received;
   expect(response.ok()).toBe(true);
   expect(response.request().postDataJSON()).toMatchObject({ quantity: 1000.5, storage_type: "frozen" });
   await shopping.getByRole("button", { name: "식품 보기", exact: true }).click();
   const detail = page.getByRole("dialog", { name: "입고 확인 쌀", exact: true });
-  await expect(detail.locator(".detail-hero-copy")).toContainText("1,000.5g");
-  await expect(detail.getByRole("button", { name: "냉동", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(detail.locator(".food-top-copy")).toContainText("1,000.5g");
+  await expect(detail.getByRole("radio", { name: "냉동", exact: true })).toHaveAttribute("aria-checked", "true");
 });
 
 test("release golden path persists meal cooking and shopping through the real API", async ({ page }) => {
@@ -181,11 +188,15 @@ test("release golden path persists meal cooking and shopping through the real AP
   await page.locator('[data-nav-tab="meal"]').click();
   const meal = page.getByRole("region", { name: "오늘의 식단" });
   await expect(meal.getByRole("heading", { name: "시금치 두부 닭가슴살 덮밥" })).toBeVisible();
-  await meal.getByRole("button", { name: "식단 저장", exact: true }).click();
-  await expect(meal.locator(".recipe-complete-button")).toBeDisabled();
-  await meal.getByRole("button", { name: "포장지와 재료를 살펴봤어요", exact: true }).click();
+  // 요리 시작 → steps → 다 만들었어요 → amount check, with no separate save.
+  await meal.getByRole("button", { name: "요리 시작", exact: true }).click();
+  const cooking = cookingSheet(page);
+  while (await cooking.getByRole("button", { name: "다음", exact: true }).count()) await cooking.getByRole("button", { name: "다음", exact: true }).click();
+  await cooking.getByRole("button", { name: "다 만들었어요", exact: true }).click();
+  await expect(cooking.locator(".recipe-complete-button")).toBeDisabled();
+  await cooking.getByRole("button", { name: "포장지와 재료를 살펴봤어요", exact: true }).click();
   const completed = page.waitForResponse((response) => /\/api\/meal-plans\/[^/]+\/complete$/.test(response.url()) && response.request().method() === "POST");
-  await meal.locator(".recipe-complete-button").click();
+  await cooking.locator(".recipe-complete-button").click();
   expect((await completed).ok()).toBe(true);
   await expect(meal).toHaveCount(0);
 
@@ -198,16 +209,16 @@ test("release golden path persists meal cooking and shopping through the real AP
   // An empty list has no home card; the bottom navigation opens it.
   await page.getByTestId("shopping-nav").click();
   const shopping = page.getByRole("region", { name: "장보기 목록" });
-  await shopping.getByRole("textbox", { name: "직접 추가 상품명" }).fill("대파");
-  await shopping.getByRole("spinbutton", { name: "직접 추가 수량" }).fill("1");
-  await shopping.getByRole("textbox", { name: "직접 추가 단위" }).fill("단");
-  await shopping.locator(".shopping-sheet-manual-submit").click();
-  const line = shopping.locator(".shopping-sheet-row-group").filter({ hasText: "대파" });
-  await line.locator(".shopping-sheet-item").click();
-  await line.getByRole("button", { name: "대파 식품 목록에 추가" }).click();
+  await shopping.getByRole("textbox", { name: "살 것 이름" }).fill("대파");
+  await shopping.getByRole("spinbutton", { name: "살 것 수량" }).fill("1");
+  await shopping.getByRole("textbox", { name: "살 것 단위" }).fill("단");
+  await shopping.locator(".shop-add-submit").click();
+  const line = shopping.locator(".shop-row").filter({ hasText: "대파" });
+  await line.locator(".shop-toggle").click();
+  await line.getByRole("button", { name: "대파 냉장고에 넣기" }).click();
   const panel = line.getByRole("form");
   await panel.getByRole("button", { name: "냉장", exact: true }).click();
-  await panel.locator(".shopping-sheet-receive-submit").click();
+  await panel.locator(".shop-receive-submit").click();
   await expect(shopping.getByRole("button", { name: "식품 보기", exact: true })).toBeVisible();
 
   await page.reload();
@@ -269,7 +280,7 @@ test("connected empty workspace gives the user a clear first action", async ({ p
   });
   await page.goto("/");
 
-  await expect(page.getByRole("heading", { name: "첫 식품을 기록해 보세요." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "냉장고가 비어 있어요" })).toBeVisible();
   // Home offers exactly one add action for an empty workspace: no priority list, no shelves, no second receipt shortcut.
   await expect(page.locator(".priority-empty-state")).toHaveCount(0);
   await expect(page.locator(".home-shelves")).toHaveCount(0);
@@ -277,6 +288,14 @@ test("connected empty workspace gives the user a clear first action", async ({ p
   await expect(page.locator(".trust-card")).toHaveCount(0);
   const addFoodAction = page.locator(".meal-plan-button");
   await expect(addFoodAction).toContainText("첫 식품 추가하기");
+  // A few starter foods open quick add with that food already listed.
+  const starters = page.getByRole("region", { name: "자주 사는 식품부터" });
+  await expect(starters.getByRole("button")).toHaveCount(4);
+  await starters.getByRole("button", { name: "두부 추가하기" }).click();
+  const starterSheet = page.getByRole("dialog", { name: "식품 추가" });
+  await expect(starterSheet.locator(".quick-add-staged-list")).toContainText("두부");
+  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("bottom-sheet")).toHaveCount(0);
   await addFoodAction.click();
   await chooseAddMethod(page, "직접 입력");
   await expect(page.getByRole("dialog", { name: "직접 추가" })).toBeVisible();
@@ -288,7 +307,7 @@ test("connected empty workspace gives the user a clear first action", async ({ p
   await expect(page.getByRole("group", { name: "식품 상태 필터", exact: true })).toHaveCount(0);
   await expect(page.locator(".inventory-empty-state")).toContainText("아직 등록된 식품이 없어요");
   await expect(page.locator(".inventory-toolbar")).toBeVisible();
-  await page.getByRole("button", { name: "식품 목록에 추가" }).click();
+  await page.getByTestId("nav-add-food").click();
   await chooseAddMethod(page, "영수증");
   await expect(page.getByRole("dialog", { name: "영수증으로 추가" })).toBeVisible();
 
@@ -364,7 +383,7 @@ test("receipt-backed canonical identity is not displayed as its own brand", asyn
 
   await spinachRow.click();
   const detail = page.getByRole("dialog", { name: "시금치" });
-  await expect(detail.locator(".detail-quantity-summary")).toHaveText("남은 1팩");
+  await expect(detail.locator(".food-quantity")).toHaveText("남은 1팩");
   const receiptSource = detail.getByRole("group", { name: "구매 기록" });
   await expect(receiptSource).toContainText("영수증에서 추가");
   await expect(receiptSource).toContainText("영수증 상품 항목");
@@ -492,13 +511,15 @@ test("connected planner retries an alternative-menu lookup without closing the s
   await expect(page.locator(".connection-pill")).toHaveClass(/connection-connected/);
   await page.locator('[data-nav-tab="meal"]').click();
   const dialog = page.getByRole("region", { name: "오늘의 식단" });
-  await dialog.getByRole("button", { name: "다른 메뉴 찾아보기" }).click();
-  const alternatives = dialog.getByRole("region", { name: "다른 메뉴" });
-  await expect(alternatives.getByRole("alert")).toContainText("다른 메뉴를 불러오지 못했어요");
-  await expect(alternatives.getByRole("button", { name: "다시 시도" })).toBeVisible();
-  await alternatives.getByRole("button", { name: "다시 시도" }).click();
+  // The menu carousel asks for options on its own; a failure keeps the current menu cookable.
+  const menu = dialog.locator(".meal-menu");
+  await expect(menu.getByRole("alert")).toContainText("다른 메뉴를 불러오지 못했어요");
+  await expect(dialog.getByRole("button", { name: "요리 시작" })).toBeEnabled();
+  await menu.getByRole("button", { name: "다른 메뉴 다시 찾기" }).click();
   await expect.poll(() => optionsAttempts).toBe(2);
-  await expect(alternatives.getByRole("listitem")).toHaveCount(2);
+  await expect(menu.getByRole("alert")).toHaveCount(0);
+  await expect(menu.locator(".meal-card")).toHaveCount(3);
+  await expect(menu.locator(".meal-card[aria-pressed=true]")).toHaveCount(1);
 });
 
 test("connected planner retries a multi-day preview without closing the section", async ({ page }) => {
@@ -520,7 +541,7 @@ test("connected planner retries a multi-day preview without closing the section"
   await expect(page.locator(".connection-pill")).toHaveClass(/connection-connected/);
   await page.locator('[data-nav-tab="meal"]').click();
   const dialog = page.getByRole("region", { name: "오늘의 식단" });
-  await dialog.getByRole("button", { name: "3일 식단 미리보기" }).click();
+  await dialog.getByRole("button", { name: "3일", exact: true }).click();
   const multiDay = dialog.getByRole("region", { name: "3일 식단" });
   await expect(multiDay.getByRole("alert")).toContainText("3일 식단을 만들지 못했어요. 잠시 후 다시 찾아봐 주세요.");
   await expect(multiDay.getByRole("button", { name: "다시 찾아보기" })).toBeVisible();
@@ -548,6 +569,7 @@ test("connected planner retries multi-day history without closing the section", 
   await expect(page.locator(".connection-pill")).toHaveClass(/connection-connected/);
   await page.locator('[data-nav-tab="meal"]').click();
   const dialog = page.getByRole("region", { name: "오늘의 식단" });
+  await dialog.getByRole("button", { name: "3일", exact: true }).click();
   await dialog.getByRole("button", { name: "저장한 3일 식단 보기", exact: true }).click();
   const history = dialog.getByRole("region", { name: "저장한 3일 식단" });
   await expect(history.getByRole("alert")).toContainText("저장한 3일 식단을 불러오지 못했어요");
@@ -959,8 +981,10 @@ test("receipt review summaries cannot leak across an account workspace switch", 
   await page.goto("/");
   await expect(page.locator(".connection-pill")).toHaveClass(/connection-connected/);
   await page.locator(".connection-pill").click();
-  const accountDialog = page.getByRole("dialog", { name: "내 계정" });
-  await accountDialog.getByRole("tab", { name: "회원가입" }).click();
+  const accountDialog = page.getByRole("dialog", { name: "나", exact: true });
+  // The sign-in form stays folded under the guest summary until asked for.
+  await accountDialog.getByRole("button", { name: "계정 만들기", exact: true }).click();
+  await accountDialog.getByRole("tab", { name: "계정 만들기" }).click();
   await accountDialog.locator("#account-email-input").fill("summary@example.com");
   await accountDialog.locator("#account-password-input").fill("correct-horse-battery");
   await accountDialog.getByRole("button", { name: "계정 만들기" }).click();
@@ -1029,7 +1053,7 @@ test("connected label review keeps an ambiguous date and storage unconfirmed", a
   await expect(dialog.getByRole("group", { name: "라벨 날짜 의미 확인" })).toHaveAttribute("aria-describedby", "label-date-meaning-hint");
   await expect(dialog.getByRole("group", { name: "라벨 식품 보관 위치" })).toHaveAttribute("aria-describedby", "label-storage-hint");
   await expect(dialog.getByRole("radio", { name: "포장일", exact: true })).toBeVisible();
-  await expect(dialog.getByRole("button", { name: "날짜·보관 위치를 선택해 주세요", exact: true })).toBeDisabled();
+  await expect(dialog.getByRole("button", { name: "날짜와 보관 위치를 선택해 주세요", exact: true })).toBeDisabled();
   await expect(dialog.locator(".label-result-card .review-badge")).toHaveText("포장지 날짜를 살펴봐 주세요");
   const firstDateMeaning = dialog.getByRole("radio").first();
   await expect(firstDateMeaning).toBeFocused();
@@ -1043,7 +1067,7 @@ test("connected label review keeps an ambiguous date and storage unconfirmed", a
 
   await dialog.getByRole("radio", { name: "소비기한", exact: true }).click();
   await dialog.getByRole("button", { name: "냉장", exact: true }).click();
-  await expect(dialog.locator('[data-label-date-candidate="true"]')).toHaveText("소비기한 2017.06.28");
+  await expect(dialog.locator('[data-label-date-candidate="true"]')).toHaveText("소비기한 2017년 6월 28일 (수)");
   await expect(dialog.getByRole("button", { name: "식품 목록에 추가하기", exact: true })).toBeEnabled();
 });
 
@@ -1358,20 +1382,20 @@ test("connected inventory search uses the server result and page contract", asyn
   await expect(page.getByRole("button", { name: /서버 검색 두번째 식품 두번째 검색 브랜드/ })).toBeVisible();
   const statusFilters = page.getByRole("group", { name: "식품 상태 필터" });
   await expect(statusFilters.getByRole("button", { name: "전체 2" })).toBeVisible();
-  await expect(statusFilters.getByRole("button", { name: "날짜·보관 확인 1" })).toBeVisible();
-  // "먼저 살펴보기" is scoped to Home's priority set; these mocked search-only foods are not in it.
-  await expect(statusFilters.getByRole("button", { name: "먼저 살펴보기 0" })).toBeVisible();
-  const needsReviewFilter = page.getByRole("group", { name: "식품 상태 필터" }).getByRole("button", { name: /날짜·보관 확인/ });
+  await expect(statusFilters.getByRole("button", { name: "확인 필요 1" })).toBeVisible();
+  // "먼저 볼 것" is scoped to Home's priority set; these mocked search-only foods are not in it.
+  await expect(statusFilters.getByRole("button", { name: "먼저 볼 것 0" })).toBeVisible();
+  const needsReviewFilter = page.getByRole("group", { name: "식품 상태 필터" }).getByRole("button", { name: /확인 필요/ });
   await needsReviewFilter.click();
   await expect(page.locator('.inventory-row .inventory-status[data-inventory-status="needs-review"]')).toHaveCount(1);
   await expect(page.getByRole("button", { name: /서버 검색 두번째 식품 두번째 검색 브랜드/ })).toHaveCount(0);
-  await statusFilters.getByRole("button", { name: /먼저 살펴보기 0/ }).click();
+  await statusFilters.getByRole("button", { name: /먼저 볼 것 0/ }).click();
   await expect(page.locator(".inventory-row")).toHaveCount(0);
   await expect(page.locator(".inventory-empty-state")).toBeVisible();
   await statusFilters.getByRole("button", { name: /전체/ }).click();
   await searchResult.click();
   const searchDetail = page.getByRole("dialog", { name: "서버 검색 식품" });
-  const dateProof = searchDetail.locator(".date-proof-card");
+  const dateProof = searchDetail.locator(".food-date-card");
   await expect(searchDetail.getByRole("group", { name: "날짜 정보: 포장지 날짜 미확인" })).toBeVisible();
   // The trimmed detail copy states the missing date without implying anything about safety.
   await expect(dateProof).toContainText("포장지 날짜를 아직 기록하지 않았어요.");
@@ -1537,16 +1561,16 @@ test("connected inventory paging transitions stale results back to current after
   await expect(page.locator(".inventory-filter-summary")).toContainText("이전 결과");
   await expect(page.getByRole("button", { name: /첫 페이지 식품 첫 브랜드/ })).toBeVisible();
   const staleStatusFilters = page.getByRole("group", { name: /식품 상태 필터 · 이전 결과/ });
-  await staleStatusFilters.getByRole("button", { name: /날짜·보관 확인/ }).click();
+  await staleStatusFilters.getByRole("button", { name: /확인 필요/ }).click();
   await expect(page.locator(".inventory-filter-summary")).toContainText("이전 결과");
-  await expect(page.locator(".inventory-filter-summary")).toContainText("날짜·보관 확인");
+  await expect(page.locator(".inventory-filter-summary")).toContainText("확인 필요");
 
   await page.locator(".inventory-search-inline-error").getByRole("button", { name: "다시 시도" }).click();
   await expect(page.locator('.inventory-status-filters button[aria-pressed="true"]')).toBeFocused();
   await expect(page.getByRole("button", { name: /첫 페이지 식품 첫 브랜드/ })).toBeVisible();
   await expectInventoryScopeState(page.getByRole("group", { name: "식품 상태 필터" }), "current");
   await expect(page.locator(".inventory-filter-summary")).not.toContainText("이전 결과");
-  await expect(page.getByRole("group", { name: "식품 상태 필터" }).getByRole("button", { name: /날짜·보관 확인/ })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("group", { name: "식품 상태 필터" }).getByRole("button", { name: /확인 필요/ })).toHaveAttribute("aria-pressed", "true");
   await page.getByRole("group", { name: "식품 상태 필터" }).getByRole("button", { name: /전체/ }).click();
   await page.getByRole("button", { name: "더 보기 1개 남음" }).click();
   await expect(page.getByRole("button", { name: /두 번째 페이지 식품 두 번째 브랜드/ })).toBeVisible();
@@ -1575,14 +1599,16 @@ test("connected app loads the API-backed planner and saves the selected recipe",
   await expect(dialog).not.toContainText("RESCUE PLANNER · V2");
   // The trimmed meal copy only names a recipe source when it is not the in-house default.
   await expect(dialog.locator(".recipe-provenance")).toHaveCount(0);
-  await expect(dialog.getByText("필요한 재료", { exact: true })).toBeVisible();
-  await expect(dialog.getByText("부족한 재료")).toHaveCount(0);
-
-  await dialog.getByRole("button", { name: "조리 방법 보기" }).click();
-  await expect(dialog.getByText("조리 순서")).toBeVisible();
-  // The trimmed recipe details drop their own safety box; the pre-cooking checks stay in the summary above.
-  await expect(dialog.locator(".recipe-safety")).toHaveCount(0);
+  await expect(dialog.locator(".meal-ingredient-group h4").first()).toContainText("냉장고에 있음");
+  await expect(dialog.locator(".meal-ingredient-group-buy")).toHaveCount(0);
   await expect(dialog.getByRole("region", { name: /^조리 전에 살펴볼 내용 \d+개$/ })).toContainText("조리 전에 포장지 날짜를 살펴봐 주세요");
+
+  // 요리 모드 reads the API's structured steps; closing it records nothing.
+  await dialog.getByRole("button", { name: "요리 시작" }).click();
+  const steps = cookingSheet(page);
+  await expect(steps.locator(".cook-step-text")).not.toBeEmpty();
+  await page.keyboard.press("Escape");
+  await expect(steps).toHaveCount(0);
 
   await dialog.getByRole("button", { name: "식단 저장" }).click();
   await expect(dialog.getByRole("button", { name: "저장됨" })).toBeVisible();
@@ -1591,18 +1617,17 @@ test("connected app loads the API-backed planner and saves the selected recipe",
   await expect(dialog.locator(".saved-recipe")).toHaveText("오늘의 식단에 저장했어요. 1인분.");
   // The open meal sheet owns the saved status; no duplicate toast covers it.
   await expect(page.locator(".toast")).toHaveCount(0);
-  const savedActionOrder = await dialog.locator(".meal-sheet-content").evaluate((element) => Array.from(element.children).map((child) => child.className));
+  const savedActionOrder = await dialog.locator(".meal-recipe").evaluate((element) => Array.from(element.children).map((child) => child.className));
   const recipeActionsIndex = savedActionOrder.findIndex((className) => className.split(/\s+/).includes("recipe-actions"));
   const savedRecipeIndex = savedActionOrder.findIndex((className) => className.split(/\s+/).includes("saved-recipe"));
   expect(recipeActionsIndex).toBeGreaterThanOrEqual(0);
   expect(savedRecipeIndex).toBeGreaterThan(recipeActionsIndex);
-  expect(savedActionOrder.indexOf("recipe-complete-actions")).toBeGreaterThan(savedRecipeIndex);
-  expect(savedActionOrder.indexOf("recipe-complete-actions")).toBeLessThan(savedActionOrder.indexOf("recipe-multi-day-history-toggle"));
-  const completion = dialog.locator(".recipe-complete-actions");
-  // The completion block (usage inputs per ingredient) can be taller than the sheet viewport;
-  // after saving, its first step (confirming the package and ingredients) must be revealed and focused.
+  // After saving, focus moves to 요리 시작; the amount check opens from 이미 만들었어요 without another save.
+  await expect(dialog.getByRole("button", { name: "요리 시작" })).toBeFocused();
+  await dialog.getByRole("button", { name: "이미 만들었어요" }).click();
+  const completion = cookingSheet(page).locator(".recipe-complete-actions");
   const completionFirstStep = completion.getByRole("button", { name: "포장지와 재료를 살펴봤어요" });
-  await expect(completionFirstStep).toBeFocused();
+  await completionFirstStep.scrollIntoViewIfNeeded();
   await expect.poll(() => completionFirstStep.evaluate((element) => {
     const content = element.closest<HTMLElement>(".sheet-content");
     if (!content) return false;
@@ -1610,9 +1635,11 @@ test("connected app loads the API-backed planner and saves the selected recipe",
     const contentBox = content.getBoundingClientRect();
     return actionBox.top >= contentBox.top - 1 && actionBox.bottom <= contentBox.bottom + 1;
   })).toBe(true);
+  await page.keyboard.press("Escape");
+  await expect(cookingSheet(page)).toHaveCount(0);
   await dialog.getByRole("button", { name: "식단 기록 보기" }).click();
   await expect(dialog.locator(".recipe-audit")).toContainText("식단 저장");
-  await expect(dialog.locator(".recipe-audit")).toContainText("저장·조리 기록");
+  await expect(dialog.locator(".recipe-audit")).toContainText("저장과 조리 기록");
   await expect(dialog.locator(".recipe-audit")).not.toContainText(/snapshot/i);
 
   // Leaving the 식단 tab ends the planner session; coming back reopens the saved plan.
@@ -1621,11 +1648,13 @@ test("connected app loads the API-backed planner and saves the selected recipe",
   await page.locator('[data-nav-tab="meal"]').click();
   const reopenedDialog = page.getByRole("region", { name: "오늘의 식단" });
   await expect(reopenedDialog.getByRole("button", { name: "저장됨" })).toBeVisible();
-  await reopenedDialog.getByRole("button", { name: "포장지와 재료를 살펴봤어요" }).click();
-  const chickenUsage = reopenedDialog.getByRole("textbox", { name: "닭가슴살 사용할 양" });
+  await reopenedDialog.getByRole("button", { name: "이미 만들었어요" }).click();
+  const reopenedCooking = cookingSheet(page);
+  await reopenedCooking.getByRole("button", { name: "포장지와 재료를 살펴봤어요" }).click();
+  const chickenUsage = reopenedCooking.getByRole("textbox", { name: "닭가슴살 사용할 양" });
   await chickenUsage.fill("0.5");
   await expect(chickenUsage).toHaveValue("0.5");
-  await reopenedDialog.getByRole("button", { name: "조리 완료 기록" }).click();
+  await reopenedCooking.getByRole("button", { name: "조리 완료 기록" }).click();
   await expect(reopenedDialog).toHaveCount(0);
   await page.locator('[data-nav-tab="fridge"]').click();
   const inventory = page.getByRole("region", { name: /내 식품 목록/ });
@@ -1634,14 +1663,14 @@ test("connected app loads the API-backed planner and saves the selected recipe",
   await expect(page.locator(".toast")).toContainText("조리 완료로 기록했어요. 사용한 양만큼 보관 수량을 줄였어요.");
   await expect(page.locator(".toast")).toContainText("재고 앱 상품과 보관 위치를 연결해 주세요.");
   await page.locator(".toast").getByRole("button", { name: "재고 앱 설정 보기" }).click();
-  const accountDialog = page.getByRole("dialog", { name: "내 계정" });
+  const accountDialog = page.getByRole("dialog", { name: "나", exact: true });
   await expect(accountDialog).toBeVisible();
   await accountDialog.getByRole("button", { name: "닫기", exact: true }).click();
   await expect(accountDialog).toHaveCount(0);
   await inventory.getByRole("button", { name: /닭가슴살 무항생제 닭가슴살 1\.5팩/ }).click();
   const remainingDetail = page.getByRole("dialog", { name: "닭가슴살" });
-  await expect(remainingDetail.locator(".detail-hero-copy p")).toHaveText("무항생제 닭가슴살");
-  await expect(remainingDetail.locator(".detail-quantity-summary")).toHaveText("남은 1.5팩");
+  await expect(remainingDetail.locator(".food-brand")).toHaveText("무항생제 닭가슴살");
+  await expect(remainingDetail.locator(".food-quantity")).toHaveText("남은 1.5팩");
   await remainingDetail.getByRole("button", { name: "닫기", exact: true }).click();
   await expect(remainingDetail).toHaveCount(0);
 
@@ -1690,13 +1719,16 @@ test("connected planner offers a typed completion retry without changing the con
   await expect(dialog.getByRole("heading", { name: "시금치 두부 닭가슴살 덮밥" })).toBeVisible();
   await dialog.getByRole("button", { name: "식단 저장" }).click();
   await expect(dialog.getByRole("button", { name: "저장됨" })).toBeVisible();
-  await dialog.getByRole("button", { name: "포장지와 재료를 살펴봤어요" }).click();
+  await dialog.getByRole("button", { name: "이미 만들었어요" }).click();
+  const cooking = cookingSheet(page);
+  await cooking.getByRole("button", { name: "포장지와 재료를 살펴봤어요" }).click();
 
-  const chickenUsage = dialog.getByRole("textbox", { name: "닭가슴살 사용할 양" });
+  const chickenUsage = cooking.getByRole("textbox", { name: "닭가슴살 사용할 양" });
   await chickenUsage.fill("0.5");
-  await dialog.getByRole("button", { name: "조리 완료 기록" }).click();
+  await cooking.getByRole("button", { name: "조리 완료 기록" }).click();
 
-  const error = dialog.locator(".recipe-error").filter({ hasText: "조리 완료" });
+  // The typed retry sits inside 요리 모드, next to the amounts it will resend.
+  const error = cooking.locator(".recipe-error").filter({ hasText: "조리 완료" });
   await expect(error).toBeVisible();
   await expect(error).toContainText("식품 목록과 식단은 그대로예요");
   await expect(error.getByRole("button", { name: "다시 시도" })).toBeVisible();
@@ -1756,7 +1788,7 @@ test("connected planner offers a typed save retry with the same plan payload", a
   await expect.poll(() => saveAttempts).toBe(2);
   expect(savePayloads[1]).toEqual(savePayloads[0]);
   await expect(dialog.getByRole("button", { name: "저장됨" })).toBeVisible();
-  await expect(dialog.getByRole("button", { name: "조리 방법 보기" })).toBeFocused();
+  await expect(dialog.getByRole("button", { name: "요리 시작" })).toBeFocused();
 });
 
 test("connected planner offers a typed multi-day save retry with the same bundle payload", async ({ page }) => {
@@ -1792,7 +1824,7 @@ test("connected planner offers a typed multi-day save retry with the same bundle
   await page.locator('[data-nav-tab="meal"]').click();
   const dialog = page.getByRole("region", { name: "오늘의 식단" });
   await expect(dialog.getByRole("heading", { name: "시금치 두부 닭가슴살 덮밥" })).toBeVisible();
-  await dialog.getByRole("button", { name: "3일 식단 미리보기" }).click();
+  await dialog.getByRole("button", { name: "3일", exact: true }).click();
   const multiDay = dialog.getByRole("region", { name: "3일 식단" });
   await expect(multiDay.getByRole("listitem")).toHaveCount(3);
   await multiDay.getByRole("button", { name: "3일치 식단 저장", exact: true }).click();
@@ -1805,7 +1837,7 @@ test("connected planner offers a typed multi-day save retry with the same bundle
   await expect.poll(() => saveAttempts).toBe(2);
   expect(savePayloads[1]).toEqual(savePayloads[0]);
   await expect(multiDay.getByRole("button", { name: "3일치 식단 저장됨", exact: true })).toBeVisible();
-  await expect(dialog.getByRole("button", { name: "3일 식단 접기", exact: true })).toBeFocused();
+  await expect(dialog.getByRole("button", { name: "3일", exact: true })).toBeFocused();
 });
 
 test("connected planner preview does not invalidate the dashboard", async ({ page }) => {
@@ -2137,30 +2169,30 @@ test("connected planner changes the recipe when the cooking time changes", async
   await page.locator('[data-nav-tab="meal"]').click();
   const dialog = page.getByRole("region", { name: "오늘의 식단" });
 
+  await openMealConditions(page);
   await dialog.getByRole("group", { name: "조리 가능 시간" }).getByRole("button", { name: "10분" }).click();
   await expect(dialog.getByRole("heading", { name: "맛타리버섯 달걀 볶음" })).toBeVisible();
   await expect(dialog.locator(".recipe-time")).toHaveText(/10분/);
 
+  await openMealConditions(page);
   await dialog.getByRole("group", { name: "조리 가능 시간" }).getByRole("button", { name: "20분" }).click();
-  await expect(dialog.getByRole("button", { name: "다른 메뉴 찾아보기" })).toBeVisible();
-  await dialog.getByRole("button", { name: "다른 메뉴 찾아보기" }).click();
-  const alternatives = dialog.getByRole("region", { name: "다른 메뉴" });
-  await expect(alternatives).toBeVisible();
-  await expect(alternatives.getByRole("listitem")).toHaveCount(2);
-  const alternative = alternatives.getByRole("listitem").first();
-  const alternativeTitle = await alternative.locator("strong").innerText();
+  // The other menus are cards in the carousel; picking one swaps the recipe below.
+  const cards = dialog.locator(".meal-card");
+  await expect(cards).toHaveCount(3);
+  const alternative = dialog.locator(".meal-card[aria-pressed=false]").first();
+  const alternativeTitle = await alternative.locator(".meal-card-title").innerText();
   await alternative.click();
-  await expect(alternatives).toHaveCount(0);
-  await expect(dialog.getByRole("heading", { name: alternativeTitle })).toBeVisible();
+  await expect(dialog.locator(".meal-card[aria-pressed=true] .meal-card-title")).toHaveText(alternativeTitle);
+  await expect(dialog.getByRole("heading", { name: alternativeTitle, level: 3 })).toBeVisible();
   await expect(dialog.getByRole("button", { name: "식단 저장" })).toBeVisible();
 
-  await dialog.getByRole("button", { name: "3일 식단 미리보기" }).click();
+  await dialog.getByRole("button", { name: "3일", exact: true }).click();
   const multiDay = dialog.getByRole("region", { name: "3일 식단" });
   await expect(multiDay).toBeVisible();
   await expect(multiDay.getByRole("listitem")).toHaveCount(3);
   await expect(multiDay).toContainText("1일차");
   await expect(multiDay).toContainText("3일차");
-  await expect(multiDay).toContainText("미리보기는 저장되지 않아요.");
+  await expect(multiDay).toContainText("저장하기 전에는 미리보기예요.");
   await multiDay.getByRole("button", { name: "3일치 식단 저장", exact: true }).click();
   await expect(multiDay.getByRole("button", { name: "3일치 식단 저장됨", exact: true })).toBeVisible();
   // While the meal sheet is open, the saved state and next step live in the sheet instead of a toast.
@@ -2171,8 +2203,9 @@ test("connected planner changes the recipe when the cooking time changes", async
   await expect(dialog).toHaveCount(0);
   await page.locator('[data-nav-tab="meal"]').click();
   const reopenedDialog = page.getByRole("region", { name: "오늘의 식단" });
+  await openMealConditions(page);
   await reopenedDialog.getByRole("group", { name: "조리 가능 시간" }).getByRole("button", { name: "20분" }).click();
-  await reopenedDialog.getByRole("button", { name: "3일 식단 미리보기" }).click();
+  await reopenedDialog.getByRole("button", { name: "3일", exact: true }).click();
   const reopenedMultiDay = reopenedDialog.getByRole("region", { name: "3일 식단" });
   await expect(reopenedMultiDay.getByRole("button", { name: "3일치 식단 저장됨", exact: true })).toBeVisible();
   await reopenedDialog.getByRole("button", { name: "저장한 3일 식단 보기", exact: true }).click();
@@ -2181,7 +2214,7 @@ test("connected planner changes the recipe when the cooking time changes", async
   await multiDayHistory.getByRole("listitem").first().click();
   await expect(multiDayHistory).toHaveCount(0);
   const dayTwo = reopenedMultiDay.getByRole("listitem").nth(1);
-  const dayTwoTitle = await dayTwo.locator("strong").innerText();
+  const dayTwoTitle = await dayTwo.locator(".meal-day-title").innerText();
   await dayTwo.click();
   await expect(reopenedMultiDay).toHaveCount(0);
   await expect(reopenedDialog.getByRole("heading", { name: dayTwoTitle })).toBeVisible();
@@ -2189,6 +2222,8 @@ test("connected planner changes the recipe when the cooking time changes", async
   await expect(reopenedDialog.getByRole("button", { name: "저장됨", exact: true })).toBeVisible();
   await expectReadbackState(reopenedDialog.locator(".saved-recipe"), "confirmed");
   await expect(page.locator(".toast")).toHaveCount(0);
+  // Saved 3일 plans live in the 3일 view.
+  await reopenedDialog.getByRole("button", { name: "3일", exact: true }).click();
   await reopenedDialog.getByRole("button", { name: "저장한 3일 식단 보기", exact: true }).click();
   const linkedBundleHistory = reopenedDialog.getByRole("region", { name: "저장한 3일 식단" });
   await linkedBundleHistory.getByRole("listitem").first().click();
@@ -2226,7 +2261,7 @@ test("connected planner focuses three-day shopping action after saving missing i
   await expect(page.locator(".connection-pill")).toHaveClass(/connection-connected/);
   await page.locator('[data-nav-tab="meal"]').click();
   const dialog = page.getByRole("region", { name: "오늘의 식단" });
-  await dialog.getByRole("button", { name: "3일 식단 미리보기" }).click();
+  await dialog.getByRole("button", { name: "3일", exact: true }).click();
   const multiDay = dialog.getByRole("region", { name: "3일 식단" });
   await expect(multiDay.getByRole("listitem")).toHaveCount(3);
   await multiDay.getByRole("button", { name: "3일치 식단 저장", exact: true }).click();
@@ -2250,8 +2285,10 @@ test("connected planner sends the selected serving count to the API", async ({ p
   await expect(page.locator(".connection-pill")).toHaveClass(/connection-connected/);
   await page.locator('[data-nav-tab="meal"]').click();
   const dialog = page.getByRole("region", { name: "오늘의 식단" });
+  await openMealConditions(page);
   await expect(dialog.getByRole("group", { name: "식사 인원" })).toBeVisible();
 
+  await openMealConditions(page);
   await dialog.getByRole("group", { name: "식사 인원" }).getByRole("button", { name: "2인분" }).click();
 
   await expect(dialog.getByText("재료 양은 2인분 기준이에요.", { exact: true })).toBeVisible();
@@ -2332,6 +2369,10 @@ test("connected planner turns confirmed missing ingredients into a checked shopp
       await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ items: [shoppingItem], added_count: 1, updated_count: 0, removed_count: 0 }) });
       return;
     }
+    if (route.request().method() === "GET" && shoppingAddAttempts >= 2) {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify([shoppingItem]) });
+      return;
+    }
     else await route.continue();
   });
   await page.route("**/api/shopping-list/*", async (route) => {
@@ -2352,40 +2393,35 @@ test("connected planner turns confirmed missing ingredients into a checked shopp
   await page.locator('[data-nav-tab="meal"]').click();
   const dialog = page.getByRole("region", { name: "오늘의 식단" });
   await expect(dialog.getByRole("heading", { name: "시금치 두부 닭가슴살 덮밥" })).toBeVisible();
-  await expect(dialog.getByRole("button", { name: "조리 전에 확인할 내용 2개 보기" })).toContainText("조리 전에 확인할 내용 2개");
-  const missingMessageOrder = await dialog.locator(".meal-sheet-content").evaluate((element) => Array.from(element.children).map((child) => child.className));
+  // Shortages are their own 사야 함 group, not a safety notice, and their action needs no prior save.
   const missingSafetySummary = dialog.locator("#recipe-safety-summary");
-  await expect(missingSafetySummary).toHaveAttribute("aria-label", "조리 전에 살펴볼 내용 2개");
-  const missingCallout = missingSafetySummary.locator(".recipe-missing-callout");
-  await expect(missingCallout).toBeVisible();
-  await expect(missingCallout).toContainText("식단을 저장한 뒤 장보기 목록에 추가할 수 있어요.");
-  await expect(missingCallout.getByRole("button", { name: "장보기 목록에 담기" })).toHaveCount(0);
-  expect(missingMessageOrder.indexOf("recipe-safety-summary")).toBeGreaterThanOrEqual(0);
-  expect(missingMessageOrder.indexOf("recipe-safety-summary")).toBeLessThan(missingMessageOrder.indexOf("recipe-ingredients"));
-  await dialog.getByRole("button", { name: "식단 저장", exact: true }).click();
-  await expect(dialog.getByRole("button", { name: "저장됨", exact: true })).toBeVisible();
-  await expect(missingCallout).not.toContainText("식단을 저장한 뒤");
-  await expect(missingCallout).toContainText("장보기 목록에 추가할 수 있어요.");
-  // The sheet's missing-ingredient callout is the only add action while the meal sheet is open.
-  await expect(page.locator(".toast")).toHaveCount(0);
-  const mealShoppingAction = dialog.getByRole("button", { name: "장보기 목록에 담기", exact: true });
-  await expect(mealShoppingAction).toBeVisible();
+  await expect(missingSafetySummary).toHaveAttribute("aria-label", "조리 전에 살펴볼 내용 1개");
+  await expect(missingSafetySummary).not.toContainText("국산콩 두부");
+  const buyGroup = dialog.locator(".meal-ingredient-group-buy");
+  await expect(buyGroup.locator("h4")).toContainText("사야 함");
+  await expect(buyGroup).toContainText("국산콩 두부");
+  await expect(dialog.locator(".meal-card[aria-pressed=true]")).toContainText("1가지 사야 함");
+  const groupOrder = await dialog.locator(".meal-recipe").evaluate((element) => Array.from(element.children).map((child) => child.className));
+  expect(groupOrder.indexOf("recipe-safety-summary")).toBeGreaterThanOrEqual(0);
+  expect(groupOrder.indexOf("recipe-safety-summary")).toBeLessThan(groupOrder.findIndex((className) => className.includes("recipe-ingredients")));
+  const mealShoppingAction = buyGroup.getByRole("button", { name: "장보기에 담기", exact: true });
   await expect(mealShoppingAction).toHaveCSS("min-height", "44px");
   await mealShoppingAction.click();
-  const shopping = dialog.getByRole("region", { name: "장보기 목록" });
-  await expect(shopping.getByRole("alert")).toContainText("기존 목록을 유지했어요");
-  await shopping.getByRole("alert").getByRole("button", { name: "다시 시도" }).click();
+  // The plan is saved on the way so the list can point back to it; the open screen shows its own status, no toast.
+  await expect.poll(() => mealPlanSaved).toBe(true);
+  await expect(dialog.getByRole("button", { name: "저장됨", exact: true })).toBeVisible();
+  await expect(page.locator(".toast")).toHaveCount(0);
+  const failure = buyGroup.getByRole("alert");
+  await expect(failure).toContainText("기존 목록을 유지했어요");
+  await failure.getByRole("button", { name: "다시 담기" }).click();
   await expect.poll(() => shoppingAddAttempts).toBe(2);
+  // A successful add opens the 장보기 tab with the list read back from the API.
+  const shopping = page.getByRole("region", { name: "장보기 목록" });
+  await expect(shopping).toBeVisible();
   await expect(shopping).toContainText("국산콩 두부");
-  const item = shopping.getByRole("button", { name: "국산콩 두부 1모 식단 1개", exact: true });
-  await expect(item).toBeFocused();
-  await expect(item).toHaveAttribute("aria-pressed", "false");
-  await item.click();
-  await expect(item).toHaveAttribute("aria-pressed", "true");
-  await dialog.getByRole("button", { name: "장보기 목록에 담기", exact: true }).click();
-  await expect(item).toBeFocused();
-  await shopping.getByRole("button", { name: "국산콩 두부 장보기 항목 삭제" }).click();
-  await expect(shopping.getByTestId("meal-shopping-empty")).toBeVisible();
+  await page.locator('[data-nav-tab="meal"]').click();
+  // Coming back reads the plan again; the implicit save is what makes it come back as saved.
+  await expect(dialog.getByRole("button", { name: "저장됨", exact: true })).toBeVisible();
   await page.locator('[data-nav-tab="home"]').click();
   await expect(dialog).toHaveCount(0);
   await expect(page.getByRole("button", { name: "홈", exact: true })).toHaveAttribute("aria-current", "page");
@@ -2476,7 +2512,7 @@ test("connected home exposes the shopping queue and keeps item mutations in sync
   const dialog = page.getByRole("region", { name: "장보기 목록" });
   const shopping = dialog.getByRole("region", { name: "장보기 항목" });
   const progress = dialog.getByRole("region", { name: "구매 현황" });
-  await expect(progress).toContainText("구매 현황");
+  await expect(progress).toContainText("1개 남았어요");
   await expect(progress).toContainText("0/1");
   await expect(progress.getByRole("progressbar", { name: "장보기 완료율" })).toHaveAttribute("aria-valuenow", "0");
   await expect(shopping).toContainText("국산콩 두부");
@@ -2486,22 +2522,21 @@ test("connected home exposes the shopping queue and keeps item mutations in sync
   await item.click();
   const checkedItem = shopping.getByRole("button", { name: "국산콩 두부 계획 1모, 식단 1개, 구매 완료", exact: true });
   await expect(checkedItem).toHaveAttribute("aria-pressed", "true");
-  await expect(checkedItem).toContainText("구매 완료");
+  // Checked moves the row under 산 것 and keeps focus on the same toggle.
+  await expect(shopping.getByRole("region", { name: /^산 것/ })).toContainText("국산콩 두부");
   await expect(checkedItem).toBeFocused();
   await expect(progress).toContainText("1/1");
-  await expect(progress).toContainText("장보기를 마쳤어요");
-  await expect(dialog.locator(".shopping-sheet-progress")).toHaveClass(/shopping-sheet-progress-complete/);
+  await expect(progress).toContainText("다 샀어요");
   await shopping.getByRole("button", { name: "국산콩 두부 장보기 항목 삭제" }).click();
-  await expect(dialog).toContainText("목록에 무엇을 담을까요?");
-  await expect(dialog).not.toContainText("아직 장보기 항목이 없어요");
+  await expect(dialog.locator(".shop-empty")).toContainText("살 것이 없어요.");
   await expect(dialog.getByRole("button", { name: "식단에서 재료 고르기" })).toBeVisible();
-  await expect(dialog.getByRole("region", { name: "직접 장보기 추가" })).toBeVisible();
-  await expect(dialog.getByRole("button", { name: "추가", exact: true })).toBeFocused();
+  await expect(dialog.getByRole("form", { name: "살 것 추가" })).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "식단에서 재료 고르기" })).toBeFocused();
 
-  const manual = dialog.getByRole("region", { name: "직접 장보기 추가" });
-  await manual.getByRole("textbox", { name: "직접 추가 상품명" }).fill("생수");
-  await manual.getByRole("spinbutton", { name: "직접 추가 수량" }).fill("2");
-  await manual.getByRole("textbox", { name: "직접 추가 단위" }).fill("병");
+  const manual = dialog.getByRole("form", { name: "살 것 추가" });
+  await manual.getByRole("textbox", { name: "살 것 이름" }).fill("생수");
+  await manual.getByRole("spinbutton", { name: "살 것 수량" }).fill("2");
+  await manual.getByRole("textbox", { name: "살 것 단위" }).fill("병");
   await manual.getByRole("button", { name: "추가", exact: true }).click();
   await expect.poll(() => manualRequestCount).toBe(1);
   await expect(dialog.getByRole("alert")).toContainText("기존 목록을 유지했어요");
@@ -2513,7 +2548,7 @@ test("connected home exposes the shopping queue and keeps item mutations in sync
   await expect(manualListItem).toHaveAttribute("aria-pressed", "false");
   await expect(manualListItem).toBeFocused();
   await manualList.getByRole("button", { name: "생수 장보기 항목 삭제" }).click();
-  await expect(dialog).toContainText("목록에 무엇을 담을까요?");
+  await expect(dialog.locator(".shop-empty")).toContainText("살 것이 없어요.");
   await dialog.getByRole("button", { name: "식단에서 재료 고르기" }).click();
   const mealDialog = page.getByRole("region", { name: "오늘의 식단" });
   await expect(mealDialog).toBeVisible();
@@ -2588,7 +2623,7 @@ test("connected shopping list refreshes after a cross-device revision", async ({
 
   await expect.poll(() => revisionCalls).toBeGreaterThan(baselineRevisionCalls);
   await expect.poll(() => listCalls).toBeGreaterThan(baselineListCalls);
-  await expect(dialog.locator(".shopping-sheet-refresh-notice")).toHaveCount(0);
+  await expect(dialog.locator(".shop-status")).toHaveCount(0);
   const remoteItemButton = dialog.getByRole("button", { name: "다른 기기 장보기 1개, 직접 추가", exact: true });
   await expect(remoteItemButton).toBeVisible();
   await expect(remoteItemButton).toBeFocused();
@@ -2774,10 +2809,12 @@ test("connected shopping receive adds a lot with confirmed storage and clears th
 
   const dialog = page.getByRole("region", { name: "장보기 목록" });
   const shopping = dialog.getByRole("region", { name: "장보기 항목" });
-  await shopping.getByRole("button", { name: "국산콩 두부 식품 목록에 추가" }).click();
-  const receivePanel = shopping.getByRole("form", { name: "국산콩 두부 식품 목록에 추가" });
-  await expect(receivePanel).toContainText("국산콩 두부 구매 정보");
-  await expect(receivePanel).toContainText("소비기한은 자동으로 정하지 않아요");
+  // Only bought items are put away: check the planned item first, then open its 넣기 form.
+  await shopping.getByRole("button", { name: "국산콩 두부 1모, 식단 1개", exact: true }).click();
+  await shopping.getByRole("button", { name: "국산콩 두부 냉장고에 넣기" }).click();
+  const receivePanel = shopping.getByRole("form", { name: "국산콩 두부 냉장고에 넣기" });
+  await expect(receivePanel.getByRole("spinbutton", { name: "국산콩 두부 구매 수량" })).toBeVisible();
+  await expect(receivePanel).toContainText("날짜는 넣은 뒤 포장지를 보고 기록해 주세요.");
   await expect.poll(() => receivePanel.evaluate((element) => {
     const content = element.closest<HTMLElement>(".sheet-content");
     if (!content) return false;
@@ -2786,14 +2823,13 @@ test("connected shopping receive adds a lot with confirmed storage and clears th
     return panelBox.top >= contentBox.top - 1 && panelBox.bottom <= contentBox.bottom + 1;
   })).toBe(true);
   await receivePanel.getByRole("button", { name: "취소", exact: true }).click();
-  await expect(shopping.getByRole("button", { name: "국산콩 두부 식품 목록에 추가" })).toBeFocused();
-  await shopping.getByRole("button", { name: "국산콩 두부 식품 목록에 추가" }).click();
-  const reopenedReceivePanel = shopping.getByRole("form", { name: "국산콩 두부 식품 목록에 추가" });
+  await expect(shopping.getByRole("button", { name: "국산콩 두부 냉장고에 넣기" })).toBeFocused();
+  await shopping.getByRole("button", { name: "국산콩 두부 냉장고에 넣기" }).click();
+  const reopenedReceivePanel = shopping.getByRole("form", { name: "국산콩 두부 냉장고에 넣기" });
   await expect(reopenedReceivePanel).toBeVisible();
   await reopenedReceivePanel.getByRole("spinbutton", { name: "국산콩 두부 구매 수량" }).fill("2");
   await reopenedReceivePanel.getByRole("group", { name: "국산콩 두부 보관 위치" }).getByRole("button", { name: "냉동", exact: true }).click();
-  await reopenedReceivePanel.getByRole("button", { name: "구매 완료로 표시", exact: true }).click();
-  await reopenedReceivePanel.getByRole("button", { name: "식품 목록에 추가", exact: true }).click();
+  await reopenedReceivePanel.getByRole("button", { name: "냉장고에 넣기", exact: true }).click();
 
   await expect.poll(() => receiveRequestCount).toBe(1);
   await expect(dialog.getByRole("alert")).toContainText("기존 장보기 목록과 재고를 유지했어요");
@@ -2801,23 +2837,23 @@ test("connected shopping receive adds a lot with confirmed storage and clears th
   await expect.poll(() => receiveRequestCount).toBe(2);
   expect(receivePayload).toMatchObject({ quantity: 2, storage_type: "frozen" });
   // The received-food notice replaces the empty list state while the purchase is being followed up.
-  await expect(dialog.locator(".shopping-sheet-received")).toContainText("국산콩 두부 2모 식품 목록에 추가했어요");
+  await expect(dialog.locator(".shop-readback")).toContainText("국산콩 두부 2모를 냉장고에 넣었어요");
   await expect(dialog).not.toContainText("아직 장보기 항목이 없어요");
   await expect(page.locator(".toast")).toContainText("국산콩 두부");
   await expect(page.locator(".toast")).toContainText("식품 목록에 2모 추가했어요.");
   await expect(page.locator(".toast")).toContainText("목록을 다시 불러오지 못했어요.");
   await expect(page.locator(".toast-action")).toHaveText("목록 새로고침");
-  const receivedNoticeBeforeRefresh = dialog.locator(".shopping-sheet-received");
+  const receivedNoticeBeforeRefresh = dialog.locator(".shop-readback");
   await expect(receivedNoticeBeforeRefresh).toBeVisible();
   await expectReadbackState(receivedNoticeBeforeRefresh, "confirmed");
   await expect(receivedNoticeBeforeRefresh).toContainText("국산콩 두부");
   await page.locator(".toast-action").click();
   await expect(page.locator(".toast")).toHaveText("목록을 새로고침했어요.");
-  await expect(dialog.locator(".shopping-sheet-content")).toHaveAttribute("data-received-food-name", "국산콩 두부");
-  const receivedNotice = dialog.locator(".shopping-sheet-received");
-  await expect(receivedNotice).toContainText("식품 목록에 추가했어요");
+  await expect(dialog.locator(".shop")).toHaveAttribute("data-received-food-name", "국산콩 두부");
+  const receivedNotice = dialog.locator(".shop-readback");
+  await expect(receivedNotice).toContainText("냉장고에 넣었어요");
   await expect(receivedNotice).toContainText("국산콩 두부");
-  await expect(receivedNotice).toContainText("포장지 날짜와 보관 방법을 살펴봐 주세요.");
+  await expect(receivedNotice).toContainText("날짜는 포장지를 보고 기록해 주세요.");
   await expect(dialog.getByRole("button", { name: "추가", exact: true })).toBeVisible();
   const receivedDetailButton = page.getByRole("region", { name: "장보기 목록" }).getByRole("button", { name: "식품 보기" });
   await expect(receivedDetailButton).toBeFocused();
@@ -2828,8 +2864,8 @@ test("connected shopping receive adds a lot with confirmed storage and clears th
  await expect(receivedDetail.getByRole("heading", { name: "국산콩 두부", level: 2 })).toBeVisible();
   // "식품 보기" opens the received food for browsing; focus stays inside the detail and the date entry is offered there.
   await expect.poll(() => receivedDetail.evaluate((element) => element.contains(document.activeElement))).toBe(true);
-  await expect(receivedDetail.getByRole("button", { name: "포장지에서 확인한 날짜 입력" })).toBeVisible();
-  await receivedDetail.getByRole("button", { name: "포장지에서 확인한 날짜 입력" }).click();
+  await expect(receivedDetail.getByRole("button", { name: "포장지 날짜 입력" })).toBeVisible();
+  await receivedDetail.getByRole("button", { name: "포장지 날짜 입력" }).click();
   const receivedDateEditor = receivedDetail.getByRole("group", { name: "확인한 날짜 입력" });
   await receivedDateEditor.getByRole("radio", { name: "소비기한", exact: true }).click();
   await receivedDateEditor.getByRole("textbox", { name: "날짜" }).fill("2026-09-30");
@@ -2906,22 +2942,22 @@ test("shopping receive preserves the readback notice when the sheet closes mid-r
   await expect(page.locator(".connection-pill")).toHaveClass(/connection-connected/);
   await page.getByTestId("shopping-nav").click();
   const dialog = page.getByRole("region", { name: "장보기 목록" });
-  await dialog.getByRole("button", { name: "재진입 두부 식품 목록에 추가" }).click();
-  const panel = dialog.getByRole("form", { name: "재진입 두부 식품 목록에 추가" });
+  await dialog.locator("button.shop-toggle").filter({ hasText: "재진입 두부" }).click();
+  await dialog.getByRole("button", { name: "재진입 두부 냉장고에 넣기" }).click();
+  const panel = dialog.getByRole("form", { name: "재진입 두부 냉장고에 넣기" });
   // A manual item has no storage suggestion; the user must choose where the purchase is stored.
   await panel.getByRole("group", { name: "재진입 두부 보관 위치" }).getByRole("button", { name: "냉장", exact: true }).click();
-  await panel.getByRole("button", { name: "구매 완료로 표시", exact: true }).click();
-  await panel.getByRole("button", { name: "식품 목록에 추가", exact: true }).click();
+  await panel.getByRole("button", { name: "냉장고에 넣기", exact: true }).click();
   await receiveStartedPromise;
-  await expect(dialog.locator(".shopping-sheet-content")).toHaveAttribute("aria-busy", "true");
+  await expect(dialog.locator(".shop")).toHaveAttribute("aria-busy", "true");
   // Leave the 장보기 tab while the purchase is still being saved, then come back.
   await page.locator('[data-nav-tab="home"]').click();
   await expect(dialog).toHaveCount(0);
   releaseReceive();
   await page.getByTestId("shopping-nav").click();
   const reopened = page.getByRole("region", { name: "장보기 목록" });
-  await expect(reopened.locator(".shopping-sheet-received")).toContainText("재진입 두부");
-  await expect(reopened.locator(".shopping-sheet-content")).toHaveAttribute("aria-busy", "false");
+  await expect(reopened.locator(".shop-readback")).toContainText("재진입 두부");
+  await expect(reopened.locator(".shop")).toHaveAttribute("aria-busy", "false");
   const receivedDetailAction = reopened.getByRole("button", { name: "식품 보기" });
   await expect(receivedDetailAction).toBeFocused();
   await receivedDetailAction.click();
@@ -2971,10 +3007,10 @@ test("shopping queue failure stays local to the sheet and keeps the dashboard co
 
   const dialog = page.getByRole("region", { name: "장보기 목록" });
   // An unread list shows only the local failure and its retry; no progress or "complete" state is implied.
-  await expect(dialog.locator(".shopping-sheet-progress")).toHaveCount(0);
+  await expect(dialog.locator(".shop-progress")).toHaveCount(0);
   await expect(dialog.getByRole("alert")).toContainText("장보기 목록을 불러오지 못했어요");
   await expect(dialog.getByRole("alert")).toContainText("잠시 후 다시 확인해 주세요.");
-  await expect(dialog.locator(".shopping-sheet-empty")).toHaveCount(0);
+  await expect(dialog.locator(".shop-empty")).toHaveCount(0);
   const retry = dialog.getByRole("button", { name: "다시 시도" });
   await expect(retry).toBeVisible();
   await expect(retry).toBeFocused();
@@ -3004,9 +3040,9 @@ test("empty shopping hands off to meal planning and returns to its origin", asyn
 
   const shopping = page.getByRole("region", { name: "장보기 목록" });
   const chooseFromMeal = shopping.getByRole("button", { name: /식단에서 재료 고르기/ });
-  const refresh = shopping.getByRole("button", { name: "새로 고침", exact: true });
+  // One line and one action: the empty list no longer adds a second refresh button.
+  await expect(shopping.getByRole("button", { name: "새로 고침", exact: true })).toHaveCount(0);
   await expect(chooseFromMeal).toHaveCSS("min-height", "44px");
-  await expect(refresh).toHaveCSS("min-height", "44px");
   await chooseFromMeal.click();
 
   const meal = page.getByRole("region", { name: "오늘의 식단" });
@@ -3117,44 +3153,18 @@ test("empty shopping creates a missing ingredient from meal readback", async ({ 
   await shopping.getByRole("button", { name: /식단에서 재료 고르기/ }).click();
   const meal = page.getByRole("region", { name: "오늘의 식단" });
   await expect(meal.getByRole("heading", { name: plan.title })).toBeVisible();
-  await meal.getByRole("button", { name: "식단 저장", exact: true }).click();
-  const addMissing = meal.getByRole("button", { name: "장보기 목록에 담기", exact: true });
+  // 장보기에 담기 saves the plan on the way and hands back to the 장보기 tab, which reads the list from the API.
+  const addMissing = meal.getByRole("button", { name: "장보기에 담기", exact: true });
   await expect(addMissing).toBeVisible();
   await addMissing.click();
-  const mealShopping = meal.getByRole("region", { name: "장보기 목록" });
-  const createdItem = mealShopping.getByRole("button", { name: "국산콩 두부 1모 식단 1개", exact: true });
-  await expect(createdItem).toBeVisible();
-  await createdItem.click();
-  await expect(createdItem).toHaveAttribute("aria-pressed", "true");
-  await mealShopping.getByRole("button", { name: "국산콩 두부 장보기 항목 삭제" }).click();
-  await expect(mealShopping.getByTestId("meal-shopping-empty")).toBeVisible();
-  shoppingItems = [remoteItem];
-  failNextShoppingRead = true;
-  await page.evaluate(() => {
-    const token = window.localStorage.getItem("rescue-meal.guest-token") ?? "";
-    const parts = token.split(".");
-    const workspaceKey = parts[0] === "rm1" && parts[1] ? `guest-${parts[1]}` : "anonymous";
-    const channel = new BroadcastChannel("rescue-meal.workspace-sync.v1");
-    channel.postMessage({ type: "mutation", id: "remote-empty-shopping-item", sourceId: "remote-empty-shopping-tab", workspaceKey, channels: ["shopping-list"] });
-    window.setTimeout(() => channel.close(), 0);
-  });
-  await expect(mealShopping.getByRole("alert")).toContainText("장보기 목록을 불러오지 못했어요");
-  await expectMealShoppingLiveState(meal.locator('[data-shopping-live-state]'), "error");
-  const refreshRetry = mealShopping.getByRole("alert").getByRole("button", { name: "다시 시도" });
-  await expect(refreshRetry).toBeVisible();
-  await refreshRetry.click();
-  const remoteRow = mealShopping.getByRole("button", { name: "대파 1개 직접 추가", exact: true });
-  await expect(remoteRow).toBeVisible();
-  await expectMealShoppingLiveState(meal.locator('[data-shopping-live-state]'), "current");
-  await expect(remoteRow).toBeFocused();
-  await mealShopping.getByRole("button", { name: "대파 장보기 항목 삭제" }).click();
-  await expect(mealShopping.getByTestId("meal-shopping-empty")).toBeVisible();
-  await meal.getByRole("button", { name: "장보기 목록 접기", exact: true }).click();
-  await expect(mealShopping).toHaveCount(0);
-  await meal.getByRole("button", { name: "장보기 목록 보기", exact: true }).click();
-  await expect(meal.getByRole("region", { name: "장보기 목록" }).getByTestId("meal-shopping-empty")).toBeVisible();
-  await expect(meal.getByRole("region", { name: "장보기 목록" }).getByRole("alert")).toHaveCount(0);
-  await page.getByTestId("shopping-nav").click();
+  await expect(meal).toBeHidden();
+  await expect(shopping).toBeVisible();
+  await expect(shopping).toContainText("국산콩 두부");
+  // The meal screen never keeps a second copy of the list.
+  await page.getByRole("button", { name: "식단", exact: true }).click();
+  await expect(meal.getByRole("region", { name: "장보기 목록" })).toHaveCount(0);
+  await expect(meal.getByRole("heading", { name: plan.title })).toBeVisible();
+  await page.locator('[data-nav-tab="shopping"]').click();
   await expect(meal).toHaveCount(0);
   await expect(shopping).toBeVisible();
 });
@@ -3212,6 +3222,10 @@ test("embedded shopping cancellation returns to the shopping origin cleanly", as
       await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(freshRemoteItem ? [freshRemoteItem] : []) });
       return;
     }
+    if (route.request().method() === "POST") {
+      await route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ code: "shopping_list_persistence_unavailable", detail: "cancel fixture add failure", retryable: true, action: "retry_later" }) });
+      return;
+    }
     await route.continue();
   });
   await page.route("**/api/meal-plans/preview", async (route) => {
@@ -3237,20 +3251,12 @@ test("embedded shopping cancellation returns to the shopping origin cleanly", as
   await shopping.getByRole("button", { name: /식단에서 재료 고르기/ }).click();
   const meal = page.getByRole("region", { name: "오늘의 식단" });
   await expect(meal.getByRole("heading", { name: plan.title })).toBeVisible();
-  await meal.getByRole("button", { name: "식단 저장", exact: true }).click();
-  await meal.getByRole("button", { name: "장보기 목록에 담기", exact: true }).click();
-  const mealShopping = meal.getByRole("region", { name: "장보기 목록" });
-  await expect(mealShopping).toBeVisible();
-  failNextShoppingRead = true;
-  await page.evaluate(() => {
-    const token = window.localStorage.getItem("rescue-meal.guest-token") ?? "";
-    const parts = token.split(".");
-    const workspaceKey = parts[0] === "rm1" && parts[1] ? `guest-${parts[1]}` : "anonymous";
-    const channel = new BroadcastChannel("rescue-meal.workspace-sync.v1");
-    channel.postMessage({ type: "mutation", id: "cancel-shopping-refresh", sourceId: "cancel-shopping-tab", workspaceKey, channels: ["shopping-list"] });
-    window.setTimeout(() => channel.close(), 0);
-  });
-  await expect(mealShopping.getByRole("alert")).toContainText("장보기 목록을 불러오지 못했어요");
+  await meal.getByRole("button", { name: "장보기에 담기", exact: true }).click();
+  // The add fails here; the failure stays beside the action in 식단.
+  const buyGroup = meal.locator(".meal-ingredient-group-buy");
+  const failure = buyGroup.getByRole("alert");
+  await expect(failure).toBeVisible();
+  await expect(failure.getByRole("button", { name: /다시/ })).toBeVisible();
   await page.getByTestId("shopping-nav").click();
   await expect(meal).toHaveCount(0);
   await expect(shopping).toBeVisible();
@@ -3260,30 +3266,10 @@ test("embedded shopping cancellation returns to the shopping origin cleanly", as
   await page.getByRole("button", { name: "식단", exact: true }).click();
   const freshMeal = page.getByRole("region", { name: "오늘의 식단" });
   await expect(freshMeal).toBeVisible();
+  // Coming back starts a clean planner view: no stale failure and no embedded list.
   await expect(freshMeal.getByRole("alert")).toHaveCount(0);
-  await expect(freshMeal.getByRole("button", { name: "다시 시도" })).toHaveCount(0);
-  const freshShoppingToggle = freshMeal.getByRole("button", { name: /장보기 목록/ });
-  await expect(freshShoppingToggle).toBeVisible();
-  await freshShoppingToggle.click();
-  const freshShopping = freshMeal.getByRole("region", { name: "장보기 목록" });
-  await expect(freshShopping).toBeVisible();
-  await expect(freshShopping.getByRole("alert")).toHaveCount(0);
-  await expect(freshShopping.getByTestId("meal-shopping-empty")).toBeVisible();
-  freshRemoteItem = { id: "fresh-session-remote-item", canonical_name: "양파", quantity: 1, unit: "개", checked: false, sources: [{ source_type: "manual", source_id: "fresh-session-remote", day_index: null, quantity: 1 }], created_at: "2026-09-03T09:20:00Z", updated_at: "2026-09-03T09:20:00Z" };
-  await page.evaluate(() => {
-    const token = window.localStorage.getItem("rescue-meal.guest-token") ?? "";
-    const parts = token.split(".");
-    const workspaceKey = parts[0] === "rm1" && parts[1] ? `guest-${parts[1]}` : "anonymous";
-    const channel = new BroadcastChannel("rescue-meal.workspace-sync.v1");
-    channel.postMessage({ type: "mutation", id: "fresh-session-remote-item", sourceId: "fresh-session-remote-tab", workspaceKey, channels: ["shopping-list"] });
-    window.setTimeout(() => channel.close(), 0);
-  });
-  const freshRow = freshShopping.getByRole("button", { name: "양파 1개 직접 추가", exact: true });
-  await expect(freshRow).toBeVisible();
-  await freshRow.click();
-  await expect(freshRow).toHaveAttribute("aria-pressed", "true");
-  await freshShopping.getByRole("button", { name: "양파 장보기 항목 삭제" }).click();
-  await expect(freshShopping.getByTestId("meal-shopping-empty")).toBeVisible();
+  await expect(freshMeal.getByRole("region", { name: "장보기 목록" })).toHaveCount(0);
+  await expect(freshMeal.getByRole("button", { name: "장보기에 담기", exact: true })).toBeVisible();
   await page.locator('[data-nav-tab="home"]').click();
   await expect(freshMeal).toHaveCount(0);
 });
@@ -3376,7 +3362,7 @@ test("connected planner routes an expired session to account recovery instead of
 
   await meal.getByRole("button", { name: "계정 다시 연결", exact: true }).click();
   await expect(meal).toHaveCount(0);
-  await expect(page.getByRole("dialog", { name: "내 계정" })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "나", exact: true })).toBeVisible();
 });
 
 test("connected planner saves allergen preferences before recalculating the recipe", async ({ page }) => {
@@ -3406,6 +3392,7 @@ test("connected planner saves allergen preferences before recalculating the reci
   const soy = preferences.getByRole("button", { name: "대두·콩", exact: true });
   await soy.click();
   await expect(soy).toHaveAttribute("aria-pressed", "true");
+  await openMealConditions(page);
   await dialog.getByRole("group", { name: "식사 인원" }).getByRole("button", { name: "2인분", exact: true }).click();
   await expect(dialog.getByText("재료 양은 2인분 기준이에요.", { exact: true })).toBeVisible();
   await expect(preferences).toBeVisible();
@@ -3480,11 +3467,10 @@ test("connected planner explains a preference-filtered menu and opens conditions
   const dialog = page.getByRole("region", { name: "오늘의 식단" });
   await expect(dialog.getByRole("heading", { name: "식단 조건에 맞는 메뉴가 없어요" })).toBeVisible();
   await expect(dialog.locator(".recipe-description")).toHaveText(filteredPlan.reason);
-  const allergenCallout = dialog.locator(".recipe-preference-callout");
-  await expect(allergenCallout.locator("strong")).toHaveText("알레르기 조건을 확인해 주세요");
-  await expect(allergenCallout.locator("small")).toHaveText(filteredPlan.preference_note);
-  const preferenceAction = allergenCallout.getByRole("button", { name: "피할 알레르기 설정 열기", exact: true });
+  // The empty state carries the reason and leads with the one action that can change it.
+  const preferenceAction = dialog.locator(".meal-no-match").getByRole("button", { name: "식단 조건 확인", exact: true });
   await expect(preferenceAction).toBeVisible();
+  await expect(preferenceAction).toHaveClass(/meal-primary-button/);
   await preferenceAction.click();
   await expect(dialog.getByRole("region", { name: "식단 조건" })).toBeFocused();
   expect(preferenceWrites).toBe(0);
@@ -3561,7 +3547,8 @@ test("connected planner calls out date review for allocated lots", async ({ page
   await page.locator('[data-nav-tab="meal"]').click();
   const dialog = page.getByRole("region", { name: "오늘의 식단" });
   await expect(dialog.getByRole("heading", { name: "날짜 확인 레시피" })).toBeVisible();
-  await expect(dialog.getByRole("button", { name: "조리 전에 확인할 내용 3개 보기" })).toContainText("조리 전에 확인할 내용 3개");
+  await expect(dialog.getByRole("region", { name: "조리 전에 살펴볼 내용 2개" })).toBeVisible();
+  await openMealConditions(page);
   await dialog.getByRole("group", { name: "식사 인원" }).getByRole("button", { name: "2인분" }).click();
   await expect(dialog.getByText("재료 양은 2인분 기준이에요.", { exact: true })).toBeVisible();
   const callout = dialog.locator(".recipe-date-review-callout");
@@ -3580,24 +3567,23 @@ test("connected planner calls out date review for allocated lots", async ({ page
   await expect(dialog).toBeVisible();
   await expect(dialog.getByText("재료 양은 2인분 기준이에요.", { exact: true })).toBeVisible();
   const safetySummary = dialog.locator("#recipe-safety-summary");
-  await expect(safetySummary).toHaveAttribute("aria-label", "조리 전에 살펴볼 내용 3개");
+  // Shortages moved to the 사야 함 group; the summary keeps only what to check before cooking.
+  await expect(safetySummary).toHaveAttribute("aria-label", "조리 전에 살펴볼 내용 2개");
   await expect(safetySummary).not.toContainText("저장하거나 조리해 주세요");
   const safetyItems = safetySummary.locator(".recipe-safety-summary-list > .recipe-safety-summary-item");
-  await expect(safetyItems).toHaveCount(3);
+  await expect(safetyItems).toHaveCount(2);
   await expect(safetyItems.nth(0)).toHaveClass(/recipe-date-review-callout/);
-  await expect(safetyItems.nth(1)).toHaveClass(/recipe-missing-callout/);
-  await expect(safetyItems.nth(1)).toContainText("부족한 재료 1개");
-  await expect(dialog.locator(".recipe-ingredients").locator(".recipe-ingredient-row").filter({ hasText: "국산콩 두부" })).toBeVisible();
-  await expect(safetyItems.nth(2)).toHaveClass(/recipe-allergen-callout/);
-  await expect(safetyItems.nth(2)).toContainText("재료 일부의 알레르기 정보를 확인할 수 없어요");
-  await expect(safetyItems.nth(2)).toContainText("먹기 전 포장지 표시와 개인 알레르기를 살펴봐 주세요.");
-  const dateMessageOrder = await dialog.locator(".meal-sheet-content").evaluate((element) => Array.from(element.children).map((child) => child.className));
+  await expect(dialog.locator(".meal-ingredient-group-buy .recipe-ingredient-row").filter({ hasText: "국산콩 두부" })).toBeVisible();
+  await expect(safetyItems.nth(1)).toHaveClass(/recipe-allergen-callout/);
+  await expect(safetyItems.nth(1)).toContainText("재료 일부의 알레르기 정보를 확인할 수 없어요");
+  await expect(safetyItems.nth(1)).toContainText("먹기 전 포장지 표시와 개인 알레르기를 살펴봐 주세요.");
+  const dateMessageOrder = await dialog.locator(".meal-recipe").evaluate((element) => Array.from(element.children).map((child) => child.className));
   expect(dateMessageOrder.indexOf("recipe-safety-summary")).toBeGreaterThanOrEqual(0);
-  expect(dateMessageOrder.indexOf("recipe-safety-summary")).toBeLessThan(dateMessageOrder.indexOf("recipe-ingredients"));
+  expect(dateMessageOrder.indexOf("recipe-safety-summary")).toBeLessThan(dateMessageOrder.findIndex((className) => className.includes("recipe-ingredients")));
   // The in-house recipe source is no longer printed, so there is no provenance line to order against.
   expect(dateMessageOrder).not.toContain("recipe-provenance");
 
-  const allergenCallout = safetyItems.nth(2);
+  const allergenCallout = safetyItems.nth(1);
   const preferenceAction = allergenCallout.getByRole("button", { name: "피할 알레르기 설정 열기", exact: true });
   await expect(preferenceAction).toBeEnabled();
   await preferenceAction.click();
@@ -3741,7 +3727,8 @@ test("connected inventory preserves the printed date meaning", async ({ page }) 
   const sellByChip = page.locator(".priority-card").filter({ hasText: "테스트 우유" }).locator(".freshness-chip");
   await expect(sellByChip).toHaveAttribute("aria-label", /^표시 날짜까지 \d+일$/);
   await expect(sellByChip).toHaveAttribute("data-estimated", "false");
-  await expect(page.locator(".priority-section")).not.toContainText("소비기한");
+  // Home no longer has a separate priority section; nothing on the Home tab may call it 소비기한.
+  await expect(page.locator('[data-tab-panel="home"]')).not.toContainText("소비기한");
   await page.locator('[data-nav-tab="fridge"]').click();
   await page.locator(".inventory-row").filter({ hasText: "테스트 우유" }).click();
   const dialog = page.getByRole("dialog", { name: "테스트 우유" });
@@ -3749,7 +3736,7 @@ test("connected inventory preserves the printed date meaning", async ({ page }) 
   await dialog.locator("details.detail-history-disclosure").locator("summary").click();
   await expect(dialog.getByRole("group", { name: "상품 정보", exact: true })).toContainText("공개 상품 정보");
   await expect(dialog.getByRole("group", { name: "상품 정보", exact: true })).not.toContainText("신뢰도");
-  await expect(dialog.getByRole("group", { name: "상품 정보", exact: true })).toContainText("상품 정보에 나온 보관 방법 냉장");
+  await expect(dialog.getByRole("group", { name: "상품 정보", exact: true })).toContainText("상품 정보에 나온 보관 방법: 냉장");
   await expect(dialog.getByRole("group", { name: "상품 정보", exact: true })).toContainText("상품 정보만으로 개별 포장의 소비기한을 알 수는 없어요. 포장지 날짜를 살펴봐 주세요.");
   await expect(dialog.getByRole("group", { name: "상품 정보 변경 기록" })).toContainText("상품 정보 출처 저장");
   await expect(dialog.getByRole("group", { name: "상품 정보 변경 기록" })).toContainText("공개 상품 정보에서 가져왔어요.");
@@ -3777,9 +3764,9 @@ test("connected inventory preserves the printed date meaning", async ({ page }) 
   await expect.poll(() => productInfoUpdated).toBe(true);
   const updatedDialog = page.getByRole("dialog", { name: "사용자 확인 우유" });
   await expect(updatedDialog).toBeVisible();
-  await expect(updatedDialog.locator(".detail-hero")).toContainText("확인한 브랜드");
-  await expect(updatedDialog.locator(".detail-hero")).toContainText("1개");
-  await expect(updatedDialog.getByText("냉장 보관 중", { exact: true })).toBeVisible();
+  await expect(updatedDialog.locator(".food-top")).toContainText("확인한 브랜드");
+  await expect(updatedDialog.locator(".food-top")).toContainText("1개");
+  await expect(updatedDialog.getByRole("group", { name: "보관 및 개봉 상태" })).toContainText("냉장");
   await expect(updatedDialog.getByText("포장 유통기한")).toBeVisible();
   await expect(updatedDialog.getByRole("group", { name: "상품 정보 수정 기록" })).toContainText("상품 정보 수정");
   await expect(updatedDialog.getByRole("group", { name: "상품 정보 수정 기록" })).toContainText("상품명 테스트 우유 → 사용자 확인 우유");
@@ -3849,8 +3836,8 @@ test("connected packaging date explains the separate expiry review path", async 
   await expect(dialog.getByRole("group", { name: "날짜 정보: 포장일" })).toBeVisible();
   await expect(dialog.locator(".date-review-callout")).toContainText("포장일과 제조일은 소비기한이 아니에요");
   await expect(dialog.locator(".date-review-callout")).toContainText("소비기한이 적힌 면");
-  await expect(dialog.locator(".date-edit-button")).toHaveCount(1);
-  await expect(dialog.getByRole("button", { name: "포장지에서 확인한 날짜 입력" })).toHaveCount(0);
+  await expect(dialog.getByRole("button", { name: "포장지에서 소비기한 다시 확인" })).toHaveCount(1);
+  await expect(dialog.getByRole("button", { name: "포장지 날짜 입력" })).toHaveCount(0);
   // A plain row tap keeps focus on the summary; only explicit action routes move it.
   await expect(dialog.getByRole("button", { name: "포장지에서 소비기한 다시 확인" })).toBeVisible();
   await dialog.getByRole("button", { name: "포장지에서 소비기한 다시 확인" }).click();
@@ -3958,7 +3945,7 @@ test("connected product info persistence failure restores the detail and exposes
 
   const retryAlert = dialog.getByRole("alert").filter({ hasText: "상품 정보를 저장하지 못했어요" });
   await expect(retryAlert).toBeVisible();
-  await expect(dialog.locator(".detail-hero")).toContainText("시금치");
+  await expect(dialog.locator(".food-top")).toContainText("시금치");
   await expect(editor.getByRole("textbox", { name: "상품명 수정" })).toHaveValue("사용자 확인 시금치");
   await expect(editor.getByRole("textbox", { name: "브랜드 수정" })).toHaveValue("확인 브랜드");
   await expect(editor.getByRole("textbox", { name: "분류 수정" })).toHaveValue("확인 분류");
@@ -3970,7 +3957,7 @@ test("connected product info persistence failure restores the detail and exposes
   await expect.poll(() => attempts).toBe(2);
   const savedDetail = page.getByRole("dialog", { name: "사용자 확인 시금치" });
   await expect(savedDetail.getByRole("heading", { name: "사용자 확인 시금치", level: 2 })).toBeVisible();
-  await expect(savedDetail.locator(".detail-hero")).toContainText("확인 브랜드");
+  await expect(savedDetail.locator(".food-top")).toContainText("확인 브랜드");
   // The successful write closes the editor; the readback failure stays visible with a refresh action.
   await expect(savedDetail.getByRole("group", { name: "상품 정보 수정" })).toHaveCount(0);
   const productInfoNotice = savedDetail.getByRole("status").filter({ hasText: "목록을 다시 불러오지 못했어요" });
@@ -4114,7 +4101,7 @@ test("connected food detail keeps local edits until an explicit cross-device ref
   await staleAlert.getByRole("button", { name: "다시 불러오기" }).click();
   await expect(page.getByRole("dialog").getByRole("heading", { name: "다른 기기 시금치", level: 2 })).toBeVisible();
   await expect(page.getByRole("textbox", { name: "상품명 수정" })).toHaveCount(0);
-  await expect(page.getByRole("dialog").locator(".detail-actions .secondary-sheet-button")).toBeFocused();
+  await expect(page.getByRole("dialog").locator(".food-actions .food-action-primary")).toBeFocused();
 });
 
 test("connected inventory warns when printed date storage condition differs", async ({ page }) => {
@@ -4242,7 +4229,7 @@ test("connected inventory warns when printed date storage condition differs", as
   await expect(mismatch).toContainText("김치냉장고");
   await expect(dialog.getByText("포장 소비기한", { exact: true })).toBeVisible();
   // Browsing a row keeps focus on the summary; the explicit review route moves it to the mismatched storage.
-  await expect(dialog.locator(".storage-picker .storage-option-active")).not.toBeFocused();
+  await expect(dialog.locator(".food-place-chips [aria-pressed='true']")).not.toBeFocused();
   await dialog.getByRole("button", { name: "닫기", exact: true }).click();
   await expect(dialog).toHaveCount(0);
   // Back on Home, the review summary lists the food, and browsing its row opens the same detail
@@ -4251,9 +4238,9 @@ test("connected inventory warns when printed date storage condition differs", as
   await expect(page.locator(".trust-card")).toHaveAttribute("data-trust-state", "needs-review");
   await storageConditionPriorityCard.click();
   await expect(mismatch).toBeVisible();
-  await expect(dialog.locator(".storage-picker .storage-option-active")).not.toBeFocused();
+  await expect(dialog.locator(".food-place-chips [aria-pressed='true']")).not.toBeFocused();
   await dialog.locator("details.detail-history-disclosure").locator("summary").click();
-  const storageHistory = dialog.locator(".detail-history").filter({ hasText: "보관·사용 기록" });
+  const storageHistory = dialog.locator(".detail-history").filter({ hasText: "보관과 사용" });
   await expect(storageHistory).toContainText("김치냉장고 → 실온");
   await expect(storageHistory.locator('[data-history-sync-status="succeeded"]')).toHaveText("재고 앱에 추가했어요");
   await expect(storageHistory.locator('[data-history-sync-reference="outbox-storage-condition-event"]')).toHaveText("재고 앱 기록 번호 grocy-storage-condition-tx");
@@ -4265,15 +4252,15 @@ test("connected inventory warns when printed date storage condition differs", as
   await expect(historyEvidence.getByRole("button", { name: "추가 기록 열기" })).toBeVisible();
   await expect(historyEvidence.getByRole("button", { name: "알림 열기" })).toBeVisible();
   await historyEvidence.getByRole("button", { name: "추가 기록 열기" }).click();
-  const accountFromDetail = page.getByRole("dialog", { name: "내 계정" });
+  const accountFromDetail = page.getByRole("dialog", { name: "나", exact: true });
   await expect(accountFromDetail).toBeVisible();
   await accountFromDetail.getByRole("button", { name: "닫기", exact: true }).click();
   await expect(accountFromDetail).toHaveCount(0);
   await expect(dialog).toBeVisible();
   await expect(dialog.locator("details.detail-history-disclosure")).toHaveAttribute("open", "");
-  await dialog.getByRole("group", { name: "보관 위치 선택" }).getByRole("button", { name: "실온", exact: true }).click();
+  await dialog.getByRole("radiogroup", { name: "보관 위치" }).getByRole("radio", { name: "실온" }).click();
   await expect(mismatch).toHaveCount(0);
-  await dialog.getByRole("group", { name: "보관 위치 선택" }).getByRole("button", { name: "냉장", exact: true }).click();
+  await dialog.getByRole("radiogroup", { name: "보관 위치" }).getByRole("radio", { name: "냉장" }).click();
   await expect(mismatch).toBeVisible();
   const currentHistoryEvidence = dialog.locator('[data-history-sync-evidence="storage-condition-event"]');
   // The history list re-renders after the storage change; open the evidence only once it settles.
@@ -4313,7 +4300,7 @@ test("connected date confirmation exposes a retry action after persistence failu
   const inventory = page.getByRole("region", { name: /내 식품 목록/ });
   await inventory.getByRole("button", { name: /국산콩 두부 풀무원 1모/ }).click();
   const dialog = page.getByRole("dialog", { name: "국산콩 두부" });
-  await dialog.getByRole("button", { name: "포장지에서 확인한 날짜 입력" }).click();
+  await dialog.getByRole("button", { name: "포장지 날짜 입력" }).click();
   const editor = dialog.getByRole("group", { name: "확인한 날짜 입력" });
   await editor.getByRole("radio", { name: "소비기한", exact: true }).click();
   await editor.getByRole("textbox", { name: "날짜" }).fill("2026-09-30");
@@ -4363,7 +4350,7 @@ test("connected date confirmation keeps a successful write visible when dashboar
   const inventory = page.getByRole("region", { name: /내 식품 목록/ });
   await inventory.getByRole("button", { name: /국산콩 두부 풀무원 1모/ }).click();
   const dialog = page.getByRole("dialog", { name: "국산콩 두부" });
-  await dialog.getByRole("button", { name: "포장지에서 확인한 날짜 입력" }).click();
+  await dialog.getByRole("button", { name: "포장지 날짜 입력" }).click();
   const editor = dialog.getByRole("group", { name: "확인한 날짜 입력" });
   await editor.getByRole("radio", { name: "소비기한", exact: true }).click();
   await editor.getByRole("textbox", { name: "날짜" }).fill("2026-09-30");
@@ -4377,7 +4364,7 @@ test("connected date confirmation keeps a successful write visible when dashboar
   const updatedInventory = page.getByRole("region", { name: /내 식품 목록/ });
   await updatedInventory.getByRole("button", { name: /국산콩 두부 풀무원 1모/ }).click();
   const updatedDialog = page.getByRole("dialog", { name: "국산콩 두부" });
-  await expect(updatedDialog.getByText("2026.09.30")).toBeVisible();
+  await expect(updatedDialog.getByText("2026년 9월 30일 (수)")).toBeVisible();
   await expect(updatedDialog.getByText("포장 소비기한", { exact: true })).toBeVisible();
   await updatedDialog.getByRole("button", { name: "닫기", exact: true }).click();
   const confirmedRow = updatedInventory.locator(".inventory-row").filter({ hasText: "국산콩 두부" });
@@ -4439,8 +4426,8 @@ test("connected inventory shows the persisted first-opened timestamp", async ({ 
   await page.locator('[data-nav-tab="fridge"]').click();
   await page.locator(".inventory-row").filter({ hasText: "테스트 우유" }).click();
   const dialog = page.getByRole("dialog", { name: "테스트 우유" });
-  await expect(dialog.locator(".opened-row")).toContainText("2026년 9월 3일");
-  await expect(dialog.locator(".opened-row")).toContainText("개봉 기록했어요.");
+  await expect(dialog.locator(".food-switch-row")).toContainText("2026년 9월 3일에 열었어요");
+  await expect(dialog.getByRole("switch", { name: "테스트 우유 개봉 상태" })).toHaveAttribute("aria-checked", "true");
 });
 
 test("connected inventory explains the estimated priority without exposing technical fields", async ({ page }) => {
@@ -4502,15 +4489,15 @@ test("connected inventory explains the estimated priority without exposing techn
   const dateInformation = dialog.getByRole("group", { name: "날짜 정보: 먼저 살펴볼 시점" });
   await expect(dateInformation).toContainText("식품 종류와 보관 방법");
   // The estimate basis is the inference window's basis; the storage it assumed is the recorded storage below.
-  await expect(dialog.locator(".detail-note")).toHaveCount(1);
+  await expect(dialog.locator(".food-date-hint")).toHaveCount(1);
   await expect(dialog).not.toContainText("실제 소비기한이 아니라 먼저 먹기 위한 추정 순서예요.");
   const recordedStorage = dialog.getByRole("group", { name: "보관 및 개봉 상태" });
-  await expect(recordedStorage).toContainText("냉장 보관 중");
+  await expect(recordedStorage).toContainText("냉장");
   await expect(recordedStorage).toContainText("미개봉");
   // The trimmed detail keeps one short note: the estimate is a reference date, never an expiry.
   const priorityNote = dialog.getByRole("note").filter({ hasText: "소비기한이 아닌 참고 날짜예요." });
   await expect(priorityNote).toBeVisible();
-  await expect(priorityNote).toHaveCSS("font-size", "12px");
+  await expect(priorityNote).toHaveCSS("font-size", "14px");
   await expect(dialog.getByRole("group", { name: "날짜 정보: 먼저 살펴볼 시점" })).not.toContainText("소비기한");
   await expect(dialog).not.toContainText("input_sha256");
   await expect(dialog).not.toContainText("safe_to_eat");
@@ -4626,8 +4613,8 @@ test("connected inventory keeps an abstained inference in the explicit review st
   await expect(dialog).toContainText("정보가 부족해 우선순위를 계산하지 않았어요. 포장지 표시를 확인해 주세요.");
   await expect(dialog.getByText("AI 소비 우선순위")).toHaveCount(0);
   await expect(dialog.getByTestId("date-confirmation-action")).toBeVisible();
-  const dateReviewOrder = await dialog.locator(".detail-sheet-content").evaluate((element) => {
-    const review = element.querySelector<HTMLElement>(".date-proof-card");
+  const dateReviewOrder = await dialog.locator(".food-page").evaluate((element) => {
+    const review = element.querySelector<HTMLElement>(".food-date-card");
     const action = element.querySelector<HTMLElement>('[data-testid="date-confirmation-action"]');
     return Boolean(review && action && (review.compareDocumentPosition(action) & Node.DOCUMENT_POSITION_FOLLOWING));
   });
@@ -4725,13 +4712,13 @@ test("connected label correction readback preserves identity while updating date
   const dialog = page.getByRole("dialog", { name: "라벨로 추가" });
   await dialog.locator('input[type="file"][data-input-source="library"]').setInputFiles("public/assets/food/tomato-photo.jpg");
   const labelDateCandidate = dialog.locator('[data-label-date-candidate="true"]');
-  await expect(labelDateCandidate).toHaveText("유통기한 2026.09.12");
-  await expect(dialog.locator("#label-result-action-summary")).toContainText("유통기한 2026.09.12");
+  await expect(labelDateCandidate).toHaveText("유통기한 2026년 9월 12일 (토)");
+  await expect(dialog.locator("#label-result-action-summary")).toContainText("유통기한 2026년 9월 12일 (토)");
   await dialog.locator(".label-result-more > summary").click();
   await expect(dialog.getByText("포장지에 적힌 보관 방법: 직사광선을 피해 실온보관")).toBeVisible();
   await dialog.getByLabel("포장지 날짜").fill("2026-09-13");
-  await expect(labelDateCandidate).toHaveText("유통기한 2026.09.13");
-  await expect(dialog.locator("#label-result-action-summary")).toContainText("유통기한 2026.09.13");
+  await expect(labelDateCandidate).toHaveText("유통기한 2026년 9월 13일 (일)");
+  await expect(dialog.locator("#label-result-action-summary")).toContainText("유통기한 2026년 9월 13일 (일)");
   const sourcePreview = dialog.getByRole("region", { name: "라벨 원본 미리보기" });
   await expect(sourcePreview).toBeVisible();
   await expect(sourcePreview.locator(".label-source-preview-frame")).toHaveAttribute("data-preview-ready", "true");
@@ -4782,14 +4769,14 @@ test("connected label correction readback preserves identity while updating date
   const correctedDialog = page.getByRole("dialog", { name: "시금치" });
   await expect(correctedDialog.getByText("포장 유통기한")).toBeVisible();
   // The date proof now also carries the detail freshness chip; read the date value itself.
-  await expect(correctedDialog.locator(".date-proof-card strong:not(.freshness-chip)")).toHaveText("2026.09.13");
-  await expect(correctedDialog.locator(".date-proof-card .freshness-chip")).toHaveAttribute("aria-label", "표시 날짜까지 3일");
-  await expect(correctedDialog.locator(".detail-hero")).toContainText("국내산 시금치");
-  await expect(correctedDialog.getByText("실온에 보관 중", { exact: true })).toBeVisible();
+  await expect(correctedDialog.locator(".food-date-card .food-date-value")).toHaveText("2026년 9월 13일 (일)");
+  await expect(correctedDialog.locator(".food-top-chip")).toHaveAttribute("aria-label", "표시 날짜까지 3일");
+  await expect(correctedDialog.locator(".food-top")).toContainText("국내산 시금치");
+  await expect(correctedDialog.getByRole("radiogroup", { name: "보관 위치" }).getByRole("radio", { name: "실온" })).toHaveAttribute("aria-checked", "true");
   await expect.poll(() => notificationCalls).toBeGreaterThan(1);
   await correctedDialog.getByRole("button", { name: "닫기", exact: true }).click();
   await page.getByRole("button", { name: /알림 보기/ }).click();
-  await expect(page.getByRole("dialog", { name: "알림" }).getByText("지금 확인할 알림이 없어요")).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "알림" }).getByText("새 알림이 없어요")).toBeVisible();
 });
 
 test("connected missing label target returns the user to the refreshed inventory", async ({ page }) => {
@@ -4911,8 +4898,8 @@ test("connected label review exposes a packaging date without treating it as an 
   await page.getByRole("dialog", { name: "영수증으로 추가" }).getByRole("tab", { name: "라벨" }).click();
   const dialog = page.getByRole("dialog", { name: "라벨로 추가" });
   await dialog.locator('input[type="file"][data-input-source="library"]').setInputFiles({ name: "produce-label-e2e.jpg", mimeType: "image/jpeg", buffer: Buffer.from("fixture") });
-  await expect(dialog.locator('[data-label-date-candidate="true"]')).toHaveText("포장일 2017.06.28");
-  await expect(dialog.locator("#label-result-action-summary")).toContainText("포장일 2017.06.28");
+  await expect(dialog.locator('[data-label-date-candidate="true"]')).toHaveText("포장일 2017년 6월 28일 (수)");
+  await expect(dialog.locator("#label-result-action-summary")).toContainText("포장일 2017년 6월 28일 (수)");
   await expect(dialog.locator("#label-date-review-guidance")).toHaveText("이 날짜는 소비기한이 아닐 수 있어요. 보관 방법도 살펴봐 주세요.");
   await expect(dialog.getByLabel("포장지 날짜")).toHaveAttribute("aria-describedby", /label-date-review-guidance/);
   await dialog.getByRole("textbox", { name: "새 식품 수량" }).fill("2팩");
@@ -4956,8 +4943,8 @@ test("connected storage mutation retries once with the same idempotency key", as
   await page.locator('[data-nav-tab="fridge"]').click();
   await page.getByRole("button", { name: /닭가슴살 무항생제 닭가슴살 2팩/ }).first().click();
   const dialog = page.getByRole("dialog", { name: "닭가슴살" });
-  await dialog.getByRole("button", { name: "냉장", exact: true }).click();
-  await dialog.locator(".detail-actions .primary-sheet-button").click();
+  // The storage segment saves on tap.
+  await dialog.getByRole("radio", { name: "냉장" }).click();
 
   await expect.poll(() => idempotencyKeys.length).toBe(2);
   expect(idempotencyKeys[0]).toMatch(/^storage-event-/);
@@ -5034,8 +5021,8 @@ test("connected storage mutation readback updates dashboard and notifications to
   await page.locator('[data-nav-tab="fridge"]').click();
   await page.locator(".inventory-row").filter({ hasText: "닭가슴살" }).click();
   const dialog = page.getByRole("dialog", { name: "닭가슴살" });
-  await dialog.getByRole("button", { name: "냉장", exact: true }).click();
-  await dialog.locator(".detail-actions .primary-sheet-button").click();
+  // The storage segment saves on tap.
+  await dialog.getByRole("radio", { name: "냉장" }).click();
 
   await expect.poll(() => storageMoved).toBe(true);
   await expect.poll(() => dashboardCalls).toBeGreaterThan(1);
@@ -5044,6 +5031,9 @@ test("connected storage mutation readback updates dashboard and notifications to
   await expect(page.locator(".toast")).toContainText("바꾼 내용 보관 위치");
   await expect(page.locator(".toast")).toContainText("재고 앱에 추가할 예정이에요");
   await expect(page.locator(".toast")).not.toContainText("Grocy");
+  // Detail stays open after a storage tap; close it so the toast actions are reachable.
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
   await expect.poll(() => page.locator(".toast").evaluate((element) => {
     const screen = document.querySelector<HTMLElement>("[data-testid=device-screen]")?.getBoundingClientRect();
     const navigation = document.querySelector<HTMLElement>(".app-bottom-nav")?.getBoundingClientRect();
@@ -5053,7 +5043,7 @@ test("connected storage mutation readback updates dashboard and notifications to
 
   await page.getByRole("button", { name: /알림 보기/ }).click();
   const notifications = page.getByRole("dialog", { name: "알림" });
-  await expect(notifications.getByText("지금 확인할 알림이 없어요")).toBeVisible();
+  await expect(notifications.getByText("새 알림이 없어요")).toBeVisible();
 });
 
 test("connected detail mutation carries the external sync lifecycle into notifications", async ({ page }) => {
@@ -5137,12 +5127,14 @@ test("connected detail mutation carries the external sync lifecycle into notific
   await page.locator('[data-nav-tab="fridge"]').click();
   await page.locator(".inventory-row").filter({ hasText: "닭가슴살" }).click();
   const detail = page.getByRole("dialog", { name: "닭가슴살" });
-  await detail.getByRole("button", { name: "냉장", exact: true }).click();
-  await detail.locator(".detail-actions .primary-sheet-button").click();
+  // The storage segment saves on tap.
+  await detail.getByRole("radio", { name: "냉장" }).click();
   await expect(page.locator(".toast")).toContainText("재고 앱에 추가할 예정이에요");
+  await page.keyboard.press("Escape");
+  await expect(detail).toHaveCount(0);
   await page.getByRole("button", { name: /알림 보기/ }).click();
   const notifications = page.getByRole("dialog", { name: "알림" });
-  await expect(notifications.locator('[data-notification-sync-state="queued"] .notification-row-copy em')).toContainText("재고 앱에 추가할 예정");
+  await expect(notifications.locator('[data-notification-sync-state="queued"] .notification-row-meta')).toContainText("재고 앱에 추가할 예정");
   // Each notification row carries its own external-sync state; keep that state inside the device screen.
   await expect.poll(() => notifications.locator('[data-notification-sync-state="queued"]').evaluate((element) => {
     const screen = document.querySelector<HTMLElement>("[data-testid=device-screen]")?.getBoundingClientRect();
@@ -5161,7 +5153,7 @@ test("connected detail mutation carries the external sync lifecycle into notific
     channel.postMessage({ type: "mutation", id: "grocy-sync-lifecycle-finished", sourceId: "grocy-worker-tab", workspaceKey: key, channels: ["notifications"] });
     window.setTimeout(() => channel.close(), 0);
   }, workspaceKey);
-  await expect(notifications.locator('[data-notification-sync-state="applied"] .notification-row-copy em')).toContainText("재고 앱에 추가했어요");
+  await expect(notifications.locator('[data-notification-sync-state="applied"] .notification-row-meta')).toContainText("재고 앱에 추가했어요");
   await expect(notifications.getByText("외부 재고에 반영했어요", { exact: true })).toBeVisible();
   await expect(notifications.locator('[data-notification-sync-state="queued"]')).toHaveCount(0);
   await notifications.getByRole("button", { name: "닫기", exact: true }).click();
@@ -5190,15 +5182,17 @@ test("connected storage sync attention offers a direct external-inventory settin
   await page.locator('[data-nav-tab="fridge"]').click();
   await page.locator(".inventory-row").filter({ hasText: "닭가슴살" }).click();
   const dialog = page.getByRole("dialog", { name: "닭가슴살" });
-  await dialog.getByRole("button", { name: "냉장", exact: true }).click();
-  await dialog.locator(".detail-actions .primary-sheet-button").click();
+  // The storage segment saves on tap.
+  await dialog.getByRole("radio", { name: "냉장" }).click();
 
   await expect(page.locator(".toast")).toContainText(/바꾼 내용\s*보관 위치/);
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
   await expect(page.locator(".toast").getByRole("button", { name: "재고 앱 설정 보기" })).toBeVisible();
   await page.locator(".toast").getByRole("button", { name: "재고 앱 설정 보기" }).click();
-  const accountDialog = page.getByRole("dialog", { name: "내 계정" });
+  const accountDialog = page.getByRole("dialog", { name: "나", exact: true });
   await expect(accountDialog).toBeVisible();
-  await expect(accountDialog.getByRole("heading", { name: "내 계정" })).toBeVisible();
+  await expect(accountDialog.getByRole("heading", { name: "나", exact: true })).toBeVisible();
 });
 
 test("connected storage persistence failure exposes a retry with the same idempotency key", async ({ page }) => {
@@ -5229,8 +5223,8 @@ test("connected storage persistence failure exposes a retry with the same idempo
   await page.locator('[data-nav-tab="fridge"]').click();
   await page.getByRole("button", { name: /닭가슴살 무항생제 닭가슴살 2팩/ }).first().click();
   const dialog = page.getByRole("dialog", { name: "닭가슴살" });
-  await dialog.getByRole("button", { name: "냉장", exact: true }).click();
-  await dialog.locator(".detail-actions .primary-sheet-button").click();
+  // The storage segment saves on tap.
+  await dialog.getByRole("radio", { name: "냉장" }).click();
 
   await expect.poll(() => idempotencyKeys.length).toBe(1);
   const storageRecovery = dialog.locator(".detail-storage-recovery");
@@ -5240,36 +5234,31 @@ test("connected storage persistence failure exposes a retry with the same idempo
   await storageRecovery.getByRole("button", { name: "다시 시도" }).click();
   await expect.poll(() => idempotencyKeys.length).toBe(2);
   expect(idempotencyKeys[1]).toBe(idempotencyKeys[0]);
-  await expect(page.locator(".toast")).toContainText("닭가슴살의 변경 내용을 저장했어요.");
+  await expect(page.locator(".toast")).toContainText("닭가슴살을 냉장으로 옮겼어요.");
 });
 
-test("connected move and open use one atomic storage event sequence", async ({ page }) => {
-  const sequenceKeys: string[] = [];
-  let sequencePayload: Record<string, unknown> | null = null;
-  let sequenceAttempts = 0;
-  await page.route("**/api/foods/chicken-1/storage-event-sequence", async (route) => {
-    sequenceAttempts += 1;
-    sequenceKeys.push(route.request().headers()["idempotency-key"] ?? "");
-    sequencePayload = JSON.parse(route.request().postData() ?? "{}") as Record<string, unknown>;
-    if (sequenceAttempts === 1) {
+test("connected opened switch records one opened event and recovers with the same request", async ({ page }) => {
+  const openKeys: string[] = [];
+  let openPayload: Record<string, unknown> | null = null;
+  await page.route("**/api/foods/chicken-1/storage-events", async (route) => {
+    if (route.request().method() !== "POST") {
+      await route.continue();
+      return;
+    }
+    openKeys.push(route.request().headers()["idempotency-key"] ?? "");
+    openPayload = JSON.parse(route.request().postData() ?? "{}") as Record<string, unknown>;
+    if (openKeys.length === 1) {
       await route.fulfill({
         status: 503,
         contentType: "application/json",
-        body: JSON.stringify({ code: "storage_event_sequence_persistence_unavailable", detail: "temporary storage sequence failure", retryable: true, action: "retry_later" }),
+        body: JSON.stringify({ code: "storage_event_persistence_unavailable", detail: "temporary storage failure", retryable: true, action: "retry_later" }),
       });
       return;
     }
     await route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({
-        events: [
-          { id: "event-sequence-move", food_id: "chicken-1", event_type: "moved", from_storage_type: "frozen", to_storage_type: "refrigerated", quantity: 1, occurred_at: "2026-09-02T10:00:00Z", source: "user_input", created_child_food_id: null, meal_plan_id: null, grocy_sync_status: "queued" },
-          { id: "event-sequence-open", food_id: "chicken-1", event_type: "opened", from_storage_type: "refrigerated", to_storage_type: null, quantity: 1, occurred_at: "2026-09-02T10:00:00Z", source: "user_input", created_child_food_id: null, meal_plan_id: null, grocy_sync_status: "queued" },
-        ],
-        final_food_id: "chicken-1",
-        idempotency_replayed: false,
-      }),
+      body: JSON.stringify({ id: "event-open-e2e", food_id: "chicken-1", event_type: "opened", from_storage_type: "frozen", to_storage_type: null, quantity: 2, occurred_at: "2026-09-02T10:00:00Z", source: "user_input", created_child_food_id: null, meal_plan_id: null, grocy_sync_status: "not_configured" }),
     });
   });
 
@@ -5278,27 +5267,20 @@ test("connected move and open use one atomic storage event sequence", async ({ p
   await page.locator('[data-nav-tab="fridge"]').click();
   await page.getByRole("button", { name: /닭가슴살 무항생제 닭가슴살 2팩/ }).first().click();
   const dialog = page.getByRole("dialog", { name: "닭가슴살" });
-  await dialog.getByRole("button", { name: "수량 줄이기" }).click();
-  await dialog.getByRole("button", { name: "냉장", exact: true }).click();
-  await dialog.locator(".opened-row .toggle").click();
-  await dialog.locator(".detail-actions .primary-sheet-button").click();
+  await dialog.getByRole("switch", { name: "닭가슴살 개봉 상태" }).click();
+  await dialog.getByRole("button", { name: "개봉으로 기록" }).click();
 
-  await expect.poll(() => sequenceAttempts).toBe(1);
-  const sequenceRecovery = dialog.locator(".detail-storage-recovery");
-  await expect(sequenceRecovery).toContainText("보관 정보를 저장하지 못했어요. 기존 기록은 그대로예요.");
-  await expect(page.locator(".inventory-row").filter({ hasText: "닭가슴살" })).toContainText("냉동");
-  await expect(page.locator(".inventory-row").filter({ hasText: "닭가슴살" })).not.toContainText("개봉");
-  await sequenceRecovery.getByRole("button", { name: "다시 시도" }).click();
-  await expect.poll(() => sequenceAttempts).toBe(2);
-  expect(sequenceKeys[1]).toBe(sequenceKeys[0]);
-  expect(sequencePayload).toMatchObject({
-    events: [
-      { event_type: "moved", to_storage_type: "refrigerated", quantity: 1 },
-      { event_type: "opened" },
-    ],
-  });
-  await expect(page.locator(".toast")).toContainText(/바꾼 내용\s*보관 위치, 개봉 상태, 수량/);
-  await expect(page.locator(".toast")).toContainText("재고 앱에 추가할 예정이에요");
+  await expect.poll(() => openKeys.length).toBe(1);
+  const recovery = dialog.locator(".detail-storage-recovery");
+  await expect(recovery).toContainText("보관 정보를 저장하지 못했어요. 기존 기록은 그대로예요.");
+  await expect(dialog.getByRole("switch", { name: "닭가슴살 개봉 상태" })).toHaveAttribute("aria-checked", "false");
+  await recovery.getByRole("button", { name: "다시 시도" }).click();
+  await expect.poll(() => openKeys.length).toBe(2);
+  expect(openKeys[1]).toBe(openKeys[0]);
+  expect(openPayload).toMatchObject({ event_type: "opened" });
+  // Opening has no safe inverse, so the page stays open and the toast offers no undo.
+  await expect(dialog).toBeVisible();
+  await expect(page.locator(".toast .toast-undo")).toHaveCount(0);
 });
 
 test("connected consume mutation recovers through the storage recovery module", async ({ page }) => {
@@ -5373,15 +5355,15 @@ test("connected discard mutation recovers through the storage recovery module", 
   await page.locator('[data-nav-tab="fridge"]').click();
   await page.getByRole("button", { name: /닭가슴살 무항생제 닭가슴살 2팩/ }).first().click();
   const dialog = page.getByRole("dialog", { name: "닭가슴살" });
-  await dialog.getByRole("button", { name: "상태가 이상해 폐기하기" }).click();
-  await dialog.getByRole("alert").getByRole("button", { name: "폐기 기록" }).click();
+  await dialog.getByRole("button", { name: "상태가 이상해서 버림" }).click();
+  await dialog.getByRole("alert").getByRole("button", { name: "버림 기록" }).click();
 
   await expect.poll(() => attempts).toBe(1);
-  await expect(page.locator(".toast")).toContainText("폐기 기록을 저장하지 못했어요. 기존 목록을 유지했어요.");
+  await expect(page.locator(".toast")).toContainText("버림 기록을 저장하지 못했어요. 기존 목록을 유지했어요.");
   await page.locator(".toast").getByRole("button", { name: "다시 시도" }).click();
   await expect.poll(() => attempts).toBe(2);
   expect(idempotencyKeys[1]).toBe(idempotencyKeys[0]);
-  await expect(page.locator(".toast")).toContainText("닭가슴살 폐기 기록을 남겼어요");
+  await expect(page.locator(".toast")).toContainText("닭가슴살 버림 기록을 남겼어요");
   await expect(page.locator(".toast")).toContainText("기록 범위: 전체 2팩");
   await expect(page.locator(".toast")).toContainText("재고 앱에 추가할 예정이에요");
 });
@@ -5417,11 +5399,11 @@ test("connected home counts this week's eaten foods from the rescue summary and 
   await page.locator(".inventory-row").filter({ hasText: "국산콩 두부" }).click();
   const tofu = page.getByRole("dialog", { name: "국산콩 두부" });
   const discarded = page.waitForResponse((response) => /\/api\/foods\/[^/]+\/storage-events$/.test(response.url()) && response.request().method() === "POST");
-  await tofu.getByRole("button", { name: "상태가 이상해 폐기하기" }).click();
+  await tofu.getByRole("button", { name: "상태가 이상해서 버림" }).click();
   const readsBeforeDiscard = summaries.length;
-  await tofu.getByRole("alert").getByRole("button", { name: "폐기 기록" }).click();
+  await tofu.getByRole("alert").getByRole("button", { name: "버림 기록" }).click();
   expect((await discarded).request().postDataJSON()).toMatchObject({ event_type: "discarded" });
-  await expect(page.locator(".toast")).toContainText("폐기 기록을 남겼어요");
+  await expect(page.locator(".toast")).toContainText("버림 기록을 남겼어요");
   // Recording a discard closes the detail by itself; close it only if it is still settled open.
   await tofu.getByRole("button", { name: "닫기", exact: true }).click({ timeout: 2_000 }).catch(() => undefined);
   await expect(tofu).toHaveCount(0);
@@ -5430,7 +5412,7 @@ test("connected home counts this week's eaten foods from the rescue summary and 
   await expect.poll(() => summaries.length).toBeGreaterThan(readsBeforeDiscard);
   await expect.poll(() => summaries.at(-1)).toBe(1);
   await expect(stat).toHaveText(/이번 주 구한 음식\s*1개/);
-  await expect(page.locator(".kitchen-hero")).not.toContainText("폐기");
+  await expect(page.locator(".kitchen-hero")).not.toContainText("버림");
 
   await page.reload();
   await expect(page.locator(".connection-pill")).toHaveClass(/connection-connected/);
@@ -5794,7 +5776,7 @@ test("connected receipt review sends user corrections to the commit API", async 
   expect(staleCandidates?.[0]?.canonical_name).toBe("매일맛있는맛타리버섯");
   await expect(page.locator(".toast")).toContainText("외부 상품·보관 위치 연결을 확인해 주세요");
   await page.locator(".toast").getByRole("button", { name: "재고 앱 설정 보기" }).click();
-  const accountDialog = page.getByRole("dialog", { name: "내 계정" });
+  const accountDialog = page.getByRole("dialog", { name: "나", exact: true });
   await expect(accountDialog).toBeVisible();
   await accountDialog.getByRole("button", { name: "닫기", exact: true }).click();
   await expect(accountDialog).toHaveCount(0);
@@ -6125,8 +6107,8 @@ test("expired account sessions ask for re-authentication without switching works
   await expect(homeLogin).toHaveCount(1);
 
   await homeLogin.click();
-  const dialog = page.getByRole("dialog", { name: "내 계정" });
-  await expect(dialog.getByRole("heading", { name: "내 계정" })).toBeVisible();
+  const dialog = page.getByRole("dialog", { name: "나", exact: true });
+  await expect(dialog.getByRole("heading", { name: "나", exact: true })).toBeVisible();
   await expect(dialog).not.toContainText("식품 기록 설정");
   await expect(dialog).not.toContainText("내 데이터 내보내기");
   await expect(dialog).not.toContainText("외부 연동");
@@ -6140,8 +6122,8 @@ test("expired account sessions ask for re-authentication without switching works
   await expect(fridgeNotice).toContainText("기존 기록 공간을 유지하고 있어요");
   await expect(fridgeNotice.getByRole("button", { name: "계정 다시 연결", exact: true })).toBeVisible();
   await page.locator(".connection-pill").click({ force: true });
-  const pantryDialog = page.getByRole("dialog", { name: "내 계정" });
-  await expect(pantryDialog.getByRole("heading", { name: "내 계정" })).toBeVisible();
+  const pantryDialog = page.getByRole("dialog", { name: "나", exact: true });
+  await expect(pantryDialog.getByRole("heading", { name: "나", exact: true })).toBeVisible();
   await pantryDialog.getByRole("button", { name: "닫기", exact: true }).click();
   await expect(pantryDialog).toHaveCount(0);
   await expect(page.locator(".app-bottom-nav-item-active")).toHaveText("냉장고");
@@ -6246,7 +6228,9 @@ for (const scenario of homeReviewScenarios) {
         await expect(page.locator(".rescue-hero-count")).toHaveCount(0);
         await expect(page.getByRole("heading", { level: 2, name: "이번 주 먼저 볼 것" })).toBeVisible();
       }
-      await expect(page.locator(".meal-plan-button")).toContainText(`날짜나 보관 방법을 살펴볼 식품 ${scenario.foods.length}개`);
+      // The meal action names what it cooks with; the review count lives in the trust card only.
+      await expect(page.locator(".meal-plan-button")).toContainText("만드는 메뉴");
+      await expect(page.locator(".meal-plan-button")).not.toContainText("살펴볼 식품");
       await expect(page.getByRole("dialog")).toHaveCount(0);
       const axe = await new AxeBuilder({ page }).include(".device-screen").analyze();
       expect(axe.violations.map((violation) => violation.id)).toEqual([]);
@@ -6258,7 +6242,7 @@ for (const scenario of homeReviewScenarios) {
         await expect(row.locator(".inventory-status")).toHaveAttribute("data-inventory-status", "needs-review");
         await expect(row.locator(".inventory-review-detail")).toHaveText(scenario.reviewDetails[index]);
       }
-      await expect(page.locator(".inventory-status-filters button").filter({ hasText: "날짜·보관 확인" })).toContainText(String(scenario.foods.length));
+      await expect(page.locator(".inventory-status-filters button").filter({ hasText: "확인 필요" })).toContainText(String(scenario.foods.length));
       const fridgeAxe = await new AxeBuilder({ page }).include(".device-screen").analyze();
       expect(fridgeAxe.violations.map((violation) => violation.id)).toEqual([]);
       expect(recordMutations).toEqual([]);
@@ -6454,15 +6438,17 @@ test("offline reload uses the last successful dashboard snapshot and labels it s
   await page.locator('[data-nav-tab="fridge"]').click();
   await expect(page.getByRole("heading", { name: "내 식품 목록 7" })).toBeVisible();
   await expect(page.locator('.inventory-status[data-inventory-status="needs-review"]').first()).toBeVisible();
-  await expect(page.locator(".inventory-status-filters button").filter({ hasText: "날짜·보관 확인" })).toContainText("2");
+  await expect(page.locator(".inventory-status-filters button").filter({ hasText: "확인 필요" })).toContainText("2");
   await page.locator(".inventory-row").first().click();
   const detail = page.getByRole("dialog", { name: "시금치" });
   await expect(detail.locator(".detail-read-only-callout")).toBeVisible();
-  await expect(detail.locator(".detail-read-only-callout")).toContainText("오프라인 상태라 수정할 수 없어요");
-  await expect(detail.locator(".detail-sheet-content")).toHaveAttribute("data-read-only", "true");
+  await expect(detail.locator(".detail-read-only-callout")).toContainText("오프라인이라 지금은 바꿀 수 없어요");
+  await expect(detail.locator(".food-page")).toHaveAttribute("data-read-only", "true");
+  await expect(detail.getByRole("group", { name: "식품 기록 행동" })).toHaveCount(0);
+  await expect(detail.getByRole("radio")).toHaveCount(0);
   await expect(detail.locator("input, select, textarea, [role='switch']")).toHaveCount(0);
-  await expect(detail.locator(".detail-consume-action, .detail-danger-zone, .product-info-edit-button")).toHaveCount(0);
-  await expect(detail.locator(".detail-hero")).toContainText("시금치");
+  await expect(detail.locator(".detail-consume-action, .food-discard-zone, .food-name-row")).toHaveCount(0);
+  await expect(detail.locator(".food-top")).toContainText("시금치");
   await detail.getByRole("button", { name: "닫기", exact: true }).click();
   await expect(detail).toHaveCount(0);
 
@@ -6487,9 +6473,9 @@ test("offline reload uses the last successful dashboard snapshot and labels it s
   await page.locator(".inventory-row").first().click();
   const liveDetail = page.getByRole("dialog", { name: "시금치" });
   await expect(liveDetail.locator(".detail-read-only-callout")).toHaveCount(0);
-  await expect(liveDetail.locator(".detail-actions-read-only")).toHaveCount(0);
-  await expect(liveDetail.locator(".detail-actions button")).toHaveCount(1);
-  await expect(liveDetail.locator(".storage-option").first()).toBeEnabled();
+  // 시금치's printed date passed: the live action row leads with 날짜 확인 and keeps the guarded record.
+  await expect(liveDetail.locator(".food-actions .food-action")).toHaveText(["날짜 확인", "먹은 기록", "일부 먹음"]);
+  await expect(liveDetail.getByRole("radio").first()).toBeEnabled();
   await liveDetail.getByRole("button", { name: "닫기", exact: true }).click();
   await expect(liveDetail).toHaveCount(0);
 });
@@ -6557,10 +6543,10 @@ test("account settings keeps local drafts until an explicit cross-device refresh
   await page.goto("/");
   await expect(page.locator(".connection-pill")).toHaveClass(/connection-connected/);
   await page.locator(".connection-pill").click();
-  const dialog = page.getByRole("dialog", { name: "내 계정" });
+  const dialog = page.getByRole("dialog", { name: "나", exact: true });
   await dialog.locator(".account-notification-disclosure > summary").click();
   const panel = dialog.getByRole("region", { name: "알림 설정" });
-  await expect(panel.getByRole("heading", { name: "알림 설정" })).toBeVisible();
+  await expect(panel).toBeVisible();
   await expect(panel.getByLabel("알림 미리 받을 기간")).toHaveValue("2");
   await panel.getByLabel("알림 미리 받을 기간").fill("5");
   await panel.getByLabel("알림 미리 받을 기간").press("Tab");
@@ -6657,8 +6643,8 @@ test("guest account settings also exposes the cross-device stale boundary", asyn
   await page.goto("/");
   await expect(page.locator(".connection-pill")).toHaveClass(/connection-connected/);
   await page.locator(".connection-pill").click();
-  const dialog = page.getByRole("dialog", { name: "내 계정" });
-  await expect(dialog.getByRole("heading", { name: "내 계정" })).toBeVisible();
+  const dialog = page.getByRole("dialog", { name: "나", exact: true });
+  await expect(dialog.getByRole("heading", { name: "나", exact: true })).toBeVisible();
   await dialog.locator(".account-notification-disclosure > summary").click();
   const panel = dialog.getByRole("region", { name: "알림 설정" });
   await expect(panel.getByLabel("알림 미리 받을 기간")).toHaveValue("2");
@@ -6747,7 +6733,7 @@ test("account settings exposes the receipt privacy erasure boundary", async ({ p
   await page.goto("/");
   await expect(page.locator(".connection-pill")).toHaveClass(/connection-connected/);
   await page.locator(".connection-pill").click();
-  const dialog = page.getByRole("dialog", { name: "내 계정" });
+  const dialog = page.getByRole("dialog", { name: "나", exact: true });
   await dialog.locator(".account-archive-disclosure > summary").click();
   const privacyPanel = dialog.getByRole("region", { name: "영수증 정보 관리" });
   await expect(privacyPanel.getByRole("heading", { name: "영수증 정보 관리" })).toBeVisible();
@@ -6823,10 +6809,10 @@ test("account settings saves notification preferences and keeps push delivery ex
   await page.goto("/");
   await expect(page.locator(".connection-pill")).toHaveClass(/connection-connected/);
   await page.locator(".connection-pill").click();
-  const dialog = page.getByRole("dialog", { name: "내 계정" });
+  const dialog = page.getByRole("dialog", { name: "나", exact: true });
   await dialog.locator(".account-notification-disclosure > summary").click();
   const panel = dialog.getByRole("region", { name: "알림 설정" });
-  await expect(panel.getByRole("heading", { name: "알림 설정" })).toBeVisible();
+  await expect(panel).toBeVisible();
   const deliveryStatus = panel.locator(".notification-delivery-status");
   await expect(deliveryStatus).toBeVisible();
   await expect(deliveryStatus).toContainText("최근 12건 전송");
@@ -6954,7 +6940,7 @@ test("account settings downloads a redacted workspace export", async ({ page }) 
   await page.goto("/");
   await expect(page.locator(".connection-pill")).toHaveClass(/connection-connected/);
   await page.locator(".connection-pill").click();
-  const dialog = page.getByRole("dialog", { name: "내 계정" });
+  const dialog = page.getByRole("dialog", { name: "나", exact: true });
   await dialog.locator(".account-archive-disclosure > summary").click();
   const panel = dialog.getByRole("region", { name: "내 데이터 내보내기" });
   const downloadPromise = page.waitForEvent("download");
@@ -6985,7 +6971,7 @@ test("account settings explains an export rate limit without creating a download
   await page.goto("/");
   await expect(page.locator(".connection-pill")).toHaveClass(/connection-connected/);
   await page.locator(".connection-pill").click();
-  const dialog = page.getByRole("dialog", { name: "내 계정" });
+  const dialog = page.getByRole("dialog", { name: "나", exact: true });
   await dialog.locator(".account-archive-disclosure > summary").click();
   const panel = dialog.getByRole("region", { name: "내 데이터 내보내기" });
   await panel.getByRole("button", { name: "내 데이터 파일 다운로드" }).click();
@@ -7014,7 +7000,7 @@ test("account settings explains export audit persistence failure without creatin
   await page.goto("/");
   await expect(page.locator(".connection-pill")).toHaveClass(/connection-connected/);
   await page.locator(".connection-pill").click();
-  const dialog = page.getByRole("dialog", { name: "내 계정" });
+  const dialog = page.getByRole("dialog", { name: "나", exact: true });
   await dialog.locator(".account-archive-disclosure > summary").click();
   const panel = dialog.getByRole("region", { name: "내 데이터 내보내기" });
   await panel.getByRole("button", { name: "내 데이터 파일 다운로드" }).click();
@@ -7022,6 +7008,38 @@ test("account settings explains export audit persistence failure without creatin
   await expect(panel.getByRole("alert")).toContainText("감사 기록을 저장하지 못했어요");
   await expect(panel.getByRole("alert")).toContainText("파일을 만들지 않고");
   await expect(panel.getByRole("status")).toHaveCount(0);
+});
+
+test("나 is a settings screen: who you are first, plain grouped rows, deletion set apart", async ({ page }) => {
+  await page.route("**/api/auth/me", async (route) => {
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ mode: "account", user_id: "account-settings-rows-e2e", email: "rows@example.com", workspace_id: "account-settings-rows-e2e", role: "user" }) });
+  });
+  await page.goto("/");
+  await expect(page.locator(".connection-pill")).toHaveClass(/connection-connected/);
+  await page.locator(".connection-pill").click();
+  const dialog = page.getByRole("dialog", { name: "나", exact: true });
+  await expect(dialog.getByRole("region", { name: "계정", exact: true })).toContainText("rows@example.com");
+  // Rows in reading order; no form is open until a row is.
+  const rows = dialog.locator(".set-group .set-row-title");
+  await expect(rows).toHaveText(["알림", "다크 모드", "보관 위치", "데이터와 개인정보", "재고 앱 연결", "비밀번호 변경", "로그아웃", "계정 삭제"]);
+  await expect(dialog.getByRole("textbox")).toHaveCount(0);
+  await expect(dialog.getByRole("region", { name: "알림 설정" })).toHaveCount(0);
+  // Every row is a 44px+ target, and rows are divided lines, not cards with their own shadow.
+  for (const box of await dialog.locator(".set-row").evaluateAll((elements) => elements.map((element) => ({ height: element.getBoundingClientRect().height, shadow: getComputedStyle(element).boxShadow })))) {
+    expect(box.height).toBeGreaterThanOrEqual(44);
+    expect(box.shadow).toBe("none");
+  }
+  // Deletion is its own group after 계정 관리, in the danger colour.
+  const groups = dialog.locator(".set-group");
+  await expect(groups.last()).toHaveAttribute("aria-label", "계정 삭제");
+  await expect(groups.nth(-2)).toHaveAttribute("aria-label", "계정 관리");
+  // Opening a row shows its form in place; closing returns focus to the row.
+  await dialog.getByRole("button", { name: "비밀번호 변경", exact: true }).click();
+  await expect(dialog.getByRole("textbox", { name: "현재 비밀번호" })).toBeFocused();
+  await dialog.getByRole("region", { name: "비밀번호 변경" }).getByRole("button", { name: "닫기", exact: true }).click();
+  await expect(dialog.getByRole("button", { name: "비밀번호 변경", exact: true })).toBeFocused();
+  await dialog.locator(".account-notification-disclosure > summary").click();
+  await expect(dialog.getByRole("region", { name: "알림 설정" })).toBeVisible();
 });
 
 test("account settings changes the password and explains session rotation", async ({ page }) => {
@@ -7041,17 +7059,17 @@ test("account settings changes the password and explains session rotation", asyn
   await page.goto("/");
   await expect(page.locator(".connection-pill")).toHaveClass(/connection-connected/);
   await page.locator(".connection-pill").click();
-  const dialog = page.getByRole("dialog", { name: "내 계정" });
+  const dialog = page.getByRole("dialog", { name: "나", exact: true });
   await dialog.getByRole("button", { name: /비밀번호 변경/ }).first().click();
   const panel = dialog.getByRole("region", { name: "비밀번호 변경" });
   await panel.getByLabel("현재 비밀번호").fill("correct-horse-battery");
   await panel.getByRole("textbox", { name: "새 비밀번호", exact: true }).fill("new-correct-password");
   await panel.getByRole("textbox", { name: "새 비밀번호 확인", exact: true }).fill("new-correct-password");
-  await panel.getByRole("button", { name: "비밀번호 변경 저장" }).click();
+  await panel.getByRole("button", { name: "새 비밀번호 저장" }).click();
 
   await expect.poll(() => changePayload).toEqual({ current_password: "correct-horse-battery", new_password: "new-correct-password" });
-  await expect(panel.getByRole("status")).toContainText("비밀번호를 변경했어요");
-  await expect(panel.getByText("다른 기기의 기존 로그인은 다시 인증이 필요해요.")).toBeVisible();
+  await expect(panel.getByRole("status")).toContainText("비밀번호를 바꿨어요");
+  await expect(panel.getByText("다른 기기에서는 다시 로그인해야 해요.")).toBeVisible();
 });
 
 test("account password change explains an auth rate limit response", async ({ page }) => {
@@ -7065,13 +7083,13 @@ test("account password change explains an auth rate limit response", async ({ pa
   await page.goto("/");
   await expect(page.locator(".connection-pill")).toHaveClass(/connection-connected/);
   await page.locator(".connection-pill").click();
-  const dialog = page.getByRole("dialog", { name: "내 계정" });
+  const dialog = page.getByRole("dialog", { name: "나", exact: true });
   await dialog.getByRole("button", { name: /비밀번호 변경/ }).first().click();
   const panel = dialog.getByRole("region", { name: "비밀번호 변경" });
   await panel.getByLabel("현재 비밀번호").fill("correct-horse-battery");
   await panel.getByRole("textbox", { name: "새 비밀번호", exact: true }).fill("new-correct-password");
   await panel.getByRole("textbox", { name: "새 비밀번호 확인", exact: true }).fill("new-correct-password");
-  await panel.getByRole("button", { name: "비밀번호 변경 저장" }).click();
+  await panel.getByRole("button", { name: "새 비밀번호 저장" }).click();
 
   await expect(panel.getByRole("alert")).toContainText("시도 횟수가 많아요. 잠시 후 다시 비밀번호를 변경해 주세요.");
 });
@@ -7089,7 +7107,7 @@ test("account settings requires an explicit confirmation before account deletion
   await page.goto("/");
   await expect(page.locator(".connection-pill")).toHaveClass(/connection-connected/);
   await page.locator(".connection-pill").click();
-  const dialog = page.getByRole("dialog", { name: "내 계정" });
+  const dialog = page.getByRole("dialog", { name: "나", exact: true });
   await dialog.getByRole("button", { name: /계정 삭제/ }).click();
   const panel = dialog.getByRole("region", { name: "계정 삭제" });
   const submit = panel.getByRole("button", { name: "계정과 데이터 영구 삭제", exact: true });
@@ -7138,7 +7156,7 @@ test("account deletion persistence failure exposes a typed retry with the same e
   await page.goto("/");
   await expect(page.locator(".connection-pill")).toHaveClass(/connection-connected/);
   await page.locator(".connection-pill").click();
-  const dialog = page.getByRole("dialog", { name: "내 계정" });
+  const dialog = page.getByRole("dialog", { name: "나", exact: true });
   await dialog.getByRole("button", { name: /계정 삭제/ }).click();
   const panel = dialog.getByRole("region", { name: "계정 삭제" });
   await panel.getByLabel("현재 비밀번호").fill("correct-horse-battery");
@@ -7163,7 +7181,7 @@ test("interrupted account deletion stays discoverable for a retry after reload",
   await page.goto("/");
   await expect(page.locator(".connection-pill")).toHaveClass(/connection-connected/);
   await page.locator(".connection-pill").click();
-  const dialog = page.getByRole("dialog", { name: "내 계정" });
+  const dialog = page.getByRole("dialog", { name: "나", exact: true });
   await expect(dialog.getByRole("alert")).toContainText("삭제 작업이 아직 끝나지 않았어요");
   await expect(dialog.getByRole("alert")).toContainText("다시 시도해 주세요");
   await expect(dialog.getByRole("button", { name: /계정 삭제/ })).toBeVisible();
@@ -7180,7 +7198,7 @@ test("account deletion explains an auth rate limit response", async ({ page }) =
   await page.goto("/");
   await expect(page.locator(".connection-pill")).toHaveClass(/connection-connected/);
   await page.locator(".connection-pill").click();
-  const dialog = page.getByRole("dialog", { name: "내 계정" });
+  const dialog = page.getByRole("dialog", { name: "나", exact: true });
   await dialog.getByRole("button", { name: /계정 삭제/ }).click();
   const panel = dialog.getByRole("region", { name: "계정 삭제" });
   await panel.getByLabel("현재 비밀번호").fill("correct-horse-battery");
@@ -7204,11 +7222,12 @@ test("login screen accepts a generic password reset request without exposing acc
   await page.goto("/");
   await expect(page.locator(".connection-pill")).toHaveClass(/connection-connected/);
   await page.locator(".connection-pill").click();
-  const dialog = page.getByRole("dialog", { name: "내 계정" });
+  const dialog = page.getByRole("dialog", { name: "나", exact: true });
+  await dialog.getByRole("button", { name: "로그인", exact: true }).click();
   const recovery = dialog.getByRole("region", { name: "비밀번호 재설정" });
-  await recovery.getByRole("button", { name: /비밀번호를 잊으셨나요/ }).click();
+  await recovery.getByRole("button", { name: /비밀번호를 잊었어요/ }).click();
   await recovery.getByRole("textbox", { name: "계정 이메일" }).fill("recover@example.com");
-  await recovery.getByRole("button", { name: "재설정 안내 요청" }).click();
+  await recovery.getByRole("button", { name: "재설정 링크 받기" }).click();
 
   expect(requestPayload).toEqual({ email: "recover@example.com" });
   await expect(recovery.getByRole("status")).toContainText("입력한 이메일이 등록되어 있고 발송 채널이 설정되어 있다면");
@@ -7228,12 +7247,13 @@ test("password reset request failure preserves the email and returns focus at a 
   await page.goto("/");
   await expect(page.locator(".connection-pill")).toHaveClass(/connection-connected/);
   await page.locator(".connection-pill").click();
-  const dialog = page.getByRole("dialog", { name: "내 계정" });
+  const dialog = page.getByRole("dialog", { name: "나", exact: true });
+  await dialog.getByRole("button", { name: "로그인", exact: true }).click();
   const recovery = dialog.getByRole("region", { name: "비밀번호 재설정" });
-  await recovery.getByRole("button", { name: /비밀번호를 잊으셨나요/ }).click();
+  await recovery.getByRole("button", { name: /비밀번호를 잊었어요/ }).click();
   const email = recovery.getByRole("textbox", { name: "계정 이메일" });
   await email.fill("recover-error@example.com");
-  await recovery.getByRole("button", { name: "재설정 안내 요청" }).click();
+  await recovery.getByRole("button", { name: "재설정 링크 받기" }).click();
 
   await expect(recovery.getByRole("alert")).toContainText("비밀번호 재설정 요청을 처리하지 못했어요");
   await expect(email).toHaveValue("recover-error@example.com");
@@ -7241,7 +7261,7 @@ test("password reset request failure preserves the email and returns focus at a 
   await expect(email).toHaveAttribute("aria-describedby", "password-recovery-error");
   await expect(email).toBeFocused();
   const screenBox = await page.getByTestId("mobile-app-viewport").boundingBox();
-  const requestBox = await recovery.getByRole("button", { name: "재설정 안내 요청" }).boundingBox();
+  const requestBox = await recovery.getByRole("button", { name: "재설정 링크 받기" }).boundingBox();
   expect(screenBox, "mobile viewport has no bounding box").toBeTruthy();
   expect(requestBox, "password reset request action has no bounding box").toBeTruthy();
   expect(requestBox!.y + requestBox!.height).toBeLessThanOrEqual(screenBox!.y + screenBox!.height - 12);
@@ -7260,7 +7280,7 @@ test("expired password reset link returns focus to the new password field at a s
   await page.goto("/?reset_token=expired-reset-token");
   await expect(page.locator(".connection-pill")).toHaveClass(/connection-connected/);
   await page.locator(".connection-pill").click();
-  const dialog = page.getByRole("dialog", { name: "내 계정" });
+  const dialog = page.getByRole("dialog", { name: "나", exact: true });
   const recovery = dialog.getByRole("region", { name: "비밀번호 재설정" });
   const password = recovery.getByRole("textbox", { name: "새 비밀번호", exact: true });
   await password.fill("expired-link-password");
@@ -7290,7 +7310,8 @@ test("connected login failure preserves credentials and returns focus to the pas
   await page.goto("/");
   await expect(page.locator(".connection-pill")).toHaveClass(/connection-connected/);
   await page.locator(".connection-pill").click();
-  const dialog = page.getByRole("dialog", { name: "내 계정" });
+  const dialog = page.getByRole("dialog", { name: "나", exact: true });
+  await dialog.getByRole("button", { name: "로그인", exact: true }).click();
   const email = dialog.getByRole("textbox", { name: "이메일" });
   const password = dialog.getByRole("textbox", { name: "비밀번호" });
   await email.fill("wrong@example.com");
@@ -7324,8 +7345,10 @@ test("registration conflict preserves credentials and returns focus to the email
   await page.goto("/");
   await expect(page.locator(".connection-pill")).toHaveClass(/connection-connected/);
   await page.locator(".connection-pill").click();
-  const dialog = page.getByRole("dialog", { name: "내 계정" });
-  await dialog.getByRole("tab", { name: "회원가입" }).click();
+  const dialog = page.getByRole("dialog", { name: "나", exact: true });
+  // The sign-in form stays folded under the guest summary until asked for.
+  await dialog.getByRole("button", { name: "계정 만들기", exact: true }).click();
+  await dialog.getByRole("tab", { name: "계정 만들기" }).click();
   const email = dialog.getByRole("textbox", { name: "이메일" });
   const password = dialog.getByRole("textbox", { name: "비밀번호" });
   await email.fill("already@example.com");
@@ -7359,7 +7382,10 @@ test("account login screen does not mount workspace settings before a session is
   await page.goto("/");
   await expect(page.locator(".connection-pill")).toHaveClass(/connection-connected/);
   await page.locator(".connection-pill").click();
-  const dialog = page.getByRole("dialog", { name: "내 계정" });
+  const dialog = page.getByRole("dialog", { name: "나", exact: true });
+  await expect(dialog.getByRole("region", { name: "게스트" })).toContainText("게스트로 쓰는 중");
+  await expect(dialog.getByRole("button", { name: "로그인", exact: true })).toBeVisible();
+  await dialog.getByRole("button", { name: "로그인", exact: true }).click();
   await expect(dialog.getByRole("tab", { name: "로그인" })).toBeVisible();
   await expect(dialog.getByRole("region", { name: "알림 설정" })).toHaveCount(0);
   await expect(dialog.getByRole("region", { name: "내 데이터 내보내기" })).toHaveCount(0);
@@ -7387,7 +7413,7 @@ test("password reset link lets a user set a new password and receive a fresh acc
   await expect.poll(() => page.url()).not.toContain("reset_token=");
   await expect(page.locator(".connection-pill")).toHaveClass(/connection-connected/);
   await page.locator(".connection-pill").click();
-  const dialog = page.getByRole("dialog", { name: "내 계정" });
+  const dialog = page.getByRole("dialog", { name: "나", exact: true });
   const recovery = dialog.getByRole("region", { name: "비밀번호 재설정" });
   await expect(recovery.getByRole("heading", { name: "새 비밀번호 설정" })).toBeVisible();
   await recovery.getByRole("textbox", { name: "새 비밀번호", exact: true }).fill("reset-correct-password");
@@ -7642,19 +7668,18 @@ test("connected notification center exposes the external sync lifecycle at a gla
   await homeSyncSummary.click();
   const dialog = page.getByRole("dialog", { name: "알림" });
   await expect(dialog.locator(".notification-sync-summary")).toBeVisible();
-  const notificationSummary = dialog.getByRole("region", { name: "알림 요약" });
+  const notificationSummary = dialog.getByRole("region", { name: "재고 앱 연동 요약" });
   await expect(notificationSummary).toHaveAttribute("data-sync-attention-count", "1");
   await expect(notificationSummary).toHaveAttribute("data-sync-waiting-count", "1");
   await expect(notificationSummary).toHaveAttribute("data-sync-applied-count", "1");
-  await expect(notificationSummary).toContainText("외부 연동의 다음 행동");
   const notificationViewport = await page.getByTestId("bottom-sheet").boundingBox();
   expect(notificationViewport, "notification bottom sheet has no bounding box").toBeTruthy();
   const attentionRow = dialog.locator('[data-notification-id="sync-notification-attention"]');
   await expect(attentionRow).toBeFocused();
   await attentionRow.click();
-  const returnedAccount = page.getByRole("dialog", { name: "내 계정" });
+  const returnedAccount = page.getByRole("dialog", { name: "나", exact: true });
   await expect(returnedAccount).toBeVisible();
-  await expect(returnedAccount.getByText("알림에서 열어 온 식품이에요", { exact: true })).toBeVisible();
+  await expect(returnedAccount.getByText("알림에서 열었어요", { exact: true })).toBeVisible();
   await returnedAccount.getByRole("button", { name: "알림으로 돌아가기", exact: true }).click();
   await expect(returnedAccount).toHaveCount(0);
   await expect(dialog).toBeVisible();
@@ -7666,15 +7691,15 @@ test("connected notification center exposes the external sync lifecycle at a gla
   expect(returnedAttentionBox, "returned attention notification has no bounding box").toBeTruthy();
   expect(returnedAttentionBox!.y).toBeGreaterThanOrEqual(returnedNotificationViewport!.y);
   expect(returnedAttentionBox!.y + returnedAttentionBox!.height).toBeLessThanOrEqual(returnedNotificationViewport!.y + returnedNotificationViewport!.height);
-  await expect(dialog.locator('[data-notification-sync-summary="action_required"]')).toContainText("확인 필요1");
-  await expect(dialog.locator('[data-notification-sync-summary="waiting"]')).toContainText("처리 대기1");
-  await expect(dialog.locator('[data-notification-sync-summary="applied"]')).toContainText("반영 완료1");
-  await expect(dialog.locator('[data-notification-sync-state="action_required"] .notification-row-copy em')).toContainText("재고 앱에서 살펴봐 주세요");
-  await expect(dialog.locator('[data-notification-sync-state="queued"] .notification-row-copy em')).toContainText("재고 앱에 추가할 예정");
-  await expect(dialog.locator('[data-notification-sync-state="applied"] .notification-row-copy em')).toContainText("재고 앱에 추가했어요");
-  await expect(dialog.locator('[data-notification-sync-state="action_required"]')).toHaveClass(/notification-row-attention/);
-  await expect(dialog.locator('[data-notification-sync-state="queued"]')).toHaveClass(/notification-row-info/);
-  await expect(dialog.locator('[data-notification-sync-state="applied"]')).toHaveClass(/notification-row-info/);
+  await expect(dialog.locator('[data-notification-sync-summary="action_required"]')).toContainText("1확인 필요");
+  await expect(dialog.locator('[data-notification-sync-summary="waiting"]')).toContainText("1처리 대기");
+  await expect(dialog.locator('[data-notification-sync-summary="applied"]')).toContainText("1반영 완료");
+  await expect(dialog.locator('[data-notification-sync-state="action_required"] .notification-row-meta')).toContainText("재고 앱에서 살펴봐 주세요");
+  await expect(dialog.locator('[data-notification-sync-state="queued"] .notification-row-meta')).toContainText("재고 앱에 추가할 예정");
+  await expect(dialog.locator('[data-notification-sync-state="applied"] .notification-row-meta')).toContainText("재고 앱에 추가했어요");
+  await expect(dialog.locator('[data-notification-sync-state="action_required"]')).toHaveAttribute("data-urgency", "caution");
+  await expect(dialog.locator('[data-notification-sync-state="queued"]')).toHaveAttribute("data-urgency", "neutral");
+  await expect(dialog.locator('[data-notification-sync-state="applied"]')).toHaveAttribute("data-urgency", "neutral");
   await expect(dialog.getByText("외부 재고 반영을 기다리는 중이에요", { exact: true })).toBeVisible();
   const attentionSummary = dialog.locator('[data-notification-sync-summary="action_required"]');
   const waitingSummary = dialog.locator('[data-notification-sync-summary="waiting"]');
@@ -7686,7 +7711,7 @@ test("connected notification center exposes the external sync lifecycle at a gla
   await expect(appliedSummary).toBeFocused();
   await page.keyboard.press("Shift+Tab");
   await expect(waitingSummary).toBeFocused();
-  await expect(attentionSummary).toHaveAccessibleName("확인 필요 1건 · 해당 알림으로 이동");
+  await expect(attentionSummary).toHaveAccessibleName("확인 필요 1건, 해당 알림으로 이동");
   await attentionSummary.click();
   await expect(attentionRow).toBeFocused();
   const currentNotificationViewport = await dialog.boundingBox();
@@ -7813,7 +7838,7 @@ test("connected external-sync notification opens the external inventory settings
   await page.getByRole("button", { name: /알림 보기/ }).click();
   const notifications = page.getByRole("dialog", { name: "알림" });
   await notifications.getByRole("button", { name: "외부 상품 연결이 필요해요: 출처 확인 식품" }).click();
-  const account = page.getByRole("dialog", { name: "내 계정" });
+  const account = page.getByRole("dialog", { name: "나", exact: true });
   await expect.poll(() => notificationRead).toBe(true);
   await expect(account.getByRole("heading", { name: "재고 앱 연결" })).toBeVisible();
   await expect(account.getByText("재고 앱과 연결되어 있어요.", { exact: true })).toBeVisible();
@@ -7968,7 +7993,7 @@ test("connected applied notification focuses its completed outbox detail", async
   await page.getByRole("button", { name: /알림 보기/ }).click();
   const notifications = page.getByRole("dialog", { name: "알림" });
   await notifications.getByRole("button", { name: /^외부 재고에 반영했어요: 닭가슴살\./ }).click();
-  const account = page.getByRole("dialog", { name: "내 계정" });
+  const account = page.getByRole("dialog", { name: "나", exact: true });
   await expect.poll(() => notificationRead).toBe(true);
   const detail = account.locator('[data-grocy-outbox-details="outbox-applied-notification"]');
   await expect(detail).toHaveAttribute("open", "");
@@ -8254,17 +8279,21 @@ test("storage mutation and notification readback converge while a food detail is
 
   const detail = page.getByRole("dialog", { name: "닭가슴살" });
   await expect(detail).toBeVisible();
-  await detail.getByRole("button", { name: "냉장", exact: true }).click();
-  await detail.locator(".detail-actions .primary-sheet-button").click();
+  // The storage segment saves on tap.
+  await detail.getByRole("radio", { name: "냉장" }).click();
   await expect.poll(() => storageMoved).toBe(true);
   await expect.poll(() => dashboardCalls).toBeGreaterThan(1);
 
   releaseRead();
   await expect.poll(() => notificationCalls).toBeGreaterThan(1);
   await expect(page.locator(".inventory-row").filter({ hasText: "닭가슴살" })).toContainText("냉장");
+  // The detail stays open after a storage tap; closing it returns to the notification sheet.
+  await expect(detail).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(detail).toHaveCount(0);
   const refreshedNotifications = page.getByRole("dialog", { name: "알림" });
   await expect(refreshedNotifications).toBeVisible();
-  await expect(refreshedNotifications.getByText("지금 확인할 알림이 없어요")).toBeVisible();
+  await expect(refreshedNotifications.getByText("새 알림이 없어요")).toBeVisible();
   // With no rows left, focus returns into the notification sheet (its first control) instead of the closed detail.
   await expect.poll(() => refreshedNotifications.evaluate((element) => element.contains(document.activeElement) && document.activeElement !== document.body)).toBe(true);
 });
@@ -8771,7 +8800,7 @@ test("connected mapping notification focuses its blocked product task", async ({
   await page.getByRole("button", { name: /알림 보기/ }).click();
   const notifications = page.getByRole("dialog", { name: "알림" });
   await notifications.getByRole("button", { name: "외부 상품 연결이 필요해요: 두부" }).click();
-  const account = page.getByRole("dialog", { name: "내 계정" });
+  const account = page.getByRole("dialog", { name: "나", exact: true });
   await expect(account).toBeVisible();
   const productTask = account.locator('[data-grocy-outbox-task="outbox-mapping-focus"]');
   await expect(productTask).toBeVisible();
@@ -8907,7 +8936,7 @@ test("account settings connects Grocy locations and a blocked product mapping", 
   await page.goto("/");
   await expect(page.locator(".connection-pill")).toHaveClass(/connection-connected/);
   await page.locator(".connection-pill").click();
-  const dialog = page.getByRole("dialog", { name: "내 계정" });
+  const dialog = page.getByRole("dialog", { name: "나", exact: true });
   await dialog.locator(".account-integration-disclosure > summary").click();
   const grocyPanel = dialog.locator(".grocy-integration");
   await expect(grocyPanel.getByRole("heading", { name: "재고 앱 연결" })).toBeVisible();
@@ -9048,7 +9077,7 @@ test("account settings requeues a dead-letter Grocy operation", async ({ page })
   await page.goto("/");
   await expect(page.locator(".connection-pill")).toHaveClass(/connection-connected/);
   await page.locator(".connection-pill").click();
-  const dialog = page.getByRole("dialog", { name: "내 계정" });
+  const dialog = page.getByRole("dialog", { name: "나", exact: true });
   await expect(dialog).toBeVisible();
   await dialog.locator(".account-integration-disclosure > summary").click();
   // Wait for the Grocy panel to mount (its effect makes the first, failing handoff read) before
@@ -9087,7 +9116,7 @@ test("account settings requeues a dead-letter Grocy operation", async ({ page })
   await expect(dialog).toHaveCount(0);
   releaseProcess();
   await page.locator(".connection-pill").click();
-  const reopenedAccount = page.getByRole("dialog", { name: "내 계정" });
+  const reopenedAccount = page.getByRole("dialog", { name: "나", exact: true });
   const reopenedIntegration = reopenedAccount.locator(".account-integration-disclosure");
   if ((await reopenedIntegration.getAttribute("open")) === null) await reopenedIntegration.locator("> summary").click();
   const completedOutbox = reopenedAccount.locator('[data-grocy-outbox-details="outbox-dead-chicken"]');
@@ -9174,7 +9203,7 @@ test("account settings requires an explicit decision for a stale in-flight opera
   await page.goto("/");
   await expect(page.locator(".connection-pill")).toHaveClass(/connection-connected/);
   await page.locator(".connection-pill").click();
-  const dialog = page.getByRole("dialog", { name: "내 계정" });
+  const dialog = page.getByRole("dialog", { name: "나", exact: true });
   await dialog.locator(".account-integration-disclosure > summary").click();
   await expect(dialog.locator('[data-outbox-overall-state="processing"]')).toContainText("추가하는 중 1개");
   await dialog.locator(".grocy-integration").getByText("재고 앱 설정", { exact: true }).click();
@@ -9419,7 +9448,7 @@ test("recipe review surface can approve a source-grounded draft without exposing
   await expect(dialog.locator(".recipe-review-audit")).toContainText("admin@example.com");
   await dialog.getByRole("button", { name: "수정 시작" }).click();
   await expect(dialog.locator(".recipe-review-claim-bar")).toContainText("내가 수정 중");
-  await dialog.getByRole("checkbox", { name: "원본 이용조건·이미지 재사용 권한을 확인했습니다." }).check();
+  await dialog.getByRole("checkbox", { name: "원본 이용조건과 이미지 재사용 권한을 확인했습니다." }).check();
   await dialog.getByRole("button", { name: "식단에 공개" }).click();
   await expect(dialog.getByRole("alert")).toContainText("기존 내용은 그대로예요");
   await dialog.getByRole("alert").getByRole("button", { name: "다시 시도" }).click();
@@ -10337,7 +10366,7 @@ test("GS1 barcode keeps a date candidate separate until the user confirms it", a
   await expect(dateCandidate).toHaveAttribute("data-date-state", "actual_printed");
   await expect(dateCandidate).toHaveAttribute("data-date-confirmation", "candidate");
   await expect(dateCandidate.locator("strong")).toContainText("소비기한");
-  await expect(dateCandidate.locator("strong")).toContainText("2026.09.02");
+  await expect(dateCandidate.locator("strong")).toContainText("2026년 9월 2일 (수)");
   await expect(dateCandidate).toContainText("바코드에서 읽은 날짜예요.");
   await expect(dateCandidate).toContainText("포장지와 식품 이름을 비교한 뒤 입력해 주세요.");
   expect(createPayload).toBeNull();
@@ -10347,15 +10376,15 @@ test("GS1 barcode keeps a date candidate separate until the user confirms it", a
   await expect.poll(() => dateCandidate.locator(".candidate-apply-button").evaluate((element) => getComputedStyle(element).fontSize)).toBe("12px");
   await expect.poll(() => dateCandidate.locator(".candidate-apply-button").evaluate((element) => getComputedStyle(element).backgroundColor)).not.toBe("rgb(237, 243, 233)");
   await expect(addDialog.locator(".barcode-candidate-list")).toContainText("풀무원 국산콩 두부");
-  await dateCandidate.getByRole("button", { name: "상품·날짜 입력하기" }).click();
+  await dateCandidate.getByRole("button", { name: "상품과 날짜 입력하기" }).click();
 
   const manualDialog = page.getByRole("dialog", { name: "직접 추가" });
   await expect(manualDialog.getByRole("textbox", { name: "식품 이름" })).toHaveValue("국산콩 두부");
   const manualDateCandidate = manualDialog.getByRole("status").filter({ hasText: "바코드에서 읽은 소비기한" });
   await expect(manualDateCandidate).toContainText("포장지 날짜와 식품 이름을 비교한 뒤 저장해 주세요.");
-  await expect(manualDateCandidate).toContainText("2026.09.02");
+  await expect(manualDateCandidate).toContainText("2026년 9월 2일 (수)");
   await expect.poll(() => manualDateCandidate.locator("small").evaluate((element) => Number.parseFloat(getComputedStyle(element).fontSize))).toBeGreaterThanOrEqual(12);
-  await expect(manualDialog.locator("#manual-submit-summary")).toHaveText("국산콩 두부 · 브랜드 풀무원1개 소비기한 2026.09.02 냉장 보관");
+  await expect(manualDialog.locator("#manual-submit-summary")).toHaveText("국산콩 두부 · 브랜드 풀무원1개 소비기한 2026년 9월 2일 (수) 냉장 보관");
   await manualDialog.getByRole("button", { name: "식품 추가하기" }).click();
 
   await expect.poll(() => createPayload).not.toBeNull();
@@ -10434,8 +10463,10 @@ test("account registration offers an explicit guest workspace transfer", async (
   await page.goto("/");
   await expect(page.locator(".connection-pill")).toHaveClass(/connection-connected/);
   await page.locator(".connection-pill").click();
-  const dialog = page.getByRole("dialog", { name: "내 계정" });
-  await dialog.getByRole("tab", { name: "회원가입" }).click();
+  const dialog = page.getByRole("dialog", { name: "나", exact: true });
+  // The sign-in form stays folded under the guest summary until asked for.
+  await dialog.getByRole("button", { name: "계정 만들기", exact: true }).click();
+  await dialog.getByRole("tab", { name: "계정 만들기" }).click();
   await dialog.locator("#account-email-input").fill("transfer@example.com");
   await dialog.locator("#account-password-input").fill("correct-horse-battery");
   await dialog.getByRole("button", { name: "계정 만들기" }).click();
@@ -10464,7 +10495,7 @@ test("account registration offers an explicit guest workspace transfer", async (
   await page.reload();
   await expect(page.locator(".connection-pill")).toHaveClass(/connection-connected/);
   await page.locator(".connection-pill").click();
-  const restoredDialog = page.getByRole("dialog", { name: "내 계정" });
+  const restoredDialog = page.getByRole("dialog", { name: "나", exact: true });
   await expect(restoredDialog.getByRole("region", { name: "게스트 기록을 가져올까요?" })).toBeVisible();
   const restoredTransferSummary = restoredDialog.getByRole("status").filter({ hasText: "가져올 기록" });
   await expect(restoredTransferSummary).toContainText("식품 8개");
@@ -10533,8 +10564,10 @@ test("account connection clears the previous workspace while dashboard sync is p
   await page.locator('[data-nav-tab="fridge"]').click();
   await expect(page.getByRole("heading", { name: "내 식품 목록 7" })).toBeVisible();
   await page.locator(".connection-pill").click();
-  const dialog = page.getByRole("dialog", { name: "내 계정" });
-  await dialog.getByRole("tab", { name: "회원가입" }).click();
+  const dialog = page.getByRole("dialog", { name: "나", exact: true });
+  // The sign-in form stays folded under the guest summary until asked for.
+  await dialog.getByRole("button", { name: "계정 만들기", exact: true }).click();
+  await dialog.getByRole("tab", { name: "계정 만들기" }).click();
   await dialog.locator("#account-email-input").fill("boundary@example.com");
   await dialog.locator("#account-password-input").fill("correct-horse-battery");
   await dialog.getByRole("button", { name: "계정 만들기" }).click();
@@ -10583,8 +10616,10 @@ test("account connection failure keeps the old workspace hidden and exposes reco
   await page.locator('[data-nav-tab="fridge"]').click();
   await expect(page.getByRole("heading", { name: "내 식품 목록 7" })).toBeVisible();
   await page.locator(".connection-pill").click();
-  const dialog = page.getByRole("dialog", { name: "내 계정" });
-  await dialog.getByRole("tab", { name: "회원가입" }).click();
+  const dialog = page.getByRole("dialog", { name: "나", exact: true });
+  // The sign-in form stays folded under the guest summary until asked for.
+  await dialog.getByRole("button", { name: "계정 만들기", exact: true }).click();
+  await dialog.getByRole("tab", { name: "계정 만들기" }).click();
   await dialog.locator("#account-email-input").fill("boundary-failure@example.com");
   await dialog.locator("#account-password-input").fill("correct-horse-battery");
   await dialog.getByRole("button", { name: "계정 만들기" }).click();
@@ -10650,8 +10685,10 @@ test("account dashboard reconnect recovers the cleared workspace presentation", 
   await page.locator('[data-nav-tab="fridge"]').click();
   await expect(page.getByRole("heading", { name: "내 식품 목록 7" })).toBeVisible();
   await page.locator(".connection-pill").click();
-  const dialog = page.getByRole("dialog", { name: "내 계정" });
-  await dialog.getByRole("tab", { name: "회원가입" }).click();
+  const dialog = page.getByRole("dialog", { name: "나", exact: true });
+  // The sign-in form stays folded under the guest summary until asked for.
+  await dialog.getByRole("button", { name: "계정 만들기", exact: true }).click();
+  await dialog.getByRole("tab", { name: "계정 만들기" }).click();
   await dialog.locator("#account-email-input").fill("reconnect@example.com");
   await dialog.locator("#account-password-input").fill("correct-horse-battery");
   await dialog.getByRole("button", { name: "계정 만들기" }).click();
@@ -10746,7 +10783,7 @@ test("guest transfer conflict sends the user back to a fresh preview", async ({ 
   await page.goto("/");
   await expect(page.locator(".connection-pill")).toHaveClass(/connection-connected/);
   await page.locator(".connection-pill").click();
-  const dialog = page.getByRole("dialog", { name: "내 계정" });
+  const dialog = page.getByRole("dialog", { name: "나", exact: true });
   await expect(dialog.getByRole("region", { name: "게스트 기록을 가져올까요?" })).toBeVisible();
   await dialog.getByRole("button", { name: "게스트 기록 가져오기" }).click();
 
@@ -10814,7 +10851,7 @@ test("connected custom storage locations can be managed from the account sheet",
   await page.goto("/");
   await expect(page.locator(".connection-pill")).toHaveClass(/connection-connected/);
   await page.locator(".connection-pill").click();
-  const dialog = page.getByRole("dialog", { name: "내 계정" });
+  const dialog = page.getByRole("dialog", { name: "나", exact: true });
   await dialog.locator(".account-storage-disclosure > summary").click();
   const panel = dialog.getByRole("region", { name: "내 보관 위치" });
   await expect(panel).toBeVisible();
@@ -10872,7 +10909,7 @@ test("connected storage location manager refreshes after a cross-device revision
   await page.goto("/");
   await expect(page.locator(".connection-pill")).toHaveClass(/connection-connected/);
   await page.locator(".connection-pill").click();
-  const dialog = page.getByRole("dialog", { name: "내 계정" });
+  const dialog = page.getByRole("dialog", { name: "나", exact: true });
   await dialog.locator(".account-storage-disclosure > summary").click();
   const panel = dialog.getByRole("region", { name: "내 보관 위치" });
   await expect(panel).toContainText("김치냉장고");
@@ -11061,11 +11098,11 @@ test("connected shopping receive posts the selected custom storage location", as
   await page.getByTestId("shopping-nav").click();
   const dialog = page.getByRole("region", { name: "장보기 목록" });
   const shopping = dialog.getByRole("region", { name: "장보기 항목" });
-  await shopping.getByRole("button", { name: "김치 식품 목록에 추가" }).click();
-  const receivePanel = shopping.getByRole("form", { name: "김치 식품 목록에 추가" });
+  await shopping.locator("button.shop-toggle").filter({ hasText: "김치" }).click();
+  await shopping.getByRole("button", { name: "김치 냉장고에 넣기" }).click();
+  const receivePanel = shopping.getByRole("form", { name: "김치 냉장고에 넣기" });
   await receivePanel.getByRole("group", { name: "김치 보관 위치" }).getByRole("button", { name: "김치냉장고", exact: true }).click();
-  await receivePanel.getByRole("button", { name: "구매 완료로 표시", exact: true }).click();
-  await receivePanel.getByRole("button", { name: "식품 목록에 추가", exact: true }).click();
+  await receivePanel.getByRole("button", { name: "냉장고에 넣기", exact: true }).click();
 
   await expect.poll(() => receivePayload).toMatchObject({ storage_type: "refrigerated", storage_location_id: customLocation.id });
 });

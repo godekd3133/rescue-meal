@@ -17,3 +17,12 @@ export function withKoreanObjectParticle(value: string) {
 export function withKoreanTopicParticle(value: string) {
   return withParticle(value, "은", "는");
 }
+
+/** 으로/로: a final ㄹ takes 로 like a vowel. */
+export function withKoreanDirectionParticle(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return value;
+  const code = trimmed.charCodeAt(trimmed.length - 1);
+  const final = code >= 0xac00 && code <= 0xd7a3 ? (code - 0xac00) % 28 : 0;
+  return `${trimmed}${final !== 0 && final !== 8 ? "으로" : "로"}`;
+}

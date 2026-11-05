@@ -15,7 +15,11 @@ export function targetScrollTop(container: HTMLElement, target: HTMLElement, blo
   if (block === "start") return targetTop - topInset;
   if (block === "center") return targetTop - (container.clientHeight - targetHeight) / 2;
   if (block === "end") return targetBottom - container.clientHeight;
-  if (targetRect.top < containerRect.top) return targetTop;
+  // A pinned header inside the container declares its height through the target's scroll-margin-top.
+  const marginTop = typeof window !== "undefined" && typeof window.getComputedStyle === "function"
+    ? Number.parseFloat(window.getComputedStyle(target).scrollMarginTop) || 0
+    : 0;
+  if (targetRect.top < containerRect.top + marginTop * scaleY) return targetTop - marginTop;
   if (targetRect.bottom > containerRect.bottom) return targetBottom - container.clientHeight;
   return container.scrollTop;
 }

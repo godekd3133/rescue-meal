@@ -51,8 +51,10 @@ export default function QuickAdd({
   formatApiDate,
   onSave,
   onChooseMethod,
+  seedNames,
 }: {
   scope: string;
+  seedNames?: readonly string[];
   existingFoods: ReadonlyArray<{ name: string; storage: QuickAddStorage }>;
   imageForFoodName: (name: string) => string;
   formatApiDate: (value: string | null) => string;
@@ -134,6 +136,15 @@ export default function QuickAdd({
     setLine("");
     setLineHint(`${parsed.map((food) => food.name).join(", ")} 담았어요.`);
   };
+
+  // Starter foods tapped on Home arrive already listed (a new array per tap, applied once).
+  const appliedSeedRef = useRef<readonly string[] | undefined>(undefined);
+  useEffect(() => {
+    if (!seedNames?.length || appliedSeedRef.current === seedNames) return;
+    appliedSeedRef.current = seedNames;
+    seedNames.forEach((name) => stage({ name }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seedNames]);
 
   const submitLine = (event: FormEvent) => {
     event.preventDefault();
@@ -254,7 +265,7 @@ export default function QuickAdd({
                 onClick={() => stage({ name: chip.name })}
               >
                 <span>{chip.name}</span>
-                {current ? <small aria-hidden="true">{formatQuickAddQuantity(current)}</small> : <PlusIcon width={12} height={12} aria-hidden="true" />}
+                {current ? <small aria-hidden="true">{formatQuickAddQuantity(current)}</small> : null}
               </button>
             );
           })}
@@ -335,7 +346,7 @@ export default function QuickAdd({
               onPointerDown={(event) => event.preventDefault()}
               onClick={() => void save()}
             >
-              <PlusIcon width={17} height={17} aria-hidden="true" /> {blankName ? "이름을 넣어 주세요" : saveLabel}
+              {blankName ? "이름을 넣어 주세요" : saveLabel}
             </button>
           </div>
         </div>
@@ -344,16 +355,13 @@ export default function QuickAdd({
       )}
 
       <div className="quick-add-methods" role="group" aria-labelledby="quick-add-methods-heading">
-        <div className="quick-add-methods-heading">
-          <strong id="quick-add-methods-heading">사진으로 정확하게</strong>
-          <small>포장지 날짜나 영수증 내용까지 넣을 때</small>
-        </div>
-        <div className="quick-add-method-grid">
-          <button className="quick-add-method" type="button" aria-label="영수증" onClick={() => onChooseMethod("receipt")}><FileTextIcon width={18} height={18} aria-hidden="true" /><span>영수증</span><small>여러 식품</small></button>
-          <button className="quick-add-method" type="button" aria-label="라벨" onClick={() => onChooseMethod("label")}><CalendarIcon width={18} height={18} aria-hidden="true" /><span>라벨</span><small>날짜 읽기</small></button>
+        <span id="quick-add-methods-heading" className="quick-add-section-label">다른 방법으로 추가</span>
+        <div className="quick-add-method-list">
+          <button className="quick-add-method" type="button" aria-label="영수증" onClick={() => onChooseMethod("receipt")}><FileTextIcon width={18} height={18} aria-hidden="true" /><span>영수증</span><small>여러 식품을 한 번에</small></button>
+          <button className="quick-add-method" type="button" aria-label="라벨" onClick={() => onChooseMethod("label")}><CalendarIcon width={18} height={18} aria-hidden="true" /><span>라벨</span><small>포장지 날짜 읽기</small></button>
           <button className="quick-add-method" type="button" aria-label="바코드" onClick={() => onChooseMethod("barcode")}><CameraIcon width={18} height={18} aria-hidden="true" /><span>바코드</span><small>상품 찾기</small></button>
+          <button className="quick-add-method" type="button" aria-label="직접 입력" onClick={() => onChooseMethod("manual")}><Pencil1Icon width={18} height={18} aria-hidden="true" /><span>직접 입력</span><small>날짜까지 한 개씩</small></button>
         </div>
-        <button className="quick-add-manual-link" type="button" aria-label="직접 입력" onClick={() => onChooseMethod("manual")}><Pencil1Icon width={15} height={15} aria-hidden="true" /><span>직접 입력</span><small>한 개씩 날짜까지</small></button>
       </div>
     </section>
   );

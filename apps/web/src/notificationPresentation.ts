@@ -44,3 +44,71 @@ export function notificationListState(loading: boolean, error: string, itemCount
 export function notificationShowsEventTime(notification: Pick<ApiNotification, "kind">) {
   return notification.kind === "grocy_sync";
 }
+
+export type NotificationUrgency = "past" | "today" | "soon" | "neutral" | "caution";
+
+function localDayNumber(date: Date) {
+  return Math.floor(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / 86_400_000);
+}
+
+function dueDayNumber(value: string | null) {
+  const match = value?.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return match ? Math.floor(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])) / 86_400_000) : null;
+}
+
+/** Days from today to the notification's date (negative once it has passed), or null without one. */
+export function notificationDueOffset(notification: Pick<ApiNotification, "kind" | "due_date">, today: Date) {
+  if (notification.kind === "grocy_sync") return null;
+  const due = dueDayNumber(notification.due_date);
+  return due === null ? null : due - localDayNumber(today);
+}
+
+/** The colour bar: urgency colours only say how soon; sync rows that need a decision use caution. */
+export function notificationUrgency(notification: Pick<ApiNotification, "kind" | "due_date" | "sync_state">, today: Date): NotificationUrgency {
+  if (notification.kind === "grocy_sync") return (notification.sync_state ?? "action_required") === "action_required" ? "caution" : "neutral";
+  const offset = notificationDueOffset(notification, today);
+  if (offset === null) return "neutral";
+  if (offset < 0) return "past";
+  if (offset === 0) return "today";
+  return offset <= 3 ? "soon" : "neutral";
+}
+
+const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
+
+export type NotificationDayGroup<T> = { key: string; label: string; items: T[] };
+
+/**
+ * Groups already-ordered notifications by the day they are about: food reminders by their
+ * date (passed, today, tomorrow, then each later day), then reminders without a date, then
+ * inventory-app sync events. Food reminders are rebuilt on read, so created_at is not a day.
+ */
+export function groupNotificationsByDay<T extends Pick<ApiNotification, "kind" | "due_date">>(notifications: readonly T[], today: Date): NotificationDayGroup<T>[] {
+  const groups = new Map<string, { rank: number; label: string; items: T[] }>();
+  const base = localDayNumber(today);
+  for (const notification of notifications) {
+    let key: string;
+    let rank: number;
+    let label: string;
+    if (notification.kind === "grocy_sync") {
+      key = "sync"; rank = Number.MAX_SAFE_INTEGER; label = "재고 앱 연동";
+    } else {
+      const offset = notificationDueOffset(notification, today);
+      if (offset === null) {
+        key = "undated"; rank = Number.MAX_SAFE_INTEGER - 1; label = "날짜 없는 알림";
+      } else if (offset < 0) {
+        key = "past"; rank = -1; label = "날짜 지남";
+      } else if (offset === 0) {
+        key = "today"; rank = 0; label = "오늘";
+      } else if (offset === 1) {
+        key = "tomorrow"; rank = 1; label = "내일";
+      } else {
+        const day = new Date((base + offset) * 86_400_000);
+        key = `day-${offset}`; rank = offset; label = `${day.getUTCMonth() + 1}월 ${day.getUTCDate()}일 ${WEEKDAYS[day.getUTCDay()]}요일`;
+      }
+    }
+    const group = groups.get(key) ?? { rank, label, items: [] };
+    group.items.push(notification);
+    groups.set(key, group);
+  }
+  return [...groups.entries()].sort((left, right) => left[1].rank - right[1].rank).map(([key, group]) => ({ key, label: group.label, items: group.items }));
+}

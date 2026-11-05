@@ -25,7 +25,7 @@ export default function RuntimeConfigurationGuard({ message }: RuntimeConfigurat
             <span><b>01</b><span><strong>API 주소</strong><small>VITE_API_BASE_URL에 운영 API의 HTTPS 주소를 넣어 주세요.</small></span></span>
             <span><b>02</b><span><strong>다시 빌드</strong><small>환경변수는 프론트엔드 빌드 시점에 반영돼요.</small></span></span>
           </div>
-          <small className="runtime-configuration-footnote">개발·시연 화면이 필요하면 VITE_DEPLOYMENT_MODE=demo를 사용하세요.</small>
+          <small className="runtime-configuration-footnote">개발이나 시연 화면이 필요하면 VITE_DEPLOYMENT_MODE=demo를 사용하세요.</small>
         </div>
       </details>
     </main>

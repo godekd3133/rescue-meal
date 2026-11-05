@@ -1,0 +1,360 @@
+/*
+ * 나 sheet (AccountSheet + MeThemeRow). A settings screen: who you are and the one thing
+ * you can do next on top, then plain grouped rows. A row opens its form in place; account
+ * deletion sits alone at the bottom. Rows are divided lists, never a card per row.
+ */
+
+:root[data-rescue-theme]:root:root .set {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+  padding-bottom: 8px;
+  color: var(--ink);
+  font-family: var(--font-body);
+  line-height: var(--leading-body);
+  word-break: keep-all;
+  text-wrap: pretty;
+}
+
+.set :is(h3, p) {
+  margin: 0;
+}
+
+/* ---------- Who: account, guest or preview ---------- */
+
+:root[data-rescue-theme]:root:root .set .set-who {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  align-items: start;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--surface-2);
+  box-shadow: none;
+}
+
+.set-who > :is(.set-who-actions, .set-auth, .primary-sheet-button, .set-recovery) {
+  grid-column: 1 / -1;
+}
+
+.set-avatar {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--action-soft);
+  color: var(--action-text);
+  font-size: var(--text-16);
+  font-weight: var(--weight-bold);
+}
+
+.set-who-copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+:root[data-rescue-theme]:root:root .set .set-who-copy strong {
+  overflow-wrap: anywhere;
+  color: var(--ink);
+  font-size: var(--text-16);
+  font-weight: var(--weight-bold);
+}
+
+:root[data-rescue-theme]:root:root .set .set-who-copy p {
+  color: var(--ink-muted);
+  font-size: var(--text-14);
+}
+
+.set-who-loading .set-avatar {
+  background: var(--surface-3);
+  color: var(--ink-muted);
+}
+
+.set-who-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+:root[data-rescue-theme]:root:root .set :is(.set-who-actions, .set-who, .set-form) > :is(.primary-sheet-button, .secondary-sheet-button) {
+  width: 100%;
+  min-height: 48px;
+  margin: 0;
+}
+
+.set-auth {
+  display: grid;
+  gap: 12px;
+  padding-top: 4px;
+}
+
+.set-auth-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+:root[data-rescue-theme]:root:root .set .account-tabs {
+  display: grid;
+  flex: 1 1 auto;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px;
+  margin: 0;
+  padding: 3px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: var(--surface-3);
+}
+
+:root[data-rescue-theme]:root:root .set .account-tab {
+  min-height: 40px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  box-shadow: none;
+  color: var(--ink-muted);
+  font-size: var(--text-14);
+  font-weight: var(--weight-semibold);
+}
+
+:root[data-rescue-theme]:root:root .set .account-tab-active {
+  background: var(--segment-on);
+  color: var(--ink);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+
+/* ---------- Groups and rows ---------- */
+
+:root[data-rescue-theme]:root:root .set .set-group {
+  display: grid;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--surface-2);
+}
+
+.set-group:empty {
+  display: none;
+}
+
+/* After every row reset, so the divider survives on buttons and details alike. */
+:root[data-rescue-theme]:root:root .set .set-group > * + *,
+:root[data-rescue-theme]:root:root .set .set-group > * + * > .set-row:first-child {
+  border-top: 0;
+}
+
+:root[data-rescue-theme]:root:root .set :is(.set-item, .set-item > section) {
+  margin: 0;
+  padding: 0;
+  border-right: 0;
+  border-bottom: 0;
+  border-left: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+:root[data-rescue-theme]:root:root .set .set-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 52px;
+  margin: 0;
+  padding: 0 14px 0 16px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  list-style: none;
+}
+
+.set-row::-webkit-details-marker {
+  display: none;
+}
+
+:root[data-rescue-theme]:root:root .set .set-row-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: inherit;
+  font-size: var(--text-16);
+  font-weight: var(--weight-medium);
+}
+
+.set-row-value {
+  color: var(--ink-muted);
+  font-size: var(--text-14);
+}
+
+.set-row-chevron {
+  flex: 0 0 auto;
+  color: var(--ink-muted);
+}
+
+details[open] > .set-row .set-row-chevron {
+  transform: rotate(90deg);
+}
+
+:root[data-rescue-theme]:root:root .set .set-row-danger {
+  color: var(--notice-danger-accent);
+}
+
+:root[data-rescue-theme]:root:root .set .set-row:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+:root[data-rescue-theme]:root:root .set :is(.set-row, .set-quiet-button):focus-visible {
+  outline: 2px solid var(--action-text);
+  outline-offset: -3px;
+}
+
+/* The theme switch: a quiet track that turns leek green when on. */
+.set-switch {
+  position: relative;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 26px;
+  border-radius: 13px;
+  background: color-mix(in srgb, var(--ink-muted) 55%, var(--surface-2));
+}
+
+.set-switch > span {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+
+.set-switch[data-on] {
+  background: var(--action);
+}
+
+.set-switch[data-on] > span {
+  transform: translateX(18px);
+}
+
+/* An opened row: its form sits under the row on the same surface. */
+.set-item-body {
+  display: grid;
+  gap: 14px;
+  padding: 4px 16px 18px;
+}
+
+:root[data-rescue-theme]:root:root .set .set-item-body > :is(section, div > section) {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+:root[data-rescue-theme]:root:root .set .set-item-body > div:not([class]) {
+  display: grid;
+  gap: 24px;
+}
+
+.set-form-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+:root[data-rescue-theme]:root:root .set .set-form-heading h3 {
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--text-16);
+  font-weight: var(--weight-bold);
+}
+
+:root[data-rescue-theme]:root:root .set .set-form-heading p {
+  margin-top: 2px;
+  color: var(--ink-muted);
+  font-size: var(--text-14);
+}
+
+.set-form {
+  display: grid;
+  gap: 8px;
+}
+
+:root[data-rescue-theme]:root:root .set .set-form .app-input-label {
+  margin-top: 4px;
+  color: var(--ink-muted);
+  font-size: var(--text-14);
+  font-weight: var(--weight-semibold);
+}
+
+:root[data-rescue-theme]:root:root .set .set-form > .primary-sheet-button,
+:root[data-rescue-theme]:root:root .set .set-form > .danger-sheet-button {
+  margin-top: 8px;
+}
+
+:root[data-rescue-theme]:root:root .set .set-quiet-button {
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  box-shadow: none;
+  color: var(--action-text);
+  font: inherit;
+  font-size: var(--text-14);
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+}
+
+.set-recovery {
+  display: grid;
+  gap: 12px;
+}
+
+:root[data-rescue-theme]:root:root .set .set-recovery-open {
+  justify-self: start;
+  margin-left: -8px;
+}
+
+:root[data-rescue-theme]:root:root .set .set-footnote {
+  padding: 0 4px;
+  color: var(--ink-muted);
+  font-size: var(--text-12);
+}
+
+.set-item-body .set-footnote {
+  padding: 0;
+}
+
+.set-group-danger {
+  margin-top: 8px;
+}
+
+@media (max-width: 340px) {
+  .set-who-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
+:root[data-rescue-theme]:root:root .set .set-group > * + * {
+  border-top: 1px solid var(--line);
+}
+
+:root[data-rescue-theme]:root:root .set .set-who-copy .set-who-email {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow-wrap: normal;
+}

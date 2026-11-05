@@ -1,0 +1,929 @@
+/*
+ * Food detail: a full-height food page inside the detail BottomSheet.
+ * Photo hero → pinned action row → date, storage, product, history cards → quiet discard.
+ * Shapes: actions are 14px rectangles (one filled), cards 20px with a hairline and no shadow,
+ * rows are flat lines inside cards, text buttons have no box. Colours are kitchen.css tokens.
+ */
+
+/* ---------- Sheet chrome: the header floats over the photo, then becomes a title bar ---------- */
+
+.bottom-sheet .sheet-content:has(> .food-page) {
+  padding: 0 0 calc(var(--device-safe-area-bottom, var(--mobile-safe-area-height, 0px)) + 28px);
+  background: var(--surface-1);
+}
+
+.bottom-sheet:has(.food-page) .sheet-handle-zone {
+  position: absolute;
+  z-index: 4;
+  inset: 0 0 auto;
+  height: 20px;
+}
+
+.bottom-sheet:has(.food-page) .sheet-handle {
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.12);
+}
+
+:root[data-rescue-theme]:root:root .bottom-sheet:has(.food-page) .sheet-header {
+  position: absolute;
+  z-index: 3;
+  inset: 0 0 auto;
+  display: flex;
+  height: 60px;
+  align-items: center;
+  padding: 6px 64px 0 20px;
+  border-bottom: 1px solid transparent;
+  background: transparent;
+  pointer-events: none;
+}
+
+:root[data-rescue-theme]:root:root .bottom-sheet:has(.food-page) .sheet-title {
+  overflow: hidden;
+  color: var(--ink);
+  font: 400 var(--text-20)/var(--leading-tight) var(--font-display);
+  opacity: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+:root[data-rescue-theme]:root:root .bottom-sheet:has(.food-page) .sheet-close-button {
+  top: 12px;
+  right: 12px;
+  width: 44px;
+  height: 44px;
+  border-color: var(--line);
+  background: var(--surface-2);
+  pointer-events: auto;
+  transform: none;
+}
+
+:root[data-rescue-theme]:root:root .bottom-sheet:has(.food-page[data-condensed]) .sheet-header {
+  border-bottom-color: var(--line);
+  background: var(--surface-1);
+}
+
+:root[data-rescue-theme]:root:root .bottom-sheet:has(.food-page[data-condensed]) .sheet-title {
+  opacity: 1;
+}
+
+.bottom-sheet:has(.food-page[data-condensed]) .sheet-handle {
+  background: var(--line-strong);
+  box-shadow: none;
+}
+
+/* ---------- Hero ---------- */
+
+.food-page {
+  min-height: 100%;
+  background: var(--surface-1);
+  color: var(--ink);
+}
+
+/* prototype.css paints every [class*="-hero"] / [class*="-editor"] in a sheet; the page owns these. */
+.food-page .food-top,
+.food-page .food-top .food-top-copy {
+  position: relative;
+  background: transparent;
+}
+
+.food-page .food-top .food-top-photo {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 16 / 10;
+  border-radius: 0 0 var(--radius-sheet) var(--radius-sheet);
+  background: var(--surface-3);
+}
+
+.food-page .food-top-photo > .food-top-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.food-page .food-top-photo > .food-photo-placeholder {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: var(--surface-3);
+  color: var(--ink-muted);
+}
+
+.food-page .food-top-photo > .food-photo-placeholder > svg {
+  width: 44px;
+  height: 44px;
+  max-width: none;
+  max-height: none;
+}
+
+.food-page .food-top-chip {
+  position: absolute;
+  bottom: 14px;
+  left: 16px;
+  height: 30px;
+  min-width: 54px;
+  font-size: 15px;
+}
+
+/* An estimate keeps its dashed outline; on a photo it needs a paper fill to stay legible. */
+.food-page .food-top-chip[data-estimated="true"] {
+  background: var(--surface-2);
+}
+
+.food-page .food-top-copy {
+  display: grid;
+  gap: 4px;
+  padding: 16px 20px 0;
+}
+
+.food-page .food-title {
+  margin: 0;
+  color: var(--ink);
+  font: 400 var(--text-28)/var(--leading-tight) var(--font-display);
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+}
+
+.food-page .food-brand {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.food-page .food-top-facts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 14px;
+  margin-top: 6px;
+  color: var(--ink-muted);
+  font-size: 14px;
+}
+
+.food-page .food-top-facts .food-quantity {
+  color: var(--ink);
+  font: 400 var(--text-20)/var(--leading-tight) var(--font-display);
+}
+
+.food-page .food-top-end {
+  position: absolute;
+  bottom: 0;
+  height: 1px;
+}
+
+/* ---------- Pinned action row ---------- */
+
+.food-page .food-actions {
+  position: sticky;
+  z-index: 2;
+  top: 60px;
+  display: grid;
+  grid-template-columns: repeat(var(--food-action-count, 4), minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 14px;
+  padding: 8px 20px 10px;
+  background: var(--surface-1);
+}
+
+.food-page .food-actions[data-count="2"] { --food-action-count: 2; }
+.food-page .food-actions[data-count="3"] { --food-action-count: 3; }
+
+.food-page[data-condensed] .food-actions {
+  box-shadow: 0 1px 0 var(--line);
+}
+
+.food-page .food-action {
+  min-width: 0;
+  min-height: 48px;
+  padding: 0 6px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-control);
+  background: var(--surface-2);
+  color: var(--ink);
+  font: var(--weight-bold) var(--text-16)/var(--leading-tight) var(--font-body);
+  cursor: pointer;
+  transition: transform 90ms var(--ease-out), background-color 120ms;
+}
+
+.food-page .food-action-primary {
+  border-radius: var(--radius-action);
+  border-color: var(--action);
+  background: var(--action);
+  color: var(--action-ink);
+}
+
+.food-page .food-action[aria-expanded="true"] {
+  border-color: var(--action-text);
+  background: var(--action-soft);
+  color: var(--action-text);
+}
+
+.food-page .food-action:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ---------- Body, cards and rows ---------- */
+
+.food-page .food-page-body {
+  display: grid;
+  gap: 12px;
+  padding: 6px 20px 0;
+}
+
+.food-page .food-card {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--surface-2);
+}
+
+.food-page .food-card-heading {
+  display: flex;
+  min-height: 24px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.food-page .food-card-title {
+  margin: 0;
+  color: var(--ink);
+  font: var(--weight-bold) var(--text-16)/var(--leading-snug) var(--font-body);
+}
+
+.food-page .food-card-status {
+  color: var(--ink-muted);
+  font-size: 13px;
+}
+
+.food-page .food-icon-button {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  margin: -10px -10px -10px 0;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink-muted);
+  cursor: pointer;
+}
+
+.food-page .food-date-value {
+  margin: 0;
+  color: var(--ink);
+  font: 400 var(--text-28)/var(--leading-tight) var(--font-display);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The date facts are one focusable group inside the date card. */
+.food-page .food-date-card {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  border-radius: var(--radius-control);
+}
+
+.food-page .food-date-card[data-date-state="unknown"] .food-date-value {
+  color: var(--ink-muted);
+}
+
+.food-page .food-facts {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+}
+
+.food-page .food-facts > div {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 12px;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.food-page .food-facts dt {
+  color: var(--ink-muted);
+}
+
+.food-page .food-facts dd {
+  margin: 0;
+  color: var(--ink);
+}
+
+.food-page .food-date-hint {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: var(--text-14);
+  line-height: var(--leading-body);
+}
+
+.food-page :is(.date-review-callout, .storage-mismatch-callout, .detail-read-only-callout, .detail-remote-refresh) {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  margin: 0;
+  padding: 12px 14px;
+}
+
+.food-page :is(.date-review-callout, .storage-mismatch-callout, .detail-read-only-callout, .detail-remote-refresh) > svg {
+  margin-top: 2px;
+}
+
+.food-page :is(.date-review-callout, .storage-mismatch-callout, .detail-read-only-callout, .detail-remote-refresh) > span {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+:root[data-rescue-theme]:root:root .food-page :is(.date-review-callout, .storage-mismatch-callout, .detail-read-only-callout, .detail-remote-refresh) strong {
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.food-page .detail-remote-refresh {
+  border: 1px solid var(--notice-caution-line);
+  border-radius: 16px;
+  background: var(--notice-caution);
+}
+
+.food-page .detail-remote-refresh > button {
+  grid-column: 2;
+  justify-self: start;
+}
+
+/* The card's one action. Outlined normally; filled when the date question leads the page. */
+.food-page .food-card-action {
+  min-height: 48px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-control);
+  background: var(--surface-2);
+  color: var(--ink);
+  font: var(--weight-bold) var(--text-16)/var(--leading-tight) var(--font-body);
+  cursor: pointer;
+}
+
+.food-page .food-card-action-strong {
+  border-radius: var(--radius-action);
+  border-color: var(--action);
+  background: var(--action);
+  color: var(--action-ink);
+}
+
+/* ---------- Storage: segmented track that saves on tap, opened switch ---------- */
+
+.food-page .food-segmented {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  padding: 4px;
+  border-radius: var(--radius-control);
+  background: var(--surface-3);
+}
+
+.food-page .food-segmented > button {
+  min-height: 44px;
+  border: 0;
+  border-radius: calc(var(--radius-control) - 3px);
+  background: transparent;
+  color: var(--ink-muted);
+  font: var(--weight-bold) var(--text-16)/1 var(--font-body);
+  cursor: pointer;
+  transition: background-color 140ms, color 140ms;
+}
+
+.food-page .food-segmented > button[aria-checked="true"] {
+  background: var(--segment-on);
+  box-shadow: 0 1px 3px rgba(12, 30, 21, 0.14);
+  color: var(--ink);
+}
+
+.food-page .food-segmented > button:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.food-page .food-storage-card[aria-busy="true"] .food-segmented > button[aria-checked="true"] {
+  color: var(--ink-muted);
+}
+
+.food-page .food-place-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.food-page .food-place-chips > button {
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-control);
+  background: var(--surface-2);
+  color: var(--ink);
+  font: var(--weight-semibold) var(--text-14)/var(--leading-tight) var(--font-body);
+  cursor: pointer;
+}
+
+.food-page .food-place-chips > button[aria-pressed="true"] {
+  border-color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--ink);
+}
+
+.food-page .food-switch-row {
+  display: flex;
+  min-height: 52px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.food-page .food-switch-copy {
+  display: grid;
+  gap: 2px;
+}
+
+.food-page .food-switch-copy strong {
+  font-size: var(--text-16);
+  font-weight: var(--weight-bold);
+}
+
+/* Sheet <small> is the shared 12px caption (prototype.css). */
+.food-page .food-switch-copy small {
+  color: var(--ink-muted);
+}
+
+/* 52×44 hit box; the 32px track is ::before and the thumb is the span. */
+.food-page .food-switch {
+  position: relative;
+  flex: 0 0 auto;
+  width: 52px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.food-page .food-switch::before {
+  position: absolute;
+  inset: 6px 0;
+  border-radius: 999px;
+  background: var(--line-strong);
+  content: "";
+  transition: background-color 160ms;
+}
+
+.food-page .food-switch > span {
+  position: absolute;
+  top: 9px;
+  left: 3px;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  transition: transform 180ms var(--ease-out);
+}
+
+.food-page .food-switch[aria-checked="true"]::before {
+  background: var(--action);
+}
+
+.food-page .food-switch[aria-checked="true"] > span {
+  transform: translateX(20px);
+}
+
+.food-page .food-switch[aria-expanded="true"]::before {
+  background: color-mix(in srgb, var(--action) 45%, var(--line-strong));
+}
+
+.food-page .food-switch:disabled {
+  cursor: default;
+}
+
+.food-page .food-switch[aria-checked="false"]:disabled {
+  opacity: 0.5;
+}
+
+.food-page .food-open-confirm {
+  display: grid;
+  gap: 10px;
+}
+
+.food-page .food-open-confirm > p,
+.food-page .product-provenance-remove-confirm > p {
+  margin: 0;
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.food-page .detail-storage-recovery {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  gap: 8px 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--notice-danger-line);
+  border-radius: 16px;
+  background: var(--notice-danger);
+  color: var(--ink);
+}
+
+.food-page .detail-storage-recovery > svg {
+  margin-top: 2px;
+  color: var(--notice-danger-accent);
+}
+
+.food-page .detail-storage-recovery > button {
+  grid-column: 2;
+  justify-self: start;
+}
+
+/* ---------- Product rows ---------- */
+
+.food-page .food-rows {
+  display: grid;
+  margin: -4px 0;
+}
+
+.food-page .food-row {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+  width: 100%;
+  min-height: 52px;
+  padding: 14px 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+}
+
+.food-page .food-row:first-child {
+  border-top: 0;
+}
+
+.food-page .food-row-button {
+  cursor: pointer;
+}
+
+.food-page .food-row-label {
+  color: var(--ink-muted);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.food-page .food-row-value {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.food-page .food-row-value strong {
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+.food-page .food-row-value :is(small, a) {
+  color: var(--ink-muted);
+  font-size: var(--text-12);
+}
+
+.food-page .food-row-value a {
+  justify-self: start;
+  color: var(--action-text);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.food-page .food-row-value .storage-hint-mismatch-note {
+  color: var(--notice-caution-accent);
+}
+
+.food-page .food-row-edit {
+  color: var(--action-text);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.food-page .food-row:not(.food-row-button) {
+  grid-template-columns: 76px minmax(0, 1fr);
+}
+
+.food-page .food-rows .product-info-editor {
+  margin: 0;
+  border-width: 1px 0 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  display: grid;
+  gap: 10px;
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+}
+
+.food-page .food-rows .product-info-editor:first-child {
+  border-top: 0;
+}
+
+.food-page .product-info-editor > strong {
+  font-size: 15px;
+}
+
+.food-page .product-info-editor-field {
+  display: grid;
+  gap: 6px;
+  color: var(--ink-muted);
+  font-size: 13px;
+}
+
+.food-page .product-info-editor-note,
+.food-page .product-info-editor > p[role="alert"] {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.food-page :is(.product-info-save-error, .product-provenance-save-error, .product-info-save-notice, .product-provenance-save-notice) {
+  display: grid;
+  grid-template-columns: 15px minmax(0, 1fr);
+  gap: 8px 10px;
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--notice-info-line);
+  border-radius: 16px;
+  background: var(--notice-info);
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.food-page :is(.product-info-save-error, .product-provenance-save-error) {
+  border-color: var(--notice-danger-line);
+  background: var(--notice-danger);
+}
+
+.food-page :is(.product-info-save-error, .product-provenance-save-error, .product-info-save-notice, .product-provenance-save-notice) > button {
+  grid-column: 2;
+  justify-self: start;
+}
+
+/* ---------- Inline cards: 일부 먹음, consume and discard confirmations ---------- */
+
+.food-page .food-inline-card {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-card);
+  background: var(--surface-2);
+}
+
+.food-page .food-inline-card.discard-confirm {
+  border-color: var(--notice-danger-line);
+}
+
+.food-page .food-inline-card > p {
+  margin: 0;
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.food-page .food-inline-title {
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.food-page .food-inline-facts {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+}
+
+.food-page .food-inline-facts > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 14px;
+}
+
+.food-page .food-inline-facts dt {
+  min-width: 0;
+  color: var(--ink-muted);
+}
+
+.food-page .food-inline-facts dd {
+  margin: 0;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: var(--text-16);
+  font-variant-numeric: tabular-nums;
+}
+
+.food-page .food-inline-buttons {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+  gap: 8px;
+}
+
+.food-page .food-inline-buttons > button {
+  min-height: 48px;
+}
+
+:root[data-rescue-theme]:root:root .food-page .food-inline-buttons > .danger-sheet-button {
+  border: 0;
+  border-radius: var(--radius-action);
+  background: var(--urgency-past-text);
+  color: var(--surface-1);
+  font: var(--weight-bold) var(--text-16)/var(--leading-tight) var(--font-body);
+}
+
+/* Revealed targets clear the title bar and the pinned action row. */
+.food-page .food-page-body :is(section, details, .food-inline-card, button, input, [tabindex]) {
+  scroll-margin-top: 136px;
+}
+
+/* ---------- History: a timeline inside the card ---------- */
+
+.food-page .detail-history-disclosure {
+  gap: 0;
+  padding: 0 16px;
+}
+
+.food-page .food-history-summary {
+  display: flex;
+  min-height: 56px;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  list-style: none;
+}
+
+.food-page .food-history-summary::-webkit-details-marker {
+  display: none;
+}
+
+.food-page .food-history-toggle {
+  color: var(--action-text);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.food-page .food-history-body {
+  display: grid;
+  gap: 16px;
+  padding: 4px 0 16px;
+}
+
+.food-page .food-history-loading {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: 13px;
+}
+
+/* ---------- Discard: a quiet text action at the end ---------- */
+
+.food-page .food-discard-zone {
+  display: grid;
+  padding-top: 4px;
+}
+
+.food-page .food-text-button {
+  justify-self: center;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 0;
+  background: transparent;
+  color: var(--ink-muted);
+  font: var(--weight-semibold) var(--text-14)/var(--leading-tight) var(--font-body);
+  text-decoration: underline;
+  text-decoration-color: var(--line-strong);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.food-page :is(.food-discard-button, .food-text-button-danger) {
+  color: var(--urgency-past-text);
+  text-decoration-color: currentColor;
+}
+
+.food-page .food-text-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ---------- Focus, press, narrow screens ---------- */
+
+/* The device shell clears native outlines, so every control draws its own 2px ring. */
+.food-page :is(button, summary, a, .food-card[tabindex], .food-date-card[tabindex]) {
+  position: relative;
+}
+
+.food-page :is(button, summary, a, .food-card[tabindex], .food-date-card[tabindex]):focus-visible::after {
+  position: absolute;
+  z-index: 1;
+  inset: -4px;
+  border: 2px solid var(--action-text);
+  border-radius: inherit;
+  content: "";
+  pointer-events: none;
+}
+
+.food-page :is(summary, a, .food-row-button):focus-visible::after {
+  border-radius: 12px;
+}
+
+.food-page :is(.food-action, .food-card-action, .food-place-chips > button):active:not(:disabled) {
+  transform: scale(var(--press-scale));
+}
+
+@media (max-width: 360px) {
+  .food-page .food-top-copy,
+  .food-page .food-page-body {
+    padding-inline: 16px;
+  }
+
+  .food-page .food-actions {
+    gap: 6px;
+    padding-inline: 16px;
+  }
+
+  .food-page .food-action {
+    font-size: var(--text-14);
+  }
+
+  .food-page .food-title {
+    font-size: 25px;
+  }
+
+  .food-page .food-row,
+  .food-page .food-row:not(.food-row-button) {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .food-page .food-row-label {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .food-page :is(.food-card, .food-inline-card, .food-action, .food-card-action) {
+    border-color: var(--line-strong);
+  }
+
+  .food-page .food-segmented > button[aria-checked="true"] {
+    box-shadow: inset 0 0 0 2px var(--ink);
+  }
+
+  .food-page .food-switch[aria-checked="false"]::before {
+    box-shadow: inset 0 0 0 2px var(--ink-muted);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .food-page .food-switch::before,
+  .food-page :is(.food-action, .food-segmented > button, .food-switch > span) {
+    transition: none;
+  }
+
+  .food-page :is(.food-action, .food-card-action, .food-place-chips > button):active:not(:disabled) {
+    transform: none;
+  }
+}
+
+/* Header bar fade only answers the scroll that caused it. */
+@media (prefers-reduced-motion: no-preference) {
+  :root[data-rescue-theme]:root:root .bottom-sheet:has(.food-page) :is(.sheet-header, .sheet-title) {
+    transition: background-color 160ms, border-color 160ms, opacity 160ms;
+  }
+}
+
+/* Food page actions sit at the top, so its toast sits at the bottom and never covers close or the action row. */
+:is(.app-shell-preview, .app-shell-native) .toast-layer.toast-layer[data-active-sheet="detail"] .toast {
+  top: auto;
+  bottom: calc(var(--device-safe-area-bottom, 34px) + 12px);
+}
+
+.app-shell-preview .mobile-app-viewport[data-platform="android"] .toast-layer.toast-layer[data-active-sheet="detail"] .toast { bottom: 12px; }
+
+:root:has(.toast-layer[data-active-sheet="detail"] .toast) .food-page { padding-bottom: 80px; }

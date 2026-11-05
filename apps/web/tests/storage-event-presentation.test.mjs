@@ -12,5 +12,5 @@ test('very small recorded amounts stay exact and readable without scientific not
 });
 test('known amounts retain their unit and consumption or disposal meaning',()=>{
  assert.equal(storageEventQuantityDetail(1.1234,'L'),'1.1234L 먹었어요');
- assert.equal(storageEventQuantityDetail(0.2,'팩',true),'0.2팩 폐기했어요');
+ assert.equal(storageEventQuantityDetail(0.2,'팩',true),'0.2팩 버렸어요');
 });

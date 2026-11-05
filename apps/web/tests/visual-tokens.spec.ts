@@ -32,6 +32,9 @@ const PAIRS: Pair[] = [
   { fg: "--hero-ink", bg: "--nav-pill", min: 4.5, why: "active tab label" },
   { fg: "--action-ink", bg: "--action", min: 3, why: "FAB plus icon" },
   { fg: "--fab-ring", bg: "--nav-pill", min: 3, why: "FAB ring on the dark nav pill" },
+  { fg: "--inverse-ink", bg: "--inverse-bg", min: 4.5, why: "toast message" },
+  { fg: "--inverse-accent", bg: "--inverse-bg", min: 4.5, why: "toast 되돌리기 / action label" },
+  { fg: "--inverse-caution", bg: "--inverse-bg", min: 3, why: "toast recovery icon" },
 ];
 
 async function readContrasts(page: Page) {
@@ -138,4 +141,48 @@ test("the add button is leek green with a white plus in both themes", async ({ p
     await expect(add).toHaveCSS("background-color", theme === "light" ? "rgb(27, 108, 66)" : "rgb(35, 122, 75)");
     await expect(add).toHaveCSS("color", "rgb(255, 255, 255)");
   }
+});
+
+test("type, shape and display-face tokens follow the six-step scale", async ({ page }) => {
+  await page.goto("/");
+  const tokens = await page.evaluate(() => {
+    const style = getComputedStyle(document.documentElement);
+    const px = (name: string) => {
+      const probe = document.createElement("span");
+      probe.style.fontSize = `var(${name})`;
+      document.body.append(probe);
+      const value = getComputedStyle(probe).fontSize;
+      probe.remove();
+      return value;
+    };
+    return {
+      sizes: ["--text-12", "--text-14", "--text-16", "--text-20", "--text-28", "--text-56"].map(px),
+      radii: ["--radius-control", "--radius-action", "--radius-card", "--radius-sheet"].map((name) => style.getPropertyValue(name).trim()),
+      body: style.getPropertyValue("--font-body"),
+      display: style.getPropertyValue("--font-display"),
+    };
+  });
+  expect(tokens.sizes).toEqual(["12px", "14px", "16px", "20px", "28px", "56px"]);
+  expect(tokens.radii).toEqual(["12px", "14px", "20px", "28px"]);
+  expect(tokens.display).toContain("Jua");
+  expect(tokens.body).not.toContain("Jua");
+
+  // Jua for titles and the Home headline only; rows, section titles and buttons use the body face.
+  const family = (selector: string) => page.locator(selector).first().evaluate((element) => getComputedStyle(element).fontFamily);
+  expect(await family("#greeting-title")).toContain("Jua");
+  expect(await family(".home-section-title")).not.toContain("Jua");
+  expect(await family(".meal-plan-button strong")).not.toContain("Jua");
+  await page.locator('.app-bottom-nav [data-nav-tab="fridge"]').click();
+  expect(await family(".fridge-screen .screen-title")).toContain("Jua");
+  expect(await family(".inventory-row .inventory-copy > strong")).not.toContain("Jua");
+  // Every visible text size on 냉장고 sits on the scale.
+  const sizes = await page.locator(".fridge-screen").evaluate((root) => {
+    const found = new Set<string>();
+    root.querySelectorAll<HTMLElement>("strong, small, span, button, h1, h2, h3, p, input").forEach((element) => {
+      if (!element.getClientRects().length || !element.textContent?.trim() && element.tagName !== "INPUT") return;
+      found.add(getComputedStyle(element).fontSize);
+    });
+    return [...found];
+  });
+  for (const size of sizes) expect(["12px", "14px", "16px", "20px", "28px", "56px"], `냉장고 font size ${size}`).toContain(size);
 });

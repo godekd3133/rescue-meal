@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { ArchiveIcon, ChevronRightIcon, Cross2Icon, InfoCircledIcon, MagnifyingGlassIcon, PlusIcon } from "@radix-ui/react-icons";
+import { ArchiveIcon, Cross2Icon, InfoCircledIcon, MagnifyingGlassIcon } from "@radix-ui/react-icons";
 import { FoodPhoto } from "../FoodPhoto";
 import { Metadata } from "../Metadata";
 import { foodIdentityParts } from "../foodBrandPresentation";
@@ -31,6 +31,12 @@ function useSwipeRow() {
 export type FridgeStatusFilter = "all" | "needs-review" | "priority";
 export type FridgeStorageFilter = "전체" | "냉장" | "냉동" | "실온" | `location:${string}`;
 type SearchPhase = "idle" | "composing" | "waiting" | "refreshing" | "stale" | "error" | "ready" | string;
+
+const STATUS_OPTIONS: ReadonlyArray<{ value: FridgeStatusFilter; label: string }> = [
+  { value: "all", label: "전체" },
+  { value: "needs-review", label: "확인 필요" },
+  { value: "priority", label: "먼저 볼 것" },
+];
 
 const BUILT_IN_STORAGE: ReadonlyArray<{ value: FridgeStorageFilter; label: string }> = [
   { value: "전체", label: "전체" },
@@ -115,20 +121,11 @@ export default function FridgeScreen(props: {
       <ScreenHeader id="fridge-screen-title" title="냉장고" actions={props.headerActions} />
 
       <section className={`inventory-section${hasEmptyResult || dataUnknown ? " inventory-section-empty-result" : ""}${dataUnknown ? " inventory-section-unknown" : ""}`} aria-labelledby="inventory-title" aria-busy={initialLoading || searchPending}>
-        {initialLoading ? <><h2 id="inventory-title" className="sr-only">내 식품 목록</h2><div className="inventory-loading-placeholder" aria-hidden="true">{[0, 1, 2].map((row) => <div key={row}><span /><span /><span /></div>)}</div></> : <>
+        {initialLoading ? <><h2 id="inventory-title" className="sr-only">내 식품 목록</h2><div className="inventory-loading-placeholder skeleton-list" aria-hidden="true">{[0, 1, 2, 3].map((row) => <div key={row} className="skeleton-row"><span /><span /><span /></div>)}</div></> : <>
           <div className="inventory-toolbar">
-            <div className="section-heading inventory-heading">
-              <div className="inventory-heading-copy">
-                <h2 id="inventory-title" aria-label={searchPhase === "composing" ? "내 식품 목록" : searchWaiting ? "내 식품 목록 검색 중" : dataUnknown ? "내 식품 목록" : showTools ? `내 식품 목록 ${inventoryCount}` : "내 식품 목록"}>내 식품 목록 {showTools ? <span>{countLabel(inventoryCount)}</span> : null}</h2>
-              </div>
-              <button className="icon-button inventory-add-button" type="button" aria-label="식품 목록에 추가" title="식품 목록에 추가" onClick={props.onAdd}>
-                <PlusIcon width={16} height={16} aria-hidden="true" />
-                <span>추가</span>
-              </button>
-            </div>
             {showTools ? <>
               <label className="inventory-search">
-                <MagnifyingGlassIcon width={15} height={15} aria-hidden="true" />
+                <MagnifyingGlassIcon width={16} height={16} aria-hidden="true" />
                 <KeyboardInput className="inventory-search-input" type="search" value={props.query} placeholder="식품 검색" aria-label="식품·브랜드·카테고리 검색" onCompositionStart={() => props.onCompositionChange(true)} onCompositionEnd={(event) => props.onCompositionChange(false, event.currentTarget.value)} onChange={(event) => props.onQueryChange(event.target.value)} onFocus={props.onSearchFocus} onBlur={props.onSearchBlur} />
                 {hasQuery ? <button type="button" aria-label="식품 검색어 지우기" onPointerDown={(event) => event.preventDefault()} onClick={props.onClearSearch}><Cross2Icon width={14} height={14} /></button> : null}
               </label>
@@ -139,16 +136,21 @@ export default function FridgeScreen(props: {
                   ))}
                 </Carousel>
               </div>
-              <div className="inventory-status-filters" role="group" aria-label={`식품 상태 필터${props.scopeIsStale ? " · 이전 결과" : ""}`} data-scope-state={props.scopeIsStale ? "stale" : searchPending ? "loading" : "current"} aria-busy={searchPending}>
-                <button className={statusFilter === "all" ? "inventory-status-filter-active" : ""} type="button" aria-pressed={statusFilter === "all"} aria-controls="inventory-list" onClick={() => props.onStatusFilterChange("all")}>전체 <span>{countLabel(props.scopeCount)}</span></button>
-                <button className={statusFilter === "needs-review" ? "inventory-status-filter-active inventory-status-filter-warning" : "inventory-status-filter-warning"} type="button" aria-pressed={statusFilter === "needs-review"} aria-controls="inventory-list" onClick={() => props.onStatusFilterChange("needs-review")}>날짜·보관 확인 <span>{countLabel(props.scopedNeedsReviewCount)}</span></button>
-                <button className={statusFilter === "priority" ? "inventory-status-filter-active inventory-status-filter-priority" : "inventory-status-filter-priority"} type="button" aria-pressed={statusFilter === "priority"} aria-controls="inventory-list" onClick={() => props.onStatusFilterChange("priority")}>먼저 살펴보기 <span>{countLabel(props.scopedPriorityCount)}</span></button>
+              <div className="inventory-status-filters fridge-status-segment" role="group" aria-label={`식품 상태 필터${props.scopeIsStale ? " · 이전 결과" : ""}`} data-scope-state={props.scopeIsStale ? "stale" : searchPending ? "loading" : "current"} aria-busy={searchPending}>
+                {STATUS_OPTIONS.map((option) => (
+                  <button key={option.value} className={statusFilter === option.value ? "inventory-status-filter-active" : undefined} type="button" data-status={option.value} aria-pressed={statusFilter === option.value} aria-controls="inventory-list" onClick={() => props.onStatusFilterChange(option.value)}>
+                    {option.label} <span>{countLabel(option.value === "all" ? props.scopeCount : option.value === "needs-review" ? props.scopedNeedsReviewCount : props.scopedPriorityCount)}</span>
+                  </button>
+                ))}
               </div>
-              {props.showScope ? <div className="inventory-filter-summary" role="status" aria-live="polite">
-                <span><Metadata parts={[...props.scopeParts, dataUnknown ? null : `${inventoryCount}개`]} /></span>
-                {!hasEmptyResult ? <button type="button" onClick={props.onClearFilters}>전체 목록 보기</button> : null}
-              </div> : null}
             </> : null}
+            <div className="inventory-heading">
+              <h2 id="inventory-title" aria-label={searchPhase === "composing" ? "내 식품 목록" : searchWaiting ? "내 식품 목록 검색 중" : dataUnknown ? "내 식품 목록" : showTools ? `내 식품 목록 ${inventoryCount}` : "내 식품 목록"}>내 식품 목록 {showTools ? <span>{countLabel(inventoryCount)}</span> : null}</h2>
+            </div>
+            {props.showScope ? <div className="inventory-filter-summary" role="status" aria-live="polite">
+              <span><Metadata parts={[...props.scopeParts, dataUnknown ? null : `${inventoryCount}개`]} /></span>
+              {!hasEmptyResult ? <button type="button" onClick={props.onClearFilters}>전체 목록 보기</button> : null}
+            </div> : null}
           </div>
 
           {searchPhase === "composing" ? null : searchWaiting ? <div className="inventory-search-state inventory-search-loading" role="status"><span className="inventory-search-loading-icon" aria-hidden="true"><MagnifyingGlassIcon width={16} height={16} /></span><span>{props.searchLoadingLabel}</span></div> : searchPhase === "error" ? <div className="inventory-search-state inventory-search-error" role="alert"><span><strong>{props.searchErrorLabel}</strong><small>{props.searchError || "잠시 후 다시 시도해 주세요."}</small></span><button type="button" onClick={props.onRetrySearch}>다시 시도</button></div> : filteredFoods.length ? <>
@@ -159,19 +161,16 @@ export default function FridgeScreen(props: {
                 const rowActions = props.rowActionsFor?.(food) ?? null;
                 const row = (
                   <button className="inventory-row" type="button" key={rowActions && SwipeRow ? undefined : food.id} data-inventory-food-id={food.id} data-date-state={food.dateKind} onClick={() => props.onOpenFood(food)}>
-                    <div className="inventory-image-wrap"><FoodPhoto src={food.image} foodName={food.name} alt="" className="inventory-image" draggable={false} /></div>
+                    <FoodPhoto src={food.image} foodName={food.name} alt="" className="inventory-image food-thumb" draggable={false} />
                     <span className="inventory-copy">
                       <strong>{food.name}</strong>
                       <small><Metadata parts={[...foodIdentityParts(food.brand, food.purchaseSource), food.quantity, food.storageLocationName]} /></small>
-                      <small className="inventory-storage-meta"><span>{food.storage}</span></small>
+                      <small className="inventory-storage-meta">{food.storage}</small>
                     </span>
-                    <span className={`inventory-status ${reviewReason ? "inventory-status-warning" : ""}`} data-inventory-status={reviewReason ? "needs-review" : props.priorityFoodIds.has(food.id) ? "priority" : "stored"}>
-                      <span className="inventory-status-content">
-                        <FreshnessChip food={food} referenceDate={referenceDate} />
-                        {reviewReason ? <small className="inventory-review-detail">{reviewReason === "보관 방법 확인" ? "보관 확인" : "날짜 확인"}</small> : null}
-                      </span>
+                    <span className={`inventory-status${reviewReason ? " inventory-status-warning" : ""}`} data-inventory-status={reviewReason ? "needs-review" : props.priorityFoodIds.has(food.id) ? "priority" : "stored"}>
+                      <FreshnessChip food={food} referenceDate={referenceDate} />
+                      {reviewReason ? <small className="inventory-review-detail">{reviewReason === "보관 방법 확인" ? "보관 확인" : "날짜 확인"}</small> : null}
                     </span>
-                    <ChevronRightIcon className="row-chevron" width={15} height={15} />
                   </button>
                 );
                 return rowActions && SwipeRow ? <SwipeRow key={food.id} foodName={food.name} actions={rowActions}>{row}</SwipeRow> : row;
@@ -201,13 +200,13 @@ export default function FridgeScreen(props: {
             <span className="inventory-review-guide-icon"><InfoCircledIcon width={17} height={17} aria-hidden="true" /></span>
             <h3 id="inventory-review-guide-title">식품을 살펴볼 때</h3>
             <button className="inventory-review-guide-action" type="button" aria-label="날짜와 보관 확인 방법 자세히 보기" onClick={props.onOpenGuidance}>
-              자세히 <ChevronRightIcon width={14} height={14} aria-hidden="true" />
+              자세히
             </button>
           </div>
           <ul className="inventory-review-guide-list" aria-label="식품 확인 항목">
-            <li><span>01</span><strong>포장지 날짜</strong></li>
-            <li><span>02</span><strong>보관·개봉 상태</strong></li>
-            <li><span>03</span><strong>냄새·색·포장 상태</strong></li>
+            <li><span>1</span><strong>포장지 날짜</strong></li>
+            <li><span>2</span><strong>보관 위치와 개봉 여부</strong></li>
+            <li><span>3</span><strong>냄새와 색, 포장 상태</strong></li>
           </ul>
           <p className="inventory-review-guide-note">앱은 먹어도 되는지 판단하지 않아요.</p>
         </section>

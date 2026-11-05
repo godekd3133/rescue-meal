@@ -7,7 +7,8 @@
  *   --action, --action-ink, --action-text, --action-soft   leek green: actions only
  *   --urgency-past/today/soon (+ --urgency-ink)            how soon to look; later is neutral
  *   --notice-{info,caution,danger}(-line,-accent)          the one Notice style
- *   --hero*, --hero-yolk                                   Home panel; yolk = the hero number only
+ *   --hero*, --hero-yolk                                   Home panel
+ *   --inverse-bg/-ink/-accent/-caution                     the toast (inverse of the page)
  * Older --fresh-*, --kitchen-*, --atelier-*, --sheet-* tokens point at these.
  *
  * Selectors use a tripled theme attribute so this layer wins over prototype.css and
@@ -47,6 +48,10 @@ html[data-rescue-theme="light"][data-rescue-theme][data-rescue-theme] {
   --nav-pill: var(--hero);
   --fab-ring: var(--surface-1);
   --shadow-card: 0 8px 24px rgba(21, 57, 42, 0.08);
+  --inverse-bg: #16221b;
+  --inverse-ink: #f3f5f0;
+  --inverse-accent: #7fd3a4;
+  --inverse-caution: #f6cc54;
 }
 
 html[data-rescue-theme="dark"][data-rescue-theme][data-rescue-theme] {
@@ -84,6 +89,10 @@ html[data-rescue-theme="dark"][data-rescue-theme][data-rescue-theme] {
   /* The FAB's own green sits close to the dark pill; a light leek halo separates them. */
   --fab-ring: var(--action-text);
   --shadow-card: 0 8px 24px rgba(0, 0, 0, 0.3);
+  --inverse-bg: #e9f0eb;
+  --inverse-ink: #16221b;
+  --inverse-accent: #1b6c42;
+  --inverse-caution: #8a5a00;
 }
 
 @media (prefers-contrast: more) {
@@ -106,11 +115,55 @@ html[data-rescue-theme="dark"][data-rescue-theme][data-rescue-theme] {
   }
 }
 
+/*
+ * Type, shape and motion tokens (theme-independent).
+ *
+ * Type: six steps. Jua (--font-display) only for screen titles, the Home headline, card
+ * titles and display numbers; everything else is the system Korean face (--font-body).
+ *   --text-12  captions, metadata, save notes          lh --leading-body
+ *   --text-14  secondary copy, buttons in rows         lh --leading-body
+ *   --text-16  body, row names, primary buttons        lh --leading-body
+ *   --text-20  section titles, card titles             lh --leading-snug
+ *   --text-28  screen titles, Home headline            lh --leading-tight
+ *   --text-56  display numbers only                    lh 1
+ * Shape: each kind of thing has its own radius; only floating layers cast a shadow.
+ *   --radius-control (inputs, quiet/secondary buttons, segments), --radius-action (primary
+ *   buttons), --radius-card (cards and grouped lists), --radius-sheet. Pills (999px) are
+ *   reserved for the nav bar, filter chips and date badges.
+ */
+html[data-rescue-theme][data-rescue-theme][data-rescue-theme] {
+  --font-body: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", "Noto Sans KR", "Malgun Gothic", system-ui, sans-serif;
+  --font-display: "Jua", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  --text-12: 0.75rem;
+  --text-14: 0.875rem;
+  --text-16: 1rem;
+  --text-20: 1.25rem;
+  --text-28: 1.75rem;
+  --text-56: 3.5rem;
+  --leading-tight: 1.25;
+  --leading-snug: 1.35;
+  --leading-body: 1.5;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+  --radius-control: 12px;
+  --radius-action: 14px;
+  --radius-card: 20px;
+  --radius-sheet: 28px;
+  --shadow-float: 0 10px 28px rgba(12, 30, 21, 0.22);
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --press-scale: 0.97;
+}
+
+html[data-rescue-theme="dark"][data-rescue-theme][data-rescue-theme] {
+  --shadow-float: 0 0 0 1px rgba(245, 241, 228, 0.08), 0 12px 30px rgba(0, 0, 0, 0.5);
+}
+
 /* Legacy names → semantic tokens (inherited from html, so every older layer follows). */
 html[data-rescue-theme][data-rescue-theme][data-rescue-theme] {
   --hero-ink: #f5f1e4;
-  --radius-card: 20px;
-  --fresh-display: "Jua", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  --fresh-display: var(--font-display);
   --fresh-bg: var(--surface-1);
   --fresh-surface: var(--surface-2);
   --fresh-ink: var(--ink);
@@ -134,7 +187,7 @@ html[data-rescue-theme][data-rescue-theme][data-rescue-theme] {
 }
 
 /* prototype.css re-declares the atelier/sheet tokens on these roots; re-point them here. */
-html[data-rescue-theme][data-rescue-theme][data-rescue-theme] :is(.meal-home,.bottom-sheet,.app-bottom-nav,.toast,.tab-screen,.fridge-screen) {
+html[data-rescue-theme][data-rescue-theme][data-rescue-theme] :is(.meal-home,.bottom-sheet,.tab-screen,.fridge-screen) {
   --atelier-deep: var(--surface-1);
   --atelier-surface: var(--surface-2);
   --atelier-surface-raised: var(--surface-2);
@@ -149,7 +202,7 @@ html[data-rescue-theme][data-rescue-theme][data-rescue-theme] :is(.meal-home,.bo
   --atelier-primary-action: var(--action);
   --atelier-primary-action-ink: var(--action-ink);
   --atelier-primary-action-hover: color-mix(in srgb, var(--action) 86%, black);
-  --atelier-primary-action-shadow: 0 10px 22px color-mix(in srgb, var(--action) 24%, transparent);
+  --atelier-primary-action-shadow: none;
   --atelier-coral: var(--urgency-past-text);
   --atelier-amber: var(--notice-caution-accent);
   --atelier-blue: var(--ink-muted);
@@ -160,288 +213,12 @@ html[data-rescue-theme][data-rescue-theme][data-rescue-theme] :is(.meal-home,.bo
   --sheet-border-strong: var(--line-strong);
 }
 
-/* Korean copy: break between words, never orphan a single syllable. */
-:where(.app-screen, .bottom-sheet, .toast) {
+/* Korean copy: the system Korean face, break between words, never orphan a single syllable. */
+:where(.app-screen,.bottom-sheet,.toast,.app-bottom-nav) {
+  font-family: var(--font-body);
   word-break: keep-all;
   overflow-wrap: break-word;
   text-wrap: pretty;
-}
-
-/* ---------- Home: the fridge interior panel ---------- */
-
-html[data-rescue-theme][data-rescue-theme][data-rescue-theme] :is(.app-shell-preview,.app-shell-native) .meal-home {
-  --kitchen-gutter: 15px;
-  padding-top: 0;
-}
-
-/* Phone-width web: the panel bleeds to the screen edges like the native shells. */
-@media (max-width: 640px) {
-  html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .app-shell-web .meal-home {
-    --kitchen-gutter: 16px;
-    padding-top: 0;
-  }
-
-  html[data-rescue-theme] .app-shell-web .kitchen-hero {
-    padding-top: 20px;
-    border-radius: 0 0 36px 36px;
-  }
-}
-
-.kitchen-hero {
-  position: relative;
-  margin: 0 calc(-1 * var(--kitchen-gutter, 0px)) 18px;
-  padding: 22px var(--kitchen-gutter, 20px) 24px;
-  border-radius: 0 0 36px 36px;
-  background: var(--kitchen-hero);
-  color: var(--kitchen-hero-ink);
-}
-
-:is(.app-shell-preview) .kitchen-hero {
-  padding-top: 44px;
-}
-
-:is(.app-shell-native) .kitchen-hero {
-  padding-top: calc(env(safe-area-inset-top, 0px) + 18px);
-}
-
-:is(.app-shell-web) .kitchen-hero {
-  border-radius: 36px;
-}
-
-/* A soft shelf light at the top of the fridge. */
-.kitchen-hero::before {
-  position: absolute;
-  inset: 0 0 auto;
-  height: 140px;
-  border-radius: inherit;
-  background: radial-gradient(120% 100% at 50% 0%, rgba(255, 255, 255, 0.09), transparent 70%);
-  content: "";
-  pointer-events: none;
-}
-
-html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .kitchen-hero :is(.home-hero-copy,.greeting-block) {
-  margin: 0;
-  padding: 0;
-  border: 0;
-  background: none !important;
-  box-shadow: none !important;
-}
-
-html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .kitchen-hero .app-header .brand-lockup,
-html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .kitchen-hero .app-header .brand-name {
-  color: var(--kitchen-hero-ink) !important;
-}
-
-html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .kitchen-hero .app-header :is(.connection-pill,.theme-toggle-button,.notification-button) {
-  background: var(--kitchen-hero-raised) !important;
-  box-shadow: none !important;
-  color: var(--kitchen-hero-ink) !important;
-}
-
-html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .kitchen-hero .app-header :is(.connection-pill,.theme-toggle-button,.notification-button) :is(span,small,strong,svg) {
-  color: inherit !important;
-}
-
-/* Header controls sit directly on the deep green panel: the shared leek-green focus ring
-   would vanish there, so ring them in the panel's cream ink. */
-html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .kitchen-hero .app-header button:focus-visible::after {
-  border-color: var(--hero-ink);
-}
-
-html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .kitchen-hero .eyebrow {
-  margin-top: 18px;
-  color: var(--kitchen-hero-muted) !important;
-  font-size: 0.875rem;
-  font-weight: 700;
-}
-
-html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .kitchen-hero h1 {
-  color: var(--kitchen-hero-ink) !important;
-  font-family: var(--fresh-display) !important;
-  font-weight: 400 !important;
-}
-
-html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .kitchen-hero h1 em {
-  color: var(--kitchen-yolk) !important;
-  font-style: normal;
-}
-
-html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .kitchen-hero .rescue-hero {
-  align-items: flex-end;
-  margin-top: 4px;
-}
-
-html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .kitchen-hero .rescue-hero-copy {
-  font-size: 1.75rem;
-  line-height: 1.2;
-}
-
-html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .kitchen-hero .rescue-hero-count {
-  color: var(--kitchen-yolk);
-  font-size: 5rem;
-}
-
-html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .kitchen-hero .rescue-hero-count[data-zero="true"] {
-  color: var(--hero-ink);
-}
-
-html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .kitchen-hero .rescue-hero-unit {
-  color: var(--kitchen-hero-ink);
-}
-
-/* Callouts that land inside the panel keep their own surface so they stay legible. */
-html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .kitchen-hero :is(.service-bootstrap-status,.session-expired-callout,.connection-retry-callout,.receipt-review-entry-card) {
-  margin-top: 14px;
-  border-radius: 20px;
-}
-
-/* ---------- Home: shelves and actions below the panel ---------- */
-
-html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .meal-home .meal-plan-button {
-  border-radius: 999px !important;
-  background: var(--fresh-primary-strong) !important;
-  color: var(--fresh-primary-ink) !important;
-  box-shadow: 0 12px 26px color-mix(in srgb, var(--fresh-primary-strong) 28%, transparent) !important;
-}
-
-html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .meal-home .meal-plan-button :is(strong,small,svg,.meal-plan-icon) {
-  color: inherit !important;
-}
-
-html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .meal-home .meal-plan-button strong {
-  font-family: var(--fresh-display);
-  font-weight: 400;
-}
-
-html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .meal-home .meal-plan-button .meal-plan-icon {
-  background: rgba(255, 255, 255, 0.16) !important;
-}
-
-html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .meal-home .section-heading h2 {
-  font-family: var(--fresh-display);
-  font-weight: 400;
-}
-
-html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .meal-home .priority-card {
-  border: 1px solid var(--fresh-line) !important;
-  border-radius: 24px !important;
-  background: var(--fresh-surface) !important;
-  box-shadow: none !important;
-}
-
-/* ---------- Floating bottom bar with the add button ---------- */
-
-html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .app-bottom-nav {
-  right: 14px;
-  left: 14px;
-  bottom: calc(var(--device-safe-area-bottom, 34px) + 6px);
-  display: grid !important;
-  grid-template-columns: repeat(2, minmax(0, 1fr)) 64px repeat(2, minmax(0, 1fr)) !important;
-  gap: 2px !important;
-  align-items: center;
-  min-height: 64px;
-  padding: 6px 8px !important;
-  border: 0 !important;
-  border-radius: 999px !important;
-  background: var(--kitchen-hero) !important;
-  background: var(--nav-pill) !important;
-  box-shadow: 0 14px 34px rgba(12, 30, 21, 0.3) !important;
-  color: var(--kitchen-hero-muted);
-}
-
-/* Android preview already shrinks the app viewport above the system navigation
-   bar; reserving --device-safe-area-bottom again would float the pill 48px too high. */
-html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .app-shell-preview .mobile-app-viewport[data-platform="android"] .app-bottom-nav {
-  bottom: 6px;
-}
-
-html[data-rescue-theme="dark"][data-rescue-theme][data-rescue-theme] .app-bottom-nav {
-  box-shadow: 0 0 0 1px rgba(245, 241, 228, 0.08), 0 14px 34px rgba(0, 0, 0, 0.5) !important;
-}
-
-html[data-rescue-theme][data-rescue-theme][data-rescue-theme] :is(.app-shell-preview,.app-shell-native) .app-bottom-nav::after {
-  display: none !important;
-}
-
-html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .app-bottom-nav .app-bottom-nav-item {
-  width: auto !important;
-  min-width: 0 !important;
-  min-height: 52px;
-  border-radius: 999px !important;
-  background: transparent !important;
-  color: var(--kitchen-hero-muted) !important;
-}
-
-html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .app-bottom-nav .app-bottom-nav-item span {
-  color: inherit !important;
-  font-size: 0.75rem;
-  font-weight: 700;
-}
-
-html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .app-bottom-nav .app-bottom-nav-item-active {
-  background: var(--hero-raised) !important;
-  color: var(--hero-ink) !important;
-}
-
-/* One focus ring on the dark pill: the shared ::before ring, recoloured cream because the
-   leek-green default all but disappears on the deep green bar. */
-html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .app-bottom-nav .app-bottom-nav-item:focus-visible {
-  outline: none !important;
-}
-
-html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .app-bottom-nav .app-bottom-nav-item:focus-visible::before {
-  inset: 2px;
-  border-color: var(--hero-ink);
-}
-
-html[data-rescue-theme] .app-bottom-nav .app-bottom-nav-add {
-  display: grid;
-  place-items: center;
-  justify-self: center;
-  width: 58px !important;
-  min-width: 58px !important;
-  height: 58px !important;
-  margin-top: -26px;
-  padding: 0;
-  border: 4px solid var(--fab-ring);
-  border-radius: 50%;
-  background: var(--action);
-  color: var(--action-ink);
-  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.26);
-  cursor: pointer;
-  transition: transform 140ms ease;
-}
-
-.app-bottom-nav-add:active {
-  transform: scale(0.94);
-}
-
-/* The add button straddles the pill and the page, so its focus ring is two-tone: a cream ring
-   that reads on the dark pill, banded by the theme ink that reads on the paper page.
-   The device screen strips outlines and box-shadows from focused elements, so draw it
-   on ::after like the app's other focus rings. */
-html[data-rescue-theme] .app-bottom-nav .app-bottom-nav-add {
-  position: relative;
-}
-
-html[data-rescue-theme] .app-bottom-nav .app-bottom-nav-add:focus-visible::after {
-  position: absolute;
-  inset: -9px;
-  border: 3px solid var(--hero-ink);
-  border-radius: 50%;
-  box-shadow: 0 0 0 2px var(--fresh-ink), inset 0 0 0 2px var(--fresh-ink);
-  content: "";
-  pointer-events: none;
-}
-
-html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .nav-shopping-count {
-  background: var(--hero-ink) !important;
-  color: var(--hero) !important;
-}
-
-/* The web shell keeps its own side navigation; the floating bar is a phone pattern. */
-.app-shell-web .app-bottom-nav-add {
-  margin-top: 0;
 }
 
 /* ---------- Sheets: same paper, leek actions, Jua titles ---------- */
@@ -456,50 +233,34 @@ html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .bottom-sheet :is(
   letter-spacing: 0;
 }
 
-html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .bottom-sheet :is(.primary-sheet-button,.recipe-primary-action,.meal-primary-action,.recipe-steps-toggle) {
+html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .bottom-sheet :is(.primary-sheet-button) {
   border-color: transparent !important;
   background: var(--fresh-primary-strong) !important;
   color: var(--fresh-primary-ink) !important;
-  box-shadow: 0 10px 22px color-mix(in srgb, var(--fresh-primary-strong) 22%, transparent) !important;
+  box-shadow: none !important;
+  border-radius: var(--radius-action) !important;
+  font-size: var(--text-16);
+  font-weight: var(--weight-bold);
 }
 
-html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .bottom-sheet :is(.primary-sheet-button,.recipe-primary-action,.meal-primary-action,.recipe-steps-toggle) :is(span,small,strong,svg) {
+html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .bottom-sheet :is(.primary-sheet-button) :is(span,small,strong,svg) {
   color: inherit !important;
 }
 
 html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .bottom-sheet :is(.secondary-sheet-button) {
-  border-color: var(--fresh-line) !important;
+  border-radius: var(--radius-control) !important;
+  border-color: var(--line-strong) !important;
   background: var(--fresh-surface) !important;
   color: var(--fresh-ink) !important;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .app-bottom-nav-add {
-    transition: none;
-  }
-}
-
-/* In dark mode the cards need to lift off the dark panel. */
-html[data-rescue-theme="dark"][data-rescue-theme][data-rescue-theme] .kitchen-hero .rescue-card {
-  background: var(--surface-2);
-}
-
-html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .app-bottom-nav .app-bottom-nav-item span {
-  white-space: nowrap;
-}
-
-@media (max-width: 360px) {
-  html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .app-bottom-nav {
-    right: 10px;
-    left: 10px;
-    padding: 6px 4px !important;
-    grid-template-columns: repeat(2, minmax(0, 1fr)) 60px repeat(2, minmax(0, 1fr)) !important;
-  }
-}
-
-html[data-rescue-theme] .app-bottom-nav .app-bottom-nav-add:disabled {
-  opacity: 0.55;
-  cursor: progress;
+/* Section headings inside sheets read as text, not display type. */
+html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .bottom-sheet:not(.tab-sheet-screen) h3 {
+  font-family: var(--font-body) !important;
+  font-size: var(--text-16);
+  font-weight: var(--weight-bold) !important;
+  line-height: var(--leading-snug);
+  letter-spacing: 0;
 }
 
 /* =====================================================================
@@ -528,19 +289,15 @@ html[data-rescue-theme] .app-bottom-nav .app-bottom-nav-add:disabled {
 
 /* ---------- Card: the Home card surface, everywhere ---------- */
 
-:root[data-rescue-theme]:root:root .bottom-sheet :is(.detail-hero, .detail-hero-copy, .detail-hero-state-summary, .date-proof-card, .detail-section, .opened-row, .recipe-title-row, .product-info-edit-button, .recipe-history-toggle, .quick-add-method, .quick-add-manual-link) {
+:root[data-rescue-theme]:root:root .bottom-sheet :is(.detail-section,.recipe-title-row,.recipe-history-toggle) {
   border-color: var(--line);
   background: var(--surface-2);
   box-shadow: none;
 }
 
-:root[data-rescue-theme]:root:root .bottom-sheet :is(.detail-hero, .date-proof-card, .detail-section, .opened-row, .recipe-title-row) {
+:root[data-rescue-theme]:root:root .bottom-sheet :is(.detail-section,.recipe-title-row) {
   border: 1px solid var(--line);
   border-radius: var(--radius-card);
-}
-
-:root[data-rescue-theme]:root:root .bottom-sheet :is(.detail-hero-copy, .detail-hero-state-summary) {
-  border: 0;
 }
 
 :root[data-rescue-theme]:root:root .bottom-sheet .recipe-title-row {
@@ -555,17 +312,9 @@ html[data-rescue-theme] .app-bottom-nav .app-bottom-nav-add:disabled {
   box-shadow: none;
 }
 
-:root[data-rescue-theme]:root:root .bottom-sheet :is(.product-info-edit-button, .recipe-history-toggle, .quick-add-method, .quick-add-manual-link) {
+:root[data-rescue-theme]:root:root .bottom-sheet :is(.recipe-history-toggle) {
   border: 1px solid var(--line);
-  border-radius: 16px;
-  color: var(--ink);
-}
-
-/* Neutral facts (storage, date source) are not actions: no green. */
-:root[data-rescue-theme]:root:root .bottom-sheet :is(.storage-pill, .proof-icon) {
-  border-color: transparent;
-  background: var(--surface-3);
-  box-shadow: none;
+  border-radius: var(--radius-control);
   color: var(--ink);
 }
 
@@ -574,76 +323,37 @@ html[data-rescue-theme] .app-bottom-nav .app-bottom-nav-add:disabled {
   color: var(--ink);
 }
 
-:root[data-rescue-theme]:root:root :is(.bottom-sheet, .tab-screen) .app-input {
+:root[data-rescue-theme]:root:root :is(.bottom-sheet,.tab-screen) .app-input {
   border-color: var(--line-strong);
-  border-radius: 14px;
+  border-radius: var(--radius-control);
   background: var(--surface-2);
 }
 
 /* ---------- Buttons: leek-green primary, surface secondary ---------- */
 
-:root[data-rescue-theme]:root:root .bottom-sheet :is(.date-edit-button-compact, .shopping-sheet-manual-submit) {
-  border-color: transparent;
-  border-radius: 999px;
-  background: var(--action);
-  color: var(--action-ink);
-  box-shadow: none;
-}
-
-:root[data-rescue-theme]:root:root .bottom-sheet :is(.date-edit-button-compact, .shopping-sheet-manual-submit) :is(svg, span) {
-  color: inherit;
-}
-
-:root[data-rescue-theme]:root:root .bottom-sheet :is(.recipe-shopping-inline-button, .quick-add-line-submit) {
+:root[data-rescue-theme]:root:root .bottom-sheet :is(.recipe-shopping-inline-button) {
   border: 1px solid var(--line-strong);
-  border-radius: 999px;
+  border-radius: var(--radius-control);
   background: var(--surface-2);
   color: var(--ink);
 }
 
-:root[data-rescue-theme]:root:root .bottom-sheet .detail-danger-zone {
-  border-color: var(--line);
-}
-
 /* ---------- Notice: info / caution / danger ---------- */
 
-:root[data-rescue-theme] :is(.shopping-sheet-preview-note, .detail-read-only-callout, .recipe-preference-callout, .recipe-missing-callout, .result-callout) {
+:root[data-rescue-theme] :is(.detail-read-only-callout,.recipe-preference-callout,.result-callout) {
   --n-bg: var(--notice-info);
   --n-line: var(--notice-info-line);
   --n-accent: var(--notice-info-accent);
 }
 
-:root[data-rescue-theme] :is(.trust-card, .recipe-allergen-callout, .result-callout-warning, .storage-mismatch-callout, .session-expired-callout, .connection-retry-callout, .guidance-warning, .recipe-review-warning) {
-  --n-bg: var(--notice-caution);
-  --n-line: var(--notice-caution-line);
-  --n-accent: var(--notice-caution-accent);
-}
-
-:root[data-rescue-theme] :is(.date-review-callout, .recipe-date-review-callout, .account-delete-warning) {
+:root[data-rescue-theme] :is(.date-review-callout,.recipe-date-review-callout) {
   --n-bg: var(--notice-danger);
   --n-line: var(--notice-danger-line);
   --n-accent: var(--notice-danger-accent);
 }
 
-:root[data-rescue-theme]:root:root :is(.shopping-sheet-preview-note, .detail-read-only-callout, .recipe-preference-callout, .recipe-missing-callout, .result-callout, .trust-card, .recipe-allergen-callout, .storage-mismatch-callout, .session-expired-callout, .connection-retry-callout, .guidance-warning, .recipe-review-warning, .date-review-callout, .recipe-date-review-callout, .account-delete-warning) {
-  border: 1px solid var(--n-line) !important;
-  border-radius: 16px !important;
-  background: var(--n-bg) !important;
-  box-shadow: none !important;
-  color: var(--ink) !important;
-}
-
-:root[data-rescue-theme]:root:root :is(.shopping-sheet-preview-note, .detail-read-only-callout, .recipe-preference-callout, .recipe-missing-callout, .result-callout, .trust-card, .recipe-allergen-callout, .storage-mismatch-callout, .session-expired-callout, .connection-retry-callout, .guidance-warning, .recipe-review-warning, .date-review-callout, .recipe-date-review-callout, .account-delete-warning) :is(strong, small, p, span:not([class*="icon"], [class*="action"])):not([class*="button"] *, [class*="action"] *) {
-  color: inherit !important;
-}
-
-:root[data-rescue-theme]:root:root :is(.shopping-sheet-preview-note, .detail-read-only-callout, .recipe-preference-callout, .recipe-missing-callout, .result-callout, .trust-card, .recipe-allergen-callout, .storage-mismatch-callout, .session-expired-callout, .connection-retry-callout, .guidance-warning, .recipe-review-warning, .date-review-callout, .recipe-date-review-callout, .account-delete-warning) :is([class*="icon"], svg):not([class*="button"] *, [class*="action"] *) {
-  background: transparent !important;
-  color: var(--n-accent) !important;
-}
-
 /* Rows that used to be bare lines in the recipe safety list become padded notices. */
-:root[data-rescue-theme]:root:root .bottom-sheet :is(.recipe-safety-summary-item, .shopping-sheet-preview-note) {
+:root[data-rescue-theme]:root:root .bottom-sheet :is(.recipe-safety-summary-item) {
   margin-block: 8px;
   padding: 12px 14px;
 }
@@ -653,55 +363,79 @@ html[data-rescue-theme] .app-bottom-nav .app-bottom-nav-add:disabled {
   color: var(--ink);
 }
 
+/* Notice tones (the shared Notice: info / caution / danger). */
+:root[data-rescue-theme] :is(.trust-card,.recipe-allergen-callout,.result-callout-warning,.storage-mismatch-callout,.session-expired-callout,.connection-retry-callout,.recipe-review-warning) {
+  --n-bg: var(--notice-caution);
+  --n-line: var(--notice-caution-line);
+  --n-accent: var(--notice-caution-accent);
+}
+
+:root[data-rescue-theme]:root:root :is(.detail-read-only-callout,.recipe-preference-callout,.result-callout,.trust-card,.recipe-allergen-callout,.storage-mismatch-callout,.session-expired-callout,.connection-retry-callout,.recipe-review-warning,.date-review-callout,.recipe-date-review-callout) {
+  border: 1px solid var(--n-line) !important;
+  border-radius: var(--radius-control) !important;
+  background: var(--n-bg) !important;
+  box-shadow: none !important;
+  color: var(--ink) !important;
+}
+
+:root[data-rescue-theme]:root:root :is(.detail-read-only-callout,.recipe-preference-callout,.result-callout,.trust-card,.recipe-allergen-callout,.storage-mismatch-callout,.session-expired-callout,.connection-retry-callout,.recipe-review-warning,.date-review-callout,.recipe-date-review-callout) :is(strong,small,p,span:not([class*="icon"], [class*="action"])):not([class*="button"] *, [class*="action"] *) {
+  color: inherit !important;
+}
+
+:root[data-rescue-theme]:root:root :is(.detail-read-only-callout,.recipe-preference-callout,.result-callout,.trust-card,.recipe-allergen-callout,.storage-mismatch-callout,.session-expired-callout,.connection-retry-callout,.recipe-review-warning,.date-review-callout,.recipe-date-review-callout) :is([class*="icon"],svg):not([class*="button"] *, [class*="action"] *) {
+  background: transparent !important;
+  color: var(--n-accent) !important;
+}
+
 /* ---------- Segmented: one track, the chosen option raised ---------- */
 
-:root[data-rescue-theme]:root:root .bottom-sheet :is(.recipe-time-picker > div, .recipe-serving-picker > div, .detail-quantity-presets, .storage-picker:not(:has(.storage-custom-options))) {
-  gap: 4px;
-  padding: 4px;
+:root[data-rescue-theme]:root:root .bottom-sheet :is(.recipe-time-picker > div,.recipe-serving-picker > div,.detail-quantity-presets,.storage-picker:not(:has(.storage-custom-options))) {
+  gap: 2px;
+  padding: 3px;
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--radius-control);
   background: var(--surface-3);
 }
 
-:root[data-rescue-theme]:root:root .bottom-sheet :is(.recipe-time-picker > div, .recipe-serving-picker > div, .detail-quantity-presets, .storage-picker:not(:has(.storage-custom-options))) > button {
+:root[data-rescue-theme]:root:root .bottom-sheet :is(.recipe-time-picker > div,.recipe-serving-picker > div,.detail-quantity-presets,.storage-picker:not(:has(.storage-custom-options))) > button {
   min-height: 44px;
   border: 0;
-  border-radius: 999px;
+  border-radius: 9px;
   background: transparent;
   box-shadow: none;
   color: var(--ink-muted);
   font-weight: 700;
 }
 
-:root[data-rescue-theme]:root:root .bottom-sheet :is(.recipe-time-picker > div, .recipe-serving-picker > div, .detail-quantity-presets, .storage-picker) > button:is([aria-pressed="true"], .recipe-time-active, .storage-option-active) {
+:root[data-rescue-theme]:root:root .bottom-sheet :is(.recipe-time-picker > div,.recipe-serving-picker > div,.detail-quantity-presets,.storage-picker) > button:is([aria-pressed="true"],.recipe-time-active,.storage-option-active) {
   background: var(--segment-on);
-  box-shadow: 0 1px 4px rgba(12, 30, 21, 0.16);
+  box-shadow: 0 1px 2px rgba(12, 30, 21, 0.14);
   color: var(--ink);
-  font-weight: 800;
+  font-weight: var(--weight-bold);
 }
 
-/* ---------- Stepper: [ −  value  + ] in a single pill ---------- */
+/* ---------- Stepper: [ −  value  + ] in one control ---------- */
 
-:root[data-rescue-theme]:root:root .bottom-sheet :is(.detail-quantity-editor, .recipe-consumption-stepper, .quick-add-stepper) {
+:root[data-rescue-theme]:root:root .bottom-sheet :is(.detail-quantity-editor,.recipe-consumption-stepper,.quick-add-stepper) {
   gap: 0;
   padding: 0;
   border: 1px solid var(--line-strong);
-  border-radius: 999px;
+  border-radius: var(--radius-control);
   background: var(--surface-2);
   box-shadow: none;
 }
 
-:root[data-rescue-theme]:root:root .bottom-sheet :is(.detail-quantity-editor, .recipe-consumption-stepper, .quick-add-stepper) > button {
+:root[data-rescue-theme]:root:root .bottom-sheet :is(.detail-quantity-editor,.recipe-consumption-stepper,.quick-add-stepper) > button {
   min-width: 44px;
   min-height: 44px;
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--radius-control);
   background: transparent;
   box-shadow: none;
   color: var(--action-text);
 }
 
-:root[data-rescue-theme]:root:root .bottom-sheet :is(.detail-quantity-editor, .recipe-consumption-stepper, .quick-add-stepper) :is(.detail-quantity-input-wrap, .recipe-consumption-input-wrap, input) {
+:root[data-rescue-theme]:root:root .bottom-sheet :is(.detail-quantity-editor,.recipe-consumption-stepper,.quick-add-stepper) :is(.detail-quantity-input-wrap,.recipe-consumption-input-wrap,input) {
   border: 0;
   border-radius: 0;
   outline: none;
@@ -709,48 +443,14 @@ html[data-rescue-theme] .app-bottom-nav .app-bottom-nav-add:disabled {
   box-shadow: none;
 }
 
-:root[data-rescue-theme]:root:root .bottom-sheet :is(.detail-quantity-editor, .recipe-consumption-stepper):focus-within {
+:root[data-rescue-theme]:root:root .bottom-sheet :is(.detail-quantity-editor,.recipe-consumption-stepper):focus-within {
   border-color: var(--action-text);
   box-shadow: 0 0 0 1px var(--action-text);
 }
 
-html[data-rescue-theme][data-rescue-theme][data-rescue-theme] .app-bottom-nav .app-bottom-nav-item-active::after {
-  display: none !important;
-}
-
 /* ---------- 장보기: the list is one card on the page, rows inside it ---------- */
 
-:root[data-rescue-theme]:root:root .bottom-sheet :is(.shopping-sheet-list-section, .shopping-sheet-progress) {
-  padding: 12px 14px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-card);
-  background: var(--surface-2);
-  box-shadow: none;
-}
-
-:root[data-rescue-theme]:root:root .bottom-sheet .shopping-sheet-item {
-  background: transparent;
-}
-
-:root[data-rescue-theme]:root:root .bottom-sheet .shopping-sheet-progress-track {
-  background: var(--surface-3);
-}
-
-:root[data-rescue-theme]:root:root .bottom-sheet .shopping-sheet-receive {
-  border: 0;
-  border-radius: 999px;
-  background: var(--action-soft);
-  color: var(--action-text);
-}
-
-:root[data-rescue-theme]:root:root .bottom-sheet .shopping-sheet-delete {
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: var(--surface-2);
-  color: var(--urgency-past-text);
-}
-
-:root[data-rescue-theme]:root:root .bottom-sheet :is(.shopping-sheet-refresh-notice, .notification-refresh-notice) {
+:root[data-rescue-theme]:root:root .bottom-sheet :is(.notification-refresh-notice) {
   border: 1px solid var(--notice-info-line);
   border-radius: 16px;
   background: var(--notice-info);

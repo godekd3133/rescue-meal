@@ -1,4 +1,5 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
+import { formatKoreanDate } from "../src/koreanDate.ts";
 import { chooseAddMethod } from "./add-flow-helpers";
 import { getHomeReviewTopicLabel } from "../src/homeReviewSummary";
 
@@ -207,17 +208,19 @@ test("keeps the native home inside a 320px viewport", async ({ page }) => {
   await expect(page.getByRole("button", { name: /오늘 뭐 먹지/ })).toBeVisible();
 });
 
-test("updates the Home date after local midnight while the app stays open", async ({ page }) => {
+test("updates Home's dates after local midnight while the app stays open", async ({ page }) => {
   await page.setViewportSize({ width: 393, height: 852 });
   const timezoneOffset = await page.evaluate(() => new Date().getTimezoneOffset());
   const justBeforeLocalMidnight = new Date(Date.UTC(2026, 8, 28, 23, 59, 30) + timezoneOffset * 60_000);
   await page.clock.install({ time: justBeforeLocalMidnight });
   await page.goto("/");
 
-  const todayLabel = page.locator(".greeting-block .eyebrow");
-  await expect(todayLabel).toHaveText("월요일, 9월 28");
+  // Home has no date label; the days-left badges move to the new day instead.
+  const tofuChip = page.locator(".rescue-card").filter({ hasText: "국산콩 두부" }).locator(".rescue-card-chip");
+  const beforeMidnight = (await tofuChip.textContent()) ?? "";
+  expect(beforeMidnight).toMatch(/^(D-\d+|D-day|\+\d+일)$/);
   await page.clock.fastForward(60_000);
-  await expect(todayLabel).toHaveText("화요일, 9월 29");
+  await expect(tofuChip).not.toHaveText(beforeMidnight);
 });
 
 test("keeps home food source details readable across narrow viewport themes", async ({ page }) => {
@@ -435,7 +438,7 @@ test("shows a visible next step in the empty shopping state across narrow themes
       await expect(nextStep).toBeVisible();
       await expect.poll(async () => (await nextStep.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
       await expect(nextStep).toBeInViewport();
-      await expect(shopping.getByRole("textbox", { name: "직접 추가 상품명" })).toBeVisible();
+      await expect(shopping.getByRole("textbox", { name: "살 것 이름" })).toBeVisible();
     }
   }
 });
@@ -502,6 +505,14 @@ test("keeps meal time and serving choices readable on narrow phones", async ({ p
     await page.locator(".meal-plan-button").click();
 
     const dialog = page.getByRole("region", { name: "오늘의 식단" });
+    // The conditions start folded behind compact chips so the menu leads.
+    const chips = dialog.locator(".meal-filter, .meal-period button");
+    for (const chip of await chips.all()) {
+      const box = await chip.boundingBox();
+      expect(box?.height).toBeGreaterThanOrEqual(43.5);
+    }
+    await expect(dialog.locator(".meal-conditions")).toBeHidden();
+    await dialog.getByRole("button", { name: /조리 시간/ }).click();
     const choices = dialog.locator(".recipe-time-picker button, .recipe-serving-picker button");
     await expect(choices).toHaveCount(8);
     for (const choice of await choices.all()) {
@@ -529,22 +540,6 @@ test("keeps cooking steps and safety instructions readable on mobile in both the
 
       await page.locator(".meal-plan-button").click();
       const dialog = page.getByRole("region", { name: "오늘의 식단" });
-      const instructionsToggle = dialog.getByRole("button", { name: "조리 방법 보기" });
-      await expect(instructionsToggle).toHaveAttribute("aria-expanded", "false");
-      await instructionsToggle.click();
-
-      const steps = dialog.locator(".recipe-details li");
-      await expect(steps).toHaveCount(3);
-      for (const step of await steps.all()) await expect(step).toHaveCSS("font-size", "12px");
-      await expect(dialog.locator(".recipe-details-heading span")).toHaveCSS("font-size", "12px");
-      await expect(dialog.locator(".recipe-details-heading small")).toHaveCSS("font-size", "12px");
-      // The separate recipe-details safety box is gone; the date-review callout carries the pre-cooking check.
-      await expect(dialog.locator(".recipe-details .recipe-safety")).toHaveCount(0);
-      const stepColors = await steps.first().evaluate((element) => {
-        const style = getComputedStyle(element);
-        return { foreground: style.color, background: style.backgroundColor };
-      });
-      expect(contrastRatio(stepColors.foreground, stepColors.background)).toBeGreaterThanOrEqual(4.5);
       const safetyHeading = dialog.locator(".recipe-date-review-callout strong").first();
       await expect(safetyHeading).toContainText("조리 전에 포장지 날짜를 살펴봐 주세요");
       const safetyColors = await safetyHeading.evaluate((element) => {
@@ -557,12 +552,33 @@ test("keeps cooking steps and safety instructions readable on mobile in both the
       });
       expect(safetyColors.fontSize).toBeGreaterThanOrEqual(12);
       expect(contrastRatio(safetyColors.foreground, safetyColors.background)).toBeGreaterThanOrEqual(4.5);
+
+      // 요리 모드 shows one step at a time in large type.
+      await dialog.getByRole("button", { name: "요리 시작" }).click();
+      const cooking = page.getByRole("dialog", { name: "시금치 두부 닭가슴살 덮밥" });
+      const step = cooking.locator(".cook-step-text");
+      await expect(step).toBeVisible();
+      expect(await step.evaluate((element) => Number.parseFloat(getComputedStyle(element).fontSize))).toBeGreaterThanOrEqual(20);
+      const stepColors = await step.evaluate((element) => {
+        let background = "rgba(0, 0, 0, 0)";
+        for (let node: HTMLElement | null = element as HTMLElement; node; node = node.parentElement) {
+          const color = getComputedStyle(node).backgroundColor;
+          if (color !== "rgba(0, 0, 0, 0)" && color !== "transparent") { background = color; break; }
+        }
+        return { foreground: getComputedStyle(element).color, background };
+      });
+      expect(contrastRatio(stepColors.foreground, stepColors.background)).toBeGreaterThanOrEqual(4.5);
+      for (const name of ["이전", "다음"]) {
+        const box = await cooking.getByRole("button", { name, exact: true }).boundingBox();
+        expect(box!.height).toBeGreaterThanOrEqual(44);
+      }
+      // The step navigation stays inside the screen, above the home indicator.
+      await waitForSheetSettled(page);
+      const navigation = await cooking.locator(".cook-nav").evaluate((element) => ({ bottom: element.getBoundingClientRect().bottom, screen: document.querySelector<HTMLElement>("[data-testid=device-screen]")!.getBoundingClientRect().bottom }));
+      expect(navigation.bottom).toBeLessThanOrEqual(navigation.screen - 8);
       await expect(dialog.locator(".recipe-complete-button")).toHaveCount(0);
-      const collapseInstructions = dialog.getByRole("button", { name: "조리 방법 접기" });
-      await expect(collapseInstructions).toHaveAttribute("aria-expanded", "true");
-      await expect(collapseInstructions).toHaveCSS("min-height", "44px");
-      await collapseInstructions.click();
-      await expect(dialog.locator(".recipe-details")).toHaveCount(0);
+      await page.keyboard.press("Escape");
+      await expect(cooking).toBeHidden();
 
       await openTab(page, "홈");
     }
@@ -580,17 +596,16 @@ test("offers one recipe-step action while keeping safety details reachable", asy
     await page.locator(".meal-plan-button").click();
     const dialog = page.getByRole("region", { name: "오늘의 식단" });
     await expect(dialog).toBeVisible();
-    await expect(dialog.locator(".recipe-title-row")).toBeVisible();
-    await dialog.getByRole("button", { name: /조리 전에 확인할 내용 .* 보기/ }).click();
+    await expect(dialog.locator(".recipe-title-row").first()).toBeVisible();
 
-    const safetySummary = dialog.locator(".recipe-safety-summary");
-    const shortcut = dialog.getByRole("button", { name: "조리 방법 보기", exact: true });
-    await expect(safetySummary).toBeVisible();
+    const safetySummary = dialog.getByRole("region", { name: /^조리 전에 살펴볼 내용 \d+개$/ });
+    const shortcut = dialog.getByRole("button", { name: "요리 시작", exact: true });
     await expect(shortcut).toHaveCount(1);
-    await expect(dialog.locator(".recipe-safety-summary-heading")).toBeInViewport();
+    await safetySummary.evaluate((element) => element.scrollIntoView({ block: "center" }));
+    await expect(safetySummary).toBeInViewport();
     await shortcut.evaluate((element) => element.scrollIntoView({ block: "center" }));
     await expect(shortcut).toBeInViewport();
-    await expect(shortcut).toHaveCSS("min-height", "44px");
+    expect((await shortcut.boundingBox())!.height).toBeGreaterThanOrEqual(44);
     // Reachable means scrolled inside the screen and clear of the floating bottom bar.
     const shortcutReachable = await shortcut.evaluate((element) => {
       const content = element.closest<HTMLElement>("[data-testid=mobile-scroll]");
@@ -601,13 +616,11 @@ test("offers one recipe-step action while keeping safety details reachable", asy
       return actionBox.top >= contentBox.top - 1 && actionBox.bottom <= navigation.getBoundingClientRect().top + 1;
     });
     expect(shortcutReachable).toBe(true);
-    await expect(dialog.locator(".recipe-instructions-shortcut")).toHaveCount(0);
 
     await shortcut.click();
-    await expect(dialog.locator(".recipe-details")).toBeVisible();
-    await expect(dialog.getByRole("button", { name: "조리 방법 접기" })).toBeFocused();
+    await expect(page.getByRole("dialog", { name: "시금치 두부 닭가슴살 덮밥" }).locator(".cook-step")).toBeVisible();
     await expect(dialog.locator(".saved-recipe")).toHaveCount(0);
-    await expect(dialog.locator(".recipe-complete-button")).toHaveCount(0);
+    await page.keyboard.press("Escape");
     await openTab(page, "홈");
   }
 });
@@ -649,7 +662,7 @@ test("explains empty recent history and exposes it as a disclosure in both theme
   }
 });
 
-test("returns to the same meal-plan position and open instructions after checking a food", async ({ page }) => {
+test("returns to the same meal-plan position after checking a food", async ({ page }) => {
   await page.setViewportSize({ width: 393, height: 852 });
   await page.goto("/");
   if (await page.locator("html").getAttribute("data-rescue-theme") !== "dark") {
@@ -661,16 +674,11 @@ test("returns to the same meal-plan position and open instructions after checkin
   await expect(dialog).toBeVisible();
   await expect(dialog.locator(".recipe-title-row")).toBeVisible();
 
-  const instructionsToggle = dialog.getByRole("button", { name: "조리 방법 보기" });
-  await instructionsToggle.scrollIntoViewIfNeeded();
-  await instructionsToggle.click();
-  await expect(dialog.locator(".recipe-details")).toBeVisible();
   await page.waitForTimeout(400);
   const returnAction = dialog.getByRole("button", { name: "시금치 보기" });
   const before = await dialog.locator(".meal-sheet-content").evaluate((element) => {
     const scroller = element.closest<HTMLElement>("[data-testid=mobile-scroll]");
-    const toggle = element.querySelector<HTMLElement>(".recipe-instructions-toggle");
-    if (!scroller || !toggle) return null;
+    if (!scroller) return null;
     const action = element.querySelector<HTMLElement>("button[data-meal-food-id]");
     // Scroll past the top but keep the action fully inside the sheet so the tap itself moves nothing.
     scroller.scrollTop = 0;
@@ -679,13 +687,11 @@ test("returns to the same meal-plan position and open instructions after checkin
     const scrollerBox = scroller.getBoundingClientRect();
     return {
       scrollTop: scroller.scrollTop,
-      instructionsExpanded: toggle.getAttribute("aria-expanded"),
       actionInViewport: actionBox ? actionBox.top >= scrollerBox.top && actionBox.bottom <= scrollerBox.bottom : false,
     };
   });
   expect(before).toBeTruthy();
   expect(before!.scrollTop).toBeGreaterThan(0);
-  expect(before!.instructionsExpanded).toBe("true");
   expect(before!.actionInViewport).toBe(true);
 
   await returnAction.click();
@@ -696,20 +702,16 @@ test("returns to the same meal-plan position and open instructions after checkin
 
   await expect(dialog).toBeVisible();
   await expect(returnAction).toBeFocused();
-  await expect(dialog.locator(".recipe-details")).toBeVisible();
-  await expect(dialog.getByRole("button", { name: "조리 방법 접기" })).toHaveAttribute("aria-expanded", "true");
   const after = await dialog.locator(".meal-sheet-content").evaluate((element) => {
     const scroller = element.closest<HTMLElement>("[data-testid=mobile-scroll]");
     const action = element.querySelector<HTMLElement>("button[data-meal-food-id]");
     return {
       scrollTop: scroller?.scrollTop ?? null,
       actionFocused: action === document.activeElement,
-      instructionsExpanded: element.querySelector(".recipe-instructions-toggle")?.getAttribute("aria-expanded"),
     };
   });
   expect(Math.abs((after.scrollTop ?? 0) - before!.scrollTop)).toBeLessThanOrEqual(1);
   expect(after.actionFocused).toBe(true);
-  expect(after.instructionsExpanded).toBe("true");
   await expect(dialog.locator(".saved-recipe")).toHaveCount(0);
   await expect(dialog.locator(".recipe-complete-button")).toHaveCount(0);
 });
@@ -926,17 +928,12 @@ test("shows the meal result inside the first 식단 screen viewport", async ({ p
     // 식단 is a tab screen, not a sheet over the tab bar.
     await expect(page.getByTestId("bottom-sheet")).toHaveCount(0);
     await expect(mainNav(page).getByRole("button", { name: "식단", exact: true })).toHaveAttribute("aria-current", "page");
-    await expect(dialog.locator(".recipe-art")).toHaveCount(0);
-    await expect(dialog.locator(".recipe-title-row")).toBeVisible();
     // Planner actions stay in document flow so they cannot cover the safety
     // summary on short mobile screens. Food detail actions remain sticky.
     await expect(dialog.locator(".recipe-actions")).toHaveCSS("position", "static");
-    const safetyEntry = dialog.getByRole("button", { name: "조리 전에 확인할 내용 2개 보기" });
-    const dateReviewAction = dialog.getByRole("button", { name: "시금치 보기", exact: true });
-    await expect(safetyEntry).toBeFocused();
-    await safetyEntry.click();
-    await expect(dateReviewAction).toBeFocused();
-    await page.getByTestId("mobile-scroll").evaluate((element) => { element.scrollTop = 0; });
+    // Focus moves to the recipe's one action without scrolling the menu out of view.
+    await expect(dialog.getByRole("button", { name: "요리 시작" })).toBeFocused();
+    await expect.poll(() => page.getByTestId("mobile-scroll").evaluate((element) => element.scrollTop)).toBe(0);
 
     const layout = await page.evaluate(() => {
       const rect = (selector: string) => document.querySelector<HTMLElement>(selector)?.getBoundingClientRect().toJSON() ?? null;
@@ -944,7 +941,7 @@ test("shows the meal result inside the first 식단 screen viewport", async ({ p
         screen: rect("[data-testid=device-screen]"),
         navigation: rect(".app-bottom-nav"),
         heading: rect(".meal-screen-page .screen-title"),
-        title: rect(".recipe-title-row"),
+        title: rect(".meal-card .meal-card-title"),
         documentWidth: document.documentElement.scrollWidth,
       };
     });
@@ -966,7 +963,7 @@ test("keeps the demo guidance action in the first native sheet viewport", async 
     await page.setViewportSize(viewport);
     await page.goto("/");
     await page.getByRole("button", { name: /체험 안내 열기/ }).click();
-    const dialog = page.getByRole("dialog", { name: "체험 안내" });
+    const dialog = page.getByRole("dialog", { name: "나", exact: true });
     await expect(dialog).toBeVisible();
     await waitForSheetSettled(page);
     await expect(dialog.locator(".account-demo-explainer .primary-sheet-button")).toHaveText("계속 둘러보기");
@@ -993,13 +990,12 @@ test("keeps the demo guidance action in the first native sheet viewport", async 
   }
 });
 
-test("reveals the completion action after saving a meal plan", async ({ page }) => {
+test("saves a plan in place and records completion through 이미 만들었어요", async ({ page }) => {
   await page.setViewportSize({ width: 393, height: 720 });
   await page.goto("/");
   await page.getByRole("button", { name: /오늘 뭐 먹지/ }).click();
   const dialog = page.getByRole("region", { name: "오늘의 식단" });
   await expect(dialog).toBeVisible();
-  await expect(dialog.locator(".recipe-title-row")).toBeVisible();
   await expect(dialog.getByRole("heading", { name: "시금치 두부 닭가슴살 덮밥" })).toBeVisible();
 
   await dialog.getByRole("button", { name: "임시 저장" }).click();
@@ -1007,30 +1003,30 @@ test("reveals the completion action after saving a meal plan", async ({ page }) 
   await expect(dialog.locator(".saved-recipe")).toHaveAttribute("data-readback-state", "confirmed");
   await expect(dialog.locator(".saved-recipe")).toHaveAttribute("role", "status");
   await expect(dialog.locator(".saved-recipe")).toHaveAttribute("aria-live", "polite");
-  const completion = dialog.locator(".recipe-complete-actions");
+  // The save button is no longer actionable, so focus moves to the next step instead of being dropped.
+  await expect(dialog.getByRole("button", { name: "요리 시작" })).toBeFocused();
+  await expect(page.locator(".toast")).toHaveCount(0);
+
+  await dialog.getByRole("button", { name: "이미 만들었어요" }).click();
+  const cooking = page.getByRole("dialog", { name: "시금치 두부 닭가슴살 덮밥" });
+  const completion = cooking.locator(".recipe-complete-actions");
   await expect(completion).toBeVisible();
-  const saveFeedbackLayout = await page.evaluate(() => {
-    const toast = document.querySelector<HTMLElement>(".toast")?.getBoundingClientRect();
-    const actions = document.querySelector<HTMLElement>(".recipe-complete-actions")?.getBoundingClientRect();
-    return {
-      // The demo save reports through the inline status, so no toast is an acceptable (non-overlapping) result.
-      overlap: toast && actions ? Math.max(0, Math.min(toast.bottom, actions.bottom) - Math.max(toast.top, actions.top)) : toast ? null : 0,
-    };
-  });
-  expect(saveFeedbackLayout.overlap).toBe(0);
-  await expect(dialog.getByRole("button", { name: "포장지와 재료를 살펴봤어요" })).toBeFocused();
-  // The completion block is taller than a short sheet; the focused acknowledgement itself must be visible.
-  await expect.poll(() => dialog.getByRole("button", { name: "포장지와 재료를 살펴봤어요" }).evaluate((element) => {
-    const content = element.closest<HTMLElement>("[data-testid=mobile-scroll]");
+  await expect(cooking.locator(".cook-confirm-title")).toBeFocused();
+  const acknowledgement = cooking.getByRole("button", { name: "포장지와 재료를 살펴봤어요" });
+  await acknowledgement.scrollIntoViewIfNeeded();
+  // The completion block is taller than a short sheet; the acknowledgement scrolls into the sheet, above the home indicator.
+  await expect.poll(() => acknowledgement.evaluate((element) => {
+    const content = element.closest<HTMLElement>(".sheet-content");
     if (!content) return false;
     const actionBox = element.getBoundingClientRect();
     const contentBox = content.getBoundingClientRect();
     return actionBox.top >= contentBox.top - 1 && actionBox.bottom <= contentBox.bottom + 1;
   })).toBe(true);
-  await expect(dialog.getByRole("button", { name: "조리 완료 기록" })).toBeDisabled();
-  await dialog.getByRole("button", { name: "포장지와 재료를 살펴봤어요" }).click();
-  await dialog.getByRole("button", { name: "조리 완료 기록" }).click();
+  await expect(cooking.getByRole("button", { name: "조리 완료 기록" })).toBeDisabled();
+  await acknowledgement.click();
+  await cooking.getByRole("button", { name: "조리 완료 기록" }).click();
   // A finished meal returns to the tab it started from (Home), where the changed foods are.
+  await expect(cooking).toBeHidden();
   await expect(dialog).toBeHidden();
   await expect(page.locator(".toast")).toHaveText("조리 완료로 기록했어요. 사용한 양만큼 보관 수량을 줄였어요.");
   const homeFeedbackLayout = await page.evaluate(() => {
@@ -1074,18 +1070,15 @@ test("keeps detail review and storage cues across light and dark themes", async 
 
     await page.getByRole("button", { name: /국산콩 두부 풀무원/ }).first().click();
     const dialog = page.getByRole("dialog", { name: "국산콩 두부" });
-    await expect(dialog.getByRole("button", { name: "포장지에서 확인한 날짜 입력" })).toBeVisible();
-    await expect(dialog.locator(".detail-actions .primary-sheet-button")).toHaveCount(0);
-    await expect(dialog.locator(".detail-actions .detail-consume-action")).toBeVisible();
-    const detailOrder = await dialog.locator(".detail-sheet-content").evaluate((element) => Array.from(element.children).map((child) => child.className));
-    expect(detailOrder.indexOf("date-edit-button")).toBeGreaterThan(detailOrder.indexOf("date-proof-card"));
-    const provenanceIndex = detailOrder.indexOf("detail-source-group");
-    const priorityNoteIndex = detailOrder.indexOf("detail-note");
-    if (provenanceIndex >= 0 && priorityNoteIndex >= 0) expect(provenanceIndex).toBeLessThan(priorityNoteIndex);
-    await dialog.getByRole("button", { name: "냉동", exact: true }).click();
-    await expect(dialog.locator(".detail-section")).toHaveClass(/detail-section-pending/);
-    await expect(dialog.locator(".detail-save-pending")).toBeVisible();
-    await dialog.getByRole("button", { name: "닫기" }).click();
+    await expect(dialog.getByRole("button", { name: "포장지 날짜 입력" })).toBeVisible();
+    await expect(dialog.getByRole("button", { name: /변경 저장/ })).toHaveCount(0);
+    await expect(dialog.locator(".food-actions .detail-consume-action")).toHaveText("먹었어요");
+    // Page order: photo, pinned actions, then the date card with its one action, then storage and product.
+    const pageOrder = await dialog.locator(".food-page-body").evaluate((element) => Array.from(element.children).map((child) => child.className));
+    expect(pageOrder.findIndex((name) => name.includes("food-date-shell"))).toBeLessThan(pageOrder.findIndex((name) => name.includes("food-storage-card")));
+    expect(pageOrder.findIndex((name) => name.includes("food-storage-card"))).toBeLessThan(pageOrder.findIndex((name) => name.includes("food-product-card")));
+    await expect(dialog.locator(".food-date-shell [data-testid=date-confirmation-action]")).toBeVisible();
+    await dialog.getByRole("button", { name: "닫기", exact: true }).click();
   }
 });
 
@@ -1172,7 +1165,7 @@ test("filters the pantry by status and restores the full inventory", async ({ pa
   await mainNav(page).getByRole("button", { name: "냉장고", exact: true }).click();
 
   const statusFilters = inventory.getByRole("group", { name: "식품 상태 필터" });
-  const needsReview = statusFilters.getByRole("button", { name: /날짜·보관 확인/ });
+  const needsReview = statusFilters.getByRole("button", { name: /확인 필요/ });
   await expect(needsReview).toHaveAttribute("aria-controls", "inventory-list");
   await expect(needsReview).toHaveCSS("min-height", "44px");
   await expect(needsReview).toHaveAttribute("aria-pressed", "false");
@@ -1180,7 +1173,7 @@ test("filters the pantry by status and restores the full inventory", async ({ pa
   await expect(needsReview).toHaveAttribute("aria-pressed", "true");
   await expect(needsReview).toBeFocused();
   await expect(inventory.getByRole("heading", { name: "내 식품 목록 1" })).toBeVisible();
-  await expect(inventory.locator('.inventory-filter-summary[role="status"]')).toContainText("날짜·보관 확인");
+  await expect(inventory.locator('.inventory-filter-summary[role="status"]')).toContainText("확인 필요");
   await expect.poll(() => inventory.locator(".inventory-row").count()).toBe(1);
   await expect.poll(() => inventory.locator('.inventory-row .inventory-status[data-inventory-status="needs-review"]').count()).toBe(1);
 
@@ -1197,12 +1190,14 @@ test("filters the pantry by status and restores the full inventory", async ({ pa
 
 test("keeps a direct add action available from the food tab", async ({ page }) => {
   await mainNav(page).getByRole("button", { name: "냉장고", exact: true }).click();
-  const addButton = page.locator(".inventory-add-button");
+  // The bar's + is the one add action on 냉장고; the list does not repeat it.
+  await expect(page.locator(".fridge-screen .inventory-add-button")).toHaveCount(0);
+  const addButton = page.getByTestId("nav-add-food");
   await expect.poll(() => addButton.evaluate((element) => {
     const screen = document.querySelector<HTMLElement>("[data-testid=device-screen]")?.getBoundingClientRect();
     const navigation = document.querySelector<HTMLElement>(".app-bottom-nav")?.getBoundingClientRect();
     const rect = element.getBoundingClientRect();
-    return Boolean(screen && navigation && rect.top >= screen.top - 1 && rect.bottom <= navigation.top + 1);
+    return Boolean(screen && navigation && rect.top >= screen.top - 1 && rect.bottom <= screen.bottom + 1 && rect.bottom >= navigation.top);
   }), { timeout: 2_000 }).toBe(true);
 
   const target = await addButton.evaluate((element) => {
@@ -1260,7 +1255,7 @@ test("keeps the device frame fixed when the pantry is reduced to a short review 
   await expect(page.locator(".inventory-review-guide")).toHaveCount(0);
 
   const inventory = page.getByRole("region", { name: /내 식품 목록/ });
-  const reviewFilter = inventory.getByRole("group", { name: "식품 상태 필터" }).getByRole("button", { name: /날짜·보관 확인/ });
+  const reviewFilter = inventory.getByRole("group", { name: "식품 상태 필터" }).getByRole("button", { name: /확인 필요/ });
   await reviewFilter.click();
   await expect(inventory.getByRole("heading", { name: "내 식품 목록 1" })).toBeVisible();
   await expect(inventory.locator(".inventory-row")).toHaveCount(1);
@@ -1337,7 +1332,7 @@ test("preserves the pantry status filter across home navigation", async ({ page 
   const foodNav = mainNav(page).getByRole("button", { name: "냉장고", exact: true });
   await foodNav.click();
   const statusFilters = inventory.getByRole("group", { name: "식품 상태 필터" });
-  const needsReview = statusFilters.getByRole("button", { name: /날짜·보관 확인/ });
+  const needsReview = statusFilters.getByRole("button", { name: /확인 필요/ });
   await needsReview.click();
   await expect(inventory.getByRole("heading", { name: "내 식품 목록 1" })).toBeVisible();
 
@@ -1357,7 +1352,7 @@ test("preserves the pantry status filter across the 식단 tab round trip", asyn
   const inventory = page.getByRole("region", { name: /내 식품 목록/ });
   await mainNav(page).getByRole("button", { name: "냉장고", exact: true }).click();
   const statusFilters = inventory.getByRole("group", { name: "식품 상태 필터" });
-  const needsReview = statusFilters.getByRole("button", { name: /날짜·보관 확인/ });
+  const needsReview = statusFilters.getByRole("button", { name: /확인 필요/ });
   await needsReview.click();
   await expect(inventory.getByRole("heading", { name: "내 식품 목록 1" })).toBeVisible();
 
@@ -1408,7 +1403,7 @@ test("preserves the active status filter after opening and closing inventory det
   const inventory = page.getByRole("region", { name: /내 식품 목록/ });
   await mainNav(page).getByRole("button", { name: "냉장고", exact: true }).click();
   const statusFilters = inventory.getByRole("group", { name: "식품 상태 필터" });
-  const needsReview = statusFilters.getByRole("button", { name: /날짜·보관 확인/ });
+  const needsReview = statusFilters.getByRole("button", { name: /확인 필요/ });
   await needsReview.click();
   await expect(inventory.getByRole("heading", { name: "내 식품 목록 1" })).toBeVisible();
 
@@ -1432,7 +1427,7 @@ test("preserves the active status filter through label review readback", async (
   const inventory = page.getByRole("region", { name: /내 식품 목록/ });
   await mainNav(page).getByRole("button", { name: "냉장고", exact: true }).click();
   const statusFilters = inventory.getByRole("group", { name: "식품 상태 필터" });
-  const needsReview = statusFilters.getByRole("button", { name: /날짜·보관 확인/ });
+  const needsReview = statusFilters.getByRole("button", { name: /확인 필요/ });
   await needsReview.click();
   await expect(inventory.getByRole("heading", { name: "내 식품 목록 1" })).toBeVisible();
 
@@ -1456,19 +1451,22 @@ test("preserves the active status filter through label review readback", async (
   await expect(inventory.locator(":focus")).toHaveCount(1);
 });
 
-test("does not leak an unsaved storage edit after closing the detail sheet", async ({ page }) => {
+test("cancelling the opened confirmation leaves the food record unchanged", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 740 });
   await page.goto("/");
 
   const inventory = page.getByRole("region", { name: /내 식품 목록/ });
   await mainNav(page).getByRole("button", { name: "냉장고", exact: true }).click();
-  const row = inventory.locator(".inventory-row").filter({ hasText: "시금치" }).first();
+  const row = inventory.locator(".inventory-row").filter({ hasText: "국산콩 두부" }).first();
   const originalRowText = await row.textContent();
   await row.click();
 
-  const detail = page.getByRole("dialog", { name: "시금치" });
-  await detail.getByRole("button", { name: "냉동", exact: true }).click();
-  await expect(detail.locator(".detail-save-hint")).toContainText("저장하지 않고 닫으면");
+  const detail = page.getByRole("dialog", { name: "국산콩 두부" });
+  const openSwitch = detail.getByRole("switch", { name: "국산콩 두부 개봉 상태" });
+  await openSwitch.click();
+  await expect(openSwitch).toHaveAttribute("aria-expanded", "true");
+  await detail.getByRole("group", { name: "개봉 기록" }).getByRole("button", { name: "취소" }).click();
+  await expect(openSwitch).toHaveAttribute("aria-checked", "false");
   await detail.getByRole("button", { name: "닫기", exact: true }).click();
 
   await expect(detail).toHaveCount(0);
@@ -1486,13 +1484,12 @@ test("keeps the updated storage state readable after a 320px detail save", async
   await row.click();
 
   const detail = page.getByRole("dialog", { name: "시금치" });
-  await detail.getByRole("button", { name: "냉동", exact: true }).click();
-  await expect(detail.getByRole("button", { name: "냉동", exact: true })).toHaveAttribute("aria-pressed", "true");
-  await expect(detail.locator(".storage-pill")).toHaveText("저장 전 냉동");
-  await expect(detail.locator(".detail-save-hint")).toHaveText("저장하지 않고 닫으면 보관 상태가 바뀌지 않아요.");
-  await detail.locator(".detail-actions .primary-sheet-button").click();
-
-  await expect(page.locator(".toast")).toHaveText("시금치의 변경 내용을 저장했어요.");
+  // The segment saves on tap; the page stays open until the user closes it.
+  await detail.getByRole("radio", { name: "냉동" }).click();
+  await expect(detail.getByRole("radio", { name: "냉동" })).toHaveAttribute("aria-checked", "true");
+  await expect(page.locator(".toast")).toContainText("시금치를 냉동으로 옮겼어요.");
+  await expect(detail).toBeVisible();
+  await detail.getByRole("button", { name: "닫기", exact: true }).click();
   await expect(detail).toHaveCount(0);
   await expect(inventory.getByRole("button", { name: /시금치 국내산 시금치 1팩.*날짜 확인/ })).toBeVisible();
   await expect(inventory.getByRole("button", { name: /시금치 국내산 시금치 1팩.*날짜 확인/ })).toBeFocused();
@@ -1514,7 +1511,7 @@ test("keeps a confirmed date readable after saving from a 320px detail sheet", a
   await row.click();
 
   const detail = page.getByRole("dialog", { name: "국산콩 두부" });
-  await detail.getByRole("button", { name: "포장지에서 확인한 날짜 입력" }).click();
+  await detail.getByRole("button", { name: "포장지 날짜 입력" }).click();
   const editor = detail.getByRole("group", { name: "확인한 날짜 입력" });
   await expect(editor).toBeVisible();
 
@@ -1527,7 +1524,7 @@ test("keeps a confirmed date readable after saving from a 320px detail sheet", a
 
   await editor.getByRole("radio", { name: "소비기한", exact: true }).click();
   await editor.getByRole("textbox", { name: "날짜" }).fill(confirmedDateValue);
-  await expect(editor.locator("#confirmed-date-readable")).toContainText(confirmedDateValue.replaceAll("-", "."));
+  await expect(editor.locator("#confirmed-date-readable")).toContainText(formatKoreanDate(confirmedDateValue));
   await editor.getByRole("button", { name: "확인 후 저장" }).click();
 
   await expect(page.locator(".toast")).toHaveText("국산콩 두부 소비기한을 포장지에서 확인해 기록했어요.");
@@ -1564,7 +1561,7 @@ test("returns focus to the date action after cancelling date review", async ({ p
   await page.getByRole("region", { name: /내 식품 목록/ }).getByRole("button", { name: /국산콩 두부 풀무원 1모/ }).click();
 
   const detail = page.getByRole("dialog", { name: "국산콩 두부" });
-  const dateAction = detail.getByRole("button", { name: "포장지에서 확인한 날짜 입력" });
+  const dateAction = detail.getByRole("button", { name: "포장지 날짜 입력" });
   await dateAction.click();
   const editor = detail.getByRole("group", { name: "확인한 날짜 입력" });
   await expect(editor).toBeVisible();
@@ -1591,10 +1588,10 @@ test("returns focus to the printed-date recheck action after closing label revie
   await waitForSheetSettled(page);
 
   const labelReview = page.getByRole("dialog", { name: "날짜 다시 살펴보기" });
-  const currentDate = labelReview.getByRole("group", { name: "현재 기록된 날짜 포장 소비기한 · 2026.09.02 · 포장지 표시" });
+  const currentDate = labelReview.getByRole("group", { name: "현재 기록된 날짜 포장 소비기한 · 2026년 9월 2일 (수) · 포장지 표시" });
   await expect(currentDate).toBeVisible();
   await expect(currentDate).toBeInViewport();
-  await expect(currentDate).toHaveText(/현재 기록.*포장 소비기한 2026\.09\.02 포장지 표시/);
+  await expect(currentDate).toHaveText(/현재 기록.*포장 소비기한 2026년 9월 2일 \(수\) 포장지 표시/);
   await expect(labelReview.locator(".sheet-description")).toContainText("저장 전까지 기록은 그대로예요");
   const dateStep = labelReview.locator(".intake-flow-rail");
   await expect(dateStep).toHaveAttribute("aria-label", "날짜 확인 1단계");
@@ -1628,7 +1625,7 @@ test("returns focus to the printed-date recheck action after closing label revie
   detail = page.getByRole("dialog", { name: "시금치" });
   const returnedDateRecheckAction = detail.getByRole("button", { name: "포장지에서 날짜 다시 확인" });
   await expect(returnedDateRecheckAction).toBeFocused();
-  await expect(detail.getByRole("group", { name: "날짜 정보: 포장 소비기한" })).toContainText("2026.09.02");
+  await expect(detail.getByRole("group", { name: "날짜 정보: 포장 소비기한" })).toContainText("2026년 9월 2일 (수)");
 });
 
 test("returns focus to the printed-date recheck action after closing label review on 320px light", async ({ page }) => {
@@ -1644,12 +1641,12 @@ test("returns focus to the printed-date recheck action after closing label revie
   const labelReview = page.getByRole("dialog", { name: "날짜 다시 살펴보기" });
   await expect(labelReview).toBeVisible();
   await waitForSheetSettled(page);
-  await expect(labelReview.getByRole("group", { name: "현재 기록된 날짜 포장 소비기한 · 2026.09.02 · 포장지 표시" })).toBeInViewport();
+  await expect(labelReview.getByRole("group", { name: "현재 기록된 날짜 포장 소비기한 · 2026년 9월 2일 (수) · 포장지 표시" })).toBeInViewport();
   await labelReview.getByRole("button", { name: "닫기", exact: true }).click();
 
   await expect(labelReview).toHaveCount(0);
   await expect(trigger).toBeFocused();
-  await expect(detail.getByRole("group", { name: "날짜 정보: 포장 소비기한" })).toContainText("2026.09.02");
+  await expect(detail.getByRole("group", { name: "날짜 정보: 포장 소비기한" })).toContainText("2026년 9월 2일 (수)");
   await expect.poll(async () => {
     const [screenBox, actionBox] = await Promise.all([
       page.getByTestId("device-screen").boundingBox(),
@@ -1693,10 +1690,10 @@ test("echoes the existing printed date before starting a label recheck", async (
     };
   });
   expect(contrastRatio(recommendationColors.foreground, recommendationColors.background)).toBeGreaterThanOrEqual(4.5);
-  const currentDate = labelReview.getByRole("group", { name: "현재 기록된 날짜 포장 소비기한 · 2026.09.02 · 포장지 표시" });
+  const currentDate = labelReview.getByRole("group", { name: "현재 기록된 날짜 포장 소비기한 · 2026년 9월 2일 (수) · 포장지 표시" });
   await expect(currentDate).toBeVisible();
   await expect(currentDate).toBeInViewport();
-  await expect(currentDate).toHaveText(/현재 기록.*포장 소비기한 2026\.09\.02 포장지 표시/);
+  await expect(currentDate).toHaveText(/현재 기록.*포장 소비기한 2026년 9월 2일 \(수\) 포장지 표시/);
   const dateContextPrecedesMethodChoices = await currentDate.evaluate((element) => {
     const methodChoices = element.parentElement?.querySelector(".mode-tabs");
     return Boolean(methodChoices && (element.compareDocumentPosition(methodChoices) & Node.DOCUMENT_POSITION_FOLLOWING));
@@ -1728,7 +1725,7 @@ test("echoes the existing printed date before starting a label recheck", async (
   expect(headerBox?.height).toBeLessThanOrEqual(112);
 
   await labelReview.getByRole("button", { name: "닫기", exact: true }).click();
-  await expect(detail.getByRole("group", { name: "날짜 정보: 포장 소비기한" })).toContainText("2026.09.02");
+  await expect(detail.getByRole("group", { name: "날짜 정보: 포장 소비기한" })).toContainText("2026년 9월 2일 (수)");
   await expect(detail.getByRole("button", { name: "포장지에서 날짜 다시 확인" })).toBeFocused();
 });
 
@@ -1756,7 +1753,7 @@ test("keeps dark native date recheck readable and inside a 320px viewport", asyn
     };
   });
   expect(contrastRatio(recommendationColors.foreground, recommendationColors.background)).toBeGreaterThanOrEqual(4.5);
-  await expect(labelReview.getByRole("group", { name: "현재 기록된 날짜 포장 소비기한 · 2026.09.02 · 포장지 표시" })).toBeInViewport();
+  await expect(labelReview.getByRole("group", { name: "현재 기록된 날짜 포장 소비기한 · 2026년 9월 2일 (수) · 포장지 표시" })).toBeInViewport();
   await expect(labelReview.locator(".sheet-description")).toContainText("저장 전까지 기록은 그대로예요");
   await expect(labelReview.locator(".sheet-description")).toHaveCSS("font-size", "12px");
   await expect(labelReview.locator(".capture-date-meaning-note strong")).toHaveCSS("font-size", "12px");
@@ -1838,7 +1835,7 @@ test("contains keyboard focus in printed-date recheck and returns it to the trig
   await page.keyboard.press("Escape");
   await expect(labelReview).toHaveCount(0);
   await expect(trigger).toBeFocused();
-  await expect(detail.getByRole("group", { name: "날짜 정보: 포장 소비기한" })).toContainText("2026.09.02");
+  await expect(detail.getByRole("group", { name: "날짜 정보: 포장 소비기한" })).toContainText("2026년 9월 2일 (수)");
 });
 
 test("keeps the 320px date recheck trigger visibly focused after keyboard dismissal in both themes", async ({ page }) => {
@@ -1878,7 +1875,7 @@ test("keeps the 320px date recheck trigger visibly focused after keyboard dismis
     expect(focusStyle.ring.borderTopStyle).toBe("solid");
     expect(focusStyle.ring.borderTopWidth).toBe("2px");
     expect(contrastRatio(focusStyle.ring.borderTopColor, focusStyle.surface)).toBeGreaterThanOrEqual(3);
-    await expect(detail.getByRole("group", { name: "날짜 정보: 포장 소비기한" })).toContainText("2026.09.02");
+    await expect(detail.getByRole("group", { name: "날짜 정보: 포장 소비기한" })).toContainText("2026년 9월 2일 (수)");
   }
 });
 
@@ -1939,34 +1936,33 @@ test("keeps the mobile date-recheck keyboard path visibly focused without an ext
 
     const productInfo = detail.getByRole("button", { name: "상품 정보 수정" });
     const consume = detail.getByRole("button", { name: "날짜와 보관 방법을 살펴본 뒤 먹은 기록 남기기" });
-    const discard = detail.getByRole("button", { name: "상태가 이상해 폐기하기" });
-    const storage = detail.getByRole("group", { name: "보관 위치 선택" });
+    const discard = detail.getByRole("button", { name: "상태가 이상해서 버림" });
+    const storage = detail.getByRole("radiogroup", { name: "보관 위치" });
     const quantityAmount = detail.getByRole("button", { name: "1팩의 양 입력" });
+    // The storage segment is one tab stop on the chosen place; arrows move between places.
+    await page.keyboard.press("Tab");
+    const chosenPlace = storage.getByRole("radio", { name: "냉장" });
+    await expect(chosenPlace).toBeFocused();
+    await expect(chosenPlace).toHaveAttribute("aria-checked", "true");
+    await expectFocusRing(chosenPlace, ".bottom-sheet");
+    await page.keyboard.press("ArrowRight");
+    await expect(storage.getByRole("radio", { name: "냉동" })).toBeFocused();
+    await expect(chosenPlace).toHaveAttribute("aria-checked", "true");
+    // 시금치 is already opened, so the disabled switch is skipped.
+    await page.keyboard.press("Tab");
+    await expect(productInfo).toBeFocused();
+    await expectFocusRing(productInfo, ".bottom-sheet");
     await page.keyboard.press("Tab");
     await expect(quantityAmount).toBeFocused();
     await expectFocusRing(quantityAmount, ".bottom-sheet");
     await page.keyboard.press("Tab");
-    await expect(productInfo).toBeFocused();
-    await expectFocusRing(productInfo, ".bottom-sheet");
-    // Quantity controls sit between product info and the record actions.
-    for (let index = 0; index < 6; index += 1) {
-      await page.keyboard.press("Tab");
-      if (await consume.evaluate((element) => element === document.activeElement)) break;
-    }
-    await expect(consume).toBeFocused();
-    await expectFocusRing(consume, ".bottom-sheet");
-    await expect(consume).toHaveAttribute("aria-describedby", "consume-safety-hint");
-    await expect(detail.locator("#consume-safety-hint")).toContainText("이미 먹은 경우에만 기록해 주세요");
-    await page.keyboard.press("Tab");
     await expect(discard).toBeFocused();
     await expectFocusRing(discard, ".bottom-sheet");
-    for (const [label, pressed] of [["냉장", true], ["냉동", false], ["실온", false]] as const) {
-      const option = storage.getByRole("button", { name: label, exact: true });
-      await page.keyboard.press("Tab");
-      await expect(option).toBeFocused();
-      await expect(option).toHaveAttribute("aria-pressed", String(pressed));
-      await expectFocusRing(option, ".bottom-sheet");
-    }
+    // The guarded consume record sits in the pinned action row and carries the safety description.
+    await expect(consume).toHaveAttribute("aria-describedby", "consume-safety-hint");
+    await expect(detail.locator("#consume-safety-hint")).toContainText("이미 먹은 경우에만 기록해 주세요");
+    await consume.focus();
+    await expectFocusRing(consume, ".bottom-sheet");
     await trigger.click();
 
     const labelReview = page.getByRole("dialog", { name: "날짜 다시 살펴보기" });
@@ -2014,7 +2010,7 @@ test("keeps the mobile date-recheck keyboard path visibly focused without an ext
     await expect(labelReview).toHaveCount(0);
     await expect(trigger).toBeFocused();
     await expectFocusRing(trigger, ".bottom-sheet");
-    await expect(detail.getByRole("group", { name: "날짜 정보: 포장 소비기한" })).toContainText("2026.09.02");
+    await expect(detail.getByRole("group", { name: "날짜 정보: 포장 소비기한" })).toContainText("2026년 9월 2일 (수)");
     await page.keyboard.press("Escape");
     await expect(detail).toHaveCount(0);
     await expect(firstPriority).toBeFocused();
@@ -2166,7 +2162,7 @@ test("returns focus to product info action after cancelling product edit", async
   await expect(productInfoAction).toBeFocused();
   // The food name sits in the sheet title; the hero keeps the unchanged brand after cancelling.
   await expect(detail.getByRole("heading", { name: "국산콩 두부" })).toBeVisible();
-  await expect(detail.locator(".detail-hero")).toContainText("풀무원");
+  await expect(detail.locator(".food-top")).toContainText("풀무원");
   await expect(detail).not.toContainText("임시 상품명");
 });
 
@@ -2311,7 +2307,7 @@ test("survives native viewport height changes while the pantry and detail are ac
   await inventory.getByRole("button", { name: /국산콩 두부/ }).click();
   const detail = page.getByRole("dialog", { name: "국산콩 두부" });
   await expect(detail).toBeVisible();
-  await expect(detail.locator(".detail-actions")).not.toHaveClass(/detail-actions-stuck/);
+  await expect(detail.locator(".food-page")).not.toHaveAttribute("data-condensed", /.*/);
 
   for (const height of [600, 852]) {
     await page.setViewportSize({ width: 393, height });
@@ -2331,7 +2327,7 @@ test("survives native viewport height changes while the pantry and detail are ac
         sheet: sheet.getBoundingClientRect().toJSON(),
         sheetScrollWidth: content?.scrollWidth ?? 0,
         sheetClientWidth: content?.clientWidth ?? 0,
-        detailActionPosition: document.querySelector<HTMLElement>(".detail-actions") ? getComputedStyle(document.querySelector<HTMLElement>(".detail-actions")!).position : "missing",
+        detailActionPosition: document.querySelector<HTMLElement>(".food-actions") ? getComputedStyle(document.querySelector<HTMLElement>(".food-actions")!).position : "missing",
       };
     });
     expect(sheetLayout.sheet.top).toBeGreaterThanOrEqual(sheetLayout.screen.top - 1);
@@ -2341,13 +2337,15 @@ test("survives native viewport height changes while the pantry and detail are ac
 
     await detail.locator(".sheet-content").evaluate((element) => { element.scrollTop = element.scrollHeight; });
     await page.waitForTimeout(40);
-    const detailActionBox = await detail.locator(".detail-actions").boundingBox();
+    const detailActionBox = await detail.locator(".food-actions").boundingBox();
     expect(detailActionBox, `detail actions have no bounding box at ${height}px`).toBeTruthy();
+    // Pinned under the title bar: still on screen at the end of the page, clear of the home indicator.
+    expect(detailActionBox!.y).toBeGreaterThanOrEqual(sheetLayout.screen.top - 1);
     expect(detailActionBox!.y + detailActionBox!.height).toBeLessThanOrEqual(sheetLayout.screen.bottom - 34);
   }
 });
 
-test("elevates food detail actions only after scrolling past their normal position", async ({ page }) => {
+test("pins the food actions under a title bar once the photo scrolls away", async ({ page }) => {
   await page.setViewportSize({ width: 393, height: 852 });
   await page.goto("/");
   await openFridgeFood(page, "시금치");
@@ -2355,33 +2353,21 @@ test("elevates food detail actions only after scrolling past their normal positi
   await expect(detail).toBeVisible();
   await waitForSheetSettled(page);
 
-  const actions = detail.locator(".detail-actions");
+  const foodPage = detail.locator(".food-page");
+  const actions = detail.locator(".food-actions");
   const content = detail.locator(".sheet-content");
-  await expect(actions).not.toHaveClass(/detail-actions-stuck/);
-  await page.addStyleTag({ content: ".detail-sheet-content::after { content: \"\"; display: block; min-height: 900px; }" });
-  await content.evaluate((element) => {
-    element.scrollTop = element.scrollHeight;
-    element.dispatchEvent(new Event("scroll"));
-  });
-  await page.waitForTimeout(50);
-  await expect(actions).toHaveClass(/detail-actions-stuck/);
-  await expect(actions).toHaveClass(/detail-actions-scroll-down/);
+  await expect(foodPage).not.toHaveAttribute("data-condensed", /.*/);
+  await expect(detail.locator(".sheet-title")).toHaveCSS("opacity", "0");
+  await content.evaluate((element) => { element.scrollTop = element.scrollHeight; });
+  await expect(foodPage).toHaveAttribute("data-condensed", "true");
+  await expect(detail.locator(".sheet-title")).toHaveCSS("opacity", "1");
+  const header = await detail.locator(".sheet-header").boundingBox();
+  const pinned = await actions.boundingBox();
+  expect(header && pinned).toBeTruthy();
+  expect(Math.abs(pinned!.y - (header!.y + header!.height))).toBeLessThanOrEqual(2);
 
-  await content.evaluate((element) => {
-    element.scrollTop = Math.max(0, element.scrollHeight - element.clientHeight - 120);
-    element.dispatchEvent(new Event("scroll"));
-  });
-  await page.waitForTimeout(50);
-  await expect(actions).toHaveClass(/detail-actions-stuck/);
-  await expect(actions).toHaveClass(/detail-actions-scroll-up/);
-  await expect(actions).not.toHaveClass(/detail-actions-scroll-down/);
-
-  await content.evaluate((element) => {
-    element.scrollTop = 0;
-    element.dispatchEvent(new Event("scroll"));
-  });
-  await expect(actions).not.toHaveClass(/detail-actions-stuck/);
-  await expect(actions).not.toHaveClass(/detail-actions-scroll-up/);
+  await content.evaluate((element) => { element.scrollTop = 0; });
+  await expect(foodPage).not.toHaveAttribute("data-condensed", /.*/);
 });
 
 test("keeps a bottom sheet usable at 320px", async ({ page }) => {
@@ -2720,17 +2706,41 @@ test("opens the explicit receipt source review fixture and follows a source box 
   const zoomedFrame = await sourcePreview.locator(".receipt-source-preview-frame").boundingBox();
   expect(zoomedFrame).toBeTruthy();
   expect(zoomedFrame!.height).toBeGreaterThan(sourceFrame!.height);
+  // Zooming scrolls the preview into view; let that settle before choosing a box.
+  let settledFrameTop: number | null = null;
+  await expect.poll(async () => {
+    const top = (await sourcePreview.locator(".receipt-source-preview-frame").boundingBox())?.y ?? null;
+    const settled = top !== null && top === settledFrameTop;
+    settledFrameTop = top;
+    return settled;
+  }).toBe(true);
   const tofuSource = sourcePreview.getByRole("button", { name: "국산콩 두부 영수증에서 확인하기" });
-  await tofuSource.press("Enter");
+  // The highlighted box must be clear of the save bar the moment it is chosen;
+  // measure in the same task as the selection, before the sheet scrolls on to
+  // the chosen line's card (a later poll would race that scroll).
+  const tofuBoxClearAtSelection = await tofuSource.evaluate(async (button) => {
+    button.focus();
+    button.click();
+    // React commits the discrete update in a microtask; the reveal waits for a frame.
+    for (let tick = 0; tick < 5 && button.getAttribute("aria-pressed") !== "true"; tick += 1) await Promise.resolve();
+    if (button.getAttribute("aria-pressed") !== "true") return false;
+    const submit = document.querySelector<HTMLElement>(".receipt-review-submit-bar")?.getBoundingClientRect();
+    const activeBoxes = Array.from(document.querySelectorAll<HTMLElement>(".receipt-source-box-active"), (element) => element.getBoundingClientRect());
+    return Boolean(submit && activeBoxes.length && activeBoxes.every((box) => box.bottom <= submit.top + 1));
+  });
+  expect(tofuBoxClearAtSelection).toBe(true);
   await expect(tofuSource).toHaveAttribute("aria-pressed", "true");
   await expect(sourcePreview).toContainText("현재 항목 국산콩 두부");
   await expect(sourcePreview).toHaveAttribute("data-active-source-line", "국산콩 두부");
   const activeTofuBoxes = await sourcePreview.locator(".receipt-source-box-active").count();
   expect(activeTofuBoxes).toBeGreaterThan(0);
+  // The chosen line opens with its fields clear of the save bar.
+  await expect(dialog.locator('.receipt-line-card[data-line-id="receipt-tofu"]')).toHaveClass(/receipt-line-card-editing/);
   await expect.poll(() => page.evaluate(() => {
     const submit = document.querySelector<HTMLElement>(".receipt-review-submit-bar")?.getBoundingClientRect();
-    const activeBoxes = Array.from(document.querySelectorAll<HTMLElement>(".receipt-source-box-active"), (element) => element.getBoundingClientRect());
-    return Boolean(submit && activeBoxes.length && activeBoxes.every((box) => box.bottom <= submit.top + 1));
+    const content = document.querySelector<HTMLElement>(".sheet-content")?.getBoundingClientRect();
+    const fields = Array.from(document.querySelectorAll<HTMLElement>('.receipt-line-card[data-line-id="receipt-tofu"] :is(input[aria-label="식품 이름"], .receipt-line-storage-field)'), (element) => element.getBoundingClientRect());
+    return Boolean(submit && content && fields.length === 2 && fields.every((field) => field.top >= content.top - 1 && field.bottom <= submit.top + 1));
   })).toBe(true);
 
   // Choosing a source line scrolls to its card; bring the preview back and tap the spinach box on the zoomed receipt.
@@ -2980,7 +2990,7 @@ test("keeps the major native sheets inside a 320px viewport", async ({ page }) =
   };
 
   await openAndCheck({ name: /알림 보기/ }, "알림");
-  await openAndCheck({ name: /체험 안내 열기/ }, "체험 안내");
+  await openAndCheck({ name: /체험 안내 열기/ }, /^나$/);
 
   await openFridgeFood(page, "시금치");
   const detail = page.getByRole("dialog", { name: "시금치" });
@@ -3021,7 +3031,7 @@ test("backdrop dismissal from account returns focus to the connection trigger", 
   await page.goto("/");
   const trigger = page.locator(".connection-pill");
   await trigger.click();
-  const dialog = page.getByRole("dialog", { name: "체험 안내" });
+  const dialog = page.getByRole("dialog", { name: "나", exact: true });
   await expect(dialog).toBeVisible();
   await page.getByTestId("sheet-overlay").last().click({ position: { x: 12, y: 12 } });
   await expect(dialog).toHaveCount(0);
@@ -3184,7 +3194,7 @@ test("scales the major sheet reading hierarchy with a larger text preference", a
   await detailDialog.locator(".sheet-content").evaluate((element) => { element.scrollTop = element.scrollHeight; });
   await page.waitForTimeout(80);
   const screenBox = await page.getByTestId("device-screen").boundingBox();
-  const actionBox = await detailDialog.locator(".detail-actions").boundingBox();
+  const actionBox = await detailDialog.locator(".food-actions").boundingBox();
   expect(screenBox, "native screen has no bounding box").toBeTruthy();
   expect(actionBox, "large-text detail actions have no bounding box").toBeTruthy();
   expect(actionBox!.y + actionBox!.height).toBeLessThanOrEqual(screenBox!.y + screenBox!.height - 34);
@@ -3221,30 +3231,36 @@ test("keeps primary controls at a 44px touch target", async ({ page }) => {
   await page.getByRole("button", { name: /오늘 뭐 먹지/ }).click();
   const mealDialog = page.getByRole("region", { name: "오늘의 식단" });
   await expect(mealDialog).toBeVisible();
+  await assertTarget(mealDialog.getByRole("button", { name: /조리 시간/ }), "meal condition chip");
+  await assertTarget(mealDialog.getByRole("group", { name: "식단 기간" }).getByRole("button").first(), "meal period choice");
+  await mealDialog.getByRole("button", { name: /조리 시간/ }).click();
   await assertTarget(mealDialog.locator(".recipe-time-picker button").first(), "recipe time choice");
   await assertTarget(mealDialog.locator(".recipe-serving-picker button").first(), "recipe serving choice");
-  await expect(mealDialog.locator(".recipe-time-picker button").first()).toHaveCSS("font-size", "12px");
-  await expect(mealDialog.locator(".recipe-serving-picker button").first()).toHaveCSS("font-size", "12px");
+  await expect(mealDialog.locator(".recipe-time-picker button").first()).toHaveCSS("font-size", "14px");
+  await expect(mealDialog.locator(".recipe-serving-picker button").first()).toHaveCSS("font-size", "14px");
+  await assertTarget(mealDialog.locator(".meal-card").first(), "menu card");
   await assertTarget(mealDialog.locator(".recipe-actions button").first(), "recipe action");
   await assertTarget(mealDialog.locator(".recipe-history-toggle"), "recipe history toggle");
+  await assertTarget(mealDialog.getByRole("button", { name: "이미 만들었어요" }), "already cooked action");
   await openTab(page, "홈");
   await expect(mealDialog).toBeHidden();
 
   await openFridgeFood(page, "시금치");
   const detailDialog = page.getByRole("dialog", { name: "시금치" });
   await expect(detailDialog).toBeVisible();
-  await assertTarget(detailDialog.locator(".date-proof-card > button"), "date guidance button");
+  await assertTarget(detailDialog.getByRole("button", { name: "날짜 안내 보기" }), "date guidance button");
+  for (const action of await detailDialog.locator(".food-actions .food-action").all()) await assertTarget(action, "food page action");
   await detailDialog.getByRole("button", { name: "날짜 안내 보기" }).click();
   const guidanceDialog = page.getByRole("dialog", { name: "날짜를 읽는 방법" });
   await expect(guidanceDialog).toBeVisible();
   await guidanceDialog.getByRole("button", { name: "닫기", exact: true }).click();
   await expect(guidanceDialog).toHaveCount(0);
   await expect(detailDialog).toBeVisible();
-  await assertTarget(detailDialog.locator(".storage-option").first(), "storage choice");
+  await assertTarget(detailDialog.getByRole("radio").first(), "storage choice");
   await assertTarget(detailDialog.getByRole("button", { name: "상품 정보 수정" }), "product info action");
   await assertTarget(detailDialog.getByRole("button", { name: "1팩의 양 입력" }), "quantity reference action");
-  await assertTarget(detailDialog.locator(".toggle"), "opened state toggle");
-  await assertTarget(detailDialog.locator(".danger-text-button"), "discard action");
+  await assertTarget(detailDialog.locator(".food-switch"), "opened state switch");
+  await assertTarget(detailDialog.locator(".food-discard-button"), "discard action");
   await page.keyboard.press("Escape");
   await expect(detailDialog).toHaveCount(0);
 
@@ -3259,7 +3275,7 @@ test("keeps the demo guidance primary action above the iPhone home indicator", a
   await page.goto("/");
   await expect(page.getByRole("main", { name: "Rescue Meal 홈" })).toBeVisible();
   await page.getByRole("button", { name: /체험 안내 열기/ }).click();
-  const dialog = page.getByRole("dialog", { name: "체험 안내" });
+  const dialog = page.getByRole("dialog", { name: "나", exact: true });
   await expect(dialog).toBeVisible();
   await waitForSheetSettled(page);
 
@@ -3275,35 +3291,26 @@ test("places detail primary actions directly after safety guidance", async ({ pa
   await openFridgeFood(page, "시금치");
   const dialog = page.getByRole("dialog", { name: "시금치" });
   await expect(dialog).toBeVisible();
-  await expect(dialog.locator(".detail-actions")).toBeVisible();
-  await expect(dialog.locator(".detail-actions .secondary-sheet-button")).toContainText("먹은 기록 남기기");
-  await expect(dialog.locator(".detail-actions .secondary-sheet-button")).toHaveAttribute("aria-label", "날짜와 보관 방법을 살펴본 뒤 먹은 기록 남기기");
-  const dateWarningCopy = dialog.locator(".date-review-callout-compact > span:nth-child(2) > small");
+  const actions = dialog.getByRole("group", { name: "식품 기록 행동" });
+  await expect(actions).toBeVisible();
+  // A passed printed date leads with 날짜 확인; eating stays a guarded record, never a one-tap 먹었어요.
+  await expect(actions.locator(".food-action-primary")).toHaveText("날짜 확인");
+  await expect(actions.getByRole("button", { name: "먹었어요", exact: true })).toHaveCount(0);
+  const consume = actions.locator(".detail-consume-action-review");
+  await expect(consume).toHaveText("먹은 기록");
+  await expect(consume).toHaveAttribute("aria-label", "날짜와 보관 방법을 살펴본 뒤 먹은 기록 남기기");
+  const dateWarningCopy = dialog.locator(".date-review-callout > span > small");
   await expect(dateWarningCopy).toHaveText(/표시 날짜가 (?:오늘이에요|어제 지났어요|\d+일 지났어요|오늘이거나 지났어요)\. 보관 방법과 개봉 상태도 확인해 주세요\./);
-  const dateWarningCopyLayout = await dateWarningCopy.evaluate((element) => ({
-    height: element.getBoundingClientRect().height,
-    lineHeight: Number.parseFloat(getComputedStyle(element).lineHeight),
-  }));
-  expect(dateWarningCopyLayout.height).toBeLessThanOrEqual(dateWarningCopyLayout.lineHeight * 2 + 1);
-  await expect(dialog.locator(".product-info-edit-button small")).toHaveCount(0);
   await expect(dialog.getByRole("button", { name: "상품 정보 수정" })).toBeVisible();
-  await expect(dialog.locator(".detail-save-hint")).toHaveCount(0);
-  const reviewActionLayout = await dialog.locator(".detail-actions .secondary-sheet-button").evaluate((element) => {
-    const rect = element.getBoundingClientRect();
-    const style = getComputedStyle(element);
-    return { height: rect.height, lineHeight: Number.parseFloat(style.lineHeight) };
-  });
-  expect(reviewActionLayout.height).toBeLessThanOrEqual(Math.ceil(reviewActionLayout.lineHeight * 2 + 18));
-  // The visible "먹은 기록 안내" block is now a screen-reader description tied to the consume action.
-  await expect(dialog.locator(".detail-actions-review-copy")).toHaveCount(0);
   const safetyHint = dialog.locator("#consume-safety-hint");
   await expect(safetyHint).toHaveText("이미 먹은 경우에만 기록해 주세요.");
   await expect(safetyHint).toHaveClass(/sr-only/);
-  await expect(dialog.locator(".detail-actions .secondary-sheet-button")).toHaveAttribute("aria-describedby", "consume-safety-hint");
-  await expect(dialog.locator(".detail-actions .secondary-sheet-button")).toHaveAccessibleDescription("이미 먹은 경우에만 기록해 주세요.");
+  await expect(consume).toHaveAttribute("aria-describedby", "consume-safety-hint");
+  await expect(consume).toHaveAccessibleDescription("이미 먹은 경우에만 기록해 주세요.");
+  // The recheck action follows the warning inside the one date card.
   const followsSafetyGuidance = await dialog.locator(".date-review-callout").evaluate((node) => {
-    const actions = node.parentElement?.querySelector(".detail-actions");
-    return Boolean(actions && (node.compareDocumentPosition(actions) & Node.DOCUMENT_POSITION_FOLLOWING));
+    const action = node.parentElement?.querySelector(".food-card-action");
+    return Boolean(action && (node.compareDocumentPosition(action) & Node.DOCUMENT_POSITION_FOLLOWING));
   });
   expect(followsSafetyGuidance).toBe(true);
 });
@@ -3314,17 +3321,17 @@ test("keeps date guidance in context when opening a review-required priority car
   await openFridgeFood(page, "시금치");
   const dialog = page.getByRole("dialog", { name: "시금치" });
   const dateReviewAction = dialog.getByRole("button", { name: "포장지에서 날짜 다시 확인" });
-  const dateReviewHeading = dialog.locator(".date-review-callout > span:nth-child(2) > strong");
-  const dateReviewCopy = dialog.locator(".date-review-callout > span:nth-child(2) > small");
+  const dateReviewHeading = dialog.locator(".date-review-callout > span > strong");
+  const dateReviewCopy = dialog.locator(".date-review-callout > span > small");
 
   await expect(dateReviewHeading).toHaveText("조리 전 확인이 필요해요");
   await expect(dateReviewCopy).toHaveText(/표시 날짜가 (?:오늘이에요|어제 지났어요|\d+일 지났어요|오늘이거나 지났어요)\. 보관 방법과 개봉 상태도 확인해 주세요\./);
-  await expect(dateReviewHeading).toHaveCSS("font-size", "12px");
+  // Safety copy stays readable: a 14px heading and the 12px caption step, never smaller.
+  await expect(dateReviewHeading).toHaveCSS("font-size", "14px");
   await expect(dateReviewCopy).toHaveCSS("font-size", "12px");
-  await expect(dialog.locator(".date-edit-button-compact > span")).toHaveCSS("font-size", "12px");
-  const dateReviewLayout = await dialog.locator(".date-review-callout").evaluate((element) => {
-    const copy = element.querySelector<HTMLElement>(":scope > span:nth-child(2) > small");
-    const action = element.querySelector<HTMLElement>(".date-edit-button-compact");
+  const dateReviewLayout = await dialog.locator(".food-date-shell").evaluate((element) => {
+    const copy = element.querySelector<HTMLElement>(".date-review-callout > span > small");
+    const action = element.querySelector<HTMLElement>(".food-card-action");
     if (!copy || !action) return null;
     const copyBox = copy.getBoundingClientRect();
     const actionBox = action.getBoundingClientRect();
@@ -3349,7 +3356,8 @@ test("date warning and recheck action keep readable contrast in both themes", as
     await openFridgeFood(page, "시금치");
 
     const dialog = page.getByRole("dialog", { name: "시금치" });
-    const callout = dialog.locator(".date-review-callout-compact");
+    // The card (shell) holds the callout and its action beside the date-facts group.
+    const callout = dialog.locator(".food-date-shell");
     await expect(callout).toBeVisible();
     const contrast = await callout.evaluate((element) => {
       const context = document.createElement("canvas").getContext("2d");
@@ -3387,9 +3395,9 @@ test("date warning and recheck action keep readable contrast in both themes", as
         };
       };
       return {
-        heading: measure(element.querySelector(":scope > span:nth-child(2) > strong")),
-        copy: measure(element.querySelector(":scope > span:nth-child(2) > small")),
-        action: measure(element.querySelector(".date-edit-button-compact > span")),
+        heading: measure(element.querySelector(".date-review-callout > span > strong")),
+        copy: measure(element.querySelector(".date-review-callout > span > small")),
+        action: measure(element.querySelector(".food-card-action")),
       };
     });
 
@@ -3453,7 +3461,7 @@ test("opens a use-next priority card on the detail summary without moving focus 
   // Only an explicit action route moves focus away from the summary (Prototype.openDetail).
   await expect(dialog.getByRole("button", { name: "닫기", exact: true })).toBeFocused();
   await expect(dialog.getByRole("button", { name: "먹었어요", exact: true })).toBeVisible();
-  await expect(dialog.getByRole("button", { name: "포장지에서 확인한 날짜 입력" })).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "포장지 날짜 입력" })).toBeVisible();
 });
 
 test("keeps primary and destructive detail actions above the iPhone home indicator", async ({ page }) => {
@@ -3467,9 +3475,9 @@ test("keeps primary and destructive detail actions above the iPhone home indicat
 
   const screenBox = await page.getByTestId("device-screen").boundingBox();
   const stateSummaryBox = await dialog.getByRole("group", { name: "보관 및 개봉 상태" }).boundingBox();
-  const toggleBox = await dialog.locator(".toggle").boundingBox();
-  const actionBox = await dialog.locator(".detail-actions").boundingBox();
-  const discardBox = await dialog.locator(".danger-text-button").boundingBox();
+  const toggleBox = await dialog.locator(".food-switch").boundingBox();
+  const actionBox = await dialog.locator(".food-actions").boundingBox();
+  const discardBox = await dialog.locator(".food-discard-button").boundingBox();
   expect(screenBox, "native screen has no bounding box").toBeTruthy();
   expect(stateSummaryBox, "food detail state summary has no bounding box").toBeTruthy();
   expect(toggleBox, "food detail state control has no bounding box").toBeTruthy();
@@ -3486,11 +3494,11 @@ test("keeps primary and destructive detail actions above the iPhone home indicat
   // where scrollIntoViewIfNeeded is a no-op; scrolling the sheet to its end must lift it clear.
   await content.evaluate((element) => { element.scrollTop = element.scrollHeight; });
   await expect.poll(async () => {
-    const scrolledDiscardBox = await dialog.locator(".danger-text-button").boundingBox();
+    const scrolledDiscardBox = await dialog.locator(".food-discard-button").boundingBox();
     return scrolledDiscardBox!.y + scrolledDiscardBox!.height;
   }).toBeLessThanOrEqual(screenBox!.y + screenBox!.height - 34);
   await content.evaluate((element) => { element.scrollTop = element.scrollHeight; });
-  const openedToggle = dialog.locator(".opened-row .toggle");
+  const openedToggle = dialog.locator(".food-switch");
   await expect.poll(async () => {
     const bounds = await openedToggle.boundingBox();
     return Boolean(bounds && screenBox && bounds.y >= screenBox.y - 1
@@ -3506,7 +3514,7 @@ test("keeps food detail primary actions above the safe area at 320px", async ({ 
 
   const screenBox = await page.getByTestId("device-screen").boundingBox();
   const stateSummaryBox = await dialog.getByRole("group", { name: "보관 및 개봉 상태" }).boundingBox();
-  const initialActionBox = await dialog.locator(".detail-actions").boundingBox();
+  const initialActionBox = await dialog.locator(".food-actions").boundingBox();
   expect(screenBox, "native screen has no bounding box").toBeTruthy();
   expect(stateSummaryBox, "food detail state summary has no bounding box").toBeTruthy();
   expect(initialActionBox, "initial food detail primary actions have no bounding box").toBeTruthy();
@@ -3519,7 +3527,7 @@ test("keeps food detail primary actions above the safe area at 320px", async ({ 
   await content.evaluate((element) => { element.scrollTop = element.scrollHeight; });
   await page.waitForTimeout(80);
 
-  const actionBox = await dialog.locator(".detail-actions").boundingBox();
+  const actionBox = await dialog.locator(".food-actions").boundingBox();
   expect(screenBox, "native screen has no bounding box").toBeTruthy();
   expect(actionBox, "food detail primary actions have no bounding box").toBeTruthy();
   expect(actionBox!.y + actionBox!.height).toBeLessThanOrEqual(screenBox!.y + screenBox!.height - 34);
@@ -3539,12 +3547,12 @@ test("phone-shell width keeps the date recheck action below its copy in a wide s
   await openFridgeFood(page, "시금치");
   const dialog = page.getByRole("dialog", { name: "시금치" });
   await waitForSheetSettled(page);
-  const callout = dialog.locator(".date-review-callout-compact");
+  const callout = dialog.locator(".food-date-shell");
   await expect(callout).toBeVisible();
 
   const layout = await callout.evaluate((element) => {
-    const copy = element.querySelector<HTMLElement>(":scope > span:nth-child(2) > small");
-    const action = element.querySelector<HTMLElement>(":scope > .date-edit-button-compact");
+    const copy = element.querySelector<HTMLElement>(".date-review-callout > span > small");
+    const action = element.querySelector<HTMLElement>(":scope > .food-card-action");
     if (!copy || !action) return null;
     const copyBox = copy.getBoundingClientRect();
     const actionBox = action.getBoundingClientRect();
