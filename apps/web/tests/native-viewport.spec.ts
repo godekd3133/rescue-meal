@@ -1524,7 +1524,6 @@ test("keeps a confirmed date readable after saving from a 320px detail sheet", a
   const confirmedDateValue = [confirmedDate.getFullYear(), confirmedDate.getMonth() + 1, confirmedDate.getDate()]
     .map((value, index) => index === 0 ? String(value) : String(value).padStart(2, "0"))
     .join("-");
-  const confirmedDateLabel = `${confirmedDate.getMonth() + 1}월 ${confirmedDate.getDate()}일`;
 
   await editor.getByRole("radio", { name: "소비기한", exact: true }).click();
   await editor.getByRole("textbox", { name: "날짜" }).fill(confirmedDateValue);
@@ -1535,9 +1534,10 @@ test("keeps a confirmed date readable after saving from a 320px detail sheet", a
   await expect(detail).toHaveCount(0);
   const updatedRow = inventory.locator(".inventory-row").filter({ hasText: "국산콩 두부" });
   await expect(updatedRow).toBeVisible();
-  // The confirmed printed date turns the chip solid and shows the date itself past a week out.
+  // The confirmed printed date turns the chip solid; it keeps the D-n notation past a week out.
   const updatedChip = updatedRow.locator(".freshness-chip");
-  await expect(updatedChip).toHaveText(confirmedDateLabel);
+  await expect(updatedChip).toHaveText("D-10");
+  await expect(updatedChip).toHaveAttribute("data-date-kind", "printed");
   await expect(updatedChip).toHaveAttribute("data-estimated", "false");
   await expect(updatedChip).toHaveAttribute("aria-label", "표시 날짜까지 10일");
   expect(await updatedChip.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
@@ -3144,7 +3144,8 @@ test("raises contrast tokens without changing native geometry", async ({ page })
     expect(readback.contrast).toBeTruthy();
     // Kitchen palette high-contrast tokens (no blue tint); the default muted ink is #5d6d64 / #9cb0a4.
     expect(readback.mutedColor).toBe(theme === "light" ? "#3f4d45" : "#c4d3ca");
-    expect(readback.borderColor).toBe(theme === "light" ? "rgba(22, 34, 27, 0.42)" : "rgba(233, 240, 235, 0.58)");
+    // The legacy border token follows the semantic --line-strong (kitchen.css).
+    expect(readback.borderColor).toBe(theme === "light" ? "rgba(22, 34, 27, 0.6)" : "rgba(233, 240, 235, 0.66)");
     expect(readback.mealActionContrast).toBeGreaterThanOrEqual(4.5);
     expect(readback.screen.width).toBeCloseTo(320, 0);
     expect(readback.screen.height).toBeCloseTo(740, 0);

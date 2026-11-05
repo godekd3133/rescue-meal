@@ -50,7 +50,7 @@ test("Rescue Meal home opens detail and saves a storage change", async ({ page }
   await expect(spinachChip).toHaveAttribute("data-estimated", "false");
   const tofuChip = page.locator(".inventory-row").filter({ hasText: "국산콩 두부" }).locator(".freshness-chip");
   await expect(tofuChip).toHaveText("D-1");
-  await expect(tofuChip).toHaveAttribute("aria-label", "먼저 살펴볼 시점까지 1일");
+  await expect(tofuChip).toHaveAttribute("aria-label", "추정, 먼저 살펴볼 시점까지 1일");
   await expect(tofuChip).toHaveAttribute("data-estimated", "true");
   await expect(spinachRow.locator("[data-inventory-status]")).toHaveAttribute("data-inventory-status", "needs-review");
   await expect(page.locator(".inventory-row").filter({ hasText: "국산콩 두부" }).locator("[data-inventory-status]")).toHaveAttribute("data-inventory-status", "priority");
@@ -103,14 +103,15 @@ test("the 나 sheet theme toggle switches between the selected light and dark su
   await expect(toggle).toBeFocused();
   await me.getByRole("button", { name: "닫기", exact: true }).click();
   await expect(me).toHaveCount(0);
-  await expect(page.locator(".meal-plan-button")).toHaveCSS("background-color", "rgb(99, 207, 148)");
+  // Dark keeps the same leek-green action with white ink (5.3:1), not a pale mint fill.
+  await expect(page.locator(".meal-plan-button")).toHaveCSS("background-color", "rgb(35, 122, 75)");
   await expect(page.locator(".meal-home")).toHaveCSS("background-color", "rgb(12, 18, 16)");
   await expect(page.locator(".rescue-card.freshness-past .rescue-card-chip")).toHaveCSS("background-color", "rgb(255, 122, 102)");
-  await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute("content", "#10291e");
+  await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute("content", "#18392b");
 
   await page.reload();
   await expect(page.locator("html")).toHaveAttribute("data-rescue-theme", "dark");
-  await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute("content", "#10291e");
+  await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute("content", "#18392b");
   await page.locator(".connection-pill").click();
   await page.getByTestId("theme-toggle").click();
   await expect(page.locator("html")).toHaveAttribute("data-rescue-theme", "light");
@@ -829,7 +830,8 @@ test("manual food intake returns focus to the newly added priority food", async 
   const addedRow = page.locator(".inventory-row").filter({ hasText: "대파" });
   // The confirmed printed date reads as a solid chip, spoken as a printed date rather than an estimate.
   const addedChip = addedRow.locator(".freshness-chip");
-  await expect(addedChip).toHaveText("1월 1일");
+  // Always the D-n notation; a date years away caps at D-99+ while the spoken label stays exact.
+  await expect(addedChip).toHaveText("D-99+");
   await expect(addedChip).toHaveAttribute("data-estimated", "false");
   await expect(addedChip).toHaveAttribute("aria-label", /^표시 날짜까지 \d+일$/);
   await expect(addedRow).toBeFocused();
@@ -1298,7 +1300,7 @@ test("receipt source review explains when image observations are not mapped to l
   await commitButton.click();
   await expect(page.locator(".toast")).toContainText("영수증에서 식품 3개를 목록에 추가했어요.");
   await page.locator(".app-bottom-nav [data-nav-tab=\"fridge\"]").click();
-  await expect(page.getByRole("region", { name: /내 식품 목록/ }).getByRole("button", { name: /새송이버섯/ })).toBeVisible();
+  await expect(page.getByRole("region", { name: /내 식품 목록/ }).locator(".inventory-row").filter({ hasText: "새송이버섯" })).toBeVisible();
 });
 
 test("camera surface falls back to photo selection when permission is unavailable", async ({ page }) => {
@@ -1896,7 +1898,6 @@ test("estimated date can be confirmed with an explicit date meaning", async ({ p
   const confirmedDateValue = [confirmedDate.getFullYear(), confirmedDate.getMonth() + 1, confirmedDate.getDate()]
     .map((value, index) => index === 0 ? String(value) : String(value).padStart(2, "0"))
     .join("-");
-  const confirmedDateLabel = new Intl.DateTimeFormat("ko-KR", { month: "long", day: "numeric" }).format(confirmedDate);
   await inventory.getByRole("button", { name: /국산콩 두부 풀무원 1모/ }).click();
   const dialog = page.getByRole("dialog", { name: "국산콩 두부" });
   await dialog.getByRole("button", { name: "포장지에서 확인한 날짜 입력" }).click();
@@ -1939,8 +1940,9 @@ test("estimated date can be confirmed with an explicit date meaning", async ({ p
   await expect(page.locator(".toast-action")).toHaveCount(0);
   const updatedFoodRow = inventory.locator(".inventory-row").filter({ hasText: "국산콩 두부" });
   await expect(updatedFoodRow).toBeVisible();
-  // The confirmed printed date is no longer an estimate: the chip turns solid and shows the date itself.
-  await expect(updatedFoodRow.locator(".freshness-chip")).toHaveText(confirmedDateLabel);
+  // The confirmed printed date is no longer an estimate: the chip turns solid and keeps the D-n notation.
+  await expect(updatedFoodRow.locator(".freshness-chip")).toHaveText(`D-${Math.round((new Date(confirmedDate.getFullYear(), confirmedDate.getMonth(), confirmedDate.getDate()).getTime() - new Date(FIXTURE_NOW.getFullYear(), FIXTURE_NOW.getMonth(), FIXTURE_NOW.getDate()).getTime()) / 86_400_000)}`);
+  await expect(updatedFoodRow.locator(".freshness-chip")).toHaveAttribute("data-date-kind", "printed");
   await expect(updatedFoodRow.locator(".freshness-chip")).toHaveAttribute("data-estimated", "false");
   await expect(updatedFoodRow.locator(".freshness-chip")).toHaveAttribute("aria-label", /^표시 날짜까지 \d+일$/);
   await expect(updatedFoodRow).toBeFocused();
@@ -2093,7 +2095,7 @@ test("estimated use-first dates read as priority references, not expiry deadline
   const homeChip = homeCard.locator(".freshness-chip");
   await expect(homeChip).toHaveText("D-1");
   await expect(homeChip).toHaveAttribute("data-estimated", "true");
-  await expect(homeChip).toHaveAttribute("aria-label", "먼저 살펴볼 시점까지 1일");
+  await expect(homeChip).toHaveAttribute("aria-label", "추정, 먼저 살펴볼 시점까지 1일");
   await expect(homeChip).toHaveCSS("border-top-style", "dashed");
   await expect(homeCard.locator("[data-inventory-status]")).toHaveAttribute("data-inventory-status", "priority");
   await homeCard.click();
@@ -2113,7 +2115,7 @@ test("estimated use-first dates read as priority references, not expiry deadline
   const inventoryChip = page.locator(".inventory-row").filter({ hasText: "국산콩 두부" }).locator(".inventory-status .freshness-chip");
   await expect(inventoryChip).toHaveText("D-1");
   await expect(inventoryChip).toHaveAttribute("data-estimated", "true");
-  await expect(inventoryChip).toHaveAttribute("aria-label", "먼저 살펴볼 시점까지 1일");
+  await expect(inventoryChip).toHaveAttribute("aria-label", "추정, 먼저 살펴볼 시점까지 1일");
 });
 
 test("user-confirmed reminder can reopen its existing date and meaning for editing", async ({ page }) => {

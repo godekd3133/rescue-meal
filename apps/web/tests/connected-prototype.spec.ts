@@ -2841,7 +2841,9 @@ test("connected shopping receive adds a lot with confirmed storage and clears th
   await page.locator('[data-nav-tab="fridge"]').click();
   const receivedInventoryRow = page.getByRole("region", { name: /내 식품 목록/ }).getByRole("button", { name: /국산콩 두부 풀무원 1모/ });
   await expect(receivedInventoryRow).toBeVisible();
-  await expect(receivedInventoryRow).toContainText("9월 30일");
+  // Date chips always use the D-n notation (fixture clock 2026-09-10 → 2026-09-30 is D-20).
+  await expect(receivedInventoryRow.locator(".freshness-chip")).toHaveText("D-20");
+  await expect(receivedInventoryRow.locator(".freshness-chip")).toHaveAttribute("data-date-kind", "printed");
 });
 
 test("shopping receive preserves the readback notice when the sheet closes mid-request", async ({ page }) => {
@@ -4380,7 +4382,7 @@ test("connected date confirmation keeps a successful write visible when dashboar
   await updatedDialog.getByRole("button", { name: "닫기", exact: true }).click();
   const confirmedRow = updatedInventory.locator(".inventory-row").filter({ hasText: "국산콩 두부" });
   await expect(confirmedRow).toHaveAttribute("data-date-state", "actual_printed");
-  await expect(confirmedRow.locator(".inventory-status")).toContainText("9월 30일");
+  await expect(confirmedRow.locator(".inventory-status .freshness-chip")).toHaveText("D-20");
   // Home's rescue deck only holds foods to look at within three days, so a date of 9/30 leaves it.
   await page.locator('[data-nav-tab="home"]').click();
   await expect(page.getByRole("button", { name: "국산콩 두부 자세히 보기" })).toHaveCount(0);
@@ -4391,7 +4393,7 @@ test("connected date confirmation keeps a successful write visible when dashboar
   await page.locator('[data-nav-tab="fridge"]').click();
   const readbackRow = page.getByRole("region", { name: /내 식품 목록/ }).locator(".inventory-row").filter({ hasText: "국산콩 두부" });
   await expect(readbackRow).toHaveAttribute("data-date-state", "actual_printed");
-  await expect(readbackRow.locator(".inventory-status")).toContainText("9월 30일");
+  await expect(readbackRow.locator(".inventory-status .freshness-chip")).toHaveText("D-20");
 });
 
 test("connected inventory shows the persisted first-opened timestamp", async ({ page }) => {
@@ -11142,5 +11144,96 @@ test.describe("quick add", () => {
     await manual.locator(".manual-submit").click();
     await expect(manual).toHaveCount(0);
     expect(created.at(-1)).toMatchObject({ canonical_name: "날짜 넣은 요거트", date_kind: "best_before", date_value: "2026-09-20", date_source: "user_input", user_confirmed: true });
+  });
+});
+
+test.describe("one-gesture rescue actions", () => {
+  // The seeded tofu estimate (2026-09-03~04) is "today" on this clock, so it is a rescue card without a date question.
+  test.use({ frozenNow: "2026-09-03T10:00:00+09:00" });
+
+  test("deck 냉동 records the frozen storage event and undo restores the original estimate", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.locator(".connection-pill")).toHaveClass(/connection-connected/);
+    const tofu = page.locator(".rescue-card").filter({ hasText: "국산콩 두부" });
+    await expect(tofu).toBeVisible();
+    // Printed date passed: date check first, no 냉동.
+    await expect(page.locator(".rescue-card").filter({ hasText: "시금치" }).getByRole("button", { name: /냉동/ })).toHaveCount(0);
+    // Milk cannot be frozen (server `freezable: false`).
+    await expect(page.locator(".rescue-card").filter({ hasText: "저지방 우유" }).getByRole("button", { name: /냉동/ })).toHaveCount(0);
+    const frozen = page.waitForResponse((response) => response.url().endsWith("/api/foods/tofu-1/storage-events") && response.request().method() === "POST");
+    await tofu.getByRole("button", { name: "국산콩 두부 냉동 보관하기" }).click();
+    const frozenResponse = await frozen;
+    expect(frozenResponse.ok()).toBe(true);
+    expect(frozenResponse.request().postDataJSON()).toEqual({ event_type: "frozen" });
+    const eventId = (await frozenResponse.json()).id as string;
+    await expect(page.locator(".toast-message")).toHaveText("국산콩 두부를 냉동 보관으로 옮겼어요");
+    await expect(tofu).toHaveCount(0);
+
+    const undone = page.waitForResponse((response) => response.url().endsWith(`/api/storage-events/${eventId}/undo`));
+    await page.locator(".toast").getByRole("button", { name: "되돌리기" }).click();
+    expect((await undone).ok()).toBe(true);
+    await expect(page.locator(".toast-message")).toHaveText("국산콩 두부 냉동 기록을 되돌렸어요");
+    await expect(page.locator(".rescue-card").filter({ hasText: "국산콩 두부" })).toBeVisible();
+    await page.reload();
+    await expect(page.locator(".connection-pill")).toHaveClass(/connection-connected/);
+    await expect(page.locator(".rescue-card").filter({ hasText: "국산콩 두부" })).toBeVisible();
+  });
+
+  test("a swiped 다 먹음 undo survives the toast closing mid-request and runs once", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.locator(".connection-pill")).toHaveClass(/connection-connected/);
+    await page.locator('[data-nav-tab="fridge"]').click();
+    const row = page.locator(".swipe-row").filter({ has: page.locator(".inventory-row", { hasText: "국산콩 두부" }) });
+    await expect(row).toBeVisible();
+    const box = (await row.boundingBox())!;
+    const consumed = page.waitForResponse((response) => response.url().endsWith("/api/foods/tofu-1/storage-events") && response.request().method() === "POST");
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    for (let step = 1; step <= 10; step += 1) await page.mouse.move(box.x + box.width / 2 + step * 14, box.y + box.height / 2);
+    await page.mouse.up();
+    const consumedResponse = await consumed;
+    expect(consumedResponse.request().postDataJSON()).toEqual({ event_type: "consumed" });
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(page.locator(".inventory-row").filter({ hasText: "국산콩 두부" })).toHaveCount(0);
+
+    let undoRequests = 0;
+    let releaseUndo: () => void = () => undefined;
+    const undoHeld = new Promise<void>((resolve) => { releaseUndo = resolve; });
+    await page.route("**/api/storage-events/*/undo", async (route) => {
+      undoRequests += 1;
+      await undoHeld;
+      await route.continue();
+    });
+    const undo = page.locator(".toast").getByRole("button", { name: "되돌리기" });
+    await undo.click();
+    await expect(page.locator(".toast-message")).toHaveText("기록을 되돌리고 있어요");
+    // Close the toast mid-request by opening the 나 sheet; the request is not tied to the toast.
+    await page.locator(".connection-pill").click();
+    await expect(page.getByTestId("bottom-sheet")).toBeVisible();
+    releaseUndo();
+    await expect(page.locator(".inventory-row").filter({ hasText: "국산콩 두부" })).toHaveCount(1);
+    expect(undoRequests).toBe(1);
+    await page.reload();
+    await expect(page.locator(".connection-pill")).toHaveClass(/connection-connected/);
+    await page.locator('[data-nav-tab="fridge"]').click();
+    await expect(page.locator(".inventory-row").filter({ hasText: "국산콩 두부" })).toHaveCount(1);
+  });
+
+  test("요리 anchors the connected 식단 on that food and the anchor can be cleared", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.locator(".connection-pill")).toHaveClass(/connection-connected/);
+    const options = page.waitForRequest((request) => request.url().endsWith("/api/meal-plans/options") && request.method() === "POST");
+    await page.locator(".rescue-card").filter({ hasText: "국산콩 두부" }).getByRole("button", { name: "국산콩 두부 넣어 요리하기" }).click();
+    const optionsRequest = await options;
+    expect(optionsRequest.postDataJSON()).toMatchObject({ anchor_food_id: "tofu-1" });
+    expect(optionsRequest.postDataJSON().inventory_ids[0]).toBe("tofu-1");
+    const anchor = page.locator(".meal-anchor");
+    await expect(anchor).toContainText("국산콩 두부로 만들 수 있는 메뉴");
+    await expect(anchor).toHaveAttribute("data-anchor-match", "true");
+    await expect(page.locator(".meal-sheet-content")).toContainText("국산콩 두부");
+    const preview = page.waitForRequest((request) => request.url().endsWith("/api/meal-plans/preview") && request.method() === "POST");
+    await anchor.getByRole("button", { name: "국산콩 두부 기준 해제하고 전체 메뉴 보기" }).click();
+    await preview;
+    await expect(page.locator(".meal-anchor")).toHaveCount(0);
   });
 });

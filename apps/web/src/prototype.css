@@ -198,7 +198,6 @@
 .section-heading,
 .meal-plan-button,
 .trust-card,
-.add-food-button,
 .inventory-row,
 .priority-card,
 .recipe-title-row,
@@ -866,20 +865,6 @@
   margin-top: 1px;
 }
 
-.summary-item {
-  display: inline-flex;
-  align-items: center;
-  min-width: 0;
-}
-
-.summary-item svg {
-  flex: 0 0 auto;
-}
-
-.summary-item strong {
-  font-weight: 800;
-}
-
 .section-heading {
   justify-content: space-between;
 }
@@ -893,15 +878,6 @@
   letter-spacing: 0;
 }
 
-.text-button {
-  display: inline-flex;
-  gap: 3px;
-  align-items: center;
-  padding: 4px 0;
-  border: 0;
-  background: transparent;
-}
-
 .priority-list {
   display: grid;
   gap: 8px;
@@ -911,7 +887,6 @@
   display: grid;
 }
 
-.priority-empty-state,
 .inventory-empty-state {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
@@ -920,11 +895,6 @@
   padding: 14px;
 }
 
-.priority-empty-state {
-  margin-top: 14px;
-}
-
-.priority-empty-icon,
 .inventory-empty-icon {
   display: grid;
   width: 34px;
@@ -933,7 +903,6 @@
   border-radius: 12px;
 }
 
-.priority-empty-copy,
 .inventory-empty-copy {
   display: grid;
   min-width: 0;
@@ -975,8 +944,7 @@
 .priority-card:active,
 .inventory-row:active,
 .meal-plan-button:active,
-.trust-card:active,
-.add-food-button:active {
+.trust-card:active {
   transform: scale(0.985);
 }
 
@@ -1024,34 +992,15 @@
   white-space: nowrap;
 }
 
-.opened-dot {
-  width: 5px;
-  height: 5px;
-  flex: 0 0 auto;
-  border-radius: 50%;
-  background: var(--meal-coral);
-}
-
 .food-subline {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.food-meta-line {
-  display: flex;
-  align-items: center;
-}
-
 .storage-pill {
   display: inline-block;
   flex: 0 0 auto;
-}
-
-.date-source {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .priority-date {
@@ -1069,8 +1018,7 @@
 }
 
 .meal-plan-button,
-.trust-card,
-.add-food-button {
+.trust-card {
   width: 100%;
   text-align: left;
 }
@@ -1095,8 +1043,7 @@
 }
 
 .meal-plan-icon,
-.trust-icon,
-.add-food-plus {
+.trust-icon {
   display: grid;
   flex: 0 0 auto;
   place-items: center;
@@ -1154,27 +1101,6 @@
 
 .inventory-heading-copy {
   min-width: 0;
-}
-
-.filter-select-wrap {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  color: var(--meal-muted);
-}
-
-.filter-select-wrap select {
-  max-width: 114px;
-  border: 1px solid var(--meal-line);
-  appearance: none;
-  font-size: 10px;
-  font-weight: 700;
-}
-
-.filter-select-wrap svg {
-  position: absolute;
-  right: 6px;
-  pointer-events: none;
 }
 
 .inventory-search {
@@ -1316,14 +1242,6 @@
 
 .row-chevron {
   flex: 0 0 auto;
-}
-
-.add-food-button {
-  border: 1px dashed #bdc7b5;
-}
-
-.add-food-button small {
-  opacity: 1;
 }
 
 .recipe-review-entry {
@@ -2461,19 +2379,6 @@
   line-height: 1.45;
 }
 
-.storage-location-note {
-  display: flex;
-  gap: 7px;
-  align-items: flex-start;
-  padding: 9px 10px;
-  border-radius: 10px;
-  background: #f4eee2;
-  color: #90755b;
-  font-size: 9px;
-  line-height: 1.45;
-}
-
-.storage-location-note svg,
 .storage-location-footnote svg {
   flex: 0 0 auto;
   margin-top: 1px;
@@ -3361,7 +3266,7 @@
   box-shadow: 0 0 0 3px rgba(131, 158, 119, 0.12);
 }
 
-.result-callout,.manual-note,.quality-callout,.guidance-warning,.saved-recipe {
+.result-callout,.quality-callout,.guidance-warning,.saved-recipe {
   display: flex;
   gap: 9px;
   align-items: flex-start;
@@ -3574,10 +3479,6 @@
   font-size: 9px;
   font-weight: 800;
   white-space: nowrap;
-}
-
-.manual-note {
-  margin-bottom: 3px;
 }
 
 .manual-product-provenance {
@@ -5733,9 +5634,9 @@ html[data-rescue-theme] .bottom-sheet .shopping-sheet-manual .shopping-sheet-man
   gap: 10px;
   align-items: center;
   padding: 16px 13px;
-  border: 1px solid var(--meal-line);
-  border-radius: 14px;
-  background: rgba(255, 254, 250, 0.74);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--surface-2);
 }
 
 .shopping-sheet-state > span:nth-child(2) {
@@ -6307,28 +6208,6 @@ html[data-rescue-theme] .bottom-sheet .shopping-sheet-manual .shopping-sheet-man
   flex: 0 0 auto;
   place-items: center;
   border-radius: 7px;
-}
-
-.recipe-safety {
-  display: flex;
-  gap: 7px;
-  align-items: flex-start;
-  padding: 9px 10px;
-}
-
-.recipe-safety > svg {
-  flex: 0 0 auto;
-  margin-top: 1px;
-}
-
-.recipe-safety strong {
-  font-size: 10px;
-}
-
-.recipe-safety small {
-  color: #a67b6b;
-  font-size: 9px;
-  line-height: 1.4;
 }
 
 .saved-recipe {
@@ -7177,21 +7056,6 @@ html[data-rescue-theme="dark"] :is(.runtime-error-screen,.runtime-configuration-
   letter-spacing: -0.072em;
 }
 
-.summary-item {
-  gap: 7px;
-  color: var(--atelier-muted);
-  font-size: 10px;
-}
-
-.summary-item strong {
-  font-size: 12px;
-}
-
-.summary-item svg {
-  width: 15px;
-  height: 15px;
-}
-
 .section-heading {
   align-items: flex-end;
 }
@@ -7207,12 +7071,6 @@ html[data-rescue-theme="dark"] :is(.runtime-error-screen,.runtime-configuration-
 .section-heading h2 span:last-child {
   color: var(--atelier-pistachio);
   font-size: 12px;
-}
-
-.text-button {
-  min-height: 30px;
-  font-size: 10px;
-  font-weight: 750;
 }
 
 .priority-date strong {
@@ -7238,36 +7096,12 @@ html[data-rescue-theme="dark"] :is(.runtime-error-screen,.runtime-configuration-
   align-items: center;
 }
 
-.filter-select-wrap select {
-  min-height: 30px;
-  padding: 0 28px 0 9px;
-}
-
 .inventory-search {
   margin-top: 14px;
 }
 
 .inventory-row:last-child {
   border-bottom: 0;
-}
-
-.inventory-status-label {
-  display: inline-flex;
-  align-items: center;
-  white-space: nowrap;
-}
-
-.inventory-status[data-inventory-status="priority"] .inventory-status-label {
-  border-color: color-mix(in srgb, var(--atelier-pistachio) 24%, transparent);
-}
-
-.inventory-status[data-inventory-status="needs-review"] .inventory-status-label {
-  border-color: color-mix(in srgb, var(--atelier-coral) 28%, transparent);
-  color: var(--atelier-coral);
-}
-
-.inventory-status-label b {
-  font-weight: 850;
 }
 
 .sheet-handle {
@@ -7782,16 +7616,7 @@ html[data-rescue-theme="light"] .bottom-sheet :is(.recipe-time-picker,.recipe-se
 .bottom-sheet .toggle span {
   width: 19px;
   height: 19px;
-  background: var(--atelier-dim);
-}
-
-.bottom-sheet .toggle-on {
-  border-color: var(--atelier-pistachio);
-  background: color-mix(in srgb, var(--atelier-pistachio) 30%, transparent);
-}
-
-.bottom-sheet .toggle-on span {
-  background: var(--atelier-pistachio);
+  background: #fff;
 }
 
 .bottom-sheet .notification-preferences-save {
@@ -8898,26 +8723,6 @@ html[data-rescue-theme="dark"] .bottom-sheet .recipe-consumption-input {
   border-top: 0;
 }
 
-.bottom-sheet .detail-actions-review-copy {
-  display: grid;
-  gap: 2px;
-  margin: 8px 2px 0;
-  padding: 8px 0 0;
-  border-top: 1px solid color-mix(in srgb, var(--atelier-amber) 28%, var(--sheet-border));
-}
-
-.bottom-sheet .detail-actions-review-copy strong {
-  color: color-mix(in srgb, var(--atelier-amber) 55%, var(--atelier-ink));
-  font-size: 11px;
-  font-weight: 820;
-}
-
-.bottom-sheet .detail-actions-review-copy small {
-  color: var(--atelier-muted);
-  font-size: 12px;
-  line-height: 1.5;
-}
-
 .bottom-sheet .detail-actions > * {
   min-height: 45px;
 }
@@ -9235,14 +9040,6 @@ html[data-rescue-theme="dark"] .bottom-sheet .recipe-consumption-input {
   font-family: "Avenir Next", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
 }
 
-.summary-item svg {
-  color: var(--atelier-pistachio-deep);
-}
-
-.summary-item strong {
-  color: var(--atelier-ink);
-}
-
 .section-heading h2 {
   color: var(--atelier-ink);
   font-size: 19px;
@@ -9262,14 +9059,6 @@ html[data-rescue-theme="dark"] .bottom-sheet .recipe-consumption-input {
   vertical-align: 1px;
 }
 
-.text-button {
-  color: var(--atelier-muted);
-}
-
-.text-button:hover {
-  color: var(--atelier-pistachio);
-}
-
 .priority-list-items {
   gap: 0;
   overflow: hidden;
@@ -9284,9 +9073,7 @@ html[data-rescue-theme="dark"] .bottom-sheet .recipe-consumption-input {
   border-bottom: 0;
 }
 
-.priority-card:hover,
-.priority-card-accent,
-.priority-card-accent:hover {
+.priority-card:hover {
   border-color: var(--atelier-border);
   transform: none;
 }
@@ -9313,32 +9100,11 @@ html[data-rescue-theme="dark"] .bottom-sheet .recipe-consumption-input {
   color: var(--atelier-amber);
 }
 
-.priority-state-label {
-  display: inline-flex;
-  min-height: 18px;
-  align-items: center;
-  justify-content: center;
-  letter-spacing: -0.04em;
-  line-height: 1;
-  white-space: nowrap;
-}
-
-.priority-state-review {
-  border-color: color-mix(in srgb, var(--atelier-coral) 30%, transparent);
-  background: color-mix(in srgb, var(--atelier-coral) 13%, transparent);
-}
-
-.priority-state-action {
-  border-color: color-mix(in srgb, var(--atelier-amber) 30%, transparent);
-  background: color-mix(in srgb, var(--atelier-amber) 12%, transparent);
-}
-
 .priority-date svg,
 .row-chevron {
   color: var(--atelier-dim);
 }
 
-.priority-empty-icon,
 .inventory-empty-icon {
   background: color-mix(in srgb, var(--atelier-pistachio) 12%, transparent);
   color: var(--atelier-pistachio);
@@ -9407,7 +9173,6 @@ html[data-rescue-theme="dark"] .bottom-sheet .recipe-consumption-input {
   .priority-section > .section-heading { order: 3; }
   .priority-section > .priority-list { order: 4; }
   .priority-section > .shopping-summary-card { order: 5; }
-  .priority-section > .add-food-button { order: 6; }
 
   .priority-section > .home-action-row {
     margin-top: 10px;
@@ -9417,13 +9182,6 @@ html[data-rescue-theme="dark"] .bottom-sheet .recipe-consumption-input {
     min-height: 54px;
     margin-top: 0;
   }
-}
-
-.filter-select-wrap select {
-  border-color: var(--atelier-border);
-  border-radius: 9px;
-  background: var(--atelier-surface);
-  color: var(--atelier-muted);
 }
 
 .inventory-search {
@@ -9484,28 +9242,6 @@ html[data-rescue-theme="dark"] .bottom-sheet .recipe-consumption-input {
 .inventory-status .storage-fridge { background: var(--atelier-pistachio-deep); }
 .inventory-status .storage-freezer { background: var(--atelier-blue); }
 .inventory-status .storage-room { background: var(--atelier-amber); }
-
-.add-food-button {
-  border-style: solid;
-  color: var(--atelier-ink);
-}
-
-.add-food-button:hover {
-  border-color: var(--atelier-pistachio-deep);
-  background: color-mix(in srgb, var(--atelier-ink) 2%, transparent);
-}
-
-.add-food-plus {
-  background: transparent;
-}
-
-.add-food-button small {
-  color: var(--atelier-muted);
-}
-
-.add-food-button > svg {
-  color: var(--atelier-dim);
-}
 
 .recipe-review-entry {
   border-color: var(--atelier-border);
@@ -10036,24 +9772,6 @@ html[data-rescue-theme="dark"] .bottom-sheet .recipe-consumption-input {
   padding-bottom: 7px;
 }
 
-:is(.app-shell-preview,.app-shell-native) .add-food-button {
-  justify-content: center;
-  gap: 8px;
-  margin-top: 2px;
-  padding-right: 8px;
-  padding-left: 8px;
-  border-color: transparent;
-  background: transparent;
-}
-
-:is(.app-shell-preview,.app-shell-native) .add-food-button > svg {
-  display: none;
-}
-
-:is(.app-shell-preview,.app-shell-native) .add-food-button .add-food-plus {
-  flex: 0 0 auto;
-}
-
 .app-shell-native .inventory-section {
   margin-top: 155px;
 }
@@ -10085,10 +9803,6 @@ html[data-rescue-theme="dark"] .bottom-sheet .recipe-consumption-input {
 
   :is(.app-shell-preview,.app-shell-native) .meal-plan-button {
     min-height: 42px;
-  }
-
-  :is(.app-shell-preview,.app-shell-native) .add-food-button {
-    margin-top: 0;
   }
 
   :is(.app-shell-preview,.app-shell-native) .priority-section > .section-heading,:is(.app-shell-preview,.app-shell-native) .priority-list {
@@ -10233,12 +9947,6 @@ html[data-rescue-theme="dark"] .bottom-sheet .recipe-consumption-input {
 
 .app-shell-web .meal-plan-button {
   grid-area: action;
-}
-
-.app-shell-web .add-food-button {
-  grid-area: add;
-  min-height: 52px;
-  margin-top: 10px;
 }
 
 .app-shell-web .inventory-section {
@@ -10477,7 +10185,7 @@ html {
   font-size: 0.6875rem;
 }
 
-:is(.app-shell-preview,.app-shell-native) :is(.food-subline,.food-meta-line),:is(.app-shell-preview,.app-shell-native) .date-source {
+:is(.app-shell-preview,.app-shell-native) :is(.food-subline,.food-meta-line) {
   font-size: 0.6875rem;
 }
 
@@ -10559,16 +10267,6 @@ html {
   height: 44px;
 }
 
-:is(.app-shell-preview,.app-shell-native) .text-button {
-  min-height: 44px;
-  padding-right: 2px;
-  padding-left: 2px;
-}
-
-:is(.app-shell-preview,.app-shell-native) .add-food-button {
-  min-height: 44px;
-}
-
 :is(.app-shell-preview,.app-shell-native) .meal-plan-button {
   margin-top: -2px;
   position: relative;
@@ -10600,9 +10298,10 @@ html {
   left: 0.5px;
   width: 43px;
   height: 25px;
-  border: 1px solid var(--sheet-border-strong);
+  border: 1px solid transparent;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--atelier-surface) 80%, transparent);
+  /* Off: a mid-grey track (3:1 against the sheet) under a white knob. On: leek green. */
+  background: color-mix(in srgb, var(--ink-muted) 75%, var(--surface-2));
   content: "";
 }
 
@@ -10614,8 +10313,7 @@ html {
 }
 
 .bottom-sheet .toggle-on::before {
-  border-color: var(--atelier-pistachio);
-  background: color-mix(in srgb, var(--atelier-pistachio) 30%, transparent);
+  background: var(--action);
 }
 
 .bottom-sheet .notification-read-all {
@@ -10644,9 +10342,6 @@ html {
 }
 
 @media (max-width: 360px) {
-  :is(.app-shell-preview,.app-shell-native) .home-action-row-with-add {
-    grid-template-columns: minmax(0, 1fr) 96px !important;
-  }
 
   :is(.app-shell-preview,.app-shell-native) .priority-card {
     padding-top: 1px;
@@ -10702,7 +10397,7 @@ html {
     padding-bottom: 9px;
   }
 
-  :is(.app-shell-preview,.app-shell-native) .bottom-sheet :is(.food-subline,.food-meta-line),:is(.app-shell-preview,.app-shell-native) .bottom-sheet .date-source {
+  :is(.app-shell-preview,.app-shell-native) .bottom-sheet :is(.food-subline,.food-meta-line) {
     font-size: 0.5625rem;
   }
 }
@@ -10720,21 +10415,10 @@ html {
 /* User-defined storage locations can be much longer than the fixture labels.
    Keep the queue metadata row single-line and let both labels yield space
    without changing the compact card height or document width. */
-:is(.app-shell-preview,.app-shell-native) .food-meta-line {
-  min-width: 0;
-  overflow: hidden;
-}
 
 :is(.app-shell-preview,.app-shell-native) .storage-pill {
   min-width: 0;
   max-width: 46%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-:is(.app-shell-preview,.app-shell-native) .date-source {
-  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -10854,13 +10538,11 @@ html[data-rescue-theme="dark"] .meal-home .greeting-block h1 {
   text-shadow: 0 4px 22px rgba(0, 0, 0, 0.28);
 }
 
-html[data-rescue-theme="light"] .meal-home :is(.priority-card:hover,.priority-card-accent:hover),
-html[data-rescue-theme="light"] .meal-home .priority-card-accent {
+html[data-rescue-theme="light"] .meal-home :is(.priority-card:hover,.priority-card-accent:hover) {
   background: rgba(49, 130, 246, 0.045);
 }
 
-html[data-rescue-theme="dark"] .meal-home :is(.priority-card:hover,.priority-card-accent:hover),
-html[data-rescue-theme="dark"] .meal-home .priority-card-accent {
+html[data-rescue-theme="dark"] .meal-home :is(.priority-card:hover,.priority-card-accent:hover) {
   background: rgba(111, 141, 255, 0.08);
 }
 
@@ -10870,18 +10552,6 @@ html[data-rescue-theme="dark"] .meal-home :is(.food-subline,.food-meta-line,.dat
 
 html[data-rescue-theme="dark"] .meal-home .priority-date small {
   color: #a9c4ff;
-}
-
-html[data-rescue-theme="dark"] .meal-home .priority-date small.priority-state-review {
-  border-color: color-mix(in srgb, #ffad98 38%, transparent);
-  background: color-mix(in srgb, #ffad98 16%, transparent);
-  color: #ffb8a6;
-}
-
-html[data-rescue-theme="dark"] .meal-home .priority-date small.priority-state-action {
-  border-color: color-mix(in srgb, #ffd38a 34%, transparent);
-  background: color-mix(in srgb, #ffd38a 14%, transparent);
-  color: #ffd38a;
 }
 
 html[data-rescue-theme="light"] .meal-home .storage-fridge {
@@ -11030,13 +10700,6 @@ html[data-rescue-theme="dark"] .toast {
 
 .inventory-toolbar .inventory-search {
   margin-top: 10px;
-}
-
-@media (max-width: 700px) {
-
-  .filter-select-wrap select {
-    min-height: 44px;
-  }
 }
 
 .inventory-filter-summary {
@@ -11954,28 +11617,17 @@ html[data-rescue-theme="dark"] .bottom-sheet .barcode-date-candidate {
   left: 0;
   width: 3px;
   border-radius: 0 999px 999px 0;
-  background: var(--atelier-blue);
+  background: var(--line-strong);
   content: "";
 }
 
-.bottom-sheet .notification-row:not(.notification-row-read).notification-row-urgent {
-  border-color: color-mix(in srgb, var(--atelier-coral) 34%, var(--sheet-border));
-}
-
+/* Unread bars use the urgency scale, identical in light and dark. */
 .bottom-sheet .notification-row:not(.notification-row-read).notification-row-urgent::before {
-  background: var(--atelier-coral);
-}
-
-.bottom-sheet .notification-row:not(.notification-row-read).notification-row-attention {
-  border-color: color-mix(in srgb, var(--atelier-amber) 34%, var(--sheet-border));
+  background: var(--urgency-past);
 }
 
 .bottom-sheet .notification-row:not(.notification-row-read).notification-row-attention::before {
-  background: var(--atelier-amber);
-}
-
-.bottom-sheet .notification-row:not(.notification-row-read).notification-row-info::before {
-  background: var(--atelier-blue);
+  background: var(--urgency-today);
 }
 
 .bottom-sheet .shopping-sheet-progress {
@@ -12301,20 +11953,6 @@ html[data-rescue-theme="dark"] .bottom-sheet .barcode-date-candidate {
 html[data-rescue-theme="dark"] .bottom-sheet .shopping-sheet-received {
   border-color: color-mix(in srgb, var(--atelier-pistachio) 44%, var(--sheet-border));
   background: color-mix(in srgb, var(--atelier-pistachio) 10%, var(--atelier-surface));
-}
-
-html[data-rescue-theme="dark"] .bottom-sheet .shopping-sheet-state {
-  border-color: var(--sheet-border);
-  background: color-mix(in srgb, var(--atelier-surface) 86%, var(--atelier-deep));
-  color: var(--atelier-ink);
-}
-
-html[data-rescue-theme="dark"] .bottom-sheet .shopping-sheet-state strong {
-  color: var(--atelier-ink);
-}
-
-html[data-rescue-theme="dark"] .bottom-sheet .shopping-sheet-state small {
-  color: var(--atelier-muted);
 }
 
 html[data-rescue-theme="dark"] .bottom-sheet .shopping-sheet-state-icon {
@@ -12896,20 +12534,6 @@ html[data-rescue-theme="dark"] .bottom-sheet .recipe-completed-sync-note[data-sy
   line-height: 1.25;
 }
 
-.bottom-sheet .recipe-details .recipe-safety {
-  border: 1px solid color-mix(in srgb, var(--atelier-coral) 30%, var(--atelier-border));
-  background: color-mix(in srgb, var(--atelier-coral) 8%, var(--atelier-surface));
-}
-
-.bottom-sheet .recipe-details .recipe-safety :is(strong,small) {
-  color: var(--atelier-ink);
-  font-size: 12px;
-}
-
-.bottom-sheet .recipe-details .recipe-safety small {
-  line-height: 1.45;
-}
-
 /* On mobile, the summary already states the queue count. Give that space back
    to the food list while keeping the same count in the heading's accessible
    name for screen-reader users. */
@@ -12937,32 +12561,6 @@ html[data-rescue-theme="dark"] .bottom-sheet .recipe-completed-sync-note[data-sy
   :is(.app-shell-preview,.app-shell-native) .priority-section > .section-heading .section-kicker {
     display: none;
   }
-}
-
-@media (max-width: 420px) {
-  .app-shell .shopping-summary-card-empty {
-    min-height: 50px;
-    padding: 7px 12px;
-  }
-
-  .app-shell .shopping-summary-empty-help {
-    position: static;
-    width: auto;
-    height: auto;
-    padding: 0;
-    margin: 0;
-    overflow: visible;
-    clip: auto;
-    font-size: 12px;
-    line-height: 1.35;
-    text-overflow: clip;
-    white-space: normal;
-    border: 0;
-  }
-}
-
-html[data-rescue-theme="light"] .app-shell .shopping-summary-empty-help {
-  color: #4e5968;
 }
 
 /* Keep the warning state prominent, but expose the reason/date and storage
@@ -13031,10 +12629,6 @@ html[data-rescue-theme="light"] .app-shell .shopping-summary-empty-help {
   .app-shell-web .inventory-status-content {
     align-items: flex-start;
     max-width: 100%;
-  }
-
-  .app-shell-web .inventory-status-label {
-    white-space: normal;
   }
 
   .app-shell-web .inventory-review-detail {
@@ -13159,17 +12753,6 @@ html[data-rescue-theme="dark"] .bottom-sheet .barcode-candidate-apply-primary:fo
   color: var(--atelier-primary-action-ink);
 }
 
-/* Rescue Meal's everyday kitchen notebook direction. */
-html[data-rescue-theme="light"] .app-screen,
-html[data-rescue-theme="light"] .app-screen .mobile-scroll-content {
-  background: #f4f0e7 !important;
-}
-
-html[data-rescue-theme="dark"] .app-screen,
-html[data-rescue-theme="dark"] .app-screen .mobile-scroll-content {
-  background: #141b16 !important;
-}
-
 html[data-rescue-theme="light"] :is(.meal-home,.bottom-sheet,.app-bottom-nav,.toast) {
   --atelier-deep: #f4f0e7;
   --atelier-ink: #243128;
@@ -13212,14 +12795,6 @@ html[data-rescue-theme="dark"] :is(.meal-home,.bottom-sheet,.app-bottom-nav,.toa
   --atelier-amber: #efc26d;
   --atelier-blue: #abc0cc;
   font-family: "Apple SD Gothic Neo", "Noto Sans KR", -apple-system, BlinkMacSystemFont, sans-serif;
-}
-
-html[data-rescue-theme="light"] .meal-home {
-  background: #f4f0e7;
-}
-
-html[data-rescue-theme="dark"] .meal-home {
-  background: #141b16;
 }
 
 .meal-home {
@@ -13288,47 +12863,6 @@ html[data-rescue-theme="dark"] .meal-home {
   margin: 24px auto 0;
 }
 
-.pantry-shortcuts {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-  margin-top: 18px;
-}
-
-.pantry-shortcuts button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 0;
-  min-height: 44px;
-  gap: 6px;
-  padding: 8px;
-  border: 1px solid var(--atelier-border-strong);
-  border-radius: 9px;
-  background: var(--atelier-surface);
-  color: var(--atelier-ink);
-  font-size: 13px;
-  cursor: pointer;
-}
-
-.pantry-shortcuts button > span:not(.storage-dot) {
-  white-space: nowrap;
-}
-
-.pantry-shortcuts button:hover {
-  border-color: var(--atelier-pistachio);
-}
-
-.pantry-shortcuts strong {
-  font-size: 15px;
-  font-variant-numeric: tabular-nums;
-}
-
-.pantry-shortcuts button > svg {
-  margin-left: auto;
-  color: var(--atelier-muted);
-}
-
 .home-demo-note {
   display: flex;
   gap: 6px;
@@ -13343,28 +12877,6 @@ html[data-rescue-theme="dark"] .meal-home {
 .home-demo-note svg {
   flex-shrink: 0;
   margin-top: 3px;
-}
-
-.first-food-receipt {
-  display: flex;
-  width: 100%;
-  min-height: 48px;
-  gap: 8px;
-  align-items: center;
-  justify-content: center;
-  padding: 10px 0;
-  border: 0;
-  background: transparent;
-  color: var(--atelier-pistachio-deep);
-  font-size: 13px;
-  line-height: 1.5;
-  text-align: left;
-  word-break: keep-all;
-  cursor: pointer;
-}
-
-.first-food-receipt svg {
-  flex-shrink: 0;
 }
 
 .greeting-block,
@@ -13435,18 +12947,6 @@ html[data-rescue-theme="dark"] .meal-home {
   letter-spacing: 0;
 }
 
-.priority-section .text-button {
-  display: inline-flex;
-  min-height: 44px;
-  gap: 4px;
-  align-items: center;
-  padding: 0 2px 0 8px;
-  color: var(--atelier-pistachio-deep);
-  font-size: 13px;
-  font-weight: 560;
-  white-space: nowrap;
-}
-
 .priority-list,
 .app-shell-web .priority-list {
   margin-top: 2px;
@@ -13471,9 +12971,7 @@ html[data-rescue-theme="dark"] .meal-home {
 }
 
 .priority-card:hover,
-.priority-card:focus-visible,
-.priority-card-accent,
-.priority-card-accent:hover {
+.priority-card:focus-visible {
   background: color-mix(in srgb, var(--atelier-ink) 3%, transparent);
   box-shadow: none;
 }
@@ -13506,16 +13004,10 @@ html[data-rescue-theme="dark"] .meal-home {
 }
 
 .food-subline,
-.food-meta-line,
-.date-source,
 .app-shell-web :is(.food-subline,.food-meta-line,.date-source) {
   color: var(--atelier-muted);
   font-size: 12px;
   line-height: 1.35;
-}
-
-.food-meta-line {
-  gap: 8px;
 }
 
 .storage-pill {
@@ -13526,28 +13018,6 @@ html[data-rescue-theme="dark"] .meal-home {
   color: var(--atelier-muted);
   font-size: 12px;
   font-weight: 500;
-}
-
-.date-source {
-  font-weight: 450;
-}
-
-.priority-state-label {
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  color: var(--atelier-muted);
-  font-size: 12px;
-  font-weight: 560;
-}
-
-.priority-state-review {
-  color: var(--atelier-coral);
-}
-
-.priority-state-action {
-  color: var(--atelier-amber);
 }
 
 .priority-date,
@@ -13577,7 +13047,6 @@ html[data-rescue-theme="dark"] .meal-home {
   color: var(--atelier-dim);
 }
 
-.priority-empty-state,
 .inventory-empty-state {
   border: 1px solid var(--atelier-border);
   border-radius: 10px;
@@ -13605,27 +13074,12 @@ html[data-rescue-theme="dark"] .meal-home {
   margin-top: 18px;
 }
 
-.home-action-row-with-add {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 116px;
-  grid-template-areas: none;
-  gap: 10px;
-  margin-top: 18px;
-}
-
 .home-action-row :is(.meal-plan-button,.add-food-button) {
   grid-area: auto;
 }
 
 .app-shell-web .home-action-row {
   grid-template-columns: minmax(0, 1fr);
-  max-width: 820px;
-  margin: 18px auto 0;
-}
-
-.app-shell-web .home-action-row-with-add {
-  grid-template-columns: minmax(0, 1fr) 150px;
-  grid-template-areas: none;
   max-width: 820px;
   margin: 18px auto 0;
 }
@@ -13674,33 +13128,6 @@ html[data-rescue-theme="dark"] .meal-home {
   color: inherit;
   font-size: 12px;
   opacity: 0.86;
-}
-
-.add-food-button {
-  display: flex;
-  min-height: 52px;
-  gap: 6px;
-  align-items: center;
-  justify-content: center;
-  margin: 0;
-  padding: 0 12px;
-  border-color: var(--atelier-border-strong);
-  border-radius: 10px;
-  background: transparent;
-  box-shadow: none;
-}
-
-.add-food-plus {
-  width: 26px;
-  height: 26px;
-  border: 0;
-  color: var(--atelier-pistachio-deep);
-}
-
-.add-food-button strong {
-  color: var(--atelier-ink);
-  font-size: 14px;
-  font-weight: 560;
 }
 
 .trust-card,
@@ -13928,26 +13355,9 @@ html[data-rescue-theme="dark"] .meal-home {
   line-height: 1.35;
 }
 
-.inventory-status-label {
-  min-height: 0;
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  font-size: 12px;
-}
-
 .inventory-review-detail {
   max-width: 180px;
   font-weight: 450;
-}
-
-.inventory-status-warning .inventory-status-label {
-  color: var(--atelier-coral);
-}
-
-.inventory-status[data-inventory-status="priority"] .inventory-status-label {
-  color: var(--atelier-muted);
 }
 
 .app-bottom-nav {
@@ -14366,8 +13776,6 @@ html[data-rescue-theme="dark"] .bottom-sheet {
   }
 
   .food-subline,
-  .food-meta-line,
-  .date-source,
   .app-shell-web :is(.food-subline,.food-meta-line,.date-source) {
     font-size: 12px;
   }
@@ -14384,27 +13792,14 @@ html[data-rescue-theme="dark"] .bottom-sheet {
     margin-top: 14px;
   }
 
-  .home-action-row-with-add,
-  .app-shell-web .home-action-row-with-add {
-    grid-template-columns: minmax(0, 1fr) 104px;
-    grid-template-areas: none;
-    gap: 8px;
-    margin-top: 14px;
-  }
-
   .app-shell-web .home-action-row:not(.home-action-row-with-add) {
     grid-template-columns: minmax(0, 1fr);
   }
 
   .meal-plan-button,
-  .app-shell-web .meal-plan-button,
-  .add-food-button {
+  .app-shell-web .meal-plan-button {
     min-height: 50px;
     padding: 0 10px;
-  }
-
-  .add-food-button > svg {
-    display: none;
   }
 
   .meal-plan-button strong,
@@ -14458,12 +13853,6 @@ html[data-rescue-theme="dark"] .bottom-sheet {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .home-action-row-with-add,
-  .app-shell-web .home-action-row-with-add {
-    grid-template-columns: minmax(0, 1fr) 96px;
-    grid-template-areas: none;
-  }
-
   .meal-home .connection-pill {
     width: 44px;
     min-width: 44px;
@@ -14479,16 +13868,6 @@ html[data-rescue-theme="dark"] .bottom-sheet {
 
   .meal-home .connection-compact-icon {
     display: block;
-  }
-
-  .meal-home .add-food-plus {
-    width: 20px;
-    height: 20px;
-    flex: 0 0 20px;
-  }
-
-  .add-food-label-prefix {
-    display: none;
   }
 
   .meal-plan-button,
@@ -14850,12 +14229,12 @@ html[data-rescue-theme="dark"] .bottom-sheet {
 
 /* Keep the home card's product, source, and date context readable on phones. */
 @media (max-width: 420px) {
-  .app-shell .meal-home .priority-card .food-subline,.app-shell .meal-home .priority-card .date-source:not(.date-source-warning),.app-shell .meal-home .priority-card .priority-date strong {
+  .app-shell .meal-home .priority-card .food-subline,.app-shell .meal-home .priority-card .priority-date strong {
     font-size: 12px;
   }
 }
 
-html[data-rescue-theme="light"] :is(.app-shell-preview,.app-shell-native) .meal-home .priority-card .food-subline,html[data-rescue-theme="light"] :is(.app-shell-preview,.app-shell-native) .meal-home .priority-card .date-source:not(.date-source-warning) {
+html[data-rescue-theme="light"] :is(.app-shell-preview,.app-shell-native) .meal-home .priority-card .food-subline {
   color: #4e5968;
 }
 
@@ -15011,17 +14390,6 @@ html[data-rescue-theme="light"] :is(.app-shell-preview,.app-shell-native) .meal-
   overflow-wrap: anywhere;
 }
 
-.inventory-status-label:has(.inventory-date-value) {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 3px;
-}
-
-.inventory-status-label .inventory-date-value {
-  font-weight: 450;
-}
-
 .bottom-sheet .detail-quantity-presets button:has(.quantity-preset-value) {
   display: flex;
   align-items: center;
@@ -15045,11 +14413,6 @@ html[data-rescue-theme="light"] :is(.app-shell-preview,.app-shell-native) .meal-
   top: auto !important;
   height: auto !important;
   max-height: calc(100dvh - 48px) !important;
-}
-
-.inventory-status[data-inventory-status="priority"] .inventory-status-label,
-.inventory-status[data-inventory-status="needs-review"] .inventory-status-label {
-  background: transparent;
 }
 
 .inventory-review-detail .metadata-parts {

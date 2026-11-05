@@ -150,7 +150,7 @@ test("primary home action text meets contrast in light and dark themes", async (
     }));
     expect(primaryShadow.value, `${theme} primary action keeps its depth`).not.toBe("none");
     // The kitchen palette tints the action's depth with its own leek green instead of the old blue.
-    expect(primaryShadow.token, `${theme} primary shadow token`).toContain(theme === "light" ? "#1b6c42" : "#63cf94");
+    expect(primaryShadow.token, `${theme} primary shadow token`).toContain(theme === "light" ? "#1b6c42" : "#237a4b");
   }
 });
 
@@ -242,7 +242,8 @@ test("printed-date recheck keeps its current record clear with system high contr
       expect(highContrastTokens.contrast).toBe(true);
       // Kitchen palette high-contrast tokens (no blue tint); the default muted ink is #5d6d64 / #9cb0a4.
       expect(highContrastTokens.muted).toBe(theme === "light" ? "#3f4d45" : "#c4d3ca");
-      expect(highContrastTokens.border).toBe(theme === "light" ? "rgba(22, 34, 27, 0.42)" : "rgba(233, 240, 235, 0.58)");
+      // --atelier-border-strong follows the semantic --line-strong token (kitchen.css).
+      expect(highContrastTokens.border).toBe(theme === "light" ? "rgba(22, 34, 27, 0.6)" : "rgba(233, 240, 235, 0.66)");
       expect(highContrastTokens.mutedContrast, `${theme} high-contrast muted ink on the sheet`).toBeGreaterThanOrEqual(7);
       await expectNoViolations(page, `printed-date recheck high contrast ${viewport.width}px ${theme}`);
       await page.screenshot({

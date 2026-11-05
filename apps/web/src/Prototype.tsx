@@ -13,6 +13,7 @@ import { foodIdentityParts } from "./foodBrandPresentation";
 import { FOOD_IMAGES, imageForFoodName, imageForKnownFoodName } from "./foodPhotos";
 import type { FoodDetailGuidanceDraft } from "./FoodDetailSheet";
 import { MealApiError } from "./mealApi";
+import { createUndoRegistry, storageEventIsUndoable, type UndoRegistry } from "./recordUndo";
 import { Metadata, MetadataText } from "./Metadata";
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from "react";
 import { MotionConfig } from "motion/react";
@@ -104,9 +105,22 @@ type InventorySearchStatus = "idle" | "loading" | "ready" | "error";
 type ShoppingListStatus = "idle" | "loading" | "ready" | "error";
 type ToastAction = {
   message: string;
-  label: string;
-  onInvoke: () => void;
+  /** Primary follow-up such as "다시 시도"; a toast may offer only `undo`. */
+  label?: string;
+  onInvoke?: () => void;
+  /**
+   * "되돌리기" for a record the person just made. Shown for UNDO_WINDOW_MS; the
+   * compensating request it starts is owned by the undo registry, not the toast,
+   * so closing the toast never cancels it.
+   */
+  undo?: () => void;
 };
+const UNDO_WINDOW_MS = 5000;
+const NON_FREEZABLE_FOOD_PATTERN = /우유|요거트|요구르트|치즈|달걀|계란/;
+/** Mirrors the server's `freezable` (reviewed storage rules) for demo foods that never came from the API. */
+function foodCanBeFrozen(food: Pick<FoodItem, "name" | "category" | "freezable">) {
+  return food.freezable ?? !(food.category === "유제품" || food.category === "달걀" || NON_FREEZABLE_FOOD_PATTERN.test(food.name));
+}
 type ShoppingListRetryAction = {
   label: string;
   onRetry: () => void;
@@ -117,6 +131,8 @@ type NotificationRetryAction = {
 };
 type StorageMutationResult = {
   affectedFoodId?: string;
+  /** The event to reverse with "되돌리기", when the change has a safe inverse. */
+  undoEventId?: string;
   statuses: ApiGrocySyncStatus[];
   inventory: ApiFood[] | null;
 };
@@ -190,6 +206,8 @@ export type FoodItem = {
   note: string;
   opened: boolean;
   productProvenance?: ProductProvenance;
+  /** From the API's reviewed storage rules; undefined for local demo foods (see foodCanBeFrozen). */
+  freezable?: boolean;
 };
 
 export type ReceiptLine = {
@@ -496,6 +514,7 @@ const THEME_STORAGE_KEY = "rescue-meal.theme";
 const IS_WEB_SURFACE = ((import.meta.env.VITE_APP_SHELL as string | undefined)?.trim().toLowerCase() ?? "web") === "web";
 const IS_PREVIEW_SURFACE = (import.meta.env.VITE_APP_SHELL as string | undefined)?.trim().toLowerCase() === "preview";
 const BarcodeScanner = lazy(() => import("./BarcodeScanner"));
+
 const loadBottomSheet = () => import("./mobile/BottomSheet").then(({ BottomSheet }) => ({ default: BottomSheet }));
 const LazyBottomSheet = lazy(loadBottomSheet);
 const FoodHistory = lazy(() => import("./FoodHistory"));
@@ -841,6 +860,7 @@ function mapApiFood(food: ApiFood, storageLocations: ApiStorageLocation[] = []):
     confidence: estimate?.confidence ?? food.date_assertion.confidence,
     note: food.note,
     opened: food.opened,
+    freezable: food.freezable ?? undefined,
   };
 }
 
@@ -1013,7 +1033,7 @@ function PrototypeContent() {
     document.documentElement.style.colorScheme = themeMode;
     // Browser chrome matches the top of Home (the fridge-interior panel, --kitchen-hero);
     // the page itself uses the paper background (--fresh-bg).
-    const themeColor = themeMode === "dark" ? "#10291e" : "#15392a";
+    const themeColor = themeMode === "dark" ? "#18392b" : "#15392a";
     document.documentElement.style.setProperty("--rescue-app-background", themeMode === "dark" ? "#0c1210" : "#f3f5f0");
     document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')?.setAttribute("content", themeColor);
 
@@ -1066,6 +1086,9 @@ function PrototypeContent() {
   const [currentDate, setCurrentDate] = useState(() => new Date());
   const [sheet, setSheet] = useState<SheetName>(null);
   const [mealPlanSheetMounted, setMealPlanSheetMounted] = useState(false);
+  /** 요리 from a rescue card: the 식단 screen ranks menus with this food first until cleared. */
+  const [mealAnchor, setMealAnchor] = useState<{ id: string; name: string } | null>(null);
+
   const [tab, setTab] = useState<AppTab>("home");
   const tabRef = useRef<AppTab>("home");
   const [visitedTabs, setVisitedTabs] = useState<ReadonlySet<AppTab>>(() => new Set<AppTab>(["home"]));
@@ -2833,10 +2856,22 @@ function PrototypeContent() {
     && (!shoppingSummaryIsEmpty || foods.length > 0);
 
   useEffect(() => {
-    if (!toast || toastPhase === "pending" || toastAction?.message === toast) return;
-    const timer = window.setTimeout(() => setToast(null), 2600);
+    if (!toast || toastPhase === "pending") return;
+    const matching = toastAction?.message === toast ? toastAction : null;
+    if (matching?.label) return;
+    const timer = window.setTimeout(() => setToast(null), matching?.undo ? UNDO_WINDOW_MS : 2600);
     return () => window.clearTimeout(timer);
   }, [toast, toastAction, toastPhase]);
+
+  useEffect(() => {
+    // A toast that also has a primary action stays open; only its undo offer expires.
+    if (!toastAction?.undo || !toastAction.label) return;
+    const action = toastAction;
+    const timer = window.setTimeout(() => {
+      if (toastActionRef.current === action) setToastAction({ ...action, undo: undefined });
+    }, UNDO_WINDOW_MS);
+    return () => window.clearTimeout(timer);
+  }, [toastAction]);
 
   useEffect(() => {
     if (toastAction && toastAction.message !== toast) setToastAction(null);
@@ -3250,7 +3285,13 @@ function PrototypeContent() {
     openAdd("receipt");
   }, [receiptSourceReviewMode]);
 
-  const openMealPlan = () => {
+  /**
+   * Opens 식단. `anchor` (요리 on a rescue card) ranks menus that use that food first;
+   * any other entry opens the ordinary planner. Event objects passed by click
+   * handlers carry no `anchor`, so they also clear it.
+   */
+  const openMealPlan = (options?: { anchor?: FoodItem | null }) => {
+    const anchor = options?.anchor ?? null;
     if (mealApi.isConfigured && connectionState !== "connected") {
       const message = connectionState === "auth_required"
         ? "로그인하면 저장한 식품으로 식단을 만들 수 있어요"
@@ -3261,6 +3302,7 @@ function PrototypeContent() {
     }
     keyboard.hide();
     if (sheetRef.current !== null) changeSheet(null);
+    setMealAnchor(anchor ? { id: anchor.id, name: anchor.name } : null);
     const isCurrentWorkspace = captureMutationScope();
     const openingIntent = ++sheetOpeningIntentRef.current;
     const alreadyOnMeal = tabRef.current === "meal";
@@ -3284,7 +3326,7 @@ function PrototypeContent() {
     }).catch(() => {
       if (requestId !== mealSheetOpenRequestRef.current || openingIntent !== sheetOpeningIntentRef.current || !isCurrentWorkspace()) return;
       selectTab(originTab);
-      showRetryToast("식단 화면을 준비하지 못했어요.", () => { if (isCurrentWorkspace()) openMealPlan(); });
+      showRetryToast("식단 화면을 준비하지 못했어요.", () => { if (isCurrentWorkspace()) openMealPlan({ anchor }); });
     });
   };
 
@@ -4473,6 +4515,143 @@ function PrototypeContent() {
     return synced;
   };
 
+  const undoRegistryRef = useRef<UndoRegistry | null>(null);
+  if (!undoRegistryRef.current) undoRegistryRef.current = createUndoRegistry();
+
+  /** Puts a just-changed food back exactly as it was in the local list (demo mode or before readback). */
+  const restoreFoodSnapshots = (snapshots: Array<{ food: FoodItem; index: number }>) => {
+    setFoods((current) => {
+      const next = current.filter((food) => !snapshots.some((snapshot) => snapshot.food.id === food.id));
+      snapshots.forEach(({ food, index }) => next.splice(index, 0, food));
+      return next.map((food, index) => ({ ...food, priority: index + 1 }));
+    });
+  };
+
+  /**
+   * Runs one compensating operation for a record toast's "되돌리기". The request is
+   * owned by the undo registry, so it survives the toast closing, and repeated taps
+   * share one request. The result is reported in a fresh toast.
+   */
+  const startUndo = ({ key, undoneMessage, run, afterUndo }: {
+    key: string;
+    undoneMessage: string;
+    /** Resolves with the server's inventory snapshot when it returns one. */
+    run: () => Promise<ApiFood[] | null>;
+    afterUndo?: () => void;
+  }) => {
+    const registry = undoRegistryRef.current!;
+    if (registry.state(key) !== "idle") return;
+    const isCurrentWorkspace = captureMutationScope();
+    setToastAction(null);
+    setToast("기록을 되돌리고 있어요", "pending");
+    void registry.run(key, async () => {
+      const inventory = await run();
+      if (!isCurrentWorkspace()) return;
+      if (inventory) setFoods(inventory.map((food, index) => ({ ...mapApiFood(food, storageLocations), priority: index + 1 })));
+      afterUndo?.();
+      const synced = mealApi.isConfigured ? await syncStorageMutation().catch(() => false) : true;
+      if (!isCurrentWorkspace()) return;
+      setToastAction(null);
+      setToast(withServerReadbackNotice(undoneMessage, synced));
+    }).catch((reason: unknown) => {
+      if (!isCurrentWorkspace()) return;
+      if (reason instanceof MealApiError && reason.status === 409) {
+        // The record changed since (or reached an external app): nothing to retry.
+        setToastAction(null);
+        setToast("그 사이 기록이 바뀌어 되돌리지 못했어요. 지금 목록을 확인해 주세요.");
+        return void syncStorageMutation().catch(() => false);
+      }
+      showRetryToast("되돌리지 못했어요. 기록은 그대로예요.", () => startUndo({ key, undoneMessage, run, afterUndo }));
+    });
+  };
+
+  /** "되돌리기" for one storage event: the server reverses it (`POST /api/storage-events/{id}/undo`). */
+  const storageEventUndo = (eventId: string, undoneMessage: string, demoSnapshots: Array<{ food: FoodItem; index: number }>, afterUndo?: () => void) => () => startUndo({
+    key: `storage-event:${eventId}`,
+    undoneMessage,
+    afterUndo,
+    run: async () => {
+      if (!mealApi.isConfigured) {
+        restoreFoodSnapshots(demoSnapshots);
+        return null;
+      }
+      const result = await mealApi.undoStorageEvent(eventId);
+      return result?.inventory ?? null;
+    },
+  });
+
+  /** Follow-up for a finished storage record: settings when the inventory app needs attention, otherwise "되돌리기" when it has a safe inverse. */
+  const recordToastAction = (message: string, result: StorageMutationResult, undoneMessage: string, snapshots: Array<{ food: FoodItem; index: number }>, afterUndo?: () => void): ToastAction | null => (
+    needsExternalSyncAttention(result.statuses) ? { message, label: "재고 앱 설정 보기", onInvoke: () => changeSheet("account") }
+      : result.undoEventId && storageEventIsUndoable(result.statuses) ? { message, undo: storageEventUndo(result.undoEventId, undoneMessage, snapshots, afterUndo) }
+        : null
+  );
+
+  const foodSnapshot = (foodId: string) => {
+    const index = foods.findIndex((food) => food.id === foodId);
+    return index >= 0 ? [{ food: foods[index], index }] : [];
+  };
+
+  const forgetDemoRescue = (foodId: string) => {
+    if (mealApi.isConfigured) {
+      setRescueSummaryNonce((current) => current + 1);
+      return;
+    }
+    setDemoRescueLog((current) => current.filter((entry) => entry.foodId !== foodId));
+  };
+
+  /**
+   * One-tap 냉동 (rescue card, fridge row): records the existing `frozen` storage
+   * event so the server recalculates the use-first estimate for frozen storage.
+   * Callers never offer it for foods that still need a date check.
+   */
+  const freezeFood = (foodId: string) => {
+    const isCurrentWorkspace = captureMutationScope();
+    const food = findFoodById(foodId);
+    if (!food || food.storage === "냉동" || !foodCanBeFrozen(food)) return;
+    const freezeMutationKey = createId("freeze-event");
+    const snapshots = foodSnapshot(foodId);
+    const previousFoods = foods;
+    const frozenMessage = `${withKoreanObjectParticle(food.name)} 냉동 보관으로 옮겼어요`;
+    const undoneMessage = `${food.name} 냉동 기록을 되돌렸어요`;
+    const applyOptimistic = () => {
+      setFoods((current) => current.map((item) => item.id === foodId
+        ? { ...item, storage: "냉동", storageLocationId: undefined, storageLocationName: undefined, dateSource: item.dateKind === "estimated_use_first" ? "냉동 보관 기준" : item.dateSource }
+        : item));
+    };
+    changeSheet(null);
+    setToastAction(null);
+    if (!mealApi.isConfigured) {
+      applyOptimistic();
+      setToastAction(recordToastAction(frozenMessage, { statuses: [], inventory: null, undoEventId: freezeMutationKey }, undoneMessage, snapshots));
+      setToast(frozenMessage);
+      return;
+    }
+    setToast("냉동 보관으로 옮기고 있어요", "pending");
+    void runStorageMutationRecovery({
+      isCurrent: isCurrentWorkspace,
+      applyOptimistic,
+      restore: () => setFoods(previousFoods),
+      mutate: async () => {
+        const event = await mealApi.createStorageEvent(foodId, { event_type: "frozen" }, freezeMutationKey);
+        return { statuses: event?.grocy_sync_status ? [event.grocy_sync_status] : [], inventory: event?.inventory ?? null, undoEventId: event?.id } satisfies StorageMutationResult;
+      },
+      sync: syncStorageMutation,
+      onSuccess: ({ value: result, synced }) => {
+        if (result.inventory && !synced) setFoods(result.inventory.map((item, index) => ({ ...mapApiFood(item, storageLocations), priority: index + 1 })));
+        const finalMessage = withServerReadbackNotice(withGrocySyncNotice(frozenMessage, result.statuses), synced);
+        setToastAction(recordToastAction(finalMessage, result, undoneMessage, snapshots));
+        setToast(finalMessage);
+      },
+      onFailure: (reason, retry) => {
+        showRetryToast(
+          isMealApiWorkspaceConflictError(reason) ? MEAL_API_WORKSPACE_CONFLICT_MESSAGE : "냉동 보관으로 옮기지 못했어요. 기존 기록은 그대로예요.",
+          () => { void retry(); },
+        );
+      },
+    });
+  };
+
   const saveFood = (foodId: string, storage: StorageType, opened: boolean, eventQuantity: number, storageLocationId: string | null = null) => {
     if (storageSavingFoodIdsRef.current.has(foodId)) return;
     const isCurrentWorkspace = captureMutationScope();
@@ -4491,6 +4670,11 @@ function PrototypeContent() {
       : undefined;
     const storageChanged = Boolean(previousFood && (previousFood.storage !== storage || previousStorageLocationId !== nextStorageLocationId));
     const shouldSplit = Boolean(isPartial && previousFood && (storageChanged || (!previousFood.opened && opened)));
+    // Only a whole-lot move has a safe inverse (move it back). Opening cannot be
+    // undone and a split lot cannot be merged back, so those toasts offer no undo.
+    const moveIsUndoable = Boolean(previousFood && storageChanged && !shouldSplit && !(!previousFood.opened && opened));
+    const moveSnapshots = foodSnapshot(foodId);
+    const moveUndone = `${previousFood.name} 보관 위치를 되돌렸어요`;
     const pendingChangeLabels = [
       storageChanged ? "보관 위치" : null,
       previousFood && !previousFood.opened && opened ? "개봉 상태" : null,
@@ -4537,6 +4721,7 @@ function PrototypeContent() {
     if (!mealApi.isConfigured) {
       applyOptimistic();
       changeSheet(null);
+      setToastAction(moveIsUndoable ? { message: storageSavedMessage, undo: storageEventUndo(storageMutationKey, moveUndone, moveSnapshots) } : null);
       setToast(storageSavedMessage);
     }
     if (mealApi.isConfigured && previousFood) {
@@ -4567,6 +4752,7 @@ function PrototypeContent() {
           return { statuses, inventory: sequence.events[sequence.events.length - 1]?.inventory ?? null, affectedFoodId: sequence.final_food_id };
         }
         let inventory: ApiFood[] | null = null;
+        let movedEventId: string | undefined;
         if (moveRequested) {
           const moved = await mealApi.createStorageEvent(targetFoodId, {
             event_type: "moved",
@@ -4575,6 +4761,7 @@ function PrototypeContent() {
             quantity: isPartial ? eventQuantity : undefined,
           }, `${storageMutationKey}:move`);
           assertCurrent();
+          movedEventId = moved?.id;
           if (moved?.grocy_sync_status) statuses.push(moved.grocy_sync_status);
           inventory = moved?.inventory ?? inventory;
           if (moved?.created_child_food_id) targetFoodId = moved.created_child_food_id;
@@ -4589,7 +4776,7 @@ function PrototypeContent() {
           inventory = openedEvent?.inventory ?? inventory;
           if (openedEvent?.created_child_food_id) targetFoodId = openedEvent.created_child_food_id;
         }
-        return { statuses, inventory, affectedFoodId: targetFoodId };
+        return { statuses, inventory, affectedFoodId: targetFoodId, undoEventId: moveIsUndoable && !openRequested ? movedEventId : undefined };
       };
       const persistAndSync = () => {
         void runStorageMutationRecovery({
@@ -4623,6 +4810,8 @@ function PrototypeContent() {
                 if (tabRef.current === "meal") openFoodDetailFromMeal(affectedFoodId);
                 else openDetail(changedFood, activeContentNavRef.current === "home" ? "home" : "inventory", "browse");
               } });
+            } else if (result.undoEventId && storageEventIsUndoable(result.statuses)) {
+              setToastAction({ message: finalStorageMessage, undo: storageEventUndo(result.undoEventId, moveUndone, moveSnapshots) });
             } else {
               setToastAction(null);
             }
@@ -4664,6 +4853,8 @@ function PrototypeContent() {
       return;
     }
     const consumeMutationKey = createId("consume-event");
+    const consumeSnapshots = foodSnapshot(foodId);
+    const consumeUndone = `${food.name} 먹은 기록을 되돌렸어요`;
     const quantity = food ? quantityParts(food.quantity) : { amount: eventQuantity ?? 1, unit: "개" };
     const isPartial = eventQuantity !== undefined && eventQuantity < quantity.amount;
     const consumeSuccessMessage = food ? `${withKoreanObjectParticle(food.name)} 먹은 기록으로 남겼어요` : "먹은 기록을 저장했어요";
@@ -4688,6 +4879,7 @@ function PrototypeContent() {
     changeSheet(null);
     setToastAction(null);
     setToast(mealApi.isConfigured ? "먹은 기록을 저장하고 있어요" : consumeSuccessMessage, mealApi.isConfigured ? "pending" : "notice");
+    if (!mealApi.isConfigured) setToastAction(recordToastAction(consumeSuccessMessage, { statuses: [], inventory: null, undoEventId: consumeMutationKey }, consumeUndone, consumeSnapshots, () => forgetDemoRescue(foodId)));
     if (mealApi.isConfigured) {
       const persistAndSync = () => {
         void runStorageMutationRecovery({
@@ -4696,7 +4888,7 @@ function PrototypeContent() {
           restore: () => setFoods(previousFoods),
           mutate: async () => {
             const event = await mealApi.createStorageEvent(foodId, { event_type: "consumed", quantity: isPartial ? eventQuantity : undefined }, consumeMutationKey);
-            return { statuses: event?.grocy_sync_status ? [event.grocy_sync_status] : [], inventory: event?.inventory ?? null } satisfies StorageMutationResult;
+            return { statuses: event?.grocy_sync_status ? [event.grocy_sync_status] : [], inventory: event?.inventory ?? null, undoEventId: event?.id } satisfies StorageMutationResult;
           },
           sync: syncStorageMutation,
           onSuccess: ({ value: result, synced }) => {
@@ -4709,11 +4901,7 @@ function PrototypeContent() {
             recordRescuedFoods([foodId]);
             const successMessage = withGrocySyncNotice(withConsumeScope(hasDeferredExternalSync(result.statuses) || !synced), result.statuses);
             const finalConsumeMessage = withServerReadbackNotice(successMessage, synced);
-            if (needsExternalSyncAttention(result.statuses)) {
-              setToastAction({ message: finalConsumeMessage, label: "재고 앱 설정 보기", onInvoke: () => changeSheet("account") });
-            } else {
-              setToastAction(null);
-            }
+            setToastAction(recordToastAction(finalConsumeMessage, result, consumeUndone, consumeSnapshots, () => forgetDemoRescue(foodId)));
             setToast(finalConsumeMessage);
           },
           onFailure: (reason, retry) => {
@@ -4740,6 +4928,8 @@ function PrototypeContent() {
       return;
     }
     const discardMutationKey = createId("discard-event");
+    const discardSnapshots = foodSnapshot(foodId);
+    const discardUndone = `${food.name} 폐기 기록을 되돌렸어요`;
     const quantity = food ? quantityParts(food.quantity) : { amount: eventQuantity ?? 1, unit: "개" };
     const isPartial = eventQuantity !== undefined && eventQuantity < quantity.amount;
     const discardSuccessMessage = food
@@ -4759,6 +4949,7 @@ function PrototypeContent() {
     changeSheet(null);
     setToastAction(null);
     setToast(mealApi.isConfigured ? "폐기 기록을 저장하고 있어요." : discardSuccessMessage, mealApi.isConfigured ? "pending" : "notice");
+    if (!mealApi.isConfigured) setToastAction(recordToastAction(discardSuccessMessage, { statuses: [], inventory: null, undoEventId: discardMutationKey }, discardUndone, discardSnapshots));
     if (mealApi.isConfigured) {
       const persistAndSync = () => {
         void runStorageMutationRecovery({
@@ -4767,7 +4958,7 @@ function PrototypeContent() {
           restore: () => setFoods(previousFoods),
           mutate: async () => {
             const event = await mealApi.createStorageEvent(foodId, { event_type: "discarded", quantity: isPartial ? eventQuantity : undefined }, discardMutationKey);
-            return { statuses: event?.grocy_sync_status ? [event.grocy_sync_status] : [], inventory: event?.inventory ?? null } satisfies StorageMutationResult;
+            return { statuses: event?.grocy_sync_status ? [event.grocy_sync_status] : [], inventory: event?.inventory ?? null, undoEventId: event?.id } satisfies StorageMutationResult;
           },
           sync: syncStorageMutation,
           onSuccess: ({ value: result, synced }) => {
@@ -4779,11 +4970,7 @@ function PrototypeContent() {
             }
             const discardSyncMessage = withGrocySyncNotice(withDiscardScope(hasDeferredExternalSync(result.statuses) || !synced), result.statuses);
             const finalDiscardMessage = withServerReadbackNotice(discardSyncMessage, synced);
-            if (needsExternalSyncAttention(result.statuses)) {
-              setToastAction({ message: finalDiscardMessage, label: "재고 앱 설정 보기", onInvoke: () => changeSheet("account") });
-            } else {
-              setToastAction(null);
-            }
+            setToastAction(recordToastAction(finalDiscardMessage, result, discardUndone, discardSnapshots));
             setToast(finalDiscardMessage);
           },
           onFailure: (reason, retry) => {
@@ -5309,6 +5496,26 @@ function PrototypeContent() {
     setToast(message);
   }, [sheet]);
 
+  /** "되돌리기" for a quick-add save: removes the just-created foods (`POST /api/foods/{id}/undo-create`). */
+  const quickAddUndo = (savedFoods: FoodItem[]) => () => {
+    const ids = savedFoods.map((food) => food.id);
+    startUndo({
+      key: `food-create:${ids.join(",")}`,
+      undoneMessage: savedFoods.length === 1 ? `${withKoreanObjectParticle(savedFoods[0].name)} 목록에서 뺐어요` : `방금 넣은 식품 ${savedFoods.length}개를 목록에서 뺐어요`,
+      run: async () => {
+        if (!mealApi.isConfigured) {
+          const removed = new Set(ids);
+          setFoods((current) => current.filter((food) => !removed.has(food.id)).map((food, index) => ({ ...food, priority: index + 1 })));
+          return null;
+        }
+        let inventory: ApiFood[] | null = null;
+        // Sequential and idempotent: a retry after a partial failure replays the foods already removed.
+        for (const id of ids) inventory = (await mealApi.undoFoodCreate(id))?.inventory ?? inventory;
+        return inventory;
+      },
+    });
+  };
+
   const quickAddFoods = async (items: QuickAddApiItem[]): Promise<QuickAddSaveResult> => {
     const isCurrentWorkspace = captureMutationScope();
     const submissionSession = addSheetSessionKeyRef.current;
@@ -5321,7 +5528,8 @@ function PrototypeContent() {
       queueAddedFoodFocus(savedFoods[0]?.name ?? "");
       if (sheetRef.current === "add" && addSheetSessionKeyRef.current === submissionSession) changeSheet(null);
       const message = withServerReadbackNotice(quickAddSaveSummary(savedFoods.length, 0), synced);
-      setToastAction(quickAddDateFollowUp(message, savedFoods.filter(quickAddNeedsDateCheck).map(({ id, name }) => ({ id, name }))));
+      const followUp = quickAddDateFollowUp(message, savedFoods.filter(quickAddNeedsDateCheck).map(({ id, name }) => ({ id, name })));
+      setToastAction(savedFoods.length ? { ...(followUp ?? { message }), undo: quickAddUndo(savedFoods) } : followUp);
       setToast(message);
     };
     if (!mealApi.isConfigured) {
@@ -5669,7 +5877,9 @@ function PrototypeContent() {
                 needsDateCheck={(food) => Boolean(dateReviewReason(food, currentDate))}
                 onOpen={(food, intent) => openDetail(food, "home", intent === "date-review" ? "date-review" : null)}
                 onConsume={(food) => consumeFood(food.id)}
-                onCook={() => openMealPlan()}
+                onCook={(food) => openMealPlan({ anchor: food })}
+                onFreeze={(food) => freezeFood(food.id)}
+                canFreeze={(food) => food.storage !== "냉동" && foodCanBeFrozen(food)}
               />
             ) : null}
             upcomingFoods={priorityFoods}
@@ -5746,6 +5956,19 @@ function PrototypeContent() {
               onRetrySearch={retryInventorySearch}
               onLoadMore={loadMoreInventory}
               onOpenFood={(food) => openDetail(food, "inventory")}
+              rowActionsFor={connectionState === "offline" ? undefined : (food) => {
+                // Same safety rule as the rescue deck: a food whose printed date passed or
+                // needs a check gets the date check, never a one-gesture "ate" or freeze.
+                const dateCheck = Boolean(dateReviewReason(food, currentDate)) || foodFreshness(food, currentDate).bucket === "past";
+                return {
+                  primary: dateCheck
+                    ? { label: "날짜 확인", tone: "check", run: () => openDetail(food, "inventory", "date-review") }
+                    : { label: "다 먹음", tone: "ate", run: () => consumeFood(food.id) },
+                  partial: { label: "먹은 양 기록", run: () => openDetail(food, "inventory", "consume-action") },
+                  discard: { run: () => discardFood(food.id) },
+                  freeze: !dateCheck && food.storage !== "냉동" && foodCanBeFrozen(food) ? { run: () => freezeFood(food.id) } : undefined,
+                };
+              }}
               onOpenGuidance={() => openGuidanceSheet()}
             />
           </div>
@@ -5783,6 +6006,8 @@ function PrototypeContent() {
                   onAddDemoShoppingItems={addDemoShoppingItems}
                   onSaved={handleMealSaved}
                   onCompleted={handleMealCompleted}
+                  anchorFood={mealAnchor}
+                  onClearAnchor={() => setMealAnchor(null)}
                 />
               </Suspense> : <ProcessingState label="식단 화면을 준비하고 있어요" detail="잠시만 기다려 주세요." />}
             </main>
@@ -5943,7 +6168,11 @@ function PrototypeContent() {
         <Suspense fallback={<ProcessingState label="레시피 목록을 준비하고 있어요" detail="잠시만 기다려 주세요." />}><RecipeReviewPanel workspaceTransport={workspaceTransport} /></Suspense>
       </DeferredBottomSheet>
 
-      {toast ? <div className="toast-layer" data-active-sheet={sheet ?? "none"} style={{ position: "absolute", zIndex: 1102, inset: 0, pointerEvents: "none" }}><div className={`toast${toastAction?.message === toast && isRecoveryToastAction(toastAction.label) ? " toast-recovery" : ""}${toastAction?.message === toast && toastAction.label === "다시 시도" ? " toast-retry" : ""}`} data-toast-state={toastFeedbackState(toastPhase, toastAction?.message === toast ? toastAction.label : undefined)} data-toast-action={toastAction?.message === toast ? toastAction.label : undefined} role="status" aria-live="polite" aria-atomic="true" style={{ pointerEvents: "auto" }}>{toastAction?.message === toast && isRecoveryToastAction(toastAction.label) ? <InfoCircledIcon width={17} height={17} aria-hidden="true" /> : toastPhase === "pending" ? <ClockIcon width={17} height={17} aria-hidden="true" /> : <CheckCircledIcon width={17} height={17} aria-hidden="true" />}<span className="toast-message"><MetadataText text={toast} /></span>{toastAction?.message === toast ? <button className="toast-action" type="button" disabled={toastAction.label === "다시 시도" && toastActionBusy} aria-busy={toastAction.label === "다시 시도" && toastActionBusy} onClick={() => { const action = toastAction; const isRetry = action.label === "다시 시도"; if (isRetry) { setToastActionBusy(true); action.onInvoke(); } else { setToast(null); setToastAction(null); action.onInvoke(); } window.setTimeout(focusToastRecoveryTarget, 0); }}>{toastAction.label === "다시 시도" && toastActionBusy ? "다시 시도 중" : toastAction.label}</button> : null}</div></div> : null}
+      {toast ? (() => {
+        const activeToastAction = toastAction?.message === toast ? toastAction : null;
+        const actionLabel = activeToastAction?.label;
+        return <div className="toast-layer" data-active-sheet={sheet ?? "none"} style={{ position: "absolute", zIndex: 1102, inset: 0, pointerEvents: "none" }}><div className={`toast${isRecoveryToastAction(actionLabel) ? " toast-recovery" : ""}${actionLabel === "다시 시도" ? " toast-retry" : ""}${activeToastAction?.undo ? " toast-has-undo" : ""}`} data-toast-state={toastFeedbackState(toastPhase, actionLabel)} data-toast-action={actionLabel} data-toast-undo={activeToastAction?.undo ? "available" : undefined} role="status" aria-live="polite" aria-atomic="true" style={{ pointerEvents: "auto" }}>{isRecoveryToastAction(actionLabel) ? <InfoCircledIcon width={17} height={17} aria-hidden="true" /> : toastPhase === "pending" ? <ClockIcon width={17} height={17} aria-hidden="true" /> : <CheckCircledIcon width={17} height={17} aria-hidden="true" />}<span className="toast-message"><MetadataText text={toast} /></span>{activeToastAction?.undo ? <button className="toast-undo" type="button" aria-label="되돌리기" onClick={() => { const undo = activeToastAction.undo; setToastAction(activeToastAction.label ? { ...activeToastAction, undo: undefined } : null); undo?.(); }} /> : null}{activeToastAction?.label ? <button className="toast-action" type="button" disabled={actionLabel === "다시 시도" && toastActionBusy} aria-busy={actionLabel === "다시 시도" && toastActionBusy} onClick={() => { const action = activeToastAction; const isRetry = action.label === "다시 시도"; if (isRetry) { setToastActionBusy(true); action.onInvoke?.(); } else { setToast(null); setToastAction(null); action.onInvoke?.(); } window.setTimeout(focusToastRecoveryTarget, 0); }}>{actionLabel === "다시 시도" && toastActionBusy ? "다시 시도 중" : actionLabel}</button> : null}</div></div>;
+      })() : null}
     </>
     </MotionConfig>
   );

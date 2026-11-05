@@ -55,17 +55,27 @@ export function foodFreshness(food: FreshnessFood, referenceDate: Date): Freshne
   return { bucket, daysLeft, estimated };
 }
 
-/** Short chip text: "D-day", "D-3", "+2일". */
+/** Short chip text: "D-day", "D-3", "+2일"; far dates cap at "D-99+" / "+99일+" (the spoken label stays exact). */
 export function freshnessChipLabel(freshness: Freshness) {
   if (freshness.daysLeft === null) return "날짜 없음";
   if (freshness.daysLeft === 0) return "D-day";
+  if (freshness.daysLeft > 99) return "D-99+";
   if (freshness.daysLeft > 0) return `D-${freshness.daysLeft}`;
+  if (freshness.daysLeft < -99) return "+99일+";
   return `+${-freshness.daysLeft}일`;
 }
 
-/** Screen-reader text for the chip, in words rather than the D- shorthand. */
+/** Which of the three badge shapes a date gets: filled printed date, dashed estimate, neutral unknown. */
+export type FreshnessDateKind = "printed" | "estimated" | "unknown";
+
+export function freshnessDateKind(freshness: Freshness): FreshnessDateKind {
+  if (freshness.daysLeft === null) return "unknown";
+  return freshness.estimated ? "estimated" : "printed";
+}
+
+/** Screen-reader text for the chip, in words rather than the D- shorthand. Estimates say 추정 out loud. */
 export function freshnessSpokenLabel(freshness: Freshness) {
-  const kind = freshness.estimated ? "먼저 살펴볼 시점" : "표시 날짜";
+  const kind = freshness.estimated ? "추정, 먼저 살펴볼 시점" : "표시 날짜";
   if (freshness.daysLeft === null) return "날짜 없음";
   if (freshness.daysLeft === 0) return `${kind} 오늘`;
   if (freshness.daysLeft > 0) return `${kind}까지 ${freshness.daysLeft}일`;

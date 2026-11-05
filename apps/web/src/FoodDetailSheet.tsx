@@ -1,5 +1,6 @@
 import { FoodPhoto } from "./FoodPhoto";
-import { foodFreshness, freshnessChipLabel, freshnessSpokenLabel } from "./freshness";
+import { foodFreshness } from "./freshness";
+import { FreshnessChip } from "./screens/FreshnessChip";
 import { storageLocationSummary } from "./storageLocationPresentation";
 import { displayFoodBrand, foodIdentityParts, productInfoDraftChanged } from "./foodBrandPresentation";
 import { detailFoodNote } from "./detailFoodNotes";
@@ -543,7 +544,7 @@ export default function FoodDetailSheet({
           {food.dateKind !== "unknown" ? <strong><MetadataText text={food.dateKind === "estimated_use_first" ? food.dateLabel : dateProofDetail} /></strong> : null}
           <small><MetadataText text={food.dateKind === "unknown" ? "포장지 날짜를 아직 기록하지 않았어요." : dateSourceLabel(food.dateSource, food.dateKind)} /></small>
         </div>
-        {food.dateKind !== "unknown" ? (() => { const freshness = foodFreshness(food, new Date()); return <strong className={`freshness-chip detail-freshness-chip freshness-${freshness.bucket}`} data-estimated={freshness.estimated} aria-label={freshnessSpokenLabel(freshness)}>{freshnessChipLabel(freshness)}</strong>; })() : null}
+        {food.dateKind !== "unknown" ? <FreshnessChip food={food} referenceDate={new Date()} className="detail-freshness-chip" /> : null}
         <button ref={guidanceActionRef} type="button" onClick={() => onShowGuidance({ source: guidanceDraftSource(food), storage, storageLocationId, opened, quantity: currentQuantityDraft, dateEditorOpen, dateDraft: dateEditorDraft, productEditor: { open: editProductInfoOpen, name: productNameDraft, brand: productBrandDraft, category: productCategoryDraft } })} aria-label="날짜 안내 보기"><InfoCircledIcon width={16} height={16} /></button>
       </div>
       {dateReviewReason && food.dateKind !== "unknown" ? (

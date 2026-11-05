@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { ArchiveIcon, ChevronRightIcon, Cross2Icon, InfoCircledIcon, MagnifyingGlassIcon, PlusIcon } from "@radix-ui/react-icons";
 import { FoodPhoto } from "../FoodPhoto";
 import { Metadata } from "../Metadata";
@@ -9,6 +9,24 @@ import type { ApiStorageLocation } from "../mealApi";
 import type { FoodItem } from "../Prototype";
 import { FreshnessChip } from "./FreshnessChip";
 import { ScreenHeader } from "./ScreenHeader";
+import type { SwipeRowActions } from "./SwipeRow";
+
+// Swipe handling ships in its own chunk, requested as soon as this module loads (normally
+// long before the 냉장고 tab is opened). Until it arrives a row is the plain tappable row;
+// no Suspense, so an already-loaded module never swaps the rows out from under focus.
+type SwipeRowComponent = typeof import("./SwipeRow").SwipeRow;
+let loadedSwipeRow: SwipeRowComponent | null = null;
+const swipeRowReady = import("./SwipeRow").then((module) => (loadedSwipeRow = module.SwipeRow));
+function useSwipeRow() {
+  const [component, setComponent] = useState<SwipeRowComponent | null>(() => loadedSwipeRow);
+  useEffect(() => {
+    if (component) return undefined;
+    let active = true;
+    void swipeRowReady.then((loaded) => { if (active) setComponent(() => loaded); });
+    return () => { active = false; };
+  }, [component]);
+  return component;
+}
 
 export type FridgeStatusFilter = "all" | "needs-review" | "priority";
 export type FridgeStorageFilter = "전체" | "냉장" | "냉동" | "실온" | `location:${string}`;
@@ -76,6 +94,8 @@ export default function FridgeScreen(props: {
   onRetrySearch: () => void;
   onLoadMore: () => void;
   onOpenFood: (food: FoodItem) => void;
+  /** Swipe and "…" menu actions for a row; null keeps the plain row (read-only offline snapshot). */
+  rowActionsFor?: (food: FoodItem) => SwipeRowActions | null;
   onOpenGuidance: () => void;
   footer?: ReactNode;
 }) {
@@ -83,6 +103,7 @@ export default function FridgeScreen(props: {
     foods, filteredFoods, referenceDate, dataUnknown, initialLoading, showTools, hasEmptyResult, inventoryCount,
     storageFilter, statusFilter, searchPhase, searchWaiting, searchPending, hasQuery,
   } = props;
+  const SwipeRow = useSwipeRow();
   const countLabel = (value: number) => dataUnknown || searchWaiting ? "—" : String(value);
   const storageOptions = [
     ...BUILT_IN_STORAGE,
@@ -135,8 +156,9 @@ export default function FridgeScreen(props: {
             <div className="inventory-list" id="inventory-list">
               {filteredFoods.map((food) => {
                 const reviewReason = props.reviewReasonFor(food);
-                return (
-                  <button className="inventory-row" type="button" key={food.id} data-inventory-food-id={food.id} data-date-state={food.dateKind} onClick={() => props.onOpenFood(food)}>
+                const rowActions = props.rowActionsFor?.(food) ?? null;
+                const row = (
+                  <button className="inventory-row" type="button" key={rowActions && SwipeRow ? undefined : food.id} data-inventory-food-id={food.id} data-date-state={food.dateKind} onClick={() => props.onOpenFood(food)}>
                     <div className="inventory-image-wrap"><FoodPhoto src={food.image} foodName={food.name} alt="" className="inventory-image" draggable={false} /></div>
                     <span className="inventory-copy">
                       <strong>{food.name}</strong>
@@ -152,6 +174,7 @@ export default function FridgeScreen(props: {
                     <ChevronRightIcon className="row-chevron" width={15} height={15} />
                   </button>
                 );
+                return rowActions && SwipeRow ? <SwipeRow key={food.id} foodName={food.name} actions={rowActions}>{row}</SwipeRow> : row;
               })}
             </div>
             {props.searchOwnsResults && props.searchHasMore ? <button className="inventory-load-more" type="button" disabled={searchPending} aria-busy={searchPending} onClick={props.onLoadMore}>{searchPending ? "더 불러오는 중" : <Metadata parts={["더 보기", `${Math.max(0, (props.searchTotal ?? 0) - filteredFoods.length)}개 남음`]} />}</button> : null}

@@ -160,6 +160,8 @@ export type ApiFoodProductInfoAuditEvent = {
 
 export type ApiFood = {
   quantity_reference?: ApiQuantityReference | null;
+  /** Derived by the server from the reviewed storage rules: false for foods such as milk or eggs. */
+  freezable?: boolean;
   id: string;
   parent_lot_id?: string | null;
   source_receipt_id?: string | null;
@@ -400,7 +402,26 @@ export type ApiStorageEvent = {
   grocy_outbox_id?: string | null;
   grocy_transaction_id?: string | null;
   grocy_status_history?: ApiGrocyOutboxStatusHistory[];
+  undone_at?: string | null;
   inventory?: ApiFood[];
+};
+
+/** Result of reversing one storage event (`POST /api/storage-events/{id}/undo`). */
+export type ApiStorageEventUndo = {
+  event_id: string;
+  event_type: ApiStorageEvent["event_type"];
+  food_id: string;
+  undone_at: string;
+  idempotency_replayed: boolean;
+  inventory: ApiFood[];
+};
+
+/** Result of removing a just-created manual food (`POST /api/foods/{id}/undo-create`). */
+export type ApiFoodCreateUndo = {
+  food_id: string;
+  undone_at: string;
+  idempotency_replayed: boolean;
+  inventory: ApiFood[];
 };
 
 export type ApiStorageEventSequence = {
@@ -474,6 +495,9 @@ export type ApiMealPlanOptions = {
   max_minutes: number;
   servings?: number;
   inventory_ids: string[];
+  anchor_food_id?: string | null;
+  anchor_name?: string | null;
+  anchor_option_recipe_ids?: string[];
 };
 
 export type ApiMultiDayMealPlan = {
@@ -1887,6 +1911,16 @@ export const mealApi = {
     });
   },
 
+  /** Reverses a just-recorded storage event. Safe to repeat: a second call replays the first result. */
+  async undoStorageEvent(eventId: string) {
+    return request<ApiStorageEventUndo>(`/api/storage-events/${encodeURIComponent(eventId)}/undo`, { method: "POST" });
+  },
+
+  /** Removes a food that was just created by manual/quick add. Safe to repeat. */
+  async undoFoodCreate(foodId: string) {
+    return request<ApiFoodCreateUndo>(`/api/foods/${encodeURIComponent(foodId)}/undo-create`, { method: "POST" });
+  },
+
   async getStorageEvents(foodId: string) {
     return request<ApiStorageEvent[]>(`/api/foods/${encodeURIComponent(foodId)}/storage-events`);
   },
@@ -1956,11 +1990,11 @@ export const mealApi = {
     });
   },
 
-  async previewMealPlan<T = ApiMealPlan>(inventoryIds: string[], maxMinutes = 30, path = "/api/meal-plans/preview", servings = 1, signal?: AbortSignal, recipeId?: string) {
+  async previewMealPlan<T = ApiMealPlan>(inventoryIds: string[], maxMinutes = 30, path = "/api/meal-plans/preview", servings = 1, signal?: AbortSignal, recipeId?: string, anchorFoodId?: string | null) {
     return request<T>(path, {
       method: "POST",
       signal,
-      body: JSON.stringify({ inventory_ids: inventoryIds, max_minutes: maxMinutes, servings, ...(recipeId ? { recipe_id: recipeId } : {}) }),
+      body: JSON.stringify({ inventory_ids: inventoryIds, max_minutes: maxMinutes, servings, ...(recipeId ? { recipe_id: recipeId } : {}), ...(anchorFoodId ? { anchor_food_id: anchorFoodId } : {}) }),
     });
   },
 

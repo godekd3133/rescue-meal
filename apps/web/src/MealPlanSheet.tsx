@@ -10,7 +10,7 @@ import { completedMealAllocations } from "./completedMealAllocations";
 import { Metadata, MetadataText } from "./Metadata";
 import { shoppingAdjustmentNote } from "./shoppingListPresentation";
 import { useEffect, useRef, useState } from "react";
-import { ArrowRightIcon, CalendarIcon, CheckCircledIcon, ChevronDownIcon, InfoCircledIcon, LightningBoltIcon, PlusIcon, ReaderIcon, TimerIcon } from "@radix-ui/react-icons";
+import { ArrowRightIcon, CalendarIcon, CheckCircledIcon, ChevronDownIcon, Cross2Icon, InfoCircledIcon, LightningBoltIcon, PlusIcon, ReaderIcon, TimerIcon } from "@radix-ui/react-icons";
 import { BottomSheet, KeyboardInput, useKeyboard } from "./mobile";
 import { TabSheetScreen } from "./screens/TabSheetScreen";
 import { getMobileScrollBehavior } from "./mobile/scroll";
@@ -21,6 +21,7 @@ import { getMealPlanErrorPresentation, mealPlanDisplayCopy, mealDateReviewCopy, 
 import { toggleMealConsumptionSelection, updateMealConsumptionSelection, type MealConsumptionMemory } from "./mealConsumptionSelection";
 import { PORTFOLIO_MISSING_INGREDIENT } from "./demo/portfolioFixtures";
 import "./mealShoppingSheets.css";
+import "./quickActions.css";
 type MealFood = {
   dateKind?: string;
   quantityUnit?: string;
@@ -115,6 +116,14 @@ function ingredientAvailabilityCopy(ingredients: ApiMealPlan["ingredients"]) {
 }
 
 type MealPlanLoadResult<T> = { value: T | null; error: unknown | null };
+
+/** "두부로" / "버섯으로" (ㄹ받침 takes 로), and "두부가" / "버섯이" for the anchored-menu copy. */
+function withAnchorParticle(value: string, kind: "instrumental" | "subject") {
+  const code = value.charCodeAt(value.length - 1) - 0xac00;
+  const final = code >= 0 && code < 11172 ? code % 28 : 0;
+  if (kind === "subject") return `${value}${final ? "이" : "가"}`;
+  return `${value}${final && final !== 8 ? "으로" : "로"}`;
+}
 
 function settleMealPlanRequest<T>(request: Promise<T>): Promise<MealPlanLoadResult<T>> {
   return request
@@ -446,8 +455,11 @@ function createDemoPlan(foods: MealFood[], maxMinutes = 30, servings = 1, dateRe
   };
 }
 
-export default function MealPlanSheet({ foods, presentation = "sheet", active = false, returningFromRelatedFlow = false, parentRestoresFocus = false, plannerContextKey = "", onOpenChange, initialMaxMinutes = 30, initialServings = 1, dateReviewFoods = [], onSaved, onCompleted, onOpenFoodDetail, onOpenAdd, onOpenSyncReview, onOpenShoppingList, onAddDemoShoppingItems, onOptionsChange, onAuthenticationRequired, onOpenAccount, workspaceSync, workspaceTransport }: {
+export default function MealPlanSheet({ foods, presentation = "sheet", active = false, returningFromRelatedFlow = false, parentRestoresFocus = false, plannerContextKey = "", onOpenChange, initialMaxMinutes = 30, initialServings = 1, dateReviewFoods = [], onSaved, onCompleted, onOpenFoodDetail, onOpenAdd, onOpenSyncReview, onOpenShoppingList, onAddDemoShoppingItems, onOptionsChange, onAuthenticationRequired, onOpenAccount, workspaceSync, workspaceTransport, anchorFood = null, onClearAnchor }: {
   foods: MealFood[];
+  /** 요리 from a rescue card: rank menus that use this food first until the person clears it. */
+  anchorFood?: { id: string; name: string } | null;
+  onClearAnchor?: () => void;
   /** "screen" renders the same planner inside the 식단 tab's MobileScroll instead of a BottomSheet. */
   presentation?: "sheet" | "screen";
   active?: boolean;
@@ -576,11 +588,15 @@ export default function MealPlanSheet({ foods, presentation = "sheet", active = 
   const revealInstructionsFocusRef = useRef(false);
   const multiDaySaveFocusRef = useRef(false);
   const initialFocusHandledRef = useRef(false);
-  const ingredients = foods.slice(0, 20);
+  const anchorStock = anchorFood ? foods.find((food) => food.id === anchorFood.id) ?? null : null;
+  const anchorFoodId = anchorStock?.id ?? null;
+  // The anchor leads the ingredient list so both the API planner and the demo recipe start from it.
+  const ingredients = (anchorStock ? [anchorStock, ...foods.filter((food) => food.id !== anchorStock.id)] : foods).slice(0, 20);
+  const [anchorMatch, setAnchorMatch] = useState<boolean | null>(null);
   const ingredientKey = ingredients.map((food) => food.id).join("|");
   const dateReviewKey = dateReviewFoods.map((food) => `${food.id}:${food.name}`).join("|");
   const plannerReadScopeRef = useRef({ key: "", generation: 0 });
-  const plannerReadKey = JSON.stringify([active, returningFromRelatedFlow, plannerContextKey, ingredientKey, dateReviewKey, maxMinutes, servings, mealPreferencesVersion, plan?.id]);
+  const plannerReadKey = JSON.stringify([active, returningFromRelatedFlow, plannerContextKey, anchorFoodId, ingredientKey, dateReviewKey, maxMinutes, servings, mealPreferencesVersion, plan?.id]);
   if (plannerReadScopeRef.current.key !== plannerReadKey) {
     plannerReadScopeRef.current = { key: plannerReadKey, generation: plannerReadScopeRef.current.generation + 1 };
   }
@@ -646,6 +662,7 @@ export default function MealPlanSheet({ foods, presentation = "sheet", active = 
     const currentInputSignature = JSON.stringify({
       workspaceKey: currentWorkspaceKey,
       plannerContextKey,
+      anchorFoodId,
       ingredients: ingredients.map(({ id, name, quantity, quantityReference }) => [id, name, quantity, quantityReference]),
       dateReviewFoods: dateReviewFoods.map(({ id, name }) => [id, name]),
       maxMinutes,
@@ -742,6 +759,7 @@ export default function MealPlanSheet({ foods, presentation = "sheet", active = 
     }
     if (!mealApi.isConfigured) {
       const demoPlan = createDemoPlan(ingredients, maxMinutes, servings, dateReviewFoods);
+      setAnchorMatch(anchorFoodId ? demoPlan.ingredients.some((ingredient) => ingredient.allocations?.some((allocation) => allocation.food_id === anchorFoodId)) : null);
       setPlan(demoPlan);
       if (!preservingPlannerView) setConsumptionDraft(initialConsumptionDraft(demoPlan, ingredients));
       setLoading(false);
@@ -753,10 +771,19 @@ export default function MealPlanSheet({ foods, presentation = "sheet", active = 
     setPlan(null);
     setLoading(true);
     const inventoryIds = ingredients.map((food) => food.id);
+    let anchoredMatch: boolean | null = null;
+    // Anchored planning asks the options endpoint for menus that use the anchor first and
+    // falls back to the ordinary preview when nothing could be planned at all.
+    const loadAnchoredPlan = async (ids: string[], signal: AbortSignal) => {
+      const options = await mealApi.previewMealPlan<ApiMealPlanOptions>(ids, maxMinutes, "/api/meal-plans/options", servings, signal, undefined, anchorFoodId);
+      const anchored = options?.options.find((option) => options.anchor_option_recipe_ids?.includes(option.recipe_id)) ?? null;
+      anchoredMatch = Boolean(anchored);
+      return anchored ?? options?.options[0] ?? await mealApi.previewMealPlan(ids, maxMinutes, "/api/meal-plans/preview", servings, signal);
+    };
     void workspaceSync.run("meal-plan", async (signal) => {
       const [preferences, response, latest, revision] = await Promise.all([
         settleMealPlanRequest(mealApi.getMealPreferences(signal)),
-        settleMealPlanRequest(mealApi.previewMealPlan(inventoryIds, maxMinutes, "/api/meal-plans/preview", servings, signal)),
+        settleMealPlanRequest(anchorFoodId ? loadAnchoredPlan(inventoryIds, signal) : mealApi.previewMealPlan(inventoryIds, maxMinutes, "/api/meal-plans/preview", servings, signal)),
         settleMealPlanRequest(mealApi.getLatestMealPlan(signal)),
         settleMealPlanRequest(mealApi.getMealPlanRevision(signal)),
       ]);
@@ -816,6 +843,7 @@ export default function MealPlanSheet({ foods, presentation = "sheet", active = 
           latest.inventory_ids.every((id, index) => id === response.inventory_ids[index]),
         );
         const resolvedPlan = latestMatchesCurrentPreview && latest ? latest : response;
+        setAnchorMatch(anchorFoodId ? anchoredMatch : null);
         setPlan(resolvedPlan);
         setConsumptionDraft(initialConsumptionDraft(resolvedPlan, foods));
         setSaved(latestMatchesCurrentPreview);
@@ -842,7 +870,7 @@ export default function MealPlanSheet({ foods, presentation = "sheet", active = 
       cancelled = true;
       workspaceSync.invalidate("meal-plan");
     };
-  }, [active, returningFromRelatedFlow, plannerContextKey, dateReviewKey, ingredientKey, maxMinutes, servings, mealPreferencesVersion, mealPlanRefreshNonce, workspaceSync]);
+  }, [active, returningFromRelatedFlow, plannerContextKey, anchorFoodId, dateReviewKey, ingredientKey, maxMinutes, servings, mealPreferencesVersion, mealPlanRefreshNonce, workspaceSync]);
 
   useEffect(() => {
     if (!active || !workspaceTransport) return;
@@ -1790,6 +1818,13 @@ export default function MealPlanSheet({ foods, presentation = "sheet", active = 
     ) : (
     <div className="meal-sheet-content">
     {shoppingOpen ? <span className="sr-only" role="status" aria-live="polite" aria-atomic="true" data-shopping-live-state={shoppingError ? "error" : shoppingLoading ? "loading" : shoppingMutating ? "mutating" : shoppingRefreshQueued ? "queued" : "current"} aria-busy={shoppingLoading || shoppingMutating}>{shoppingError ? "장보기 목록을 불러오지 못했어요. 다시 시도해 주세요" : shoppingLoading ? "장보기 목록을 불러오는 중이에요" : shoppingMutating ? "장보기 항목을 저장하는 중이에요" : shoppingRefreshQueued ? "장보기 목록을 다시 불러오고 있어요" : "장보기 목록을 불러왔어요"}</span> : null}
+    {anchorStock && ingredients.length ? <section className="meal-anchor" aria-labelledby="meal-anchor-title" data-anchor-match={loading || anchorMatch === null ? "pending" : anchorMatch ? "true" : "false"}>
+      <span className="meal-anchor-copy">
+        <strong id="meal-anchor-title">{withAnchorParticle(anchorStock.name, "instrumental")} 만들 수 있는 메뉴</strong>
+        {!loading && anchorMatch === false ? <small role="status">{withAnchorParticle(anchorStock.name, "subject")} 들어가는 메뉴를 찾지 못해 다른 메뉴를 보여드려요.</small> : null}
+      </span>
+      {onClearAnchor ? <button className="meal-anchor-clear" type="button" aria-label={`${anchorStock.name} 기준 해제하고 전체 메뉴 보기`} onClick={onClearAnchor}><Cross2Icon width={14} height={14} aria-hidden="true" />전체 메뉴</button> : null}
+    </section> : null}
     {ingredients.length ? <>
     {mealApi.isConfigured ? <button className="recipe-preferences-toggle" type="button" disabled={mealPreferencesLoading || mealPreferencesSaving || (!mealPreferencesLoaded && !mealPreferencesError)} aria-busy={mealPreferencesLoading || mealPreferencesSaving} onClick={() => setMealPreferencesOpen((current) => !current)}>{mealPreferencesLoading ? "식단 조건 불러오는 중" : mealPreferencesOpen ? "식단 조건 접기" : !mealPreferencesLoaded && mealPreferencesError ? "조건을 불러올 수 없어요" : mealPreferencesDraftDirty ? "저장하지 않은 변경이 있어요" : mealPreferences.avoid_allergens.length ? `피할 알레르기 ${mealPreferences.avoid_allergens.length}개` : "식단 조건 설정"}<ArrowRightIcon width={14} height={14} /></button> : null}
     {mealPreferencesNotice ? <div className="recipe-preference-notice" role="status"><CheckCircledIcon width={15} height={15} />{mealPreferencesNotice}</div> : null}

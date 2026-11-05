@@ -52,24 +52,14 @@ html[data-rescue-theme] .kitchen-hero .rescue-deck {
 /* Focus: the device screen strips outlines, so the photo relies on the shared leek-green
    ::after ring, which reads on the card surface (yolk would not). */
 
-.rescue-card-chip {
+/* The shared FreshnessChip, pinned to the photo corner; a soft shadow lifts it off the image. */
+:root[data-rescue-theme] .rescue-card-chip {
   position: absolute;
   top: 8px;
   left: 8px;
-  padding: 3px 10px;
-  border-radius: 999px;
-  background: var(--fresh-bucket, var(--fresh-unknown));
-  color: #10170f;
-  font-family: var(--fresh-display);
+  height: 28px;
   font-size: 0.875rem;
-  line-height: 1.4;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
-}
-
-.rescue-card-chip[data-estimated="true"] {
-  background: var(--fresh-surface);
-  color: var(--fresh-ink);
-  box-shadow: inset 0 0 0 2px var(--fresh-bucket, var(--fresh-unknown)), 0 2px 8px rgba(0, 0, 0, 0.18);
 }
 
 .rescue-card-body {
@@ -130,19 +120,21 @@ html[data-rescue-theme][data-rescue-theme] .meal-home .rescue-card-action-ate {
   color: var(--fresh-primary-ink);
 }
 
+/* Second tap confirms: the button inverts instead of borrowing an urgency colour. */
 html[data-rescue-theme][data-rescue-theme] .meal-home .rescue-card-action-ate.is-confirming {
-  background: var(--kitchen-yolk);
-  color: #1b1a10;
+  background: var(--ink);
+  color: var(--surface-2);
 }
 
+/* 날짜 확인 is an action (soft leek); the chip alone carries the urgency colour. */
 html[data-rescue-theme][data-rescue-theme] .meal-home .rescue-card-action-check {
-  background: color-mix(in srgb, var(--fresh-past) 14%, var(--fresh-surface));
-  color: color-mix(in srgb, var(--fresh-past) 72%, var(--fresh-ink));
+  background: var(--action-soft);
+  color: var(--action-text);
 }
 
 html[data-rescue-theme][data-rescue-theme] .meal-home .rescue-card-action-cook {
-  background: color-mix(in srgb, var(--fresh-ink) 7%, var(--fresh-surface));
-  color: var(--fresh-ink);
+  background: var(--surface-3);
+  color: var(--ink);
 }
 
 .rescue-deck-clear {
@@ -152,8 +144,8 @@ html[data-rescue-theme][data-rescue-theme] .meal-home .rescue-card-action-cook {
   margin-top: 16px;
   padding: 14px 16px;
   border-radius: 20px;
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--kitchen-hero-ink);
+  background: var(--hero-raised);
+  color: var(--hero-ink);
   font-weight: 700;
 }
 

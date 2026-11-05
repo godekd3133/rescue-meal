@@ -1,0 +1,263 @@
+/*
+ * One-gesture record actions: rescue-card 냉동, swipeable 냉장고 rows, the toast's
+ * 되돌리기 and the anchored 식단 banner. Kitchen semantic tokens only.
+ */
+
+/* ---------- Rescue card: 먹었어요 on its own row, 요리 · 냉동 below (168px card) ---------- */
+
+.rescue-card-actions.rescue-card-actions-stacked {
+  grid-template-columns: 1fr 1fr;
+}
+
+.rescue-card-actions.rescue-card-actions-stacked .rescue-card-action-ate {
+  grid-column: 1 / -1;
+}
+
+html[data-rescue-theme][data-rescue-theme] .meal-home .rescue-card-action-freeze {
+  background: var(--surface-3);
+  color: var(--ink);
+}
+
+html[data-rescue-theme][data-rescue-theme] .meal-home .rescue-card-actions-stacked .rescue-card-action {
+  padding: 0 8px;
+}
+
+/* ---------- 냉장고 swipe rows ---------- */
+
+.swipe-row {
+  position: relative;
+  border-radius: var(--radius-card, 20px);
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.swipe-row-front {
+  position: relative;
+  z-index: 2;
+  transition: transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  will-change: transform;
+}
+
+.swipe-row[data-swipe-state="dragging"] .swipe-row-front {
+  transition: none;
+}
+
+html[data-rescue-theme][data-rescue-theme] .meal-home .swipe-row .inventory-row {
+  width: 100%;
+  padding-right: 52px !important;
+}
+
+.swipe-row .inventory-row .row-chevron {
+  display: none;
+}
+
+html[data-rescue-theme][data-rescue-theme] .meal-home .swipe-row-more {
+  position: absolute !important;
+  top: 50%;
+  right: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink-muted);
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+
+html[data-rescue-theme][data-rescue-theme] .meal-home .swipe-row-more:focus-visible,
+html[data-rescue-theme][data-rescue-theme] .meal-home .swipe-row-action:focus-visible,
+html[data-rescue-theme][data-rescue-theme] .meal-home .swipe-row-menu-item:focus-visible {
+  outline: 3px solid var(--action-text);
+  outline-offset: -3px;
+}
+
+.swipe-row-under {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: none;
+  align-items: center;
+  padding: 0 20px;
+  border-radius: inherit;
+  font-weight: 800;
+}
+
+.swipe-row[data-swipe-tone="ate"] .swipe-row-under-primary {
+  display: flex;
+  background: var(--action);
+  color: var(--action-ink);
+}
+
+.swipe-row[data-swipe-tone="check"] .swipe-row-under-primary {
+  display: flex;
+  background: var(--notice-caution);
+  color: var(--notice-caution-accent);
+}
+
+.swipe-row-actions {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+  display: flex;
+  visibility: hidden;
+}
+
+.swipe-row:is([data-swipe-tone="reveal"], [data-swipe-state="open"]) .swipe-row-actions {
+  visibility: visible;
+}
+
+html[data-rescue-theme][data-rescue-theme] .meal-home .swipe-row-action {
+  flex: 1 1 0;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+html[data-rescue-theme][data-rescue-theme] .meal-home .swipe-row-action-freeze {
+  background: var(--surface-3);
+  color: var(--ink);
+}
+
+html[data-rescue-theme][data-rescue-theme] .meal-home .swipe-row-action-discard {
+  background: var(--notice-danger);
+  color: var(--notice-danger-accent);
+}
+
+.swipe-row-menu {
+  position: absolute;
+  top: calc(50% + 22px);
+  right: 8px;
+  z-index: 5;
+  display: grid;
+  min-width: 156px;
+  padding: 6px;
+  border: 1px solid var(--line-strong);
+  border-radius: 16px;
+  background: var(--surface-2);
+  box-shadow: var(--shadow-card);
+}
+
+.swipe-row:has(.swipe-row-menu) {
+  overflow: visible;
+  z-index: 4;
+}
+
+html[data-rescue-theme][data-rescue-theme] .meal-home .swipe-row-menu-item {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+html[data-rescue-theme][data-rescue-theme] .meal-home .swipe-row-menu-item-ate {
+  color: var(--action-text);
+}
+
+html[data-rescue-theme][data-rescue-theme] .meal-home .swipe-row-menu-item-check {
+  color: var(--notice-caution-accent);
+}
+
+html[data-rescue-theme][data-rescue-theme] .meal-home .swipe-row-menu-item-discard {
+  color: var(--notice-danger-accent);
+}
+
+/* ---------- Toast: 되돌리기 ---------- */
+
+.toast-undo {
+  flex: 0 0 auto;
+  min-width: 44px;
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--line-strong, rgba(255, 255, 255, 0.32));
+  border-radius: 999px;
+  background: var(--action-soft, transparent);
+  color: var(--action-text, inherit);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.toast-undo:focus-visible {
+  outline: 2px solid var(--action-text, currentColor);
+  outline-offset: 2px;
+}
+
+/* ---------- 식단: anchored on one food ---------- */
+
+.meal-anchor {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 12px;
+  padding: 10px 10px 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--action-soft);
+  color: var(--ink);
+}
+
+.meal-anchor-copy {
+  display: grid;
+  flex: 1 1 auto;
+  gap: 2px;
+  min-width: 0;
+}
+
+.meal-anchor-copy strong {
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.meal-anchor-copy small {
+  color: var(--ink-muted);
+  font-size: 0.75rem;
+}
+
+.meal-anchor-clear {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .swipe-row-front {
+    transition: none;
+  }
+}
+
+/* The label is drawn here so the toast's live status text stays the record message itself;
+   the button's accessible name comes from aria-label="되돌리기". */
+.toast-undo::before {
+  content: "되돌리기";
+}
