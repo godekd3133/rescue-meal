@@ -1,0 +1,254 @@
+{
+  "schema": "rescue-meal.ocr-benchmark.v1",
+  "generated_at": "2026-11-05T08:44:36+09:00",
+  "config": {
+    "mode": "text-only",
+    "corpus_label": "data/fixtures",
+    "worker_url": null,
+    "ocr_model_version": null,
+    "name_threshold": 0.8,
+    "confident_threshold": 0.8,
+    "python": "3.14.7",
+    "platform": "Darwin arm64"
+  },
+  "scored_documents": 5,
+  "drafts_written": [],
+  "skipped": [],
+  "receipts": {
+    "summary": {
+      "documents": 3,
+      "pipeline_status": {
+        "complete": 3
+      },
+      "merchant_accuracy": 1.0,
+      "merchant_outcomes": {
+        "correct": 2,
+        "both_absent": 1
+      },
+      "purchased_at_accuracy": 1.0,
+      "purchased_at_outcomes": {
+        "correct": 2,
+        "both_absent": 1
+      },
+      "grocery_kind_accuracy": 1.0,
+      "line_precision": 1.0,
+      "line_recall": 1.0,
+      "line_counts": {
+        "truth_lines": 20,
+        "predicted_lines": 20,
+        "matched_lines": 20,
+        "exact_name_matches": 20
+      },
+      "quantity_match_rate": 1.0,
+      "amount_match_rate": 1.0,
+      "review_line_rate": 0.0,
+      "receipt_review_rate": 0.0,
+      "silent_wrong_matched_lines": 0,
+      "silent_extra_lines": 0,
+      "flagged_but_correct_lines": 0,
+      "timing": {
+        "count": 3,
+        "p50_ms": 0.27,
+        "p90_ms": 2.79,
+        "max_ms": 2.79,
+        "mean_ms": 1.05
+      },
+      "ocr_timing": {
+        "count": 0,
+        "p50_ms": null,
+        "p90_ms": null,
+        "max_ms": null,
+        "mean_ms": null
+      }
+    },
+    "documents": [
+      {
+        "id": "receipts/grocery_mart_sanitized_01",
+        "status": "complete",
+        "observations": 34,
+        "quality_status": null,
+        "ocr_input_profile": null,
+        "timing_ms": {
+          "parse": 2.79,
+          "total": 2.79
+        },
+        "metrics": {
+          "merchant": "correct",
+          "purchased_at": "correct",
+          "grocery_kind_correct": true,
+          "truth_lines": 10,
+          "predicted_lines": 10,
+          "matched_lines": 10,
+          "exact_name_matches": 10,
+          "quantity_correct": 10,
+          "quantity_compared": 10,
+          "amount_correct": 10,
+          "amount_compared": 10,
+          "review_lines": 0,
+          "grocery": true,
+          "receipt_needs_review": false,
+          "silent_wrong_matched_lines": 0,
+          "silent_extra_lines": 0,
+          "flagged_but_correct_lines": 0,
+          "template_id": "grocery-mart-v1"
+        }
+      },
+      {
+        "id": "receipts/restaurant_sanitized_01",
+        "status": "complete",
+        "observations": 10,
+        "quality_status": null,
+        "ocr_input_profile": null,
+        "timing_ms": {
+          "parse": 0.08,
+          "total": 0.08
+        },
+        "metrics": {
+          "merchant": "both_absent",
+          "purchased_at": "both_absent",
+          "grocery_kind_correct": true,
+          "truth_lines": 0,
+          "predicted_lines": 0,
+          "matched_lines": 0,
+          "exact_name_matches": 0,
+          "quantity_correct": 0,
+          "quantity_compared": 0,
+          "amount_correct": 0,
+          "amount_compared": 0,
+          "review_lines": 0,
+          "grocery": false,
+          "receipt_needs_review": true,
+          "silent_wrong_matched_lines": 0,
+          "silent_extra_lines": 0,
+          "flagged_but_correct_lines": 0,
+          "template_id": "restaurant-card-v1"
+        }
+      },
+      {
+        "id": "receipts/retail_beverage_sanitized_01",
+        "status": "complete",
+        "observations": 40,
+        "quality_status": null,
+        "ocr_input_profile": null,
+        "timing_ms": {
+          "parse": 0.27,
+          "total": 0.27
+        },
+        "metrics": {
+          "merchant": "correct",
+          "purchased_at": "correct",
+          "grocery_kind_correct": true,
+          "truth_lines": 10,
+          "predicted_lines": 10,
+          "matched_lines": 10,
+          "exact_name_matches": 10,
+          "quantity_correct": 10,
+          "quantity_compared": 10,
+          "amount_correct": 10,
+          "amount_compared": 10,
+          "review_lines": 0,
+          "grocery": true,
+          "receipt_needs_review": false,
+          "silent_wrong_matched_lines": 0,
+          "silent_extra_lines": 0,
+          "flagged_but_correct_lines": 0,
+          "template_id": "retail-beverage-v1"
+        }
+      }
+    ]
+  },
+  "labels": {
+    "summary": {
+      "documents": 2,
+      "pipeline_status": {
+        "complete": 2
+      },
+      "date_value_recall": 1.0,
+      "date_value_precision": 1.0,
+      "date_counts": {
+        "truth_dates": 1,
+        "predicted_dates": 1,
+        "truth_dates_found": 1,
+        "predicted_dates_correct": 1
+      },
+      "kind_correct_rate": 1.0,
+      "kind_misclassification_rate": 0.0,
+      "kind_abstain_rate": 0.0,
+      "consumption_date_outcomes": {
+        "both_absent": 2
+      },
+      "consumption_date_wrong": 0,
+      "confident_wrong_consumption_date": 0,
+      "confident_wrong_ids": [],
+      "storage_accuracy": 1.0,
+      "label_review_rate": 1.0,
+      "timing": {
+        "count": 2,
+        "p50_ms": 0.12,
+        "p90_ms": 0.16,
+        "max_ms": 0.16,
+        "mean_ms": 0.12
+      },
+      "ocr_timing": {
+        "count": 0,
+        "p50_ms": null,
+        "p90_ms": null,
+        "max_ms": null,
+        "mean_ms": null
+      }
+    },
+    "documents": [
+      {
+        "id": "labels/packaged_no_date_sanitized_01",
+        "status": "complete",
+        "observations": 6,
+        "quality_status": null,
+        "ocr_input_profile": null,
+        "timing_ms": {
+          "parse": 0.16,
+          "total": 0.16
+        },
+        "metrics": {
+          "truth_dates": 0,
+          "predicted_dates": 0,
+          "truth_dates_found": 0,
+          "predicted_dates_correct": 0,
+          "kind_correct": 0,
+          "kind_abstained": 0,
+          "kind_wrong": 0,
+          "consumption_date": "both_absent",
+          "consumption_selected_confidence": null,
+          "confident_wrong_consumption_date": false,
+          "storage_correct": true,
+          "label_requires_review": true
+        }
+      },
+      {
+        "id": "labels/produce_ambiguous_sanitized_01",
+        "status": "complete",
+        "observations": 6,
+        "quality_status": null,
+        "ocr_input_profile": null,
+        "timing_ms": {
+          "parse": 0.08,
+          "total": 0.08
+        },
+        "metrics": {
+          "truth_dates": 1,
+          "predicted_dates": 1,
+          "truth_dates_found": 1,
+          "predicted_dates_correct": 1,
+          "kind_correct": 1,
+          "kind_abstained": 0,
+          "kind_wrong": 0,
+          "consumption_date": "both_absent",
+          "consumption_selected_confidence": null,
+          "confident_wrong_consumption_date": false,
+          "storage_correct": true,
+          "label_requires_review": true
+        }
+      }
+    ]
+  },
+  "observations": []
+}

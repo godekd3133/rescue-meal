@@ -175,7 +175,10 @@ def test_receipt_observations_group_by_item_anchor_and_bbox_columns() -> None:
     products = [line for line in parsed.lines if line.line_type == "product"]
 
     assert len(products) == 2
-    assert products[0].raw_name == "시금치"
+    # Package size stays in the raw name (as in the text path); the canonical
+    # name drops it.
+    assert products[0].raw_name == "시금치 1팩"
+    assert products[0].canonical_name == "시금치"
     assert products[0].quantity == 1
     assert products[0].unit_price == 2980
     assert products[0].total_price == 2980
@@ -191,6 +194,218 @@ def test_receipt_observations_group_by_item_anchor_and_bbox_columns() -> None:
         OcrObservation("1,100", 0.95, (0.72, 0.86, 0.08, 0.02)),
     ])
     assert weighted.lines[0].unit == "개"
+
+
+def _obs(text: str, x: float, y: float, w: float = 0.1, h: float = 0.05) -> OcrObservation:
+    return OcrObservation(text, 0.95, (x, y, w, h))
+
+
+def test_receipt_observations_keep_the_table_header_out_of_the_first_product_name() -> None:
+    # Benchmark e2e `retail_beverage_sanitized_01`: the header box sits within
+    # the name-pull distance of the first item and used to prefix its name.
+    parsed = parse_receipt_observations([
+        _obs("상품명 단가 수량 금액", 0.076, 0.890, 0.289, 0.022),
+        _obs("001지리산샘물 500mL뚜껑(20)", 0.077, 0.865, 0.441, 0.022),
+        _obs("8809345359390", 0.077, 0.844, 0.241, 0.019),
+        _obs("2,480", 0.484, 0.816, 0.091, 0.020),
+        _obs("4", 0.683, 0.816, 0.026, 0.016),
+        _obs("9,920", 0.852, 0.812, 0.088, 0.021),
+    ])
+
+    product = parsed.lines[0]
+    assert product.raw_name == "지리산샘물 500mL뚜껑(20)"
+    assert "상품명" not in product.raw_name
+    assert (product.unit_price, product.quantity, product.total_price) == (2480, 4, 9920)
+    assert product.review_reason is None
+
+
+def test_receipt_observations_keep_can_and_volume_in_the_name() -> None:
+    parsed = parse_receipt_observations([
+        _obs("007삿포로/캔500m", 0.059, 0.366, 0.296, 0.020),
+        _obs("4901880851446", 0.058, 0.342, 0.233, 0.019),
+        _obs("2,150", 0.473, 0.314, 0.083, 0.020),
+        _obs("1", 0.668, 0.314, 0.025, 0.016),
+        _obs("2,150", 0.840, 0.312, 0.081, 0.019),
+        _obs("$특매할인", 0.051, 0.293, 0.143, 0.022),
+        _obs("-260", 0.474, 0.291, 0.080, 0.020),
+        _obs("1", 0.667, 0.292, 0.026, 0.015),
+        _obs("-260", 0.843, 0.289, 0.077, 0.019),
+    ])
+
+    assert [line.line_type for line in parsed.lines] == ["product", "discount"]
+    assert parsed.lines[0].raw_name == "삿포로/캔500m"
+    assert parsed.lines[0].quantity == 1
+    # The discount row's own numbers stay with the discount line.
+    assert parsed.lines[1].total_price == -260
+
+
+def test_receipt_observations_attach_amounts_from_the_same_visual_row() -> None:
+    # Benchmark e2e `syn_inline_amount_01`: the quantity box is a little
+    # higher than the name box, so a plain y sort pulled the next row's
+    # amounts into the previous product without a review flag.
+    parsed = parse_receipt_observations([
+        _obs("상품명 단가 수량 금액", 0.052, 0.771, 0.294, 0.047),
+        _obs("001바른계란10구", 0.048, 0.705, 0.259, 0.051),
+        _obs("4,980", 0.471, 0.705, 0.092, 0.051),
+        _obs("1", 0.678, 0.708, 0.028, 0.047),
+        _obs("4,980", 0.848, 0.704, 0.095, 0.057),
+        _obs("002햇양파1.5kg", 0.047, 0.638, 0.245, 0.057),
+        _obs("3,500", 0.468, 0.639, 0.097, 0.056),
+        _obs("1", 0.676, 0.643, 0.035, 0.049),
+        _obs("3,500", 0.848, 0.642, 0.097, 0.053),
+        _obs("003 냉동만두1kg", 0.046, 0.573, 0.252, 0.057),
+        _obs("6,900", 0.468, 0.575, 0.096, 0.056),
+        _obs("2", 0.675, 0.577, 0.029, 0.049),
+        _obs("13,800", 0.836, 0.578, 0.107, 0.051),
+        _obs("할인-1,000", 0.045, 0.509, 0.171, 0.056),
+        _obs("합계22,280", 0.045, 0.445, 0.176, 0.052),
+        _obs("감사합니다 다음에 또 오세요", 0.045, 0.380, 0.4, 0.052),
+    ])
+
+    products = [line for line in parsed.lines if line.line_type == "product"]
+    assert [(line.raw_name, line.quantity, line.unit_price, line.total_price) for line in products] == [
+        ("바른계란10구", 1, 4980, 4980),
+        ("햇양파1.5kg", 1, 3500, 3500),
+        ("냉동만두1kg", 2, 6900, 13800),
+    ]
+    assert all(line.review_reason is None for line in products)
+    # Footer text after 합계 must not leak into the last product.
+    assert [line.line_type for line in parsed.lines][-2:] == ["discount", "subtotal"]
+
+
+def test_receipt_observations_repair_period_thousands_separator_but_require_review() -> None:
+    # Benchmark e2e `syn_ocr_noise_01`: `2.500` was read as 500 won.
+    parsed = parse_receipt_observations([
+        _obs("001국산콩 두 부 300g", 0.048, 0.705, 0.323, 0.055),
+        _obs("8800000000017", 0.047, 0.647, 0.266, 0.046),
+        _obs("2.500", 0.468, 0.576, 0.097, 0.056),
+        _obs("1", 0.679, 0.577, 0.028, 0.046),
+        _obs("2.500", 0.847, 0.576, 0.096, 0.055),
+    ])
+
+    product = parsed.lines[0]
+    assert (product.unit_price, product.total_price) == (2500, 2500)
+    assert product.review_reason is not None
+    assert product.match_confidence < 0.8
+
+
+@pytest.mark.parametrize(
+    ("unit_price", "quantity", "total_price"),
+    [("2,980", "1", "5,980"), ("12,500", "2", "37,500")],
+)
+def test_receipt_observations_flag_amounts_that_do_not_multiply(unit_price: str, quantity: str, total_price: str) -> None:
+    parsed = parse_receipt_observations([
+        _obs("001 시금치 1단", 0.05, 0.80, 0.3, 0.03),
+        _obs(unit_price, 0.47, 0.75, 0.09, 0.03),
+        _obs(quantity, 0.67, 0.75, 0.02, 0.03),
+        _obs(total_price, 0.84, 0.75, 0.09, 0.03),
+    ])
+
+    assert parsed.lines[0].review_reason is not None
+    assert any("확인" in warning for warning in parsed.warnings)
+
+
+def test_receipt_observations_flag_conflicting_amount_candidates() -> None:
+    parsed = parse_receipt_observations([
+        _obs("001 시금치 1단", 0.05, 0.80, 0.3, 0.03),
+        _obs("1,980", 0.47, 0.75, 0.09, 0.03),
+        _obs("1", 0.67, 0.75, 0.02, 0.03),
+        _obs("1,980", 0.84, 0.75, 0.09, 0.03),
+        _obs("2,480", 0.84, 0.70, 0.09, 0.03),
+    ])
+
+    assert parsed.lines[0].review_reason is not None
+
+
+def test_receipt_observations_infer_a_missing_quantity_only_from_consistent_amounts() -> None:
+    parsed = parse_receipt_observations([
+        _obs("001 맛타리버섯 2팩", 0.05, 0.80, 0.3, 0.03),
+        _obs("1,000", 0.47, 0.75, 0.09, 0.03),
+        _obs("1,000", 0.84, 0.75, 0.09, 0.03),
+    ])
+
+    assert parsed.lines[0].quantity == 1
+    assert parsed.lines[0].review_reason is None
+
+    unresolved = parse_receipt_observations([
+        _obs("001 맛타리버섯 2팩", 0.05, 0.80, 0.3, 0.03),
+        _obs("1,000", 0.47, 0.75, 0.09, 0.03),
+        _obs("1,500", 0.84, 0.75, 0.09, 0.03),
+    ])
+    assert unresolved.lines[0].review_reason is not None
+
+
+def test_receipt_text_repairs_ocr_lookalike_amounts_with_review() -> None:
+    parsed = parse_receipt_text(
+        "판매일: 26-11-03 10:11\n상품명 단가 수량 금액\n"
+        "001 국산콩 두 부 300g\n8800000000017\n2.500 1 2.500\n"
+        "002 시금치 1단\n201344\n1,980 l 1,980\n"
+        "003 무항생제 닭가슴살 1kg\n8800000000024\n8,9OO 1 8,9OO"
+    )
+
+    products = [line for line in parsed.lines if line.line_type == "product"]
+    assert [(line.raw_name, line.quantity, line.total_price) for line in products] == [
+        ("국산콩 두 부 300g", 1, 2500),
+        ("시금치 1단", 1, 1980),
+        ("무항생제 닭가슴살 1kg", 1, 8900),
+    ]
+    assert all(line.review_reason for line in products)
+    assert any("확인" in warning for warning in parsed.warnings)
+
+
+def test_receipt_text_flags_a_numbered_row_whose_amounts_do_not_multiply() -> None:
+    parsed = parse_receipt_text("001 시금치 1단 1,980 2 1,980")
+
+    assert parsed.lines[0].review_reason is not None
+    assert parsed.lines[0].match_confidence < 0.8
+
+
+def test_receipt_text_reads_rows_without_item_numbers_and_branch_merchant_names() -> None:
+    parsed = parse_receipt_text(
+        "행복마트 성수점\n2026-11-01 13:05\n상품명 단가 수량 금액\n"
+        "서울목장 우유 1L 2,500 1 2,500\n국산콩 두부 300g 1,200 2 2,400\n대파 1단 2,980 1 2,980\n"
+        "합계 7,880\n카드결제 7,880"
+    )
+
+    assert parsed.merchant_name == "행복마트 성수점"
+    products = [line for line in parsed.lines if line.line_type == "product"]
+    assert [(line.raw_name, line.quantity, line.total_price) for line in products] == [
+        ("서울목장 우유 1L", 1, 2500),
+        ("국산콩 두부 300g", 2, 2400),
+        ("대파 1단", 1, 2980),
+    ]
+
+
+@pytest.mark.parametrize(
+    "line",
+    ["TEL 02 123 4567", "과세물품 7,164 716 7,880", "상품명 단가 수량 금액", "판매일 2026 11 01", "2,500 1 2,500"],
+)
+def test_receipt_text_does_not_invent_unnumbered_products(line: str) -> None:
+    parsed = parse_receipt_text(f"행복마트\n{line}")
+
+    assert not [item for item in parsed.lines if item.line_type == "product"]
+
+
+def test_receipt_observations_without_item_numbers_rebuild_rows() -> None:
+    # Benchmark e2e `syn_no_item_number_01`: used to yield three empty names.
+    parsed = parse_receipt_observations([
+        _obs("행복마트 성수점", 0.054, 0.900, 0.219, 0.054),
+        _obs("2026-11-0113:05", 0.054, 0.840, 0.251, 0.047),
+        _obs("상품명 단가 수량 금액", 0.052, 0.773, 0.295, 0.051),
+        _obs("서울목장 우유 1L", 0.052, 0.706, 0.229, 0.056),
+        _obs("2,500", 0.470, 0.702, 0.093, 0.054),
+        _obs("1", 0.679, 0.705, 0.031, 0.046),
+        _obs("2,500", 0.848, 0.700, 0.092, 0.051),
+        _obs("대파1단", 0.050, 0.578, 0.118, 0.059),
+        _obs("2,980", 0.471, 0.575, 0.093, 0.054),
+        _obs("1", 0.679, 0.577, 0.030, 0.044),
+        _obs("2,980", 0.848, 0.570, 0.093, 0.056),
+        _obs("합계5,480", 0.052, 0.519, 0.154, 0.049),
+    ])
+
+    assert parsed.merchant_name == "행복마트 성수점"
+    products = [line for line in parsed.lines if line.line_type == "product"]
+    assert [(line.raw_name, line.total_price) for line in products] == [("서울목장 우유 1L", 2500), ("대파1단", 2980)]
 
 
 def test_local_paddle_bbox_is_normalized_to_the_shared_review_coordinates() -> None:
@@ -283,6 +498,94 @@ def test_label_parser_does_not_treat_lot_embedded_digits_as_a_compact_date() -> 
 
     assert parsed.date_candidates == []
     assert parsed.consumption_date_candidate is None
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "소비기한: 뚜껑 별도 표기일까지\nLOT 20261015\n실온보관",
+        "소비기한 별도 표기\n제조번호: 20261015",
+        "소비기한 뚜껑 표기\nLOT\n20261015",
+        "소비기한 하단 표기\nLot No. 2026.10.15",
+    ],
+)
+def test_label_parser_never_offers_a_lot_number_near_a_use_by_keyword_as_a_date(text: str) -> None:
+    # Benchmark probe `lot_number_near_keyword_01`: the LOT was read as a
+    # use_by date with confidence 0.94 — the most dangerous failure mode.
+    parsed = parse_label_text(text)
+
+    assert parsed.date_candidates == []
+    assert parsed.consumption_date_candidate is None
+    assert parsed.requires_review is True
+    assert any("제조번호(LOT)" in warning for warning in parsed.warnings)
+
+
+def test_label_parser_keeps_a_real_use_by_date_next_to_a_lot_number() -> None:
+    parsed = parse_label_text("LOT 20261015\n소비기한 2026.12.01\n냉장보관")
+
+    assert [(candidate.kind, candidate.value) for candidate in parsed.date_candidates] == [("use_by", date(2026, 12, 1))]
+
+
+def test_label_parser_never_trusts_an_unlabelled_compact_date_shape() -> None:
+    parsed = parse_label_text("소비기한 뚜껑 표기\n20261015")
+
+    assert parsed.consumption_date_candidate is not None
+    assert parsed.consumption_date_candidate.confidence < 0.8
+
+
+def test_label_parser_classifies_adjacent_production_and_use_by_lines() -> None:
+    parsed = parse_label_text("제품명: 가상 요거트\n제조일 2026.10.25\n소비기한 2026.11.08\n0~10℃ 냉장보관")
+
+    assert [(candidate.kind, candidate.value) for candidate in parsed.date_candidates] == [
+        ("production_date", date(2026, 10, 25)),
+        ("use_by", date(2026, 11, 8)),
+    ]
+    assert parsed.consumption_date_candidate is not None
+    assert parsed.consumption_date_candidate.value == date(2026, 11, 8)
+    assert parsed.consumption_date_candidate.requires_review is True
+
+
+def test_label_parser_classifies_two_labelled_dates_on_one_line() -> None:
+    parsed = parse_label_text("유통기한 2026.11.20 제조일 2026.10.20\n냉동보관 -18℃ 이하")
+
+    assert [(candidate.kind, candidate.value) for candidate in parsed.date_candidates] == [
+        ("sell_by", date(2026, 11, 20)),
+        ("production_date", date(2026, 10, 20)),
+    ]
+    assert parsed.consumption_date_candidate is not None
+    assert parsed.consumption_date_candidate.kind == "sell_by"
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        # The only keyword labels the *other* value on the line.
+        "2026.11.20 제조일 2026.10.20",
+        # Column headings without x-coordinates.
+        "제조일  소비기한\n2026.10.25  2026.11.08",
+    ],
+)
+def test_label_parser_abstains_when_a_keyword_could_belong_to_another_value(text: str) -> None:
+    parsed = parse_label_text(text)
+
+    assert parsed.consumption_date_candidate is None
+    assert parsed.date_candidates[0].kind == "unknown"
+
+
+def test_label_parser_reads_two_digit_years_without_trusting_them() -> None:
+    parsed = parse_label_text("소비기한: 26.11.20\n냉장보관")
+
+    assert parsed.consumption_date_candidate is not None
+    assert parsed.consumption_date_candidate.kind == "use_by"
+    assert parsed.consumption_date_candidate.value == date(2026, 11, 20)
+    # `26.11.20` is also a valid DD.MM.YY date, so it is never confident.
+    assert parsed.consumption_date_candidate.confidence < 0.8
+    assert any("연도가 두 자리" in warning for warning in parsed.warnings)
+
+
+@pytest.mark.parametrize("text", ["단가 2.500원", "중량 1.5kg", "전화 02-123-4567", "1.2.3", "26.13.40"])
+def test_label_parser_two_digit_year_does_not_match_prices_or_codes(text: str) -> None:
+    assert parse_label_text(text).date_candidates == []
 
 
 @pytest.mark.parametrize(
