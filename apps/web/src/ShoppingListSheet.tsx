@@ -29,6 +29,10 @@ type ShoppingListSheetProps = {
   onOpenInventoryFood?: (foodId: string) => void;
   onOpenMeal: () => void;
   initialFocus?: boolean;
+  /** False while the 장보기 tab is hidden or covered by a sheet; focus hand-offs wait for it. */
+  active?: boolean;
+  /** Changes whenever the received-food readback is (re)announced, so focus returns to its action. */
+  receivedFoodToken?: unknown;
   demoMode?: boolean;
   storageLocations: ApiStorageLocation[];
   inventoryFoods?: ShoppingInventoryFood[];
@@ -86,6 +90,8 @@ export default function ShoppingListSheet({
   onOpenInventoryFood,
   onOpenMeal,
   initialFocus = false,
+  active = true,
+  receivedFoodToken,
   demoMode = false,
   storageLocations,
   inventoryFoods = [],
@@ -182,7 +188,8 @@ export default function ShoppingListSheet({
       const activeElement = document.activeElement;
       return activeElement === document.body
         || activeElement === document.documentElement
-        || (activeElement instanceof HTMLElement && activeElement.classList.contains("sheet-close-button"))
+        || (activeElement instanceof HTMLElement && (activeElement.classList.contains("sheet-close-button") || activeElement.classList.contains("app-bottom-nav-item")))
+        || (activeElement instanceof HTMLElement && (Boolean(activeElement.closest("[hidden]")) || activeElement.getClientRects().length === 0))
         || !activeElement?.isConnected;
     };
     const findTarget = () => {
@@ -258,7 +265,7 @@ export default function ShoppingListSheet({
   }, [items, keyboard, mutating, recentlyReceivedFoodName]);
 
   useEffect(() => {
-    if (!recentlyReceivedFoodName) return;
+    if (!recentlyReceivedFoodName || !active) return;
     let settleFrame: number | undefined;
     let settleTimer: number | undefined;
     const focusReceivedAction = () => revealAndFocus(receivedFoodActionRef.current, { block: "nearest" });
@@ -271,7 +278,7 @@ export default function ShoppingListSheet({
       if (settleFrame !== undefined) window.cancelAnimationFrame(settleFrame);
       if (settleTimer !== undefined) window.clearTimeout(settleTimer);
     };
-  }, [recentlyReceivedFoodName]);
+  }, [recentlyReceivedFoodName, active, receivedFoodToken]);
 
   useEffect(() => {
     const previousError = previousErrorRef.current;

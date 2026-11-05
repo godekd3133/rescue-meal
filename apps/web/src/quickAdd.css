@@ -1,0 +1,438 @@
+/* Quick add: the add sheet's first view. Uses the sheet tokens (re-pointed at the
+   kitchen palette by kitchen.css) so light, dark and high contrast follow the app. */
+
+.bottom-sheet .quick-add {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+  padding: 4px 0 10px;
+}
+
+.bottom-sheet .quick-add-line {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.bottom-sheet .quick-add-line-label,
+.bottom-sheet .quick-add-section-label {
+  color: var(--atelier-ink);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.bottom-sheet .quick-add-line-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  min-width: 0;
+}
+
+.bottom-sheet .quick-add-line-input {
+  min-width: 0;
+  min-height: 48px;
+  font-size: 16px;
+}
+
+.bottom-sheet .quick-add-line-submit {
+  min-width: 64px;
+  min-height: 48px;
+  padding: 0 14px;
+  border: 1px solid var(--atelier-primary-action, var(--atelier-pistachio));
+  border-radius: 12px;
+  background: var(--atelier-primary-action, var(--atelier-pistachio));
+  color: var(--atelier-primary-action-ink, #fff);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.bottom-sheet .quick-add-line-submit:disabled {
+  border-color: var(--atelier-border-strong);
+  background: var(--atelier-surface-raised);
+  color: var(--atelier-muted);
+}
+
+.bottom-sheet .quick-add-line-hint {
+  color: var(--atelier-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.bottom-sheet .quick-add-chips {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.bottom-sheet .quick-add-chip-rail {
+  width: 100%;
+  min-width: 0;
+}
+
+.bottom-sheet .quick-add-chip-track {
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-rows: repeat(2, auto);
+  gap: 8px;
+  padding: 2px 2px 4px;
+  width: max-content;
+}
+
+.bottom-sheet .quick-add-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--atelier-border-strong);
+  border-radius: 999px;
+  background: var(--atelier-surface-raised);
+  color: var(--atelier-ink);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.bottom-sheet .quick-add-chip svg {
+  color: var(--atelier-muted);
+}
+
+.bottom-sheet .quick-add-chip[aria-pressed="true"] {
+  border-color: var(--atelier-pistachio);
+  background: color-mix(in srgb, var(--atelier-pistachio) 12%, var(--atelier-surface-raised));
+  color: var(--atelier-pistachio);
+}
+
+.bottom-sheet .quick-add-chip small {
+  min-width: 22px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--atelier-pistachio);
+  color: var(--atelier-primary-action-ink, #fff);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.bottom-sheet .quick-add-chip:focus-visible,
+.bottom-sheet .quick-add-method:focus-visible,
+.bottom-sheet .quick-add-manual-link:focus-visible,
+.bottom-sheet .quick-add-pill button:focus-visible,
+.bottom-sheet .quick-add-line-submit:focus-visible {
+  outline: 2px solid var(--atelier-pistachio);
+  outline-offset: 2px;
+}
+
+.bottom-sheet .quick-add-empty {
+  margin: 0;
+  padding: 14px;
+  border: 1px dashed var(--atelier-border-strong);
+  border-radius: 14px;
+  color: var(--atelier-muted);
+  font-size: 13px;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.bottom-sheet .quick-add-staged {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.bottom-sheet .quick-add-staged-heading {
+  display: grid;
+  gap: 2px;
+}
+
+.bottom-sheet .quick-add-staged-heading strong {
+  color: var(--atelier-ink);
+  font-size: 14px;
+}
+
+.bottom-sheet .quick-add-staged-heading small {
+  color: var(--atelier-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.bottom-sheet .quick-add-staged-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.bottom-sheet .quick-add-pill {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  padding: 8px 8px 10px 12px;
+  border: 1px solid var(--atelier-border-strong);
+  border-radius: 16px;
+  background: var(--atelier-surface-raised);
+}
+
+.bottom-sheet .quick-add-pill-failed {
+  border-color: var(--fresh-past, #ec5a43);
+}
+
+.bottom-sheet .quick-add-pill-name-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+}
+
+.bottom-sheet .quick-add-pill-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--atelier-ink);
+  text-align: left;
+}
+
+.bottom-sheet .quick-add-pill-name strong {
+  overflow: hidden;
+  font-size: 16px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bottom-sheet .quick-add-pill-name svg {
+  flex: none;
+  color: var(--atelier-muted);
+}
+
+.bottom-sheet .quick-add-pill-name-input {
+  min-width: 0;
+  min-height: 44px;
+}
+
+.bottom-sheet .quick-add-icon-button {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid var(--atelier-border);
+  border-radius: 12px;
+  background: var(--atelier-surface);
+  color: var(--atelier-ink);
+}
+
+.bottom-sheet .quick-add-pill-remove {
+  border-color: transparent;
+  background: transparent;
+  color: var(--atelier-muted);
+}
+
+.bottom-sheet .quick-add-pill-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.bottom-sheet .quick-add-stepper {
+  display: inline-grid;
+  grid-template-columns: 44px minmax(56px, auto) 44px;
+  align-items: center;
+}
+
+.bottom-sheet .quick-add-quantity {
+  padding: 0 6px;
+  color: var(--atelier-ink);
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  text-align: center;
+}
+
+.bottom-sheet .quick-add-storage {
+  min-width: 72px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--atelier-border-strong);
+  border-radius: 999px;
+  background: var(--atelier-surface);
+  color: var(--atelier-ink);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.bottom-sheet .quick-add-storage[data-storage="냉동"] {
+  border-color: color-mix(in srgb, var(--fresh-later, #8ccdb3) 70%, var(--atelier-border-strong));
+}
+
+.bottom-sheet .quick-add-storage[data-storage="실온"] {
+  border-color: color-mix(in srgb, var(--fresh-soon, #f4b72f) 70%, var(--atelier-border-strong));
+}
+
+.bottom-sheet .quick-add-pill-date {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  color: var(--atelier-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.bottom-sheet .quick-add-pill-date strong {
+  color: var(--atelier-ink);
+  font-weight: 700;
+}
+
+/* Estimates read as estimates: a dashed, neutral tag, never a deadline colour. */
+.bottom-sheet .quick-add-date-tag {
+  padding: 1px 8px;
+  border: 1px dashed var(--atelier-border-strong);
+  border-radius: 999px;
+  color: var(--atelier-ink);
+  font-weight: 700;
+}
+
+.bottom-sheet .quick-add-date-tag-unknown {
+  border-style: solid;
+  color: var(--atelier-muted);
+}
+
+.bottom-sheet .quick-add-pill-error {
+  color: var(--fresh-past, #c2412d);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.bottom-sheet .quick-add-submit-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  display: grid;
+  gap: 6px;
+  margin: 0 -2px;
+  padding: 18px 2px 6px;
+  background: linear-gradient(to bottom, transparent, var(--fresh-bg, var(--atelier-surface)) 16px);
+}
+
+.bottom-sheet .quick-add-submit-summary {
+  color: var(--atelier-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.bottom-sheet .quick-add-save {
+  min-height: 52px;
+}
+
+.bottom-sheet .quick-add-methods {
+  display: grid;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--atelier-border);
+}
+
+.bottom-sheet .quick-add-methods-heading {
+  display: grid;
+  gap: 2px;
+}
+
+.bottom-sheet .quick-add-methods-heading strong {
+  color: var(--atelier-ink);
+  font-size: 14px;
+}
+
+.bottom-sheet .quick-add-methods-heading small {
+  color: var(--atelier-muted);
+  font-size: 12px;
+}
+
+.bottom-sheet .quick-add-method-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.bottom-sheet .quick-add-method {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  min-width: 0;
+  min-height: 68px;
+  padding: 8px 4px;
+  border: 1px solid var(--atelier-border-strong);
+  border-radius: 14px;
+  background: var(--atelier-surface-raised);
+  color: var(--atelier-ink);
+}
+
+.bottom-sheet .quick-add-method span {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.bottom-sheet .quick-add-method small,
+.bottom-sheet .quick-add-manual-link small {
+  color: var(--atelier-muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.bottom-sheet .quick-add-manual-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--atelier-border);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--atelier-ink);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.bottom-sheet .quick-add-manual-link small {
+  margin-left: auto;
+}
+
+.bottom-sheet .add-method-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  justify-self: start;
+  min-height: 44px;
+  padding: 0 12px 0 6px;
+  border: 0;
+  background: transparent;
+  color: var(--atelier-pistachio);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+@media (max-width: 340px) {
+  .bottom-sheet .quick-add-method small {
+    display: none;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .bottom-sheet .quick-add-chip,
+  .bottom-sheet .quick-add-pill,
+  .bottom-sheet .quick-add-method,
+  .bottom-sheet .quick-add-storage,
+  .bottom-sheet .quick-add-date-tag {
+    border-width: 2px;
+  }
+}

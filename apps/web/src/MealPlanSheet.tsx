@@ -12,6 +12,7 @@ import { shoppingAdjustmentNote } from "./shoppingListPresentation";
 import { useEffect, useRef, useState } from "react";
 import { ArrowRightIcon, CalendarIcon, CheckCircledIcon, ChevronDownIcon, InfoCircledIcon, LightningBoltIcon, PlusIcon, ReaderIcon, TimerIcon } from "@radix-ui/react-icons";
 import { BottomSheet, KeyboardInput, useKeyboard } from "./mobile";
+import { TabSheetScreen } from "./screens/TabSheetScreen";
 import { getMobileScrollBehavior } from "./mobile/scroll";
 import { revealAndFocusWithinNearestContainer as revealAndFocus, scrollTargetWithinNearestContainer } from "./appScroll";
 import { isMealApiAuthError, MEAL_API_WORKSPACE_CONFLICT_MESSAGE, isMealApiMealPlanCompletionPersistenceError, isMealApiMealPlanPersistenceError, isMealApiMealPreferencesPersistenceError, isMealApiMultiDayPlanPersistenceError, isMealApiShoppingListPersistenceError, isMealApiWorkspaceConflictError, mealApi, type ApiAllergenCode, type ApiGrocySyncStatus, type ApiMealPlan, type ApiMealPlanAuditEvent, type ApiMealPlanOptions, type ApiMealPreferences, type ApiMultiDayMealPlan, type ApiShoppingListItem } from "./mealApi";
@@ -445,8 +446,10 @@ function createDemoPlan(foods: MealFood[], maxMinutes = 30, servings = 1, dateRe
   };
 }
 
-export default function MealPlanSheet({ foods, active = false, returningFromRelatedFlow = false, parentRestoresFocus = false, plannerContextKey = "", onOpenChange, initialMaxMinutes = 30, initialServings = 1, dateReviewFoods = [], onSaved, onCompleted, onOpenFoodDetail, onOpenAdd, onOpenSyncReview, onOpenShoppingList, onAddDemoShoppingItems, onOptionsChange, onAuthenticationRequired, onOpenAccount, workspaceSync, workspaceTransport }: {
+export default function MealPlanSheet({ foods, presentation = "sheet", active = false, returningFromRelatedFlow = false, parentRestoresFocus = false, plannerContextKey = "", onOpenChange, initialMaxMinutes = 30, initialServings = 1, dateReviewFoods = [], onSaved, onCompleted, onOpenFoodDetail, onOpenAdd, onOpenSyncReview, onOpenShoppingList, onAddDemoShoppingItems, onOptionsChange, onAuthenticationRequired, onOpenAccount, workspaceSync, workspaceTransport }: {
   foods: MealFood[];
+  /** "screen" renders the same planner inside the 식단 tab's MobileScroll instead of a BottomSheet. */
+  presentation?: "sheet" | "screen";
   active?: boolean;
   returningFromRelatedFlow?: boolean;
   parentRestoresFocus?: boolean;
@@ -1777,7 +1780,7 @@ export default function MealPlanSheet({ foods, active = false, returningFromRela
     }
   };
 
-  return <BottomSheet open={active} onOpenChange={onOpenChange} title="오늘의 식단" snap={0.86}>
+  const plannerBody = <>
     {authenticationExpired ? (
       <div className="recipe-error recipe-auth-expired" role="alert">
         <InfoCircledIcon width={16} height={16} />
@@ -1900,5 +1903,7 @@ export default function MealPlanSheet({ foods, active = false, returningFromRela
     </section> : null}
     </div>
     )}
-  </BottomSheet>;
+  </>;
+  if (presentation === "screen") return <TabSheetScreen title="오늘의 식단" className="meal-screen">{plannerBody}</TabSheetScreen>;
+  return <BottomSheet open={active} onOpenChange={onOpenChange} title="오늘의 식단" snap={0.86}>{plannerBody}</BottomSheet>;
 }

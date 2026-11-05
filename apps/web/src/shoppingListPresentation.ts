@@ -1,4 +1,5 @@
 import type { ApiShoppingListItem, ApiStorageType } from "./mealApi";
+import { comparableFoodName, guessStorageFromName } from "./foodStorageGuess.ts";
 
 export type ShoppingInventoryFood = {
   id: string;
@@ -8,13 +9,7 @@ export type ShoppingInventoryFood = {
   storageLocationName?: string;
 };
 
-function comparableFoodName(name: string) {
-  return name.normalize("NFKC").trim().replace(/\s+/g, " ").toLocaleLowerCase("ko-KR");
-}
-
 const STORAGE_LABEL_TO_TYPE: Record<string, ApiStorageType> = { 냉장: "refrigerated", 냉동: "frozen", 실온: "ambient" };
-const FROZEN_HINT = /(냉동|아이스|만두|얼음)/;
-const AMBIENT_HINT = /(쌀|라면|국수|파스타|감자|고구마|양파|마늘|통조림|캔|과자|식빵|빵|설탕|소금|간장|식용유|올리브유|밀가루|김$|참치)/;
 
 /**
  * Storage to preselect when a bought item moves into the fridge: where the same food
@@ -26,10 +21,7 @@ export function defaultReceiveStorage(name: string, foods: ShoppingInventoryFood
     const type = STORAGE_LABEL_TO_TYPE[food.storage.trim()];
     if (type) return type;
   }
-  const normalized = comparableFoodName(name);
-  if (FROZEN_HINT.test(normalized)) return "frozen";
-  if (AMBIENT_HINT.test(normalized)) return "ambient";
-  return "refrigerated";
+  return guessStorageFromName(name);
 }
 
 export function matchingShoppingInventoryFoods(name: string, foods: ShoppingInventoryFood[]) {

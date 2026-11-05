@@ -270,6 +270,14 @@ export type ApiNotificationReadAll = {
   marked: number;
 };
 
+/** GET /api/rescue-summary: distinct foods eaten (consumed, never discarded) in the last `window_days`. */
+export type ApiRescueSummary = {
+  window_days: number;
+  /** ISO datetime (UTC) of the window start. */
+  since: string;
+  rescued_food_count: number;
+};
+
 export type ApiNotificationPreferences = {
   in_app_enabled: boolean;
   push_enabled: boolean;
@@ -1586,6 +1594,12 @@ export const mealApi = {
 
   async getShoppingListRevision(signal?: AbortSignal) {
     return request<ApiShoppingListRevision>("/api/shopping-list/revision", { signal });
+  },
+
+  /** Resolves null when the API is not configured, like every other read. */
+  async getRescueSummary(days = 7, signal?: AbortSignal) {
+    const params = new URLSearchParams({ days: String(days) });
+    return request<ApiRescueSummary>(`/api/rescue-summary?${params.toString()}`, { signal });
   },
 
   async getMealPreferences(signal?: AbortSignal) {

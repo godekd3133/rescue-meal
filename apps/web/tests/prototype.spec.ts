@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { chooseAddMethod } from "./add-flow-helpers";
 import { isStaleLabelLotTarget } from "../src/labelLotSelection.ts";
 
 // Sample dates are relative to today; a fixed clock keeps the dated assertions true.
@@ -27,31 +28,34 @@ test("Rescue Meal home opens detail and saves a storage change", async ({ page }
   const eyebrowParts = new Intl.DateTimeFormat("ko-KR", { weekday: "long", month: "long", day: "numeric" }).formatToParts(FIXTURE_NOW);
   const expectedEyebrow = `${eyebrowParts.find((part) => part.type === "weekday")?.value ?? "오늘"}, ${eyebrowParts.find((part) => part.type === "month")?.value ?? ""} ${eyebrowParts.find((part) => part.type === "day")?.value ?? ""}`;
   await expect(page.locator(".eyebrow")).toHaveText(expectedEyebrow);
-  await expect(page.getByRole("heading", { name: "먼저 살펴볼 식품 3개" })).toBeVisible();
-  await expect(page.locator(".connection-pill")).toHaveText("체험 중");
-  // The fridge door replaces the trust card: the hero counts what to rescue today and the passed
-  // printed date is a full red sticker on its shelf.
-  await expect(page.locator(".trust-card")).toHaveCount(0);
-  await expect(page.getByRole("heading", { level: 1, name: "오늘 구할 음식 6개" })).toBeVisible();
-  const spinachSticker = page.locator(".fridge-sticker").filter({ hasText: "시금치" });
-  await expect(spinachSticker).toHaveAttribute("aria-label", "시금치, 표시 날짜에서 1일 지남");
-  await expect(spinachSticker).toHaveClass(/freshness-past/);
-  await expect(spinachSticker).toHaveAttribute("data-estimated", "false");
-  await expect(page.locator(".fridge-sticker").filter({ hasText: "국산콩 두부" })).toHaveAttribute("data-estimated", "true");
-  const spinachPriorityCard = page.locator(".priority-card").filter({ hasText: "시금치" });
-  const spinachChip = spinachPriorityCard.locator(".freshness-chip");
+  await expect(page.locator(".connection-pill")).toContainText("체험 중");
+  // Home no longer repeats the inventory: today's count, the week's rescues, the deck and one line per storage.
+  await expect(page.getByRole("heading", { level: 1, name: "오늘 살펴볼 음식 6개" })).toBeVisible();
+  await expect(page.getByTestId("home-rescued-stat")).toHaveText(/이번 주 구한 음식\s*3개/);
+  await expect(page.locator(".priority-card")).toHaveCount(0);
+  await expect(page.locator(".inventory-row")).toHaveCount(0);
+  await expect(page.locator(".trust-card")).toContainText("살펴볼 식품 1개");
+  const spinachCard = page.locator(".rescue-card").filter({ hasText: "시금치" });
+  await expect(spinachCard).toHaveAttribute("aria-label", "시금치, 표시 날짜에서 1일 지남");
+  await expect(spinachCard).toHaveClass(/freshness-past/);
+  await expect(spinachCard.locator(".rescue-card-chip")).toHaveAttribute("data-estimated", "false");
+  await expect(page.locator(".rescue-card").filter({ hasText: "국산콩 두부" }).locator(".rescue-card-chip")).toHaveAttribute("data-estimated", "true");
+  await expect(page.locator(".meal-plan-button")).toContainText("날짜나 보관 방법을 살펴볼 식품 1개");
+
+  await page.locator(".app-bottom-nav [data-nav-tab=\"fridge\"]").click();
+  const spinachRow = page.locator(".inventory-row").filter({ hasText: "시금치" });
+  const spinachChip = spinachRow.locator(".freshness-chip");
   await expect(spinachChip).toHaveText("+1일");
   await expect(spinachChip).toHaveAttribute("aria-label", "표시 날짜에서 1일 지남");
   await expect(spinachChip).toHaveAttribute("data-estimated", "false");
-  const tofuChip = page.locator(".priority-card").filter({ hasText: "국산콩 두부" }).locator(".freshness-chip");
+  const tofuChip = page.locator(".inventory-row").filter({ hasText: "국산콩 두부" }).locator(".freshness-chip");
   await expect(tofuChip).toHaveText("D-1");
   await expect(tofuChip).toHaveAttribute("aria-label", "먼저 살펴볼 시점까지 1일");
   await expect(tofuChip).toHaveAttribute("data-estimated", "true");
-  await expect(page.locator(".priority-card").filter({ hasText: "시금치" })).toHaveAttribute("data-priority-state", "needs-review");
-  await expect(page.locator(".priority-card").filter({ hasText: "국산콩 두부" })).toHaveAttribute("data-priority-state", "use-next");
-  await expect(page.locator(".meal-plan-button")).toContainText("날짜나 보관 방법을 살펴볼 식품 1개");
+  await expect(spinachRow.locator("[data-inventory-status]")).toHaveAttribute("data-inventory-status", "needs-review");
+  await expect(page.locator(".inventory-row").filter({ hasText: "국산콩 두부" }).locator("[data-inventory-status]")).toHaveAttribute("data-inventory-status", "priority");
 
-  await page.getByRole("button", { name: /시금치 개봉됨/ }).click();
+  await spinachRow.click();
   const dialog = page.getByRole("dialog", { name: "시금치" });
   await expect(dialog).toBeVisible();
   await expect(page.getByTestId("keyboard-dock")).toHaveAttribute("data-visible", "false");
@@ -81,56 +85,80 @@ test("Rescue Meal home opens detail and saves a storage change", async ({ page }
   await expect(dialog).toHaveCount(0);
   // The saved-change toast now names the food instead of the changed field; the row below proves the storage.
   await expect(page.getByRole("status")).toHaveText("시금치의 변경 내용을 저장했어요.");
-  await expect(page.getByRole("button", { name: /시금치 개봉됨 .* 냉동/ })).toBeVisible();
+  await expect(page.locator(".inventory-row").filter({ hasText: "시금치" }).locator(".inventory-storage-meta")).toHaveText("냉동");
 });
 
-test("home theme toggle switches between the selected light and dark surfaces", async ({ page }) => {
-  const toggle = page.getByTestId("theme-toggle");
+test("the 나 sheet theme toggle switches between the selected light and dark surfaces", async ({ page }) => {
+  // Theme moved from every header into 나, the single place for account and app settings.
+  await expect(page.getByTestId("theme-toggle")).toHaveCount(0);
+  await page.locator(".connection-pill").click();
+  const me = page.getByRole("dialog", { name: "체험 안내" });
+  const toggle = me.getByTestId("theme-toggle");
 
   await expect(page.locator("html")).toHaveAttribute("data-rescue-theme", "light");
   await expect(toggle).toHaveAttribute("aria-label", "현재 라이트모드, 다크모드로 전환");
   await toggle.click();
   await expect(page.locator("html")).toHaveAttribute("data-rescue-theme", "dark");
   await expect(toggle).toHaveAttribute("aria-label", "현재 다크모드, 라이트모드로 전환");
+  await expect(toggle).toBeFocused();
+  await me.getByRole("button", { name: "닫기", exact: true }).click();
+  await expect(me).toHaveCount(0);
   await expect(page.locator(".meal-plan-button")).toHaveCSS("background-color", "rgb(99, 207, 148)");
   await expect(page.locator(".meal-home")).toHaveCSS("background-color", "rgb(12, 18, 16)");
-  await expect(page.locator(".fridge-sticker.freshness-past .fridge-sticker-badge")).toHaveCSS("background-color", "rgb(255, 122, 102)");
+  await expect(page.locator(".rescue-card.freshness-past .rescue-card-chip")).toHaveCSS("background-color", "rgb(255, 122, 102)");
   await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute("content", "#10291e");
 
   await page.reload();
   await expect(page.locator("html")).toHaveAttribute("data-rescue-theme", "dark");
   await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute("content", "#10291e");
+  await page.locator(".connection-pill").click();
   await page.getByTestId("theme-toggle").click();
   await expect(page.locator("html")).toHaveAttribute("data-rescue-theme", "light");
+  await page.getByRole("dialog", { name: "체험 안내" }).getByRole("button", { name: "닫기", exact: true }).click();
   await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute("content", "#15392a");
   await expect(page.locator(".meal-plan-button")).toHaveCSS("background-color", "rgb(27, 108, 66)");
   await expect(page.locator(".meal-home")).toHaveCSS("background-color", "rgb(243, 245, 240)");
-  await expect(page.locator(".fridge-sticker.freshness-past .fridge-sticker-badge")).toHaveCSS("background-color", "rgb(236, 90, 67)");
+  await expect(page.locator(".rescue-card.freshness-past .rescue-card-chip")).toHaveCSS("background-color", "rgb(236, 90, 67)");
 });
 
-test("home status summary opens the food list as the primary next step", async ({ page }) => {
-  const statusCard = page.getByRole("button", { name: "식품 찾기" });
-  await expect(statusCard).toBeVisible();
-  await statusCard.click();
-  await expect(page.locator(".app-bottom-nav-item-active")).toHaveText("식품");
+test("home review summary and storage rows lead to the right food or list", async ({ page }) => {
+  // One food needs a date check, so the safety summary opens that food's date review directly.
+  const summary = page.locator(".trust-card");
+  await expect(summary).toHaveAccessibleName(/시금치 날짜와 보관 정보 확인/);
+  await summary.click();
+  const detail = page.getByRole("dialog", { name: "시금치" });
+  await expect(detail).toBeVisible();
+  await detail.getByRole("button", { name: "닫기", exact: true }).click();
+  await expect(detail).toHaveCount(0);
+  await expect(page.locator(".app-bottom-nav-item-active")).toHaveText("홈");
+  await expect(summary).toBeFocused();
+
+  // Storage rows are the way into the full list: one line per place, empty places collapse.
+  const shelves = page.getByRole("navigation", { name: "보관 장소" });
+  await expect(shelves.getByRole("button")).toHaveCount(3);
+  await shelves.getByRole("button", { name: /^실온 식품 1개 보기/ }).click();
+  await expect(page.locator(".app-bottom-nav-item-active")).toHaveText("냉장고");
   await expect(page.locator(".inventory-toolbar")).toBeVisible();
+  await expect(page.locator(".inventory-list .inventory-row")).toHaveCount(1);
 });
 
-test("home fridge door opens a passed food sticker or its shelf list", async ({ page }) => {
+test("home rescue deck opens a passed food and storage rows open their list", async ({ page }) => {
   // Sample dates are anchored to load time; the list path needs several passed foods, so the clock moves a week ahead.
   await page.clock.install({ time: FIXTURE_NOW });
   await page.reload();
-  const pastSticker = page.getByRole("button", { name: "시금치, 표시 날짜에서 1일 지남" });
+  const pastCard = page.locator(".rescue-card").filter({ hasText: "시금치" });
   await expect(page.locator(".inventory-review-guide")).toHaveCount(0);
-  await expect(page.locator(".trust-card")).toHaveCount(0);
   await expect(page.locator(".freshness-overview")).toHaveCount(0);
-  await expect(page.getByRole("heading", { level: 1, name: "오늘 구할 음식 6개" })).toBeVisible();
-  await expect(page.locator(".fridge-sticker.freshness-past")).toHaveCount(1);
-  await expect(pastSticker.locator(".fridge-sticker-badge")).toHaveText("+1일");
-  await expect(page.getByRole("button", { name: "국산콩 두부, 먼저 살펴볼 시점까지 1일" })).toHaveClass(/freshness-today/);
+  await expect(page.getByRole("heading", { level: 1, name: "오늘 살펴볼 음식 6개" })).toBeVisible();
+  await expect(page.locator(".rescue-card.freshness-past")).toHaveCount(1);
+  await expect(pastCard.locator(".rescue-card-chip")).toHaveText("+1일");
+  await expect(page.locator(".rescue-card").filter({ hasText: "국산콩 두부" })).toHaveClass(/freshness-today/);
+  // A passed printed date only offers the date check, never a one-tap "먹었어요".
+  await expect(pastCard.getByRole("button", { name: "시금치 날짜 확인" })).toBeVisible();
+  await expect(pastCard.getByRole("button", { name: /시금치 먹었어요/ })).toHaveCount(0);
 
-  // A sticker goes straight to that food and closes back to home.
-  await pastSticker.click();
+  // A card goes straight to that food and closes back to home.
+  await page.getByRole("button", { name: "시금치 자세히 보기" }).click();
   const singleReviewDetail = page.getByRole("dialog", { name: "시금치" });
   await expect(singleReviewDetail).toBeVisible();
   await expect(page.locator(".app-bottom-nav-item-active")).toHaveText("홈");
@@ -138,15 +166,17 @@ test("home fridge door opens a passed food sticker or its shelf list", async ({ 
   await expect(singleReviewDetail).toHaveCount(0);
   await expect(page.locator(".app-bottom-nav-item-active")).toHaveText("홈");
 
-  // A week later every food has passed: the hero counts them all and the shelf label opens the shelf's list.
+  // A week later every food has passed: the hero counts them all and the storage row opens that list.
   await page.clock.fastForward(7 * 24 * 60 * 60 * 1000);
-  await expect(page.getByRole("heading", { level: 1, name: "오늘 구할 음식 7개" })).toBeVisible();
-  await expect(page.locator(".fridge-sticker.freshness-past")).toHaveCount(7);
-  await expect(page.getByRole("button", { name: "시금치, 표시 날짜에서 8일 지남" })).toBeVisible();
-  await page.getByRole("button", { name: "냉장 보관 식품 5개 보기" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "오늘 살펴볼 음식 7개" })).toBeVisible();
+  await expect(page.locator(".rescue-card.freshness-past")).toHaveCount(7);
+  await expect(page.locator(".rescue-card").filter({ hasText: "시금치" })).toHaveAttribute("aria-label", "시금치, 표시 날짜에서 8일 지남");
+  await page.getByRole("button", { name: /^냉장 식품 5개 보기/ }).click();
 
-  await expect(page.locator(".app-bottom-nav-item-active")).toHaveText("식품");
-  await expect(page.locator(".filter-select-wrap select")).toHaveValue("냉장");
+  await expect(page.locator(".app-bottom-nav-item-active")).toHaveText("냉장고");
+  const chilledChip = page.getByRole("group", { name: "보관 위치 필터" }).getByRole("button", { name: "냉장", exact: true });
+  await expect(chilledChip).toHaveAttribute("aria-pressed", "true");
+  await expect(chilledChip).toBeFocused();
   await expect(page.locator(".inventory-list .inventory-row")).toHaveCount(5);
   await expect(page.locator(".inventory-list .inventory-row").first()).toContainText("시금치");
 
@@ -176,7 +206,7 @@ test("home fridge door opens a passed food sticker or its shelf list", async ({ 
 });
 
 test("review guidance closes back to the filtered food list", async ({ page }) => {
-  await page.getByRole("button", { name: "식품", exact: true }).click();
+  await page.locator(".app-bottom-nav [data-nav-tab=\"fridge\"]").click();
   await page.locator(".inventory-status-filters button").filter({ hasText: "날짜·보관 확인" }).click();
   await expect(page.locator(".inventory-list .inventory-row")).toHaveCount(1);
   await page.getByRole("region", { name: "식품을 살펴볼 때" }).getByRole("button", { name: "날짜와 보관 확인 방법 자세히 보기" }).click();
@@ -184,7 +214,7 @@ test("review guidance closes back to the filtered food list", async ({ page }) =
   await expect(guidance).toBeVisible();
   await guidance.getByRole("button", { name: "닫기", exact: true }).click();
   await expect(guidance).toHaveCount(0);
-  await expect(page.locator(".app-bottom-nav-item-active")).toHaveText("식품");
+  await expect(page.locator(".app-bottom-nav-item-active")).toHaveText("냉장고");
   await expect(page.locator(".inventory-list .inventory-row")).toHaveCount(1);
 });
 
@@ -222,7 +252,8 @@ test("keeps the mobile quick-add action in fixed navigation and the meal CTA abo
 });
 
 test("date guidance returns to the same food detail context", async ({ page }) => {
-  await page.locator(".priority-card").first().click();
+  await page.locator(".app-bottom-nav [data-nav-tab=\"fridge\"]").click();
+  await page.locator(".inventory-row").first().click();
   const detail = page.getByRole("dialog", { name: "시금치" });
   await expect(detail).toBeVisible();
 
@@ -239,17 +270,19 @@ test("date guidance returns to the same food detail context", async ({ page }) =
   await expect(detail.getByRole("heading", { name: "시금치", level: 2 })).toBeVisible();
 });
 
-test("priority detail closes back to the home context while inventory detail restores pantry context", async ({ page }) => {
-  await page.locator(".priority-card").first().click();
-  const priorityDetail = page.getByRole("dialog", { name: "시금치" });
-  await expect(priorityDetail).toBeVisible();
-  await priorityDetail.getByRole("button", { name: "닫기", exact: true }).click();
-  await expect(priorityDetail).toHaveCount(0);
+test("deck detail closes back to home while fridge detail restores the 냉장고 context", async ({ page }) => {
+  const deckCard = page.getByRole("button", { name: "시금치 자세히 보기" });
+  await deckCard.click();
+  const deckDetail = page.getByRole("dialog", { name: "시금치" });
+  await expect(deckDetail).toBeVisible();
+  await deckDetail.getByRole("button", { name: "닫기", exact: true }).click();
+  await expect(deckDetail).toHaveCount(0);
   await expect(page.locator(".app-bottom-nav-item-active")).toHaveText("홈");
-  await expect(page.getByRole("heading", { name: "먼저 살펴볼 식품 3개" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "오늘 살펴볼 음식 6개" })).toBeVisible();
+  await expect(deckCard).toBeFocused();
 
-  await page.getByRole("button", { name: "식품", exact: true }).click();
-  await expect(page.locator(".app-bottom-nav-item-active")).toHaveText("식품");
+  await page.locator(".app-bottom-nav [data-nav-tab=\"fridge\"]").click();
+  await expect(page.locator(".app-bottom-nav-item-active")).toHaveText("냉장고");
   await expect(page.locator(".inventory-status-filters button").filter({ hasText: "날짜·보관 확인" })).toContainText("1");
   await expect(page.locator(".inventory-row").filter({ hasText: "국산콩 두부" }).locator(".inventory-status .freshness-chip")).toHaveText("D-1");
   await page.locator(".inventory-row").first().click();
@@ -257,8 +290,9 @@ test("priority detail closes back to the home context while inventory detail res
   await expect(inventoryDetail).toBeVisible();
   await inventoryDetail.getByRole("button", { name: "닫기", exact: true }).click();
   await expect(inventoryDetail).toHaveCount(0);
-  await expect(page.locator(".app-bottom-nav-item-active")).toHaveText("식품");
+  await expect(page.locator(".app-bottom-nav-item-active")).toHaveText("냉장고");
   await expect(page.getByRole("heading", { name: "내 식품 목록 7" })).toBeVisible();
+  await expect(page.locator(".inventory-row").first()).toBeFocused();
 });
 
 test("PWA install prompt can hand the browser install decision to the user", async ({ page }) => {
@@ -284,20 +318,16 @@ test("PWA install prompt can hand the browser install decision to the user", asy
   const prompt = page.getByTestId("install-prompt");
   await expect(prompt).toBeVisible();
   await expect(prompt).toContainText("앱처럼 더 편하게 써요");
+  // The install prompt sits at the end of Home, after the storage rows and the meal action.
   await expect.poll(() => page.evaluate(() => {
-    const priority = document.querySelector(".priority-section");
+    const shelves = document.querySelector(".home-shelves");
     const install = document.querySelector(".install-prompt");
-    return Boolean(priority && install && (priority.compareDocumentPosition(install) & Node.DOCUMENT_POSITION_FOLLOWING));
+    return Boolean(shelves && install && (shelves.compareDocumentPosition(install) & Node.DOCUMENT_POSITION_FOLLOWING));
   })).toBe(true);
   await expect.poll(() => page.evaluate(() => {
-    const fridgeDoor = document.querySelector(".fridge-door");
+    const action = document.querySelector(".home-action-row");
     const install = document.querySelector(".install-prompt");
-    return Boolean(fridgeDoor && install && (fridgeDoor.compareDocumentPosition(install) & Node.DOCUMENT_POSITION_FOLLOWING));
-  })).toBe(true);
-  await expect.poll(() => page.evaluate(() => {
-    const inventory = document.querySelector(".inventory-section");
-    const install = document.querySelector(".install-prompt");
-    return Boolean(inventory && install && (inventory.compareDocumentPosition(install) & Node.DOCUMENT_POSITION_FOLLOWING));
+    return Boolean(action && install && (action.compareDocumentPosition(install) & Node.DOCUMENT_POSITION_FOLLOWING));
   })).toBe(true);
   await prompt.getByRole("button", { name: "설치하기" }).click();
   await expect(prompt).toHaveCount(0);
@@ -396,9 +426,13 @@ test("keeps visible primary controls named across the major mobile surfaces", as
     await expect(dialog).toHaveCount(0);
   };
 
-  await openAndAudit("[data-testid=nav-add-food]", "receipt", "영수증으로 추가");
-  await openAndAudit(".meal-plan-button", "meal", "오늘의 식단");
-  await openAndAudit(".priority-card", "food detail", "시금치");
+  await openAndAudit("[data-testid=nav-add-food]", "quick add", "식품 추가");
+  // 식단 is a tab screen rather than a dialog.
+  await page.locator(".meal-plan-button").click();
+  await expect(page.getByRole("region", { name: "오늘의 식단" })).toBeVisible();
+  await assertVisibleControlsNamed("meal");
+  await page.locator(".app-bottom-nav [data-nav-tab=\"home\"]").click();
+  await openAndAudit(".rescue-card-photo", "food detail", "시금치");
   await openAndAudit(".connection-pill", "account", "체험 안내");
   await openAndAudit(".mobile-hero-notification", "notifications", "알림");
 });
@@ -429,9 +463,10 @@ test("Pixel preview anchors app navigation to the reserved Android viewport edge
   expect(layout.documentWidth).toBeLessThanOrEqual(1100);
   expect(layout.bodyWidth).toBeLessThanOrEqual(1100);
 
-  await page.getByRole("button", { name: "오늘 식단 만들기" }).click();
-  const mealDialog = page.getByRole("dialog", { name: "오늘의 식단" });
-  await expect(mealDialog).toBeVisible();
+  // 식단 is a screen now; the notification center is a long sheet over the same edge.
+  await page.locator(".mobile-hero-notification").click();
+  const longSheet = page.getByRole("dialog", { name: "알림" });
+  await expect(longSheet).toBeVisible();
   await page.waitForTimeout(650);
   const sheetLayout = await page.evaluate(() => {
     const sheet = document.querySelector<HTMLElement>("[data-testid=bottom-sheet]")!;
@@ -491,6 +526,8 @@ test("notification center surfaces demo rescue items and opens food detail", asy
   await expect(dialog.locator(".notification-row").first().locator(".notification-row-copy strong")).toHaveCSS("white-space", "normal");
   await expect(dialog).not.toContainText("을(를)");
   await expect(dialog).not.toContainText("데모 모드에서는 서버 알림을 저장하지 않아요");
+  // Notification settings have a single entry point in 나; the notification center never links to them.
+  await expect(dialog.getByRole("button", { name: /알림 설정/ })).toHaveCount(0);
 
   await spinachNotification.click();
   await expect(page.getByRole("dialog", { name: "시금치" })).toBeVisible();
@@ -599,13 +636,17 @@ test("long sheet navigation keeps the latest return context and focus", async ({
   await expect(account).toHaveCount(0);
   await expect(accountTrigger).toBeFocused();
 
+  // 식단 is a tab: leaving it goes through the bar, and focus stays on the tab the user chose.
   const mealTrigger = page.getByRole("button", { name: "식단", exact: true });
   await mealTrigger.click();
-  const meal = page.getByRole("dialog", { name: "오늘의 식단" });
+  const meal = page.getByRole("region", { name: "오늘의 식단" });
   await expect(meal).toBeVisible();
-  await meal.getByRole("button", { name: "닫기", exact: true }).click();
-  await expect(meal).toHaveCount(0);
-  await expect(mealTrigger).toBeFocused();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  const homeTrigger = page.getByRole("button", { name: "홈", exact: true });
+  await homeTrigger.click();
+  await expect(meal).toBeHidden();
+  await expect(homeTrigger).toBeFocused();
+  await expect(homeTrigger).toHaveAttribute("aria-current", "page");
 
 });
 
@@ -615,6 +656,7 @@ test("bottom sheets expose modal semantics and restore focus after closing", asy
 
   await trigger.focus();
   await trigger.click();
+  await chooseAddMethod(page, "영수증");
 
   // The sheet title follows the selected intake method, so keep one handle on the single open sheet.
   const dialog = page.getByRole("dialog");
@@ -661,6 +703,7 @@ test("bottom sheets expose modal semantics and restore focus after closing", asy
 test("keeps keyboard focus inside an open bottom sheet", async ({ page }) => {
   const trigger = page.getByTestId("nav-add-food");
   await trigger.click();
+  await chooseAddMethod(page, "영수증");
   const dialog = page.getByRole("dialog", { name: "영수증으로 추가" });
   await expect(dialog).toBeVisible();
 
@@ -682,7 +725,9 @@ test("keeps keyboard focus inside an open bottom sheet", async ({ page }) => {
 });
 
 test("receipt review only commits selected candidates", async ({ page }) => {
+  await page.locator(".app-bottom-nav [data-nav-tab=\"fridge\"]").click();
   await page.getByRole("button", { name: /식품 추가하기/ }).click();
+  await chooseAddMethod(page, "영수증");
   await expect(page.getByRole("group", { name: "식품 추가 1단계" })).toContainText("원본 파일은 식품 기록에 저장하지 않아요.");
   await page.getByRole("button", { name: "예시 영수증 보기" }).click();
   await expect(page.getByRole("group", { name: "식품 추가 2단계" })).toContainText("영수증 항목을 살펴봐요");
@@ -705,7 +750,8 @@ test("receipt review only commits selected candidates", async ({ page }) => {
   await expect(page.locator(".review-summary")).toContainText("식품 3개");
   await expect(page.locator(".review-summary")).not.toContainText("10개 품목");
   await expect(page.locator(".receipt-review-submit-bar")).toHaveAttribute("data-review-state", "needs-confirmation");
-  await expect(page.locator("#receipt-review-submit-hint > span").first()).toHaveText("확인이 필요한 항목 1개를 살펴보거나 선택을 해제해 주세요.");
+  await expect(page.locator("#receipt-review-submit-hint > span").first()).toHaveText("맛타리버섯: 이름이 맞으면 '내용이 맞아요', 아니면 고치거나 선택 해제");
+  await expect(page.getByRole("button", { name: "확인할 항목으로 이동" })).toBeVisible();
   await expect(page.locator("#receipt-review-submit-hint > .receipt-review-submit-date-hint")).toHaveText("소비기한은 미확인으로 저장돼요.");
   await expect(page.getByRole("button", { name: "3개 식품 저장하기" })).toBeDisabled();
   const firstReviewTarget = page.getByRole("button", { name: "맛타리버섯 2팩, 3,980원 내용을 살펴봐 주세요" });
@@ -724,26 +770,30 @@ test("receipt review only commits selected candidates", async ({ page }) => {
   await expect(page.getByRole("button", { name: "2개 식품 저장하기" })).toBeEnabled();
   await page.getByRole("button", { name: "2개 식품 저장하기" }).click();
 
-  await expect(page.locator(".toast")).toHaveText("영수증에서 식품 2개를 목록에 추가했어요.");
+  await expect(page.locator(".toast-message")).toHaveText("영수증에서 식품 2개를 목록에 추가했어요.");
+  await expect(page.locator(".toast-action")).toHaveText(/날짜 확인할 식품 \d+개/);
   await expect(page.getByRole("dialog")).toHaveCount(0);
   const inventoryRows = page.getByRole("region", { name: /내 식품 목록/ }).locator(".inventory-row");
   await expect(inventoryRows.filter({ hasText: "시금치" })).toContainText("날짜 확인");
   // The deselected candidate was not committed: 맛타리버섯 keeps its original record only.
   await expect(inventoryRows.filter({ hasText: "맛타리버섯" })).toHaveCount(1);
   await expect(inventoryRows.filter({ hasText: "맛타리버섯" })).toContainText("국내산 맛타리 2팩");
-  await expect(page.locator(".priority-card").filter({ hasText: "시금치" })).toBeFocused();
+  await expect(page.locator(".inventory-row:focus")).toContainText("시금치");
 });
 
 test("manual food intake returns focus to the newly added priority food", async ({ page }) => {
+  // The new row lives on the 냉장고 list; Home no longer repeats it.
+  await page.locator(".app-bottom-nav [data-nav-tab=\"fridge\"]").click();
   await page.getByRole("button", { name: /식품 추가하기/ }).click();
+  await chooseAddMethod(page, "영수증");
   const receiptDialog = page.getByRole("dialog", { name: "영수증으로 추가" });
   await receiptDialog.getByRole("tab", { name: "직접 입력" }).click();
   const dialog = page.getByRole("dialog", { name: "직접 추가" });
   await expect(dialog.locator(".intake-flow-rail")).toHaveCount(0);
   await expect(dialog.getByRole("textbox", { name: "식품 이름", exact: true })).toBeVisible();
-  await expect(dialog).toContainText("날짜는 포장지를 확인한 뒤 추가할 수 있어요.");
+  await expect(dialog.locator("#manual-date-hint")).toHaveText("비워 두면 날짜 미확인으로 저장돼요.");
   await expect(dialog.getByRole("button", { name: "연결 후 확인 가능" })).toHaveCount(0);
-  await expect(dialog.getByText("날짜는 포장지를 확인한 뒤 추가할 수 있어요.", { exact: true })).toBeVisible();
+  await expect(dialog.getByRole("textbox", { name: "날짜", exact: true })).toHaveValue("");
   await dialog.getByRole("textbox", { name: "식품 이름" }).fill("대파");
   const quantity = dialog.getByRole("textbox", { name: "수량" });
   const submit = dialog.getByRole("button", { name: "식품 추가하기" });
@@ -786,9 +836,10 @@ test("manual food intake returns focus to the newly added priority food", async 
 });
 
 test("food-tab intake returns focus to the newly added inventory row", async ({ page }) => {
-  await page.getByRole("button", { name: "식품", exact: true }).click();
+  await page.locator(".app-bottom-nav [data-nav-tab=\"fridge\"]").click();
   const inventory = page.getByRole("region", { name: /내 식품 목록/ });
   await inventory.getByRole("button", { name: "식품 목록에 추가" }).click();
+  await chooseAddMethod(page, "영수증");
   const receiptDialog = page.getByRole("dialog", { name: "영수증으로 추가" });
   await receiptDialog.getByRole("tab", { name: "직접 입력" }).click();
   const dialog = page.getByRole("dialog", { name: "직접 추가" });
@@ -802,6 +853,7 @@ test("food-tab intake returns focus to the newly added inventory row", async ({ 
 
 test("switching intake methods restores the sheet to its top before the next step", async ({ page }) => {
   await page.getByRole("button", { name: /식품 추가하기/ }).click();
+  await chooseAddMethod(page, "영수증");
   await page.getByRole("button", { name: "예시 영수증 보기" }).click();
   const receiptDialog = page.getByRole("dialog", { name: "영수증으로 추가" });
   await expect(receiptDialog.getByRole("group", { name: "식품 추가 2단계" })).toBeVisible();
@@ -828,6 +880,7 @@ test("switching intake methods restores the sheet to its top before the next ste
 
 test("switching intake tabs preserves an in-progress receipt review in the same sheet", async ({ page }) => {
   await page.getByRole("button", { name: /식품 추가하기/ }).click();
+  await chooseAddMethod(page, "영수증");
   const sheet = page.getByRole("dialog");
   // The sample receipt has no original image; upload one so the ephemeral preview is part of the preserved review.
   await sheet.locator('input[type="file"][data-input-source="library"]').setInputFiles("public/assets/food/tomato-photo.jpg");
@@ -858,7 +911,9 @@ test("switching intake tabs preserves an in-progress receipt review in the same 
 });
 
 test("receipt review lets the user correct an OCR candidate before commit", async ({ page }) => {
+  await page.locator(".app-bottom-nav [data-nav-tab=\"fridge\"]").click();
   await page.getByRole("button", { name: /식품 추가하기/ }).click();
+  await chooseAddMethod(page, "영수증");
   await page.getByRole("button", { name: "예시 영수증 보기" }).click();
 
   const mushroomCard = page.locator('.receipt-line-card[data-line-id="receipt-mushroom"]');
@@ -910,6 +965,7 @@ test("receipt review lets the user correct an OCR candidate before commit", asyn
 
 test("receipt review can explicitly confirm unchanged OCR candidates", async ({ page }) => {
   await page.getByRole("button", { name: /식품 추가하기/ }).click();
+  await chooseAddMethod(page, "영수증");
   await page.getByRole("button", { name: "예시 영수증 보기" }).click();
   // Exact name: once confirmed, the line toggle's own label also ends with "내용이 맞아요".
   const confirmButtons = page.getByRole("button", { name: "내용이 맞아요", exact: true });
@@ -945,8 +1001,13 @@ test("receipt review can explicitly confirm unchanged OCR candidates", async ({ 
 });
 
 test("receipt product lookup stays secondary and full-size in dark mode", async ({ page }) => {
+  await page.locator(".connection-pill").click();
   await page.getByTestId("theme-toggle").click();
+  await expect(page.locator("html")).toHaveAttribute("data-rescue-theme", "dark");
+  await page.getByRole("dialog", { name: "체험 안내" }).getByRole("button", { name: "닫기", exact: true }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
   await page.getByRole("button", { name: /식품 추가하기/ }).click();
+  await chooseAddMethod(page, "영수증");
   await page.getByRole("button", { name: "예시 영수증 보기" }).click();
 
   const lookup = page.locator('.receipt-line-card[data-line-id="receipt-mushroom"]').getByRole("button", { name: "상품 정보 찾기" });
@@ -964,6 +1025,7 @@ test("receipt product lookup stays secondary and full-size in dark mode", async 
 
 test("receipt validation explains and focuses invalid quantity and unit fields", async ({ page }) => {
   await page.getByRole("button", { name: /식품 추가하기/ }).click();
+  await chooseAddMethod(page, "영수증");
   const dialog = page.getByRole("dialog", { name: "영수증으로 추가" });
   await dialog.getByRole("button", { name: "예시 영수증 보기" }).click();
   const mushroomCard = dialog.locator('.receipt-line-card[data-line-id="receipt-mushroom"]');
@@ -975,7 +1037,8 @@ test("receipt validation explains and focuses invalid quantity and unit fields",
   await quantity.fill("0");
   await expect(mushroomCard.locator(".receipt-line-error")).toHaveText("수량은 0보다 큰 숫자로 입력해 주세요.");
   await expect(dialog.locator(".receipt-review-submit-bar")).toHaveAttribute("data-review-state", "invalid");
-  await expect(dialog.locator("#receipt-review-invalid-hint > span").first()).toHaveText("입력 내용 1개를 확인해 주세요.");
+  await expect(dialog.locator("#receipt-review-invalid-hint > span").first()).toHaveText("맛타리버섯: 수량은 0보다 큰 숫자로 입력해 주세요.");
+  await expect(dialog.getByRole("button", { name: "고칠 항목으로 이동" })).toBeVisible();
   await expect(dialog.locator("#receipt-review-invalid-hint > .receipt-review-submit-date-hint")).toHaveText("소비기한은 미확인으로 저장돼요.");
   await expect(save).toBeDisabled();
   // The correction shortcut now sits in the alert that counts the items still needing input.
@@ -1012,6 +1075,7 @@ test("receipt validation explains and focuses invalid quantity and unit fields",
 
 test("receipt line editing reveals the active line and keeps commit reachable", async ({ page }) => {
   await page.getByRole("button", { name: /식품 추가하기/ }).click();
+  await chooseAddMethod(page, "영수증");
   await page.getByRole("button", { name: "예시 영수증 보기" }).click();
 
   const spinachCard = page.locator('.receipt-line-card[data-line-id="receipt-spinach"]');
@@ -1087,6 +1151,7 @@ test("keeps the expanded receipt editor readable inside narrow phone sheets", as
 
 test("receipt review keeps the uploaded original available for OCR comparison", async ({ page }) => {
   await page.getByRole("button", { name: /식품 추가하기/ }).click();
+  await chooseAddMethod(page, "영수증");
   const dialog = page.getByRole("dialog", { name: "영수증으로 추가" });
   await dialog.locator('input[type="file"][data-input-source="library"]').setInputFiles("public/assets/food/tomato-photo.jpg");
 
@@ -1107,6 +1172,7 @@ test("receipt review keeps the uploaded original available for OCR comparison", 
 
 test("intake methods explain what will be checked and offer the matching capture option", async ({ page }) => {
   await page.getByRole("button", { name: /식품 추가하기/ }).click();
+  await chooseAddMethod(page, "영수증");
   const receiptDialog = page.getByRole("dialog", { name: "영수증으로 추가" });
   await expect(receiptDialog.getByText("원본 파일은 식품 기록에 저장하지 않아요.", { exact: true })).toBeVisible();
   const receiptTab = receiptDialog.getByRole("tab", { name: "영수증" });
@@ -1140,11 +1206,12 @@ test("intake methods explain what will be checked and offer the matching capture
   await labelDialog.getByRole("tab", { name: "직접 입력" }).click();
   const manualDialog = page.getByRole("dialog", { name: "직접 추가" });
   await expect(manualDialog.getByRole("textbox", { name: "식품 이름", exact: true })).toBeVisible();
-  await expect(manualDialog).toContainText("날짜는 포장지를 확인한 뒤 추가할 수 있어요.");
+  await expect(manualDialog.locator("#manual-date-hint")).toContainText("비워 두면");
 });
 
 test("receipt intake accepts an electronic PDF and keeps its original available for review", async ({ page }) => {
   await page.getByRole("button", { name: /식품 추가하기/ }).click();
+  await chooseAddMethod(page, "영수증");
   const dialog = page.getByRole("dialog", { name: "영수증으로 추가" });
   const input = dialog.locator('input[type="file"][data-input-source="library"]');
 
@@ -1230,6 +1297,7 @@ test("receipt source review explains when image observations are not mapped to l
   await expect(commitButton).toBeEnabled();
   await commitButton.click();
   await expect(page.locator(".toast")).toContainText("영수증에서 식품 3개를 목록에 추가했어요.");
+  await page.locator(".app-bottom-nav [data-nav-tab=\"fridge\"]").click();
   await expect(page.getByRole("region", { name: /내 식품 목록/ }).getByRole("button", { name: /새송이버섯/ })).toBeVisible();
 });
 
@@ -1242,6 +1310,7 @@ test("camera surface falls back to photo selection when permission is unavailabl
   });
   await page.reload();
   await page.getByRole("button", { name: /식품 추가하기/ }).click();
+  await chooseAddMethod(page, "영수증");
   const dialog = page.getByRole("dialog", { name: "영수증으로 추가" });
   await dialog.getByRole("button", { name: "카메라로 촬영" }).click();
 
@@ -1272,6 +1341,7 @@ test("camera surface turns a captured frame into the existing receipt intake fil
   });
   await page.reload();
   await page.getByRole("button", { name: /식품 추가하기/ }).click();
+  await chooseAddMethod(page, "영수증");
   const dialog = page.getByRole("dialog", { name: "영수증으로 추가" });
   await dialog.getByRole("button", { name: "카메라로 촬영" }).click();
 
@@ -1307,6 +1377,7 @@ test("camera capture sends the visible guide crop instead of the surrounding fra
   });
   await page.reload();
   await page.getByRole("button", { name: /식품 추가하기/ }).click();
+  await chooseAddMethod(page, "영수증");
   const dialog = page.getByRole("dialog", { name: "영수증으로 추가" });
   await dialog.getByRole("button", { name: "카메라로 촬영" }).click();
 
@@ -1344,6 +1415,7 @@ test("camera surface keeps capture disabled until the video is ready", async ({ 
   });
   await page.reload();
   await page.getByRole("button", { name: /식품 추가하기/ }).click();
+  await chooseAddMethod(page, "영수증");
   const dialog = page.getByRole("dialog", { name: "영수증으로 추가" });
   await dialog.getByRole("button", { name: "카메라로 촬영" }).click();
 
@@ -1356,6 +1428,7 @@ test("camera surface keeps capture disabled until the video is ready", async ({ 
 
 test("label date remains a candidate until the user confirms it", async ({ page }) => {
   await page.getByRole("button", { name: /식품 추가하기/ }).click();
+  await chooseAddMethod(page, "영수증");
   await page.getByRole("tab", { name: "라벨" }).click();
   await page.getByRole("button", { name: "예시 라벨 결과 보기" }).click();
 
@@ -1400,8 +1473,9 @@ test("label date remains a candidate until the user confirms it", async ({ page 
   await page.getByRole("button", { name: "새 식품 추가하기" }).click();
   await expect(page.locator(".toast")).toHaveText(/시금치/);
 
-  const savedPriorityCard = page.locator(".priority-card").first();
-  await expect(savedPriorityCard).toHaveAttribute("data-priority-state", "needs-review");
+  await page.locator(".app-bottom-nav [data-nav-tab=\"fridge\"]").click();
+  const savedPriorityCard = page.locator(".inventory-row").filter({ hasText: "시금치" }).first();
+  await expect(savedPriorityCard.locator("[data-inventory-status]")).toHaveAttribute("data-inventory-status", "needs-review");
   await expect(savedPriorityCard.locator(".freshness-chip")).toHaveText("+1일");
   await expect(savedPriorityCard.locator(".freshness-chip")).toHaveAttribute("aria-label", "표시 날짜에서 1일 지남");
   await expect(savedPriorityCard.locator(".freshness-chip")).toHaveAttribute("data-estimated", "false");
@@ -1432,7 +1506,8 @@ test("label date remains a candidate until the user confirms it", async ({ page 
 });
 
 test("focuses the updated date proof when a label recheck clears the review warning", async ({ page }) => {
-  await page.locator(".priority-card").filter({ hasText: "시금치" }).click();
+  await page.locator(".app-bottom-nav [data-nav-tab=\"fridge\"]").click();
+  await page.locator(".inventory-row").filter({ hasText: "시금치" }).first().click();
   const detail = page.getByRole("dialog", { name: "시금치" });
   await detail.getByRole("button", { name: "포장지에서 날짜 다시 확인" }).click();
 
@@ -1450,6 +1525,7 @@ test("focuses the updated date proof when a label recheck clears the review warn
 
 test("label review lets the user choose a new lot or an existing matching lot", async ({ page }) => {
   await page.getByRole("button", { name: /식품 추가하기/ }).click();
+  await chooseAddMethod(page, "영수증");
   await page.getByRole("tab", { name: "라벨" }).click();
   const dialog = page.getByRole("dialog", { name: "라벨로 추가" });
   await expect(dialog.locator(".input-flow > p")).toHaveText("사진은 식품 기록에 저장하지 않아요.");
@@ -1500,7 +1576,8 @@ test("label review lets the user choose a new lot or an existing matching lot", 
 
 test("label read failure reveals a reachable recovery action without changing the existing date", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 740 });
-  await page.locator(".priority-card").filter({ hasText: "시금치" }).click();
+  await page.locator(".app-bottom-nav [data-nav-tab=\"fridge\"]").click();
+  await page.locator(".inventory-row").filter({ hasText: "시금치" }).first().click();
   const detail = page.getByRole("dialog", { name: "시금치" });
   // textContent matches toHaveText's normalization; innerText adds layout line breaks between the proof fields.
   const originalDateProof = (await detail.locator(".date-proof-card").textContent()) ?? "";
@@ -1524,7 +1601,8 @@ test("label read failure reveals a reachable recovery action without changing th
 
   await manualFallback.click();
   await expect(labelReview.getByRole("group", { name: "포장지 날짜 직접 입력" })).toBeVisible();
-  await expect(labelReview.getByRole("textbox", { name: "라벨 상품명" })).toHaveValue("시금치");
+  // The product name sits behind the secondary disclosure when it already matches the record.
+  await expect(labelReview.locator(".label-result-name-field input")).toHaveValue("시금치");
   await expect(labelReview.getByRole("textbox", { name: "포장지 날짜" })).toHaveValue("");
   await expect(labelReview.locator('.label-lot-target-option[aria-checked="true"]')).toContainText("기존 식품");
   await expect(labelReview.locator(".label-result-action")).toBeDisabled();
@@ -1544,6 +1622,7 @@ test("label correction blocks a target id that disappeared from the refreshed in
 
 test("barcode flow exposes camera scanning and keeps manual lookup fallback", async ({ page }) => {
   await page.getByRole("button", { name: /식품 추가하기/ }).click();
+  await chooseAddMethod(page, "영수증");
   await page.getByRole("tab", { name: "바코드" }).click();
   const cameraButton = page.getByRole("button", { name: "카메라로 스캔" });
   await expect(cameraButton).toHaveClass(/primary-sheet-button/);
@@ -1672,6 +1751,7 @@ test("keeps the Pixel 10 manual draft and add action above the Android keyboard"
   await expect(page.getByTestId("phone-frame")).toHaveAttribute("data-device", "pixel-10");
 
   await page.getByRole("button", { name: "식품 추가하기", exact: true }).click();
+  await chooseAddMethod(page, "영수증");
   const receiptDialog = page.getByRole("dialog", { name: "영수증으로 추가" });
   await receiptDialog.getByRole("tab", { name: "바코드" }).click();
   await page.getByRole("button", { name: "예시 바코드 입력" }).click();
@@ -1714,6 +1794,7 @@ test("preserves Pixel 10 label-date review across input tabs", async ({ page }) 
   await expect(page.getByTestId("phone-frame")).toHaveAttribute("data-device", "pixel-10");
 
   await page.getByRole("button", { name: "식품 추가하기", exact: true }).click();
+  await chooseAddMethod(page, "영수증");
   const receiptDialog = page.getByRole("dialog", { name: "영수증으로 추가" });
   await receiptDialog.getByRole("tab", { name: "라벨" }).click();
   const labelDialog = page.getByRole("dialog", { name: "라벨로 추가" });
@@ -1766,6 +1847,8 @@ test("preserves Pixel 10 label-date review across input tabs", async ({ page }) 
   await returnedLabelDialog.getByRole("button", { name: "날짜 의미 변경" }).click();
   const missingMeaningAction = returnedLabelDialog.getByRole("button", { name: "날짜·보관 위치를 선택해 주세요" });
   await expect(missingMeaningAction).toBeDisabled();
+  // The product name sits behind the label result's secondary disclosure.
+  await returnedLabelDialog.locator(".label-result-more > summary").click();
   await returnedLabelDialog.getByLabel("라벨 상품명").click();
   await expect(page.locator(".keyboard-dock")).toHaveAttribute("data-visible", "true");
   await expect(returnedLabelDialog.locator(".label-result-action-summary")).toHaveText("예시 결과 저장 전 확인 날짜 종류를 골라 주세요 2026.09.07 기존 식품 1팩 냉장");
@@ -1794,6 +1877,7 @@ test("barcode camera shows a manual fallback when media devices are unavailable"
   });
   await page.reload();
   await page.getByRole("button", { name: /식품 추가하기/ }).click();
+  await chooseAddMethod(page, "영수증");
   await page.getByRole("tab", { name: "바코드" }).click();
   await page.getByRole("button", { name: "카메라로 스캔" }).click();
 
@@ -1804,6 +1888,7 @@ test("barcode camera shows a manual fallback when media devices are unavailable"
 });
 
 test("estimated date can be confirmed with an explicit date meaning", async ({ page }) => {
+  await page.locator(".app-bottom-nav [data-nav-tab=\"fridge\"]").click();
   const inventory = page.getByRole("region", { name: /내 식품 목록/ });
   const confirmedDate = new Date();
   confirmedDate.setHours(12, 0, 0, 0);
@@ -1866,6 +1951,7 @@ test("estimated date can be confirmed with an explicit date meaning", async ({ p
 });
 
 test("receipt-backed food detail explains purchase provenance without exposing internal ids", async ({ page }) => {
+  await page.locator(".app-bottom-nav [data-nav-tab=\"fridge\"]").click();
   const inventory = page.getByRole("region", { name: /내 식품 목록/ });
   await inventory.getByRole("button", { name: /맛타리버섯 국내산 맛타리 2팩/ }).click();
   const dialog = page.getByRole("dialog", { name: "맛타리버섯" });
@@ -1881,7 +1967,8 @@ test("receipt-backed food detail explains purchase provenance without exposing i
 });
 
 test("detail save stays quiet until a storable food state changes", async ({ page }) => {
-  // 닭가슴살 is no longer in the three-food home priority set; open it from the food list.
+  // Foods open from the 냉장고 list.
+  await page.locator(".app-bottom-nav [data-nav-tab=\"fridge\"]").click();
   await page.locator(".inventory-row").filter({ hasText: "닭가슴살" }).first().click();
   const dialog = page.getByRole("dialog", { name: "닭가슴살" });
   const saveButton = dialog.locator(".detail-actions .primary-sheet-button");
@@ -1910,8 +1997,10 @@ test("detail save stays quiet until a storable food state changes", async ({ pag
 });
 
 test("date-warning food separates safety review from the consume record", async ({ page }) => {
+  await page.locator(".app-bottom-nav [data-nav-tab=\"fridge\"]").click();
   await expect(page.locator(".inventory-row").filter({ hasText: "시금치" }).first()).toHaveAttribute("data-date-state", "actual_printed");
-  await page.locator(".priority-card").first().click();
+  await page.locator(".app-bottom-nav [data-nav-tab=\"fridge\"]").click();
+  await page.locator(".inventory-row").first().click();
   const dialog = page.getByRole("dialog", { name: "시금치" });
   await expect(dialog.locator(".date-proof-card")).toHaveClass(/date-proof-printed/);
   await expect(dialog.locator(".date-proof-card")).toHaveAttribute("data-date-state", "actual_printed");
@@ -1935,15 +2024,17 @@ test("date-warning food separates safety review from the consume record", async 
   await resumedConfirmation.getByRole("button", { name: "먹었어요", exact: true }).click();
   await expect(dialog).toHaveCount(0);
   await expect(page.getByRole("status")).toHaveText("시금치를 먹은 기록으로 남겼어요");
-  // The next food is no longer named in the toast; focus moves to it on the refreshed priority list instead.
-  await expect(page.getByRole("heading", { name: "먼저 살펴볼 식품 3개" })).toBeVisible();
-  await expect(page.locator(".priority-card").filter({ hasText: "시금치" })).toHaveCount(0);
-  await expect(page.locator(".app-bottom-nav-item-active")).toHaveText("홈");
-  await expect(page.locator(".priority-card").first()).toBeFocused();
+  // The next food is no longer named in the toast; focus moves to the next row of the 냉장고 list instead.
+  await expect(page.locator(".inventory-row").filter({ hasText: "시금치" })).toHaveCount(0);
+  await expect(page.locator(".app-bottom-nav-item-active")).toHaveText("냉장고");
+  await expect(page.locator(".inventory-row").first()).toBeFocused();
+  // Eating counts towards this week's rescues on Home (discards never do).
+  await expect(page.getByTestId("home-rescued-stat")).toHaveText(/이번 주 구한 음식\s*4개/);
 });
 
 test("consume confirmation explains that pending storage changes are not part of the record", async ({ page }) => {
-  await page.locator(".priority-card").filter({ hasText: "시금치" }).click();
+  await page.locator(".app-bottom-nav [data-nav-tab=\"fridge\"]").click();
+  await page.locator(".inventory-row").filter({ hasText: "시금치" }).first().click();
   const dialog = page.getByRole("dialog", { name: "시금치" });
   const stateSummary = dialog.getByRole("group", { name: "보관 및 개봉 상태" });
 
@@ -1966,7 +2057,8 @@ test("consume confirmation explains that pending storage changes are not part of
 });
 
 test("food detail state summary marks an unsaved opened event as pending", async ({ page }) => {
-  await page.locator(".priority-card").filter({ hasText: "국산콩 두부" }).click();
+  await page.locator(".app-bottom-nav [data-nav-tab=\"fridge\"]").click();
+  await page.locator(".inventory-row").filter({ hasText: "국산콩 두부" }).first().click();
   const dialog = page.getByRole("dialog", { name: "국산콩 두부" });
   const stateSummary = dialog.getByRole("group", { name: "보관 및 개봉 상태" });
 
@@ -1980,7 +2072,8 @@ test("food detail state summary marks an unsaved opened event as pending", async
 });
 
 test("user-confirmed date detail exposes the date without repeating the source label", async ({ page }) => {
-  // 닭가슴살 is no longer in the three-food home priority set; open it from the food list.
+  // Foods open from the 냉장고 list.
+  await page.locator(".app-bottom-nav [data-nav-tab=\"fridge\"]").click();
   await page.locator(".inventory-row").filter({ hasText: "닭가슴살" }).first().click();
   const dialog = page.getByRole("dialog", { name: "닭가슴살" });
   const dateProof = dialog.locator(".date-proof-card");
@@ -1994,14 +2087,15 @@ test("user-confirmed date detail exposes the date without repeating the source l
 });
 
 test("estimated use-first dates read as priority references, not expiry deadlines", async ({ page }) => {
-  const homeCard = page.locator(".priority-card").filter({ hasText: "국산콩 두부" });
+  await page.locator(".app-bottom-nav [data-nav-tab=\"fridge\"]").click();
+  const homeCard = page.locator(".inventory-row").filter({ hasText: "국산콩 두부" });
   // The dashed estimate chip and its spoken label carry the reference meaning; no expiry wording.
   const homeChip = homeCard.locator(".freshness-chip");
   await expect(homeChip).toHaveText("D-1");
   await expect(homeChip).toHaveAttribute("data-estimated", "true");
   await expect(homeChip).toHaveAttribute("aria-label", "먼저 살펴볼 시점까지 1일");
   await expect(homeChip).toHaveCSS("border-top-style", "dashed");
-  await expect(homeCard).toHaveAttribute("data-priority-state", "use-next");
+  await expect(homeCard.locator("[data-inventory-status]")).toHaveAttribute("data-inventory-status", "priority");
   await homeCard.click();
 
   const detail = page.getByRole("dialog", { name: "국산콩 두부" });
@@ -2015,7 +2109,7 @@ test("estimated use-first dates read as priority references, not expiry deadline
   await expect(detail.locator(".detail-note")).toHaveText("소비기한이 아닌 참고 날짜예요.");
   await detail.getByRole("button", { name: "닫기", exact: true }).click();
 
-  await page.getByRole("button", { name: "식품", exact: true }).click();
+  await page.locator(".app-bottom-nav [data-nav-tab=\"fridge\"]").click();
   const inventoryChip = page.locator(".inventory-row").filter({ hasText: "국산콩 두부" }).locator(".inventory-status .freshness-chip");
   await expect(inventoryChip).toHaveText("D-1");
   await expect(inventoryChip).toHaveAttribute("data-estimated", "true");
@@ -2023,7 +2117,8 @@ test("estimated use-first dates read as priority references, not expiry deadline
 });
 
 test("user-confirmed reminder can reopen its existing date and meaning for editing", async ({ page }) => {
-  // 닭가슴살 is no longer in the three-food home priority set; open it from the food list.
+  // Foods open from the 냉장고 list.
+  await page.locator(".app-bottom-nav [data-nav-tab=\"fridge\"]").click();
   await page.locator(".inventory-row").filter({ hasText: "닭가슴살" }).first().click();
   const dialog = page.getByRole("dialog", { name: "닭가슴살" });
 
@@ -2034,6 +2129,7 @@ test("user-confirmed reminder can reopen its existing date and meaning for editi
 });
 
 test("partial storage move splits a multi-quantity food into two lots", async ({ page }) => {
+  await page.locator(".app-bottom-nav [data-nav-tab=\"fridge\"]").click();
   await page.getByRole("button", { name: /닭가슴살 무항생제 닭가슴살 2팩/ }).first().click();
   const dialog = page.getByRole("dialog", { name: "닭가슴살" });
   await expect(dialog.locator(".detail-section-heading small")).toHaveText("냉동에 보관 중");
@@ -2054,6 +2150,7 @@ test("partial storage move splits a multi-quantity food into two lots", async ({
 });
 
 test("partial discard requires confirmation and preserves the remaining quantity", async ({ page }) => {
+  await page.locator(".app-bottom-nav [data-nav-tab=\"fridge\"]").click();
   const inventory = page.getByRole("region", { name: /내 식품 목록/ });
   await inventory.getByRole("button", { name: /맛타리버섯 국내산 맛타리 2팩/ }).click();
   const dialog = page.getByRole("dialog", { name: "맛타리버섯" });
@@ -2080,19 +2177,19 @@ test("partial discard requires confirmation and preserves the remaining quantity
 });
 
 test("inventory consume returns focus to the next pantry row", async ({ page }) => {
-  await page.getByRole("button", { name: "식품", exact: true }).click();
+  await page.locator(".app-bottom-nav [data-nav-tab=\"fridge\"]").click();
   const inventory = page.getByRole("region", { name: /내 식품 목록/ });
   await inventory.getByRole("button", { name: /국산콩 두부 풀무원 1모/ }).click();
   const dialog = page.getByRole("dialog", { name: "국산콩 두부" });
   await dialog.getByRole("button", { name: "먹었어요", exact: true }).click();
 
   await expect(page.getByRole("status")).toHaveText("국산콩 두부를 먹은 기록으로 남겼어요");
-  await expect(page.locator(".app-bottom-nav-item-active")).toHaveText("식품");
+  await expect(page.locator(".app-bottom-nav-item-active")).toHaveText("냉장고");
   await expect(inventory.getByRole("button", { name: /시금치 국내산 시금치 1팩/ })).toBeFocused();
 });
 
 test("inventory discard returns focus to the next pantry row", async ({ page }) => {
-  await page.getByRole("button", { name: "식품", exact: true }).click();
+  await page.locator(".app-bottom-nav [data-nav-tab=\"fridge\"]").click();
   const inventory = page.getByRole("region", { name: /내 식품 목록/ });
   await inventory.getByRole("button", { name: /국산콩 두부 풀무원 1모/ }).click();
   const dialog = page.getByRole("dialog", { name: "국산콩 두부" });
@@ -2104,13 +2201,18 @@ test("inventory discard returns focus to the next pantry row", async ({ page }) 
   await dialog.getByRole("button", { name: "폐기 기록" }).click();
 
   await expect(page.getByRole("status")).toHaveText("국산콩 두부 폐기 기록을 남겼어요");
-  await expect(page.locator(".app-bottom-nav-item-active")).toHaveText("식품");
+  await expect(page.locator(".app-bottom-nav-item-active")).toHaveText("냉장고");
   await expect(inventory.getByRole("button", { name: /시금치 국내산 시금치 1팩/ })).toBeFocused();
 });
 
 test("inventory filter narrows the list by storage location", async ({ page }) => {
+  await page.locator(".app-bottom-nav [data-nav-tab=\"fridge\"]").click();
   const inventory = page.getByRole("region", { name: /내 식품 목록/ });
-  await inventory.getByRole("combobox", { name: "보관 위치 필터" }).selectOption({ label: "냉동만" });
+  const storageChips = page.getByRole("group", { name: "보관 위치 필터" });
+  await expect(storageChips.getByRole("button")).toHaveCount(4);
+  await storageChips.getByRole("button", { name: "냉동", exact: true }).click();
+  await expect(storageChips.getByRole("button", { name: "냉동", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(storageChips.getByRole("button", { name: "냉동", exact: true })).toHaveCSS("min-height", "44px");
 
   await expect(inventory.getByRole("heading", { name: "내 식품 목록 1" })).toBeVisible();
   await expect(inventory.locator(".inventory-filter-summary")).toContainText("냉동 보관 식품 1개");
@@ -2121,15 +2223,10 @@ test("inventory filter narrows the list by storage location", async ({ page }) =
 test("inventory search finds food by name and recovers from no results", async ({ page }) => {
   const inventory = page.getByRole("region", { name: /내 식품 목록/ });
   const search = inventory.getByRole("searchbox", { name: "식품·브랜드·카테고리 검색" });
-  await page.getByRole("button", { name: "식품", exact: true }).click();
-  // The list lands directly below the sticky toolbar inset (iPhone safe area), so no row starts hidden under it.
-  await expect.poll(() => inventory.evaluate((element) => {
-    const screenElement = document.querySelector<HTMLElement>("[data-testid=device-screen]");
-    const toolbar = element.querySelector<HTMLElement>(".inventory-toolbar");
-    if (!screenElement || !toolbar) return Number.POSITIVE_INFINITY;
-    const stickyTop = Number.parseFloat(getComputedStyle(toolbar).top) || 0;
-    return Math.abs(element.getBoundingClientRect().top - screenElement.getBoundingClientRect().top - stickyTop);
-  })).toBeLessThanOrEqual(1);
+  await page.locator(".app-bottom-nav [data-nav-tab=\"fridge\"]").click();
+  // 냉장고 is its own screen: it opens at the top with its title, and the search toolbar is in view.
+  await expect(page.getByRole("heading", { level: 1, name: "냉장고" })).toBeInViewport();
+  await expect(inventory.locator(".inventory-toolbar")).toBeInViewport();
   await expect.poll(() => inventory.evaluate((element) => {
     const screenElement = document.querySelector<HTMLElement>("[data-testid=device-screen]");
     const toolbar = element.querySelector<HTMLElement>(".inventory-toolbar");
@@ -2199,8 +2296,8 @@ test("inventory search finds food by name and recovers from no results", async (
 });
 
 test("recipe sheet previews the pantry, saves a recipe, and records completion", async ({ page }) => {
-  await page.getByRole("button", { name: /오늘 식단 만들기/ }).click();
-  const dialog = page.getByRole("dialog", { name: "오늘의 식단" });
+  await page.getByRole("button", { name: "오늘 뭐 먹지" }).click();
+  const dialog = page.getByRole("region", { name: "오늘의 식단" });
 
   await expect(dialog.getByRole("heading", { name: "시금치 두부 닭가슴살 덮밥" })).toBeVisible();
   await expect(dialog.getByRole("heading", { name: "시금치 두부 닭가슴살 덮밥" })).toBeVisible();
@@ -2283,16 +2380,21 @@ test("recipe sheet previews the pantry, saves a recipe, and records completion",
   await dialog.getByRole("button", { name: "조리 완료 기록" }).click();
   await expect.poll(() => page.getByTestId("mobile-scroll").evaluate((element) => element.scrollTop)).toBe(0);
   await expect(page.locator(".app-bottom-nav-item-active")).toHaveText("홈");
+  await expect(dialog).toBeHidden();
+  // Focus lands on Home, never inside the hidden 식단 screen.
+  await expect.poll(() => page.evaluate(() => Boolean(document.activeElement?.closest("[data-tab-panel=\"home\"]")))).toBe(true);
+  await expect(page.locator(".toast")).toHaveText("조리 완료로 기록했어요. 사용한 양만큼 보관 수량을 줄였어요. 2가지는 이번 기록에서 제외했어요.");
+  // The rescued spinach counts towards this week.
+  await expect(page.getByTestId("home-rescued-stat")).toHaveText(/이번 주 구한 음식\s*4개/);
   // Only 시금치 was used; the two excluded ingredients stay in the food list.
+  await page.locator(".app-bottom-nav [data-nav-tab=\"fridge\"]").click();
   await expect(page.getByRole("heading", { name: "내 식품 목록 6" })).toBeVisible();
   await expect(page.getByRole("region", { name: /내 식품 목록/ }).getByRole("button", { name: /닭가슴살 무항생제 닭가슴살 2팩/ })).toBeVisible();
-  await expect(page.locator(".priority-card").first()).toBeFocused();
-  await expect(page.locator(".toast")).toHaveText("조리 완료로 기록했어요. 사용한 양만큼 보관 수량을 줄였어요. 2가지는 이번 기록에서 제외했어요.");
 });
 
 test("meal completion reports a skipped ingredient that remains in inventory", async ({ page }) => {
-  await page.getByRole("button", { name: /오늘 식단 만들기/ }).click();
-  const dialog = page.getByRole("dialog", { name: "오늘의 식단" });
+  await page.getByRole("button", { name: "오늘 뭐 먹지" }).click();
+  const dialog = page.getByRole("region", { name: "오늘의 식단" });
   await expect(dialog.getByRole("heading", { name: "시금치 두부 닭가슴살 덮밥" })).toBeVisible();
 
   await dialog.getByRole("button", { name: "임시 저장" }).click();
@@ -2303,18 +2405,19 @@ test("meal completion reports a skipped ingredient that remains in inventory", a
   await dialog.getByRole("button", { name: "조리 완료 기록" }).click();
 
   await expect(page.locator(".toast")).toContainText("조리 완료로 기록했어요. 사용한 양만큼 보관 수량을 줄였어요. 1가지는 이번 기록에서 제외했어요.");
-  await expect(dialog).toHaveCount(0);
-  // The skipped ingredient stays in the food list.
-  await expect(page.locator(".inventory-row").filter({ hasText: "시금치" })).toContainText("1팩");
+  await expect(dialog).toBeHidden();
   await expect(page.locator(".app-bottom-nav-item-active")).toHaveText("홈");
+  await expect.poll(() => page.evaluate(() => Boolean(document.activeElement?.closest("[data-tab-panel=\"home\"]")))).toBe(true);
+  // The skipped ingredient stays in the food list.
+  await page.locator(".app-bottom-nav [data-nav-tab=\"fridge\"]").click();
+  await expect(page.locator(".inventory-row").filter({ hasText: "시금치" })).toContainText("1팩");
   await expect(page.getByRole("heading", { name: "내 식품 목록 6" })).toBeVisible();
-  await expect(page.locator(".priority-card").filter({ hasText: "닭가슴살" })).toBeFocused();
 });
 
 test("meal consumption controls reflow and retain 44px targets on narrow phones", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 740 });
-  await page.getByRole("button", { name: /오늘 식단 만들기/ }).click();
-  const dialog = page.getByRole("dialog", { name: "오늘의 식단" });
+  await page.getByRole("button", { name: "오늘 뭐 먹지" }).click();
+  const dialog = page.getByRole("region", { name: "오늘의 식단" });
   await expect(dialog.getByRole("heading", { name: "시금치 두부 닭가슴살 덮밥" })).toBeVisible();
   await dialog.getByRole("button", { name: "임시 저장", exact: true }).click();
 
@@ -2327,15 +2430,15 @@ test("meal consumption controls reflow and retain 44px targets on narrow phones"
 });
 
 test("fixture meal shortages can be added, received, and sent to date review", async ({ page }) => {
-  await page.getByRole("button", { name: /오늘 식단 만들기/ }).click();
-  const meal = page.getByRole("dialog", { name: "오늘의 식단" });
+  await page.getByRole("button", { name: "오늘 뭐 먹지" }).click();
+  const meal = page.getByRole("region", { name: "오늘의 식단" });
   await meal.getByRole("button", { name: "4인분", exact: true }).click();
   await expect(meal.locator(".recipe-availability-summary strong")).toHaveText("재료 3가지를 준비해 주세요");
   await meal.getByRole("button", { name: "임시 저장", exact: true }).click();
   // The shortage shortcut now lives in the sheet instead of a toast action.
   await expect(meal.getByRole("button", { name: "장보기 목록에 담기", exact: true })).toBeVisible();
   await meal.getByRole("button", { name: "장보기 목록에 담기", exact: true }).click();
-  const shopping = page.getByRole("dialog", { name: "장보기 목록" });
+  const shopping = page.getByRole("region", { name: "장보기 목록" });
   const spinachPlanItem = shopping.getByRole("button", { name: "시금치 3팩, 식단 1개", exact: true });
   await expect(spinachPlanItem).toBeVisible();
   await shopping.getByRole("textbox", { name: "직접 추가 상품명" }).fill("시금치");
@@ -2355,13 +2458,15 @@ test("fixture meal shortages can be added, received, and sent to date review", a
   await spinachToggle.click();
   await expect(spinachToggle).toHaveAttribute("aria-pressed", "true");
   await expect(spinachToggle).toHaveAccessibleName("시금치 계획 4팩, 직접 추가, 식단 1개, 구매 완료");
-  await shopping.getByRole("button", { name: "닫기", exact: true }).click();
-  await expect(shopping).toHaveCount(0);
+  // Both are tabs: going back to 식단 hides the shopping screen and starts a fresh planner view.
+  await page.getByRole("button", { name: "식단", exact: true }).click();
+  await expect(shopping).toBeHidden();
   await expect(meal).toBeVisible();
   await meal.getByRole("button", { name: "임시 저장", exact: true }).click();
   const addPlanShortagesAgain = meal.getByRole("button", { name: "장보기 목록에 담기", exact: true });
   await expect(addPlanShortagesAgain).toBeVisible();
   await addPlanShortagesAgain.click();
+  await expect(shopping).toBeVisible();
   const reloadedSpinachItem = shopping.locator("button.shopping-sheet-item").filter({ hasText: "시금치" });
   await expect(reloadedSpinachItem).toHaveAttribute("aria-pressed", "true");
   await expect(shopping.locator(".shopping-sheet-item").filter({ hasText: "시금치" })).toHaveCount(1);
@@ -2374,8 +2479,8 @@ test("fixture meal shortages can be added, received, and sent to date review", a
   await expect(receivePanel.getByRole("spinbutton", { name: "시금치 구매 수량" })).toHaveValue("4");
   await expect(receivePanel.getByRole("group", { name: "시금치 구매 완료 확인" })).toContainText("구매가 끝났나요?");
   await expect(receivePanel).toContainText("소비기한은 자동으로 정하지 않아요.");
-  // Storage now has no default, and the commit stays disabled until both storage and purchase are confirmed.
-  await expect(receivePanel.getByRole("button", { name: "보관 위치를 골라 주세요", exact: true })).toBeDisabled();
+  // Storage starts where the same food already lives (시금치 is kept 냉장); the commit stays disabled until the purchase is confirmed.
+  await expect(receivePanel.getByRole("button", { name: "냉장", exact: true })).toHaveAttribute("aria-pressed", "true");
   await receivePanel.getByRole("button", { name: "냉장", exact: true }).click();
   await expect(receivePanel.getByRole("button", { name: "식품 목록에 추가", exact: true })).toBeDisabled();
   await receivePanel.getByRole("button", { name: "구매 완료로 표시", exact: true }).click();
@@ -2410,17 +2515,17 @@ test("guest home can reopen the temporary shopping list and explains its lifetim
   // An empty shopping list no longer takes a home card; the bottom navigation reopens it.
   await expect(page.locator(".shopping-summary-card").filter({ hasText: "장보기" })).toHaveCount(0);
   const homeActionOrder = await page.evaluate(() => {
-    const fridgeDoor = document.querySelector(".fridge-door");
+    const shelves = document.querySelector(".home-shelves");
     const mealAction = document.querySelector(".meal-plan-button");
-    return Boolean(fridgeDoor && mealAction
-      && (fridgeDoor.compareDocumentPosition(mealAction) & Node.DOCUMENT_POSITION_FOLLOWING));
+    return Boolean(shelves && mealAction
+      && (shelves.compareDocumentPosition(mealAction) & Node.DOCUMENT_POSITION_FOLLOWING));
   });
   expect(homeActionOrder).toBe(true);
   const shoppingSummary = page.getByTestId("shopping-nav");
   await expect(shoppingSummary).toHaveAccessibleName("장보기");
 
   await shoppingSummary.click();
-  const shopping = page.getByRole("dialog", { name: "장보기 목록" });
+  const shopping = page.getByRole("region", { name: "장보기 목록" });
   await expect(shopping.locator(".shopping-sheet-preview-note")).toHaveText("미리보기 내용은 저장되지 않아요.");
   await expect(shopping.locator(".shopping-sheet-progress")).toHaveCount(0);
   await expect(shopping.getByRole("button", { name: /식단에서 재료 고르기/ })).toBeVisible();
@@ -2432,8 +2537,9 @@ test("guest home can reopen the temporary shopping list and explains its lifetim
 });
 
 test("past printed dates read as relative days and notification links open the food", async ({ page }) => {
-  const spinachPriorityCard = page.locator(".priority-card").filter({ hasText: "시금치" });
-  // The home chip shortens the passed day; its spoken label and the detail copy keep the relative wording.
+  await page.locator(".app-bottom-nav [data-nav-tab=\"fridge\"]").click();
+  const spinachPriorityCard = page.locator(".inventory-row").filter({ hasText: "시금치" });
+  // The list chip shortens the passed day; its spoken label and the detail copy keep the relative wording.
   await expect(spinachPriorityCard.locator(".freshness-chip")).toHaveText("+1일");
   await expect(spinachPriorityCard.locator(".freshness-chip")).toHaveAttribute("aria-label", "표시 날짜에서 1일 지남");
 
@@ -2443,8 +2549,10 @@ test("past printed dates read as relative days and notification links open the f
   await expect(dialog).toContainText("표시 날짜가 어제 지났어요.");
   await expect.poll(() => page.evaluate(() => window.location.search)).toBe("");
 
+  // The daily summary lands on Home's headline (today's count) when foods are urgent.
   await page.goto("/?open=priority");
-  await expect(page.locator("#priority-title")).toBeFocused();
+  await expect(page.locator(".app-bottom-nav-item-active")).toHaveText("홈");
+  await expect(page.locator("#greeting-title")).toBeFocused();
   await expect.poll(() => page.evaluate(() => window.location.search)).toBe("");
 
   await page.goto("/?food=missing-food");
@@ -2454,4 +2562,86 @@ test("past printed dates read as relative days and notification links open the f
   await page.goto("/?open=grocy");
   await expect(page.getByRole("dialog", { name: "알림" })).toBeVisible();
   await expect.poll(() => page.evaluate(() => window.location.search)).toBe("");
+});
+
+test("each tab keeps its own scroll position", async ({ page }) => {
+  const scroll = page.getByTestId("mobile-scroll");
+  const setScrollTop = (top: number) => scroll.evaluate((element, value) => { element.scrollTop = value; }, top);
+  const scrollTop = () => scroll.evaluate((element) => Math.round(element.scrollTop));
+
+  await page.locator(".app-bottom-nav [data-nav-tab=\"fridge\"]").click();
+  await expect(page.locator(".inventory-row").first()).toBeVisible();
+  await setScrollTop(120);
+  await expect.poll(scrollTop).toBe(120);
+
+  await page.locator(".app-bottom-nav [data-nav-tab=\"home\"]").click();
+  await expect.poll(scrollTop).toBe(0);
+  await setScrollTop(80);
+  await expect.poll(scrollTop).toBe(80);
+
+  await page.locator(".app-bottom-nav [data-nav-tab=\"fridge\"]").click();
+  await expect.poll(scrollTop).toBe(120);
+  await page.locator(".app-bottom-nav [data-nav-tab=\"home\"]").click();
+  await expect.poll(scrollTop).toBe(80);
+
+  // Tapping the tab you are already on goes back to its top.
+  await page.locator(".app-bottom-nav [data-nav-tab=\"home\"]").click();
+  await expect.poll(scrollTop).toBe(0);
+  // Fixed chrome stays outside the scrolling screen.
+  await expect(page.getByTestId("mobile-scroll").locator(".app-bottom-nav")).toHaveCount(0);
+});
+
+test("with nothing urgent Home stays calm and lists what to look at this week", async ({ page }) => {
+  await page.clock.install({ time: FIXTURE_NOW });
+  await page.reload();
+  await expect(page.getByRole("heading", { level: 1, name: "오늘 살펴볼 음식 6개" })).toBeVisible();
+  // Ten days earlier, every sample date is more than three days away.
+  await page.clock.setSystemTime(new Date(FIXTURE_NOW.getTime() - 10 * 24 * 60 * 60 * 1000));
+  await page.clock.runFor(61_000);
+
+  const heading = page.getByRole("heading", { level: 1 });
+  await expect(heading).toContainText("오늘은 서둘러 볼");
+  await expect(heading).toContainText("음식이 없어요");
+  await expect(page.locator(".kitchen-hero .rescue-hero-count")).toHaveCount(0);
+  await expect(page.locator(".kitchen-hero")).not.toContainText("0개");
+  await expect(page.locator(".rescue-card")).toHaveCount(0);
+
+  const upcoming = page.getByRole("region", { name: "이번 주 먼저 볼 것" });
+  await expect(upcoming).toBeVisible();
+  await expect(upcoming.locator(".priority-card")).toHaveCount(3);
+  await expect(page.getByRole("navigation", { name: "보관 장소" }).getByRole("button")).toHaveCount(3);
+  const firstUpcoming = upcoming.locator(".priority-card").first();
+  const firstName = (await firstUpcoming.locator("strong").first().textContent()) ?? "";
+  await firstUpcoming.click();
+  const detail = page.getByRole("dialog", { name: firstName.trim() });
+  await expect(detail).toBeVisible();
+  await page.keyboard.press("Escape");
+  // The installed fake clock freezes the sheet's exit spring, so check the closed state
+  // rather than unmount; focus return to Home rows is covered by the real-clock tests.
+  await expect(page.getByTestId("bottom-sheet")).toHaveAttribute("data-state", "closed");
+});
+
+test("this week's rescued count starts from the demo log and rises after the deck's two-tap eat", async ({ page }) => {
+  const rescued = page.getByTestId("home-rescued-stat");
+  await expect(rescued).toHaveText(/이번 주 구한 음식\s*3개/);
+
+  const tofu = page.locator(".rescue-card").filter({ hasText: "국산콩 두부" });
+  await tofu.getByRole("button", { name: "국산콩 두부 먹었어요" }).click();
+  // The first tap only asks for confirmation; nothing is recorded yet.
+  await expect(tofu.getByRole("button", { name: "국산콩 두부 다 먹은 기록 남기기" })).toBeVisible();
+  await expect(rescued).toHaveText(/이번 주 구한 음식\s*3개/);
+  await tofu.getByRole("button", { name: "국산콩 두부 다 먹은 기록 남기기" }).click();
+
+  await expect(page.getByRole("status")).toHaveText("국산콩 두부를 먹은 기록으로 남겼어요");
+  await expect(rescued).toHaveText(/이번 주 구한 음식\s*4개/);
+  await expect(page.getByRole("heading", { level: 1, name: "오늘 살펴볼 음식 5개" })).toBeVisible();
+
+  // Discarding never shows up as a count on Home.
+  await page.locator(".app-bottom-nav [data-nav-tab=\"fridge\"]").click();
+  await page.locator(".inventory-row").filter({ hasText: "닭가슴살" }).click();
+  const detail = page.getByRole("dialog", { name: "닭가슴살" });
+  await detail.getByRole("button", { name: "상태가 이상해 폐기하기" }).click();
+  await detail.getByRole("button", { name: "폐기 기록" }).click();
+  await expect(page.getByRole("status")).toHaveText("닭가슴살 폐기 기록을 남겼어요");
+  await expect(rescued).toHaveText(/이번 주 구한 음식\s*4개/);
 });

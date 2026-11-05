@@ -1,32 +1,30 @@
 import { expect, test } from "@playwright/test";
 
-test("home pantry shortcuts stay on one line and the meal action fits at 320px", async ({ page }) => {
+test("home storage rows stay on one line and the meal action fits at 320px", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 740 });
   await page.goto("/");
-  // The storage shortcuts are now the fridge door's shelf label buttons (one per storage).
-  await expect(page.locator(".pantry-shortcuts .fridge-shelf-label")).toHaveCount(3);
-  await expect(page.getByRole("button", { name: "냉장 보관 식품 5개 보기" })).toBeVisible();
-  const shortcutSizes = await page.locator(".pantry-shortcuts .fridge-shelf-label").evaluateAll((buttons) => buttons.map((button) => {
-    const label = button.querySelector<HTMLElement>("span")!;
+  // One line per storage place; empty storages collapse instead of saying "비어 있어요".
+  const rows = page.locator(".home-shelves .home-shelf-row");
+  await expect(rows).toHaveCount(3);
+  await expect(page.getByRole("button", { name: /^냉장 식품 5개 보기/ })).toBeVisible();
+  const rowSizes = await rows.evaluateAll((buttons) => buttons.map((button) => {
+    const label = button.querySelector<HTMLElement>(".home-shelf-name")!;
+    const rect = button.getBoundingClientRect();
     return {
       width: button.clientWidth,
       contentWidth: button.scrollWidth,
       labelHeight: label.getBoundingClientRect().height,
       labelFontSize: Number.parseFloat(getComputedStyle(label).fontSize),
-      height: button.getBoundingClientRect().height,
+      height: rect.height,
+      right: rect.right,
     };
   }));
-  for (const size of shortcutSizes) {
+  for (const size of rowSizes) {
     expect(size.contentWidth).toBeLessThanOrEqual(size.width);
     // One line: a wrapped label would be at least twice the font size tall.
     expect(size.labelHeight).toBeLessThan(size.labelFontSize * 2);
     expect(size.height).toBeGreaterThanOrEqual(44);
-  }
-  const stickerSizes = await page.locator(".pantry-shortcuts .fridge-sticker").evaluateAll((buttons) => buttons.map((button) => button.getBoundingClientRect().toJSON()));
-  expect(stickerSizes.length).toBeGreaterThan(0);
-  for (const size of stickerSizes) {
-    expect(size.width).toBeGreaterThanOrEqual(44);
-    expect(size.height).toBeGreaterThanOrEqual(44);
+    expect(size.right).toBeLessThanOrEqual(320);
   }
   // The taller fridge panel moves the meal CTA below the 320px first fold. A meal-plan entry must still be
   // fully visible above the nav in the first viewport: the first rescue card's 요리 action (or the CTA without a deck).
@@ -47,7 +45,8 @@ test("home pantry shortcuts stay on one line and the meal action fits at 320px",
   expect(mealAction!.y + mealAction!.height).toBeLessThan(navigationAfterScroll!.y);
   const navItems = await page.locator(".app-bottom-nav-item").evaluateAll((items) => items.map((item) => {
     const rect = item.getBoundingClientRect();
-    return { x: rect.x, right: rect.right, width: rect.width, height: rect.height };
+    const label = item.querySelector("span:last-child")!;
+    return { x: rect.x, right: rect.right, width: rect.width, height: rect.height, labelWidth: label.scrollWidth, labelBox: label.clientWidth };
   }));
   // Four destinations share the five-column bar with the centre add button.
   expect(navItems).toHaveLength(4);
@@ -58,6 +57,8 @@ test("home pantry shortcuts stay on one line and the meal action fits at 320px",
     expect(item.x).toBeGreaterThanOrEqual(0);
     expect(item.right).toBeLessThanOrEqual(320);
   }
+  // "냉장고" is the longest label and must not be clipped.
+  for (const item of navItems) expect(item.labelWidth).toBeLessThanOrEqual(item.labelBox + 1);
   const sorted = [...navItems].sort((a, b) => a.x - b.x);
   for (let index = 1; index < sorted.length; index += 1) expect(sorted[index]!.x).toBeGreaterThanOrEqual(sorted[index - 1]!.right - 0.5);
 });
@@ -80,10 +81,6 @@ test("web surface renders the real app without phone simulator chrome", async ({
   expect(surface?.width).toBeGreaterThanOrEqual(1439);
   expect(surface?.height).toBeGreaterThanOrEqual(999);
 
-  const inventoryToolbar = page.locator(".inventory-toolbar");
-  await expect(inventoryToolbar).toBeVisible();
-  await expect(inventoryToolbar).toHaveCSS("position", "sticky");
-
   const navigation = await page.locator(".app-bottom-nav").boundingBox();
   expect(navigation, "web navigation has no bounding box").toBeTruthy();
   expect(navigation!.y).toBeGreaterThan(surface!.y + surface!.height * 0.8);
@@ -95,54 +92,67 @@ test("web surface renders the real app without phone simulator chrome", async ({
   expect(navigation!.x + navigation!.width).toBeLessThanOrEqual(surface!.x + surface!.width);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(1440);
 
-  // The priority section's food-list action is now labelled "식품 찾기".
-  await page.getByRole("button", { name: "식품 찾기", exact: true }).click();
-  await expect(page.locator(".app-bottom-nav-item-active")).toHaveText("식품");
-  await expect.poll(
-    () => page.locator(".inventory-section").evaluate((element) => element.getBoundingClientRect().top),
-    { timeout: 2_000 },
-  ).toBeLessThan(1_000);
+  const navigationBar = page.getByRole("navigation", { name: "주요 메뉴" });
+  const scroll = page.getByTestId("mobile-scroll");
+  // 냉장고 is its own screen: the inventory toolbar lives there, not on Home.
+  await expect(page.locator(".inventory-toolbar")).toHaveCount(0);
+  await navigationBar.getByRole("button", { name: "냉장고", exact: true }).click();
+  await expect(page.locator(".app-bottom-nav-item-active")).toHaveText("냉장고");
+  await expect(page.getByRole("heading", { level: 1, name: "냉장고" })).toBeVisible();
+  const inventoryToolbar = page.locator(".inventory-toolbar");
+  await expect(inventoryToolbar).toBeVisible();
+  await expect(inventoryToolbar).toHaveCSS("position", "sticky");
 
-  await page.evaluate(() => {
-    document.querySelector<HTMLElement>("[data-testid=mobile-scroll]")?.scrollTo({ top: Number.MAX_SAFE_INTEGER, behavior: "auto" });
-  });
-  await expect(page.locator(".app-bottom-nav-item-active")).toHaveText("식품");
+  await scroll.evaluate((element) => element.scrollTo({ top: Number.MAX_SAFE_INTEGER, behavior: "auto" }));
+  await expect(page.locator(".app-bottom-nav-item-active")).toHaveText("냉장고");
 
-  const scrollTopBeforeDetail = await page.getByTestId("mobile-scroll").evaluate((element) => element.scrollTop);
+  const scrollTopBeforeDetail = await scroll.evaluate((element) => element.scrollTop);
   await page.locator(".inventory-row").first().click();
   await expect(page.getByRole("dialog", { name: "시금치" })).toBeVisible();
-  await expect(page.locator(".app-bottom-nav-item-active")).toHaveText("식품");
+  await expect(page.locator(".app-bottom-nav-item-active")).toHaveText("냉장고");
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog", { name: "시금치" })).toHaveCount(0);
-  await expect(page.locator(".app-bottom-nav-item-active")).toHaveText("식품");
-  await expect.poll(() => page.getByTestId("mobile-scroll").evaluate((element) => element.scrollTop)).toBeGreaterThanOrEqual(scrollTopBeforeDetail - 1);
-  await expect.poll(() => page.getByTestId("mobile-scroll").evaluate((element) => element.scrollTop)).toBeLessThanOrEqual(scrollTopBeforeDetail + 1);
+  await expect(page.locator(".app-bottom-nav-item-active")).toHaveText("냉장고");
+  await expect.poll(() => scroll.evaluate((element) => element.scrollTop)).toBeGreaterThanOrEqual(scrollTopBeforeDetail - 1);
+  await expect.poll(() => scroll.evaluate((element) => element.scrollTop)).toBeLessThanOrEqual(scrollTopBeforeDetail + 1);
+  const fridgeScrollTop = await scroll.evaluate((element) => element.scrollTop);
 
-  await page.evaluate(() => {
-    document.querySelector<HTMLElement>("[data-testid=mobile-scroll]")?.scrollTo({ top: 0, behavior: "auto" });
-  });
+  // Each tab keeps its own scroll position: Home opens at its own (top) position.
+  await navigationBar.getByRole("button", { name: "홈", exact: true }).click();
+  await expect(page.locator(".app-bottom-nav-item-active")).toHaveText("홈");
+  await expect.poll(() => scroll.evaluate((element) => element.scrollTop)).toBe(0);
+
+  await page.getByRole("button", { name: /오늘 뭐 먹지/ }).click();
+  const meal = page.getByRole("region", { name: "오늘의 식단" });
+  await expect(meal).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "오늘의 식단" })).toHaveCount(0);
+  await expect(page.locator(".app-bottom-nav-item-active")).toHaveText("식단");
+  await expect(page.getByRole("heading", { level: 1, name: "식단" })).toBeVisible();
+  await navigationBar.getByRole("button", { name: "홈", exact: true }).click();
+  await expect(meal).toBeHidden();
   await expect(page.locator(".app-bottom-nav-item-active")).toHaveText("홈");
 
-  await page.getByRole("button", { name: "오늘 식단 만들기" }).click();
-  await expect(page.getByRole("dialog", { name: "오늘의 식단" })).toBeVisible();
+  await navigationBar.getByRole("button", { name: "냉장고", exact: true }).click();
+  await expect(page.locator(".app-bottom-nav-item-active")).toHaveText("냉장고");
+  await expect.poll(() => scroll.evaluate((element) => element.scrollTop)).toBeGreaterThanOrEqual(fridgeScrollTop - 1);
+  await navigationBar.getByRole("button", { name: "식단", exact: true }).click();
+  await expect(meal).toBeVisible();
   await expect(page.locator(".app-bottom-nav-item-active")).toHaveText("식단");
-  await page.keyboard.press("Escape");
-  await expect(page.getByRole("dialog", { name: "오늘의 식단" })).toHaveCount(0);
-  await expect(page.locator(".app-bottom-nav-item-active")).toHaveText("홈");
-
-  await page.getByRole("button", { name: "식품", exact: true }).click();
-  await expect(page.locator(".app-bottom-nav-item-active")).toHaveText("식품");
-  await page.getByRole("button", { name: "식단", exact: true }).click();
-  await expect(page.getByRole("dialog", { name: "오늘의 식단" })).toBeVisible();
-  await expect(page.locator(".app-bottom-nav-item-active")).toHaveText("식단");
-  await page.keyboard.press("Escape");
-  await expect(page.getByRole("dialog", { name: "오늘의 식단" })).toHaveCount(0);
-  await expect(page.locator(".app-bottom-nav-item-active")).toHaveText("식품");
+  await navigationBar.getByRole("button", { name: /^장보기/ }).click();
+  await expect(page.getByRole("region", { name: "장보기 목록" })).toBeVisible();
+  await expect(page.locator(".app-bottom-nav-item-active")).toHaveText("장보기");
+  await expect(meal).toBeHidden();
+  // The bell and 나 exist once, on the visible tab's header.
+  await expect(page.locator(".connection-pill")).toHaveCount(1);
+  await expect(page.locator(".notification-button")).toHaveCount(1);
 });
 
 test("web surface carries the selected dark theme through the outer runtime shell", async ({ page }) => {
   await page.addInitScript(() => window.localStorage.removeItem("rescue-meal.theme"));
+  await page.emulateMedia({ colorScheme: "light" });
   await page.goto("/");
+  // The theme switch lives in 나.
+  await page.locator(".connection-pill").click();
   await page.getByTestId("theme-toggle").click();
 
   await expect(page.locator("html")).toHaveAttribute("data-rescue-theme", "dark");
@@ -150,23 +160,25 @@ test("web surface carries the selected dark theme through the outer runtime shel
   await expect(page.locator(".app-shell-web")).toHaveCSS("background-color", "rgb(12, 18, 16)");
 });
 
-test("web home keeps the fridge door before meal actions on mobile and desktop", async ({ page }) => {
+test("web home keeps the storage rows before the meal action on mobile and desktop", async ({ page }) => {
   await page.setViewportSize({ width: 393, height: 852 });
   await page.goto("/");
 
-  // The fridge door replaced the trust card and freshness overview as the review entry point.
-  await expect(page.locator(".trust-card")).toHaveCount(0);
+  // The full inventory moved to 냉장고; Home shows each food at most in the deck and the storage rows.
+  await expect(page.locator(".inventory-row")).toHaveCount(0);
   await expect(page.locator(".freshness-overview")).toHaveCount(0);
-  await expect(page.getByRole("heading", { level: 1, name: /^오늘 구할 음식 \d+개$/ })).toBeVisible();
-  const summary = page.locator(".fridge-door");
+  await expect(page.getByRole("heading", { level: 1, name: /^오늘 살펴볼 음식 \d+개$/ })).toBeVisible();
+  // The demo record has one passed printed date: the safety summary opens its review.
+  await expect(page.locator(".trust-card")).toHaveCount(1);
+  await expect(page.locator(".rescue-card").filter({ hasText: "시금치" })).toHaveClass(/freshness-past/);
+  const summary = page.locator(".home-shelves");
   await expect(summary).toBeVisible();
-  await expect(summary.getByRole("button", { name: /^시금치, 표시 날짜에서 \d+일 지남$/ })).toHaveClass(/freshness-past/);
   const actionRow = page.locator(".home-action-row");
   const overviewPrecedesActions = () => page.evaluate(() => {
-    const overview = document.querySelector(".fridge-door");
+    const overview = document.querySelector(".home-shelves");
     const action = document.querySelector(".home-action-row");
     if (!overview || !action || !(overview.compareDocumentPosition(action) & Node.DOCUMENT_POSITION_FOLLOWING)) return false;
-    // Shelves must not run under the action row.
+    // Rows must not run under the action row.
     const overviewBox = overview.getBoundingClientRect();
     const actionBox = action.getBoundingClientRect();
     return overviewBox.bottom <= actionBox.top || overviewBox.right <= actionBox.left || actionBox.right <= overviewBox.left;
@@ -182,7 +194,8 @@ test("web home keeps the fridge door before meal actions on mobile and desktop",
 test("compact web food detail keeps its safety guidance readable at 320px", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 740 });
   await page.goto("/");
-  await page.getByRole("button", { name: /시금치 개봉됨/ }).click();
+  await page.getByRole("navigation", { name: "주요 메뉴" }).getByRole("button", { name: "냉장고", exact: true }).click();
+  await page.locator(".inventory-row").filter({ hasText: "시금치" }).click();
 
   const detail = page.getByRole("dialog", { name: "시금치" });
   const warningCopy = detail.locator(".date-review-callout-compact > span:nth-child(2) > small");

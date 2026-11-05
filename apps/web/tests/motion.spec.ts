@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { chooseAddMethod } from "./add-flow-helpers";
 
 // The other suites run without entrance motion (the app turns it off for automated
 // browsers) so they measure settled layout. This file turns motion on and checks the entrance choreography plays, settles, and never
@@ -34,16 +35,16 @@ const settle = (page: import("@playwright/test").Page) =>
 test("home writes its headline in letter by letter, counts up, and deals the rescue cards", async ({ page }) => {
   await page.goto("/");
   const started = Date.now();
-  const heading = page.getByRole("heading", { level: 1, name: "오늘 구할 음식 6개" });
+  const heading = page.getByRole("heading", { level: 1, name: "오늘 살펴볼 음식 6개" });
   await expect(heading).toBeVisible();
-  await expect(page.locator("#greeting-title .reveal-char")).toHaveCount(6);
+  await expect(page.locator("#greeting-title .reveal-char")).toHaveCount(7);
   expect(await runningAnimationNames(page)).toEqual(expect.arrayContaining(["m-char"]));
 
   await settle(page);
   // The whole entrance settles quickly (budget ~700ms of choreography plus load).
   expect(Date.now() - started).toBeLessThan(2_500);
   await expect(page.locator(".rescue-hero-count")).toHaveText("6");
-  await expect(heading).toHaveText("오늘 구할 음식6개");
+  await expect(heading).toHaveText("오늘 살펴볼 음식6개");
   const clipped = await page.locator("button").evaluateAll((buttons) => buttons.filter((button) => getComputedStyle(button).clipPath !== "none").length);
   expect(clipped).toBe(0);
   const cards = page.locator(".rescue-card");
@@ -66,6 +67,7 @@ test("tab changes and sheets animate without delaying the tap", async ({ page })
   await expect(page.locator(".rescue-hero-count")).toHaveText("6");
 
   await page.getByTestId("nav-add-food").click();
+  await chooseAddMethod(page, "영수증");
   const sheet = page.getByTestId("bottom-sheet");
   await expect(sheet).toBeVisible();
   expect(await runningAnimationNames(page)).toEqual(expect.arrayContaining(["m-rise"]));
@@ -75,16 +77,16 @@ test("tab changes and sheets animate without delaying the tap", async ({ page })
 
 test("the letter intro plays on the first open of the day only", async ({ page }) => {
   await page.goto("/");
-  await expect(page.locator("#greeting-title .reveal-char")).toHaveCount(6);
+  await expect(page.locator("#greeting-title .reveal-char")).toHaveCount(7);
   await page.reload();
-  await expect(page.getByRole("heading", { level: 1, name: "오늘 구할 음식 6개" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "오늘 살펴볼 음식 6개" })).toBeVisible();
   await expect(page.locator("#greeting-title .reveal-char")).toHaveCount(0);
 });
 
 test("reduced motion keeps every surface still", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
-  await expect(page.getByRole("heading", { level: 1, name: "오늘 구할 음식 6개" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "오늘 살펴볼 음식 6개" })).toBeVisible();
   await expect(page.locator(".rescue-hero-count")).toHaveText("6");
   const names = await runningAnimationNames(page);
   expect(names.filter((name) => name.startsWith("m-"))).toEqual([]);

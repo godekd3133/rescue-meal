@@ -3,18 +3,83 @@ import { MetadataText } from "./Metadata";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { CalendarIcon, CheckIcon } from "@radix-ui/react-icons";
 import { KeyboardInput, useKeyboard } from "./mobile";
+import "./koreanDateField.css";
 
 export type DateConfirmationKind = "sell_by" | "use_by" | "best_before" | "user_reminder";
 
 export type DateAssertionDraft = { value: string; kind: DateConfirmationKind | null };
 
-const options: Array<[DateConfirmationKind, string]> = [
+export const DATE_CONFIRMATION_OPTIONS: Array<[DateConfirmationKind, string]> = [
   ["sell_by", "유통기한"],
   ["use_by", "소비기한"],
   ["best_before", "품질유지기한"],
   ["user_reminder", "내 알림일"],
 ];
+const options = DATE_CONFIRMATION_OPTIONS;
 const DATE_KIND_COLUMNS = 2;
+const KOREAN_WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
+
+/** `2026-11-09` (or `2026.11.09`) → `2026년 11월 9일 (월)`; anything else → "". */
+export function formatKoreanDate(value: string) {
+  const match = value.trim().match(/^(\d{4})[-.](\d{2})[-.](\d{2})$/);
+  if (!match) return "";
+  const [year, month, day] = match.slice(1).map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day, 12));
+  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return "";
+  return `${year}년 ${month}월 ${day}일 (${KOREAN_WEEKDAYS[date.getUTCDay()]})`;
+}
+
+/**
+ * A date field that reads in the app's Korean style instead of the OS locale format.
+ * The native date input stays on top (transparent) so the platform picker, form
+ * filling and assistive technology keep working; the visible text is Korean.
+ */
+export function KoreanDateField({
+  id,
+  value,
+  onChange,
+  ariaLabel,
+  ariaDescribedBy,
+  placeholder = "날짜 선택",
+  className = "",
+  onFocus,
+}: {
+  id?: string;
+  /** ISO `YYYY-MM-DD` or "" */
+  value: string;
+  onChange: (value: string) => void;
+  ariaLabel?: string;
+  ariaDescribedBy?: string;
+  placeholder?: string;
+  className?: string;
+  onFocus?: (event: React.FocusEvent<HTMLInputElement>) => void;
+}) {
+  const keyboard = useKeyboard();
+  const display = formatKoreanDate(value);
+  return (
+    <span className={`korean-date-field${display ? "" : " korean-date-field-empty"} ${className}`.trim()}>
+      <span className="korean-date-field-display" aria-hidden="true"><CalendarIcon width={16} height={16} /><span>{display || placeholder}</span></span>
+      <KeyboardInput
+        id={id}
+        className="korean-date-field-input"
+        type="date"
+        value={value}
+        aria-label={ariaLabel}
+        aria-describedby={ariaDescribedBy}
+        onChange={(event) => onChange(event.target.value)}
+        onClick={(event) => {
+          try { (event.currentTarget as HTMLInputElement & { showPicker?: () => void }).showPicker?.(); } catch { /* picker unavailable */ }
+        }}
+        onFocus={(event) => {
+          // A date uses the platform picker, not the simulated text keyboard.
+          keyboard.hide();
+          onFocus?.(event);
+        }}
+        onBlur={() => keyboard.hide()}
+      />
+    </span>
+  );
+}
 
 export default function DateAssertionEditor({
   onCancel,

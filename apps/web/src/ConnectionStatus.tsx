@@ -1,5 +1,4 @@
 import { MetadataText } from "./Metadata";
-import { ChevronRightIcon, PersonIcon } from "@radix-ui/react-icons";
 
 type ConnectionState = "fixture" | "checking" | "connected" | "offline" | "auth_required";
 type CachedAtFreshness = "recent" | "stale" | "old" | "unknown";
@@ -17,8 +16,9 @@ export default function ConnectionStatus({ state, hasCachedData = false, cachedA
     ? `최근 기록 · ${cachedAtLabel ?? "최근 화면"}`
     : labels[state];
   const freshnessClass = state === "offline" && hasCachedData ? ` connection-offline-${cachedAtFreshness ?? "unknown"}` : "";
-  const actionLabel = state === "fixture" ? "체험 안내 열기" : state === "auth_required" ? "로그인 화면 열기" : "계정 열기";
-  const accessibleLabel = state === "connected" ? actionLabel : state === "fixture"
+  // The account entry is the "나" avatar: account, notification settings, theme and advanced settings.
+  const actionLabel = state === "fixture" ? "체험 안내 열기" : state === "auth_required" ? "로그인 화면 열기" : "계정과 설정 열기";
+  const accessibleLabel = `나. ${state === "connected" ? actionLabel : state === "fixture"
     ? `예시 식품으로 체험 중. 변경 내용은 새로고침하면 사라져요. ${actionLabel}`
     : state === "offline"
     ? hasCachedData
@@ -26,6 +26,6 @@ export default function ConnectionStatus({ state, hasCachedData = false, cachedA
       : `식품 목록을 불러오지 못했어요. ${actionLabel}`
     : state === "checking"
       ? `식품 목록에 연결하고 있어요. ${actionLabel}`
-      : `${label}. ${actionLabel}`;
-  return <button className={`connection-pill connection-${state}${freshnessClass}`} type="button" onClick={onOpenAccount} aria-label={accessibleLabel} title={accessibleLabel}>{state === "connected" ? <PersonIcon className="connection-compact-icon connection-account-icon" aria-hidden="true" width={15} height={15} /> : <span className="connection-dot" />}<span className="connection-label"><MetadataText text={label} /></span>{state !== "connected" ? <PersonIcon className="connection-compact-icon" aria-hidden="true" width={15} height={15} /> : null}<ChevronRightIcon aria-hidden="true" width={11} height={11} style={{ flex: "0 0 auto", opacity: 0.72 }} /></button>;
+      : `${label}. ${actionLabel}`}`;
+  return <button className={`connection-pill connection-${state}${freshnessClass}`} type="button" onClick={onOpenAccount} aria-label={accessibleLabel} title={accessibleLabel}>{state === "connected" ? null : <><span className="connection-dot" /><span className="connection-label"><MetadataText text={label} /></span></>}<span className="me-avatar" aria-hidden="true">나</span></button>;
 }

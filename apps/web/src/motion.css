@@ -123,21 +123,16 @@
     animation: m-confirm 320ms var(--m-pop);
   }
 
-  html[data-motion="on"] .fridge-door .fridge-shelf {
+  /* Storage rows slide up one after another under the panel. */
+  html[data-motion="on"] .home-shelves li {
     animation: m-rise 380ms var(--m-out) backwards;
   }
-  html[data-motion="on"] .fridge-door .fridge-shelf:nth-child(2) { animation-delay: 40ms; }
-  html[data-motion="on"] .fridge-door .fridge-shelf:nth-child(3) { animation-delay: 80ms; }
-  html[data-motion="on"] .fridge-door .fridge-shelf:nth-child(4) { animation-delay: 120ms; }
+  html[data-motion="on"] .home-shelves li:nth-child(2) { animation-delay: 40ms; }
+  html[data-motion="on"] .home-shelves li:nth-child(3) { animation-delay: 80ms; }
 
-  html[data-motion="on"][data-rescue-theme] .meal-home .fridge-door .fridge-sticker {
-    animation: m-pop 340ms var(--m-pop) backwards;
-    animation-delay: 100ms;
+  html[data-motion="on"][data-rescue-theme] .home-shelves .home-shelf-photo {
+    animation: m-pop 340ms var(--m-pop) 120ms backwards;
   }
-  html[data-motion="on"][data-rescue-theme] .meal-home .fridge-door li:nth-child(2) .fridge-sticker { animation-delay: 130ms; }
-  html[data-motion="on"][data-rescue-theme] .meal-home .fridge-door li:nth-child(3) .fridge-sticker { animation-delay: 160ms; }
-  html[data-motion="on"][data-rescue-theme] .meal-home .fridge-door li:nth-child(4) .fridge-sticker { animation-delay: 190ms; }
-  html[data-motion="on"][data-rescue-theme] .meal-home .fridge-door li:nth-child(n + 5) .fridge-sticker { animation-delay: 220ms; }
 
   html:where([data-motion="on"]) :where(.inventory-row) {
     animation: m-rise 420ms var(--m-out) backwards;
@@ -188,10 +183,10 @@
     transform: scale(0.9) rotate(90deg);
   }
 
-  html[data-motion="on"][data-rescue-theme] :is(.primary-sheet-button, .secondary-sheet-button, .app-bottom-nav-item, .fridge-shelf-label) {
+  html[data-motion="on"][data-rescue-theme] :is(.primary-sheet-button, .secondary-sheet-button, .app-bottom-nav-item, .home-shelf-row) {
     transition: transform 180ms var(--m-pop), background-color 160ms ease, color 160ms ease;
   }
-  html[data-motion="on"][data-rescue-theme] :is(.primary-sheet-button, .secondary-sheet-button, .app-bottom-nav-item, .fridge-shelf-label):active:not(:disabled) {
+  html[data-motion="on"][data-rescue-theme] :is(.primary-sheet-button, .secondary-sheet-button, .app-bottom-nav-item, .home-shelf-row):active:not(:disabled) {
     transform: scale(0.95);
   }
 }
@@ -203,3 +198,15 @@
     animation-delay: calc(340ms + min(var(--deal-i, 0), 4) * 45ms);
   }
 }
+
+/*
+ * Tabs are hidden panels, and display:none -> block restarts CSS animations. A tab that is
+ * shown again keeps its settled layout: only the short screen rise (playScreenEntrance,
+ * Web Animations) plays, never the first-open choreography or the letter intro.
+ */
+html[data-motion="on"] [data-tab-panel][data-revisit] :not(.is-confirming),
+html[data-motion="on"] [data-tab-panel][data-revisit] :not(.is-confirming)::before,
+html[data-motion="on"] [data-tab-panel][data-revisit] :not(.is-confirming)::after {
+  animation: none !important;
+}
+

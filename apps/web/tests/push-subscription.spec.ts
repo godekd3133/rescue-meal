@@ -75,7 +75,7 @@ test("Web Push asks for permission, registers the subscription, and supports rev
   const getPushPayload = await mockAccountAndPushApi(page, { initialPermission: "default", requestedPermission: "granted" });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("계정");
+  await expect(page.locator(".connection-pill")).toHaveClass(/connection-connected/);
   await page.locator(".connection-pill").click();
   const panel = page.getByRole("region", { name: "알림 설정" });
   await expect(panel.getByRole("button", { name: "이 기기에서 푸시 연결" })).toBeEnabled();
@@ -94,7 +94,7 @@ test("Web Push stops before subscription when notification permission is denied"
   const getPushPayload = await mockAccountAndPushApi(page, { initialPermission: "default", requestedPermission: "denied" });
 
   await page.goto("/");
-  await expect(page.locator(".connection-pill")).toHaveText("계정");
+  await expect(page.locator(".connection-pill")).toHaveClass(/connection-connected/);
   await page.locator(".connection-pill").click();
   const panel = page.getByRole("region", { name: "알림 설정" });
   await panel.getByRole("button", { name: "이 기기에서 푸시 연결" }).click();

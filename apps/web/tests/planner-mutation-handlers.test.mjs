@@ -8,7 +8,7 @@ const cases=[
  ['saveMealPreferences','  useEffect(() => {','updateMealPreferences'],
  ['persistPlan','  const hasRecipe','saveMealPlan'],
  ['persistMultiDayPlan','  const toggleMultiDayHistory','saveMultiDayMealPlan'],
- ['completePlan','  return <BottomSheet','completeMealPlan'],
+ ['completePlan','  const plannerBody =','completeMealPlan'],
  ['loadAlternatives','  const loadMultiDayPreview','options'],
  ['loadMultiDayPreview','  const persistMultiDayPlan','preview'],
  ['toggleMultiDayHistory','  const openSavedMultiDayPlan','history'],
@@ -80,13 +80,13 @@ test('shopping retry callbacks cannot act in a replacement workspace',async()=>{
 });
 
 test('completion cannot write while current stock is being checked',async()=>{
- const pending=deferred(),x=setup('completePlan','  return <BottomSheet','completeMealPlan',pending);
+ const pending=deferred(),x=setup('completePlan','  const plannerBody =','completeMealPlan',pending);
  let writes=0;x.values.stockChecking=true;x.values.mealApi.completeMealPlan=()=>{writes++;return pending.promise;};
  await x.handler();assert.equal(writes,0);
 });
 
 test('unfinished cooking input prevents completion before any mutation starts',async()=>{
- const pending=deferred(),x=setup('completePlan','  return <BottomSheet','completeMealPlan',pending);
+ const pending=deferred(),x=setup('completePlan','  const plannerBody =','completeMealPlan',pending);
  x.values.consumptionInputErrors=[{foodId:'food'}];
  await x.handler();
  assert.ok(x.events.some(e=>e[0]==='setError'&&e[1]==='사용한 양을 확인해 주세요.'));

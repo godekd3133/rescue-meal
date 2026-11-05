@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { chooseAddMethod } from "./add-flow-helpers";
 
 test.skip(process.env.VITE_DEPLOYMENT_MODE !== "production", "production runtime contract only");
 
@@ -41,6 +42,7 @@ test("production boot never presents demo inventory when the API is unreachable"
   expect(layout.navigation!.bottom).toBeLessThanOrEqual(layout.screen!.bottom + 1);
 
   await page.getByRole("button", { name: "식품 목록에 추가" }).click();
+  await chooseAddMethod(page, "영수증");
   const intake = page.getByRole("dialog", { name: "영수증으로 추가" });
   await expect(intake).toBeVisible();
   await expect(intake.getByRole("button", { name: "샘플 영수증으로 시작" })).toHaveCount(0);
@@ -61,6 +63,7 @@ test("production boot never presents demo inventory when the API is unreachable"
 test("production label intake never exposes the demo result shortcut", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "식품 목록에 추가" }).click();
+  await chooseAddMethod(page, "영수증");
 
   const intake = page.getByRole("dialog", { name: "영수증으로 추가" });
   await intake.getByRole("tab", { name: "라벨" }).click();

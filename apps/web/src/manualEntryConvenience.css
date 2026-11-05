@@ -71,3 +71,50 @@
   color: var(--atelier-muted);
   opacity: 0.5;
 }
+
+.bottom-sheet .manual-date-field {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.bottom-sheet .manual-date-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.bottom-sheet .manual-date-clear {
+  min-height: 44px;
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+  color: var(--atelier-pistachio);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.bottom-sheet .manual-date-kinds {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.bottom-sheet .manual-date-kinds .manual-entry-choice[aria-checked="true"] {
+  border-color: var(--atelier-pistachio);
+  background: color-mix(in srgb, var(--atelier-pistachio) 12%, var(--atelier-surface-raised));
+  color: var(--atelier-pistachio);
+}
+
+.bottom-sheet .manual-date-hint {
+  color: var(--atelier-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.bottom-sheet .manual-date-hint-required {
+  color: var(--atelier-ink);
+  font-weight: 600;
+}

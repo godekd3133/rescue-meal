@@ -1,0 +1,483 @@
+/*
+ * Tab screens (홈 / 냉장고 / 식단 / 장보기) and the 나 additions.
+ * Kitchen tokens only (kitchen.css): deep leek-green hero, paper surfaces, leek-green
+ * actions, Jua display numbers. `:root[data-rescue-theme]:root:root` out-ranks both the
+ * legacy prototype.css layer and kitchen.css's tripled html selector, at a third of the bytes.
+ */
+
+.tab-panel[hidden] {
+  display: none !important;
+}
+
+/* ---------- Shared screen header (냉장고 / 식단 / 장보기) ---------- */
+
+:root[data-rescue-theme]:root:root .tab-screen,
+:root[data-rescue-theme]:root:root .fridge-screen {
+  min-height: 100%;
+  background: var(--fresh-bg) !important;
+  color: var(--fresh-ink);
+}
+
+:root[data-rescue-theme]:root:root .tab-screen {
+  padding: 0 var(--kitchen-gutter, 16px) calc(var(--device-safe-area-bottom, 34px) + 112px);
+}
+
+:is(.app-shell-preview) .tab-screen,
+:is(.app-shell-preview) .fridge-screen {
+  --kitchen-gutter: 15px;
+}
+
+:root[data-rescue-theme]:root:root .screen-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 56px;
+  margin: 0;
+  padding: 8px 0 6px;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+:is(.app-shell-preview) .screen-header {
+  padding-top: 46px !important;
+}
+
+:is(.app-shell-native) .screen-header {
+  padding-top: calc(env(safe-area-inset-top, 0px) + 10px) !important;
+}
+
+:root[data-rescue-theme]:root:root .screen-header .screen-title {
+  margin: 0;
+  color: var(--fresh-ink) !important;
+  font-family: var(--fresh-display);
+  font-size: 1.75rem;
+  font-weight: 400;
+  line-height: 1.2;
+  letter-spacing: 0;
+}
+
+/* Bell + 나 on paper: raised neutral chips that still read as one pair with the hero's. */
+:root[data-rescue-theme]:root:root .screen-header :is(.connection-pill,.notification-button) {
+  border: 1px solid var(--fresh-line) !important;
+  background: var(--fresh-surface) !important;
+  box-shadow: none !important;
+  color: var(--fresh-ink) !important;
+}
+
+:root[data-rescue-theme]:root:root .screen-header :is(.connection-pill,.notification-button) :is(span,small,strong,svg) {
+  color: inherit !important;
+}
+
+/* ---------- The 나 avatar (connection pill) ---------- */
+
+:root[data-rescue-theme]:root:root .connection-pill .me-avatar {
+  display: inline-grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--kitchen-yolk);
+  color: #1b1a10 !important;
+  font-family: var(--fresh-display);
+  font-size: 0.9375rem;
+  font-weight: 400;
+  line-height: 1;
+}
+
+:root[data-rescue-theme]:root:root .connection-pill.connection-connected {
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  min-height: 44px;
+  justify-content: center;
+  padding: 0 !important;
+  border-radius: 50% !important;
+}
+
+/* ---------- 홈 ---------- */
+
+:root[data-rescue-theme]:root:root .kitchen-hero .rescue-hero-calm {
+  display: grid;
+  gap: 2px;
+}
+
+:root[data-rescue-theme]:root:root .kitchen-hero .rescue-hero-calm .rescue-hero-copy {
+  font-size: 1.875rem;
+}
+
+:root[data-rescue-theme]:root:root .kitchen-hero .rescue-hero-calm .rescue-hero-copy + .rescue-hero-copy {
+  color: #8fe0b2;
+}
+
+:root[data-rescue-theme]:root:root .home-rescued-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 36px;
+  margin: 12px 0 0;
+  padding: 4px 14px 4px 12px;
+  border-radius: 999px;
+  background: var(--kitchen-hero-raised);
+  color: var(--kitchen-hero-muted);
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+:root[data-rescue-theme]:root:root .home-rescued-value {
+  color: var(--kitchen-hero-ink);
+  font-family: var(--fresh-display);
+  font-size: 0.9375rem;
+  font-weight: 400;
+}
+
+:root[data-rescue-theme]:root:root .home-rescued-value strong {
+  margin-right: 1px;
+  color: #8fe0b2;
+  font-size: 1.375rem;
+  font-weight: 400;
+}
+
+:root[data-rescue-theme]:root:root .home-body {
+  display: grid;
+  gap: 18px;
+}
+
+:root[data-rescue-theme]:root:root .home-body > .trust-card {
+  margin-top: 0 !important;
+  border: 1px solid var(--fresh-line) !important;
+  border-radius: 20px !important;
+}
+
+:root[data-rescue-theme]:root:root .home-section-title,
+:root[data-rescue-theme]:root:root .home-upcoming .section-heading h2 {
+  margin: 0 0 10px;
+  color: var(--fresh-ink);
+  font-family: var(--fresh-display);
+  font-size: 1.1875rem;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+:root[data-rescue-theme]:root:root .home-upcoming {
+  margin: 0;
+}
+
+:root[data-rescue-theme]:root:root .home-upcoming .priority-list-items {
+  display: grid;
+  gap: 8px;
+}
+
+/* One line per storage place. */
+:root[data-rescue-theme]:root:root .home-shelves ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+:root[data-rescue-theme]:root:root .home-shelf-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 3.25rem minmax(0, 1fr) auto 16px;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 60px;
+  padding: 8px 12px 8px 16px;
+  border: 1px solid var(--fresh-line);
+  border-radius: 20px;
+  background: var(--fresh-surface);
+  color: var(--fresh-ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+:root[data-rescue-theme]:root:root .home-shelf-row:focus-visible {
+  outline: none;
+}
+
+:root[data-rescue-theme]:root:root .home-shelf-row:focus-visible::after {
+  position: absolute;
+  inset: -4px;
+  border: 2px solid var(--fresh-primary-strong);
+  border-radius: 24px;
+  content: "";
+  pointer-events: none;
+}
+
+.home-shelf-name {
+  font-family: var(--fresh-display);
+  font-size: 1.0625rem;
+}
+
+.home-shelf-photos {
+  display: flex;
+  min-width: 0;
+  overflow: hidden;
+}
+
+:root[data-rescue-theme]:root:root .home-shelf-photo {
+  flex: 0 0 auto;
+  width: 36px !important;
+  height: 36px !important;
+  margin-right: -8px;
+  border: 2px solid var(--fresh-surface);
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.home-shelf-counts {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.home-shelf-counts strong {
+  min-width: 1.5ch;
+  font-family: var(--fresh-display);
+  font-size: 1.375rem;
+  font-weight: 400;
+  text-align: right;
+}
+
+:root[data-rescue-theme]:root:root .home-shelf-soon {
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--fresh-today) 18%, transparent);
+  color: color-mix(in srgb, var(--fresh-today) 55%, var(--fresh-ink));
+  font-size: 0.75rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.home-shelf-chevron {
+  color: var(--fresh-muted);
+}
+
+:root[data-rescue-theme]:root:root .home-action-row {
+  margin: 0;
+}
+
+:root[data-rescue-theme]:root:root .home-body .home-demo-note {
+  margin: 0;
+}
+
+/* Space for the floating bar under the last Home row. */
+:root[data-rescue-theme]:root:root .home-screen {
+  padding-bottom: calc(var(--device-safe-area-bottom, 34px) + 112px);
+}
+
+/* ---------- 냉장고 ---------- */
+
+:root[data-rescue-theme]:root:root .fridge-screen {
+  padding-bottom: calc(var(--device-safe-area-bottom, 34px) + 112px);
+}
+
+:root[data-rescue-theme]:root:root .fridge-screen .inventory-section {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+  border-top: 0 !important;
+}
+
+:root[data-rescue-theme]:root:root .fridge-screen .inventory-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+:root[data-rescue-theme]:root:root .fridge-screen .inventory-add-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: auto;
+  min-width: 62px;
+  height: 44px;
+  padding: 0 12px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.fridge-storage-chips {
+  margin: 10px calc(-1 * var(--kitchen-gutter, 16px)) 0;
+}
+
+.fridge-chip-rail {
+  width: 100%;
+}
+
+:root[data-rescue-theme]:root:root .fridge-chip-track {
+  display: flex;
+  gap: 8px;
+  padding: 2px var(--kitchen-gutter, 16px) 4px;
+}
+
+:root[data-rescue-theme]:root:root .fridge-chip {
+  position: relative;
+  flex: 0 0 auto;
+  min-width: 52px;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--fresh-line);
+  border-radius: 999px;
+  background: var(--fresh-surface);
+  color: var(--fresh-ink);
+  font-size: 0.875rem;
+  font-weight: 800;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+:root[data-rescue-theme]:root:root .fridge-chip-active {
+  border-color: transparent;
+  background: var(--fresh-primary-strong);
+  color: var(--fresh-primary-ink);
+}
+
+:root[data-rescue-theme]:root:root .fridge-chip:focus-visible {
+  outline: none;
+}
+
+:root[data-rescue-theme]:root:root .fridge-chip:focus-visible::after {
+  position: absolute;
+  inset: -4px;
+  border: 2px solid var(--fresh-primary-strong);
+  border-radius: 999px;
+  box-shadow: 0 0 0 2px var(--fresh-bg);
+  content: "";
+  pointer-events: none;
+}
+
+/* ---------- 식단 / 장보기: sheet content as a screen ---------- */
+
+:root[data-rescue-theme]:root:root .bottom-sheet.tab-sheet-screen {
+  position: relative !important;
+  z-index: auto !important;
+  inset: auto !important;
+  display: block !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  overflow: visible !important;
+  margin: 0;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  transform: none !important;
+  translate: none !important;
+  width: auto !important;
+  max-width: none !important;
+  touch-action: auto !important;
+  animation: none !important;
+}
+
+:root[data-rescue-theme]:root:root .bottom-sheet.tab-sheet-screen > .sheet-content {
+  max-height: none !important;
+  overflow: visible !important;
+  padding: 4px 0 0 !important;
+}
+
+/* ---------- 나: theme row above the account content ---------- */
+
+:root[data-rescue-theme]:root:root .me-section {
+  margin: 0 0 14px;
+  padding: 12px 14px 12px 16px;
+  border: 1px solid var(--fresh-line);
+  border-radius: 20px;
+  background: var(--fresh-surface);
+}
+
+.me-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.me-row-copy {
+  display: grid;
+  gap: 2px;
+}
+
+.me-row-copy strong {
+  font-size: 0.9375rem;
+}
+
+:root[data-rescue-theme]:root:root .me-row-copy small {
+  color: var(--fresh-muted);
+  font-size: 0.75rem;
+}
+
+:root[data-rescue-theme]:root:root .bottom-sheet .me-theme-toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: auto !important;
+  min-width: 44px;
+  height: 44px !important;
+  min-height: 44px;
+  padding: 0 14px !important;
+  border: 1px solid var(--fresh-line) !important;
+  border-radius: 999px !important;
+  background: var(--fresh-bg) !important;
+  color: var(--fresh-ink) !important;
+  font-size: 0.8125rem;
+  font-weight: 800;
+}
+
+/* ---------- Bottom bar: 냉장고 is the longest label ---------- */
+
+:root[data-rescue-theme]:root:root .app-bottom-nav .app-bottom-nav-item span {
+  white-space: nowrap;
+}
+
+@media (max-width: 340px) {
+  :root[data-rescue-theme]:root:root .home-shelf-row {
+    grid-template-columns: 2.75rem minmax(0, 1fr) auto 14px;
+    gap: 8px;
+    padding-left: 12px;
+  }
+
+  :root[data-rescue-theme]:root:root .app-bottom-nav .app-bottom-nav-item span {
+    font-size: 0.6875rem;
+  }
+}
+
+@media (prefers-contrast: more) {
+  :root[data-rescue-theme]:root:root :is(.home-shelf-row,.fridge-chip,.me-section) {
+    border-color: color-mix(in srgb, var(--fresh-ink) 45%, transparent);
+  }
+
+  :root[data-rescue-theme]:root:root .home-rescued-stat {
+    color: var(--kitchen-hero-ink);
+  }
+}
+
+/* ---------- Header actions: bell then 나, one row at every phone width ---------- */
+
+:root[data-rescue-theme]:root:root .app-header .header-actions {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 6px;
+}
+
+@media (max-width: 360px) {
+  /* The legacy narrow-hero rule floated the bell below the header; it now sits beside 나. */
+  :root[data-rescue-theme]:root:root .app-header .header-actions .notification-button {
+    position: relative !important;
+    top: auto !important;
+    right: auto !important;
+  }
+
+  /* 나 shrinks to the avatar; its accessible name still carries the connection state. */
+  :root[data-rescue-theme]:root:root .app-header .connection-pill .connection-label {
+    display: none !important;
+  }
+}

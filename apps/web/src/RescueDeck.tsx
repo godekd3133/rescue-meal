@@ -64,7 +64,7 @@ export default function RescueDeck<T extends DeckFood>({
         const confirming = confirmingId === food.id;
         return (
           <article key={food.id} className={`rescue-card freshness-${freshness.bucket}`} data-rescue-food-id={food.id} style={{ "--deal-i": index } as React.CSSProperties} aria-label={`${food.name}, ${freshnessSpokenLabel(freshness)}`}>
-            <button className="rescue-card-photo" type="button" onClick={() => onOpen(food, "browse")} aria-label={`${food.name} 자세히 보기`}>
+            <button className="rescue-card-photo" type="button" data-priority-food-id={food.id} onClick={() => onOpen(food, "browse")} aria-label={`${food.name} 자세히 보기`}>
               <FoodPhoto src={food.image} foodName={food.name} alt="" className="rescue-card-image" draggable={false} />
               <span className="rescue-card-chip" data-estimated={freshness.estimated} aria-hidden="true">{freshnessChipLabel(freshness)}</span>
             </button>

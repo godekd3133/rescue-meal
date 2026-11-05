@@ -1,21 +1,24 @@
 import { expect, test } from "@playwright/test";
+import { gotoTab, shoppingScreen } from "./ia-helpers";
 
 test("storage shortcuts clear previous review and search filters", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "식품", exact: true }).click();
+  await gotoTab(page, "fridge");
   const reviewFilter = page.locator(".inventory-status-filters button").filter({ hasText: "날짜·보관 확인" });
   await reviewFilter.click();
   await expect(reviewFilter).toHaveAttribute("aria-pressed", "true");
   await page.getByRole("searchbox").fill("시금치");
   await page.getByRole("searchbox").press("Tab");
-  await page.getByRole("button", { name: "홈", exact: true }).click();
-  await page.getByRole("button", { name: "냉동 보관 식품 1개 보기" }).click();
+  await gotoTab(page, "home");
+  // One line per storage place on Home; the row opens 냉장고 filtered to that place.
+  await page.getByRole("button", { name: /^냉동 식품 1개 보기/ }).click();
   await expect(page.getByRole("searchbox")).toHaveValue("");
-  await expect(page.locator(".filter-select-wrap select")).toHaveValue("냉동");
-  await expect(page.locator(".filter-select-wrap select")).toBeFocused();
+  const frozenChip = page.getByRole("group", { name: "보관 위치 필터" }).getByRole("button", { name: "냉동", exact: true });
+  await expect(frozenChip).toHaveAttribute("aria-pressed", "true");
+  await expect(frozenChip).toBeFocused();
   await expect(page.locator(".inventory-row")).toHaveCount(1);
   await expect(page.locator(".inventory-row")).toContainText("닭가슴살");
-  await expect(page.locator(".app-bottom-nav-item-active")).toHaveText("식품");
+  await expect(page.locator(".app-bottom-nav-item-active")).toHaveText("냉장고");
 });
 
 test("demo home makes the lifetime of the sample data explicit", async ({ page }) => {
@@ -24,11 +27,11 @@ test("demo home makes the lifetime of the sample data explicit", async ({ page }
   await expect(page.locator(".home-demo-note")).toContainText("새로고침하면 사라져요");
 });
 
-test("shopping shows existing stock and requires an explicit storage choice", async ({ page }) => {
+test("shopping shows existing stock and preselects where that food is already stored", async ({ page }) => {
   await page.goto("/");
   // An empty list has no home card; the bottom navigation opens it.
   await page.getByTestId("shopping-nav").click();
-  const shopping = page.getByRole("dialog", { name: "장보기 목록" });
+  const shopping = shoppingScreen(page);
   await shopping.getByRole("textbox", { name: "직접 추가 상품명" }).fill("시금치");
   await expect(shopping.locator(".shopping-sheet-manual-stock")).toContainText("1팩 냉장");
   await shopping.getByRole("spinbutton", { name: "직접 추가 수량" }).fill("1000.5");
@@ -39,7 +42,9 @@ test("shopping shows existing stock and requires an explicit storage choice", as
   const panel = shopping.getByRole("form", { name: "시금치 식품 목록에 추가" });
   await expect(panel.getByRole("spinbutton")).toHaveValue("1000.5");
   await expect(panel.locator(".shopping-sheet-quantity-with-unit")).toContainText("g");
-  await expect(panel.locator(".shopping-sheet-receive-submit")).toBeDisabled();
+  // Storage starts where the same food already lives (시금치 is kept 냉장) and stays editable.
+  await expect(panel.getByRole("button", { name: "냉장", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(panel.locator(".shopping-sheet-save-summary")).toContainText("냉장");
   await panel.getByRole("button", { name: "냉동", exact: true }).click();
   await expect(panel.locator(".shopping-sheet-receive-submit")).toBeEnabled();
   await expect(panel.locator(".shopping-sheet-save-summary")).toContainText("냉동");
@@ -52,11 +57,11 @@ test("shopping shows existing stock and requires an explicit storage choice", as
 
 test("empty filtered search offers query editing and preserves it when filters are cleared", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "식품", exact: true }).click();
+  await gotoTab(page, "fridge");
   const query = "닭가슴살";
   const search = page.getByRole("searchbox");
-  const storage = page.locator(".filter-select-wrap select");
-  await storage.selectOption("냉장");
+  const storage = page.getByRole("group", { name: "보관 위치 필터" });
+  await storage.getByRole("button", { name: "냉장", exact: true }).click();
   await search.fill(query);
   await search.press("Tab");
   const empty = page.locator(".inventory-empty-state");
@@ -67,7 +72,7 @@ test("empty filtered search offers query editing and preserves it when filters a
   await expect(search).toHaveValue(query);
   expect(await search.evaluate((input: HTMLInputElement) => [input.selectionStart, input.selectionEnd])).toEqual([0, query.length]);
   await empty.getByRole("button", { name: "필터 해제", exact: true }).click();
-  await expect(storage).toHaveValue("전체");
+  await expect(storage.getByRole("button", { name: "전체", exact: true })).toHaveAttribute("aria-pressed", "true");
   await expect(search).toHaveValue(query);
   await expect(page.locator(".inventory-row")).toHaveCount(1);
   await expect(page.locator(".inventory-row")).toContainText(query);

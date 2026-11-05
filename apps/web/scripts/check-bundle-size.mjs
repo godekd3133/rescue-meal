@@ -10,7 +10,9 @@ const ASSETS_DIR = new URL("../dist/client/assets/", import.meta.url).pathname;
 
 const ENTRY_BUDGET_KB = 420;
 const CHUNK_BUDGET_KB = 500;
-const TOTAL_JS_BUDGET_KB = 1500;
+// Raised to 1530KB on 2026-11-05 for the IA overhaul (src/screens/*: tab screens) and the
+// quick-add sheet (QuickAdd + its parser), both lazy or small; ~1.52MB shipped.
+const TOTAL_JS_BUDGET_KB = 1530;
 // Raised from 260KB on 2026-11-02: the shipped stylesheet measures 286KB (45KB gzip)
 // and has no duplicate overridden declarations left to drop. 300KB stops further growth.
 // Raised to 320KB on 2026-11-04 for the freshness redesign (overview tiles, days-left
@@ -18,7 +20,9 @@ const TOTAL_JS_BUDGET_KB = 1500;
 // Raised to 335KB on 2026-11-05 for the "inside the fridge" layer (kitchen.css +
 // rescueDeck.css, ~15KB) that re-points the legacy atelier tokens instead of rewriting
 // prototype.css; shrinking prototype.css is the way back under 320KB.
-const TOTAL_CSS_BUDGET_KB = 335;
+// Raised to 350KB on 2026-11-05: src/screens.css (tab screens, net ~+3KB after fridge.css
+// was removed) and the quick-add sheet styles (~+10KB in the AddFoodSheet chunk).
+const TOTAL_CSS_BUDGET_KB = 350;
 
 let files;
 try {

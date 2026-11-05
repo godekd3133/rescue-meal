@@ -10,7 +10,8 @@ export type WorkspaceSyncChannel =
   | "shopping-list"
   | "storage-locations"
   | "receipt-summaries"
-  | "recipe-review";
+  | "recipe-review"
+  | "rescue-summary";
 
 export type WorkspaceSyncResult<T> = {
   current: boolean;

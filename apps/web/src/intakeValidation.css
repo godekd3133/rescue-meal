@@ -29,3 +29,89 @@ html[data-rescue-theme="light"] .bottom-sheet :is(.label-result-fields, .manual-
   position: static;
   bottom: auto;
 }
+
+.bottom-sheet .receipt-review-fix-button {
+  justify-self: start;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--atelier-border-strong);
+  border-radius: 12px;
+  background: var(--atelier-surface-raised);
+  color: var(--atelier-ink);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.bottom-sheet .receipt-review-fix-button:focus-visible {
+  outline: 2px solid var(--atelier-pistachio);
+  outline-offset: 2px;
+}
+
+.bottom-sheet .label-result-more {
+  overflow: hidden;
+  border: 1px solid var(--atelier-border);
+  border-radius: 12px;
+}
+
+.bottom-sheet .label-result-more > summary {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 6px 12px;
+  color: var(--atelier-ink);
+  cursor: pointer;
+}
+
+.bottom-sheet .label-result-more > summary span {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+
+.bottom-sheet .label-result-more > summary strong {
+  font-size: 13px;
+}
+
+.bottom-sheet .label-result-more > summary small {
+  overflow: hidden;
+  color: var(--atelier-muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bottom-sheet .label-result-more-body {
+  display: grid;
+  gap: 8px;
+  padding: 0 12px 12px;
+}
+
+.bottom-sheet .label-result-date-field .korean-date-field-display {
+  min-height: 44px;
+  font-size: 15px;
+}
+
+.bottom-sheet .label-result-date-field .korean-date-field {
+  min-height: 44px;
+}
+
+.bottom-sheet .receipt-review-submit-status-blocked {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.bottom-sheet .receipt-review-submit-status-blocked .receipt-review-submit-hint {
+  margin: 0;
+  padding: 0;
+  text-align: left;
+}
+
+.bottom-sheet .receipt-review-submit-status-blocked .receipt-review-fix-button {
+  max-width: 132px;
+  padding: 0 10px;
+  white-space: normal;
+  line-height: 1.25;
+}

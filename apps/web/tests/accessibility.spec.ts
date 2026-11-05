@@ -1,4 +1,6 @@
 import { expect, test } from "@playwright/test";
+import { chooseAddMethod } from "./add-flow-helpers";
+import { gotoTab, setThemeFromMe } from "./ia-helpers";
 import { AxeBuilder } from "@axe-core/playwright";
 
 // Scans are scoped to the device screen so the audit covers app content plus
@@ -54,14 +56,16 @@ test("home surface passes axe audit at narrow and standard mobile widths", async
 });
 
 test("primary home action text meets contrast in light and dark themes", async ({ page }) => {
+  // Each theme switch now goes through the 나 sheet.
+  test.slow();
   await page.evaluate(() => window.localStorage.removeItem("rescue-meal.theme"));
   await page.reload();
 
   for (const theme of ["light", "dark"] as const) {
-    if (await page.locator("html").getAttribute("data-rescue-theme") !== theme) {
-      await page.getByTestId("theme-toggle").click();
-    }
+    await setThemeFromMe(page, theme);
     await expect(page.locator("html")).toHaveAttribute("data-rescue-theme", theme);
+    // Days-left chips live on the 냉장고 list; the primary action stays on Home.
+    await gotoTab(page, "fridge");
 
     {
       // Days-left chips carry the review urgency now; every chip state must stay readable.
@@ -112,6 +116,7 @@ test("primary home action text meets contrast in light and dark themes", async (
       }
     }
 
+    await gotoTab(page, "home");
     // The action's background transitions after a theme change; measure the settled colors.
     await page.locator(".meal-plan-button").evaluate((button) => Promise.all(button.getAnimations().map((animation) => animation.finished)));
     const ratios = await page.locator(".meal-plan-button").evaluate((button) => {
@@ -150,21 +155,23 @@ test("primary home action text meets contrast in light and dark themes", async (
 });
 
 test("food detail sheet passes axe audit", async ({ page }) => {
-  await page.getByRole("button", { name: /시금치 개봉됨/ }).click();
+  await gotoTab(page, "fridge");
+      await page.locator(".inventory-row").filter({ hasText: "시금치" }).click();
   await openSheet(page, "시금치");
   await expectNoViolations(page, "food detail");
 });
 
 test("printed-date recheck sheet passes axe audit in light and dark themes", async ({ page }) => {
+  // Each theme switch now goes through the 나 sheet.
+  test.slow();
   for (const viewport of [{ width: 320, height: 740 }, { width: 393, height: 852 }]) {
     for (const theme of ["light", "dark"] as const) {
       await page.setViewportSize(viewport);
       await page.goto("/");
-      if (await page.locator("html").getAttribute("data-rescue-theme") !== theme) {
-        await page.getByTestId("theme-toggle").click();
-      }
+      await setThemeFromMe(page, theme);
       await expect(page.locator("html")).toHaveAttribute("data-rescue-theme", theme);
-      await page.getByRole("button", { name: /시금치 개봉됨/ }).click();
+      await gotoTab(page, "fridge");
+      await page.locator(".inventory-row").filter({ hasText: "시금치" }).click();
       const detail = await openSheet(page, "시금치");
       await detail.getByRole("button", { name: "포장지에서 날짜 다시 확인" }).click();
 
@@ -192,7 +199,8 @@ test("printed-date recheck keeps its current record clear with system high contr
       await expect(page.locator("html")).toHaveAttribute("data-rescue-theme", theme);
       await expect(page.getByRole("main", { name: "Rescue Meal 홈" })).toBeVisible();
 
-      await page.getByRole("button", { name: /시금치 개봉됨/ }).click();
+      await gotoTab(page, "fridge");
+      await page.locator(".inventory-row").filter({ hasText: "시금치" }).click();
       const detail = await openSheet(page, "시금치");
       await detail.getByRole("button", { name: "포장지에서 날짜 다시 확인" }).click();
       const dateRecheck = await openSheet(page, "날짜 다시 살펴보기");
@@ -263,6 +271,7 @@ test("account and notification surfaces pass axe audit", async ({ page }) => {
 
 test("receipt review sheet passes axe audit", async ({ page }) => {
   await page.getByRole("button", { name: /식품 추가하기/ }).click();
+  await chooseAddMethod(page, "영수증");
   await openSheet(page, "영수증으로 추가");
   await page.getByRole("button", { name: "예시 영수증 보기" }).click();
   await expect(page.getByRole("button", { name: "3개 식품 저장하기" })).toBeVisible();

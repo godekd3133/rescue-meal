@@ -59,3 +59,17 @@ export function revealAndFocusWithinNearestContainer(
   target.focus({ preventScroll: true });
   return true;
 }
+
+/**
+ * The element that actually scrolls `target`: a sheet's `.sheet-content`, or the tab's
+ * MobileScroll when sheet content is presented as a full tab screen.
+ */
+export function nearestScrollContainer(target: HTMLElement | null) {
+  let container = target?.parentElement ?? null;
+  while (container && container !== document.body && container !== document.documentElement) {
+    const overflowY = window.getComputedStyle(container).overflowY;
+    if (["auto", "scroll", "overlay"].includes(overflowY)) return container;
+    container = container.parentElement;
+  }
+  return null;
+}
