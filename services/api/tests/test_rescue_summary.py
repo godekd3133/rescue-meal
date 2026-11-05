@@ -117,3 +117,21 @@ def test_other_workspace_consumption_is_not_visible() -> None:
 
     assert _summary(owner)["rescued_food_count"] == 1
     assert _summary(stranger)["rescued_food_count"] == 0
+
+
+def test_undone_consumption_is_not_counted_and_lot_returns() -> None:
+    headers = _guest_headers()
+    eaten = _create_food(headers, "rescue-undo-eaten")
+    kept = _create_food(headers, "rescue-undo-kept")
+    _storage_event(headers, kept, "consumed", 1)
+    event = _storage_event(headers, eaten, "consumed")
+    assert _summary(headers)["rescued_food_count"] == 2
+
+    undo = client.post(f"/api/storage-events/{event['id']}/undo", headers=headers)
+    assert undo.status_code == 200, undo.text
+    assert any(item["id"] == eaten for item in undo.json()["inventory"])
+    assert _summary(headers)["rescued_food_count"] == 1
+
+    history = client.get(f"/api/foods/{eaten}/storage-events", headers=headers)
+    assert history.status_code == 200
+    assert history.json()[0]["undone_at"] is not None

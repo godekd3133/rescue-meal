@@ -189,6 +189,24 @@ RULES = (
 )
 
 
+def is_freezable(name: str, category: str) -> bool:
+    """Return False only when the matching reviewed rule forbids freezing.
+
+    A rule matches by its category first, then by any alias contained in the
+    product name. Foods without a matching rule stay freezable so the client
+    never hides an action on missing evidence.
+    """
+
+    normalized_category = (category or "").strip()
+    rule = next((candidate for candidate in RULES if candidate.category == normalized_category), None)
+    if rule is None:
+        normalized_name = (name or "").strip()
+        rule = next((candidate for candidate in RULES if any(alias in normalized_name for alias in candidate.aliases)), None)
+    if rule is None:
+        return True
+    return rule.days_by_storage.get("frozen") != (0, 0)
+
+
 def infer_priority(request: PriorityInferenceRequest) -> PriorityInferenceResponse:
     """Use the deterministic, reviewed baseline provider.
 

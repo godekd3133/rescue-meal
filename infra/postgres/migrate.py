@@ -46,6 +46,7 @@ MIGRATIONS = (
     "026_export_audit.sql",
     "027_quantity_reference.sql",
     "028_quantity_precision.sql",
+    "029_storage_event_undo.sql",
 )
 LOCK_NAME = "rescue-meal-schema-migrations"
 MIGRATION_TABLE_SQL = """
@@ -97,7 +98,7 @@ def apply_migrations(migration_directory: Path, database_url: str) -> None:
         connection.commit()
 
         print("Migration ledger: rescue_schema_migrations")
-        print("Rescue Meal PostgreSQL migrations (ordered, 001→028)")
+        print("Rescue Meal PostgreSQL migrations (ordered, 001→029)")
         print(f"Migration directory: {migration_directory}")
 
         for path in paths:

@@ -266,8 +266,8 @@ class NormalizedInventoryAdapter:
                 (workspace_id, event_id, food_id, event_type, from_storage_type,
                  from_storage_location_id, to_storage_type, to_storage_location_id,
                  quantity, occurred_at, source, created_child_food_id,
-                 meal_plan_id, grocy_sync_status)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                 meal_plan_id, grocy_sync_status, undone_at, undo_snapshot)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """,
             [
                 (
@@ -285,6 +285,8 @@ class NormalizedInventoryAdapter:
                     event.created_child_food_id,
                     event.meal_plan_id,
                     event.grocy_sync_status,
+                    getattr(event, "undone_at", None),
+                    _undo_snapshot_jsonb(getattr(event, "undo_snapshot", None)),
                 )
                 for event in storage_events
             ],
@@ -532,7 +534,8 @@ class NormalizedInventoryAdapter:
             """
             SELECT event_id, food_id, event_type, from_storage_type, from_storage_location_id,
                    to_storage_type, to_storage_location_id, quantity, occurred_at, source,
-                   created_child_food_id, meal_plan_id, grocy_sync_status
+                   created_child_food_id, meal_plan_id, grocy_sync_status,
+                   undone_at, undo_snapshot
             FROM rescue_inventory_storage_events
             WHERE workspace_id = %s
             ORDER BY occurred_at, event_id
@@ -554,6 +557,8 @@ class NormalizedInventoryAdapter:
                 created_child_food_id=row[10],
                 meal_plan_id=row[11],
                 grocy_sync_status=row[12],
+                undone_at=_as_datetime(row[13]) if len(row) > 13 else None,
+                undo_snapshot=_undo_snapshot_from_row(row[14]) if len(row) > 14 else None,
             )
             for row in cursor.fetchall()
         ]
@@ -640,6 +645,22 @@ def _jsonb(value: Any) -> Any:
     except ImportError:  # pragma: no cover - psycopg is a runtime dependency
         return value
     return Jsonb(value)
+
+
+def _undo_snapshot_jsonb(snapshot: Any) -> Any:
+    if snapshot is None:
+        return None
+    return _jsonb(snapshot.model_dump(mode="json"))
+
+
+def _undo_snapshot_from_row(value: Any) -> Any:
+    if value is None:
+        return None
+    from .main import FoodResponse
+
+    if isinstance(value, str):
+        value = json.loads(value)
+    return FoodResponse.model_validate(value)
 
 
 def _json_list(value: Any) -> list[str]:

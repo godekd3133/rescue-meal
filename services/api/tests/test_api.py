@@ -6562,3 +6562,229 @@ def test_dashboard_does_not_expose_date_from_a_write_that_later_rolls_back() -> 
         assert write.result(timeout=3).status_code == 503
         payload = read.result(timeout=3).json()
     assert next(food for food in payload['inventory'] if food['id']=='tofu-1')['date_assertion']['value']=='2026-10-13'
+
+
+def _dashboard_food(food_id: str) -> dict | None:
+    return next((item for item in client.get("/api/dashboard").json()["inventory"] if item["id"] == food_id), None)
+
+
+def test_dashboard_marks_dairy_and_eggs_as_not_freezable() -> None:
+    inventory = {item["id"]: item for item in client.get("/api/dashboard").json()["inventory"]}
+
+    assert inventory["spinach-1"]["freezable"] is True
+    assert inventory["milk-1"]["freezable"] is False
+    assert inventory["egg-1"]["freezable"] is False
+
+    created = client.post(
+        "/api/foods",
+        json={"canonical_name": "알 수 없는 소스", "quantity": 1, "unit": "개", "storage_type": "refrigerated"},
+    )
+    assert created.status_code == 201
+    assert created.json()["freezable"] is True
+
+
+def test_undo_frozen_event_restores_storage_and_window_and_replays() -> None:
+    before = _dashboard_food("spinach-1")
+    frozen = client.post("/api/foods/spinach-1/storage-events", json={"event_type": "frozen"})
+    assert frozen.status_code == 200
+    assert _dashboard_food("spinach-1")["storage_type"] == "frozen"
+
+    undo = client.post(f"/api/storage-events/{frozen.json()['id']}/undo")
+    assert undo.status_code == 200, undo.text
+    body = undo.json()
+    assert body["event_id"] == frozen.json()["id"]
+    assert body["event_type"] == "frozen"
+    assert body["food_id"] == "spinach-1"
+    assert body["idempotency_replayed"] is False
+    restored = next(item for item in body["inventory"] if item["id"] == "spinach-1")
+    assert restored["storage_type"] == "refrigerated"
+    assert restored["storage_location_id"] == before["storage_location_id"]
+    assert restored["estimated_use_first_window"] == before["estimated_use_first_window"]
+
+    replay = client.post(f"/api/storage-events/{frozen.json()['id']}/undo")
+    assert replay.status_code == 200
+    assert replay.json()["idempotency_replayed"] is True
+    assert replay.json()["undone_at"] == body["undone_at"]
+    assert _dashboard_food("spinach-1")["storage_type"] == "refrigerated"
+    assert len(store.storage_events) == 1
+
+    history = client.get("/api/foods/spinach-1/storage-events").json()
+    assert history[0]["undone_at"] is not None
+    assert "undo_snapshot" not in history[0]
+
+
+def test_undo_frozen_event_restores_the_original_estimate_not_a_fresh_one() -> None:
+    before = _dashboard_food("tofu-1")
+    assert before["estimated_use_first_window"] is not None
+    frozen = client.post("/api/foods/tofu-1/storage-events", json={"event_type": "frozen"})
+    assert frozen.status_code == 200
+    assert _dashboard_food("tofu-1")["estimated_use_first_window"] != before["estimated_use_first_window"]
+
+    undo = client.post(f"/api/storage-events/{frozen.json()['id']}/undo")
+    assert undo.status_code == 200, undo.text
+    after = _dashboard_food("tofu-1")
+    assert after["storage_type"] == before["storage_type"]
+    assert after["estimated_use_first_window"] == before["estimated_use_first_window"]
+
+
+def test_undo_full_consume_restores_same_lot_id() -> None:
+    before = _dashboard_food("tofu-1")
+    consumed = client.post("/api/foods/tofu-1/storage-events", json={"event_type": "consumed"})
+    assert consumed.status_code == 200
+    assert "undo_snapshot" not in consumed.json()
+    assert _dashboard_food("tofu-1") is None
+
+    undo = client.post(f"/api/storage-events/{consumed.json()['id']}/undo")
+    assert undo.status_code == 200, undo.text
+    restored = _dashboard_food("tofu-1")
+    assert restored is not None
+    assert restored["quantity"] == before["quantity"]
+    assert restored["storage_type"] == before["storage_type"]
+
+
+def test_undo_partial_discard_restores_quantity() -> None:
+    discarded = client.post("/api/foods/chicken-1/storage-events", json={"event_type": "discarded", "quantity": 0.5})
+    assert discarded.status_code == 200
+    assert _dashboard_food("chicken-1")["quantity"] == 1.5
+
+    undo = client.post(f"/api/storage-events/{discarded.json()['id']}/undo")
+    assert undo.status_code == 200, undo.text
+    assert _dashboard_food("chicken-1")["quantity"] == 2
+
+
+def _undo_reason(event_id: str) -> str:
+    response = client.post(f"/api/storage-events/{event_id}/undo")
+    assert response.status_code == 409, response.text
+    detail = response.json()["detail"]
+    assert detail["code"] == "storage_event_undo_unavailable"
+    assert detail["detail"]
+    return detail["reason"]
+
+
+def test_undo_storage_event_rejects_unsafe_compensations() -> None:
+    assert client.post("/api/storage-events/missing-event/undo").status_code == 404
+
+    split = client.post("/api/foods/chicken-1/storage-events", json={"event_type": "moved", "to_storage_type": "refrigerated", "quantity": 1})
+    assert split.status_code == 200
+    assert _undo_reason(split.json()["id"]) == "split_lot"
+
+    first = client.post("/api/foods/tofu-1/storage-events", json={"event_type": "frozen"})
+    second = client.post("/api/foods/tofu-1/storage-events", json={"event_type": "consumed", "quantity": 0.5})
+    assert first.status_code == 200 and second.status_code == 200
+    assert _undo_reason(first.json()["id"]) == "newer_events"
+    # Undoing the newest event first unblocks the older one.
+    assert client.post(f"/api/storage-events/{second.json()['id']}/undo").status_code == 200
+    assert client.post(f"/api/storage-events/{first.json()['id']}/undo").status_code == 200
+
+    opened = client.post("/api/foods/milk-1/storage-events", json={"event_type": "opened"})
+    assert _undo_reason(opened.json()["id"]) == "unsupported"
+
+    synced = client.post("/api/foods/mushroom-1/storage-events", json={"event_type": "consumed", "quantity": 1})
+    next(event for event in store.storage_events if event.id == synced.json()["id"]).grocy_sync_status = "queued"
+    assert _undo_reason(synced.json()["id"]) == "external_sync"
+
+    old = client.post("/api/foods/spinach-1/storage-events", json={"event_type": "frozen"})
+    event = next(event for event in store.storage_events if event.id == old.json()["id"])
+    event.occurred_at = datetime.now(timezone.utc) - timedelta(minutes=11)
+    assert _undo_reason(old.json()["id"]) == "older_than_window"
+    assert _dashboard_food("spinach-1")["storage_type"] == "frozen"
+
+
+def test_undo_full_consume_rejects_when_lot_id_exists_again() -> None:
+    consumed = client.post("/api/foods/tomato-1/storage-events", json={"event_type": "consumed"})
+    assert consumed.status_code == 200
+    event = next(event for event in store.storage_events if event.id == consumed.json()["id"])
+    store.foods["tomato-1"] = main_module._FoodRecord(event.undo_snapshot.model_copy(deep=True))
+
+    assert _undo_reason(consumed.json()["id"]) == "lot_changed"
+
+
+def _create_manual_food(name: str, key: str) -> str:
+    created = client.post(
+        "/api/foods",
+        headers={"Idempotency-Key": key},
+        json={"canonical_name": name, "quantity": 1, "unit": "개", "storage_type": "refrigerated"},
+    )
+    assert created.status_code == 201, created.text
+    return created.json()["id"]
+
+
+def test_undo_create_removes_manual_lot_and_replays() -> None:
+    food_id = _create_manual_food("빠른추가 양배추", "quick-add-undo-1")
+    events_before = len(store.storage_events)
+
+    undo = client.post(f"/api/foods/{food_id}/undo-create")
+    assert undo.status_code == 200, undo.text
+    body = undo.json()
+    assert body["food_id"] == food_id
+    assert body["idempotency_replayed"] is False
+    assert all(item["id"] != food_id for item in body["inventory"])
+    assert food_id not in store.foods
+    assert len(store.storage_events) == events_before
+
+    replay = client.post(f"/api/foods/{food_id}/undo-create")
+    assert replay.status_code == 200
+    assert replay.json()["idempotency_replayed"] is True
+    assert replay.json()["undone_at"] == body["undone_at"]
+
+
+def test_undo_create_rejects_lots_that_are_not_fresh_manual_creates() -> None:
+    def reason(food_id: str) -> str:
+        response = client.post(f"/api/foods/{food_id}/undo-create")
+        assert response.status_code == 409, response.text
+        assert response.json()["detail"]["code"] == "food_create_undo_unavailable"
+        return response.json()["detail"]["reason"]
+
+    assert reason("spinach-1") == "not_manual"
+    assert client.post("/api/foods/missing-food/undo-create").status_code == 404
+
+    moved = _create_manual_food("빠른추가 당근", "quick-add-undo-2")
+    assert client.post(f"/api/foods/{moved}/storage-events", json={"event_type": "frozen"}).status_code == 200
+    assert reason(moved) == "storage_events"
+
+    old = _create_manual_food("빠른추가 오이", "quick-add-undo-3")
+    operation = next(item for item in store.manual_food_operations.values() if item.food_id == old)
+    operation.occurred_at = datetime.now(timezone.utc) - timedelta(minutes=11)
+    assert reason(old) == "older_than_window"
+    assert old in store.foods
+
+
+def test_meal_plan_options_rank_anchor_recipes_first() -> None:
+    response = client.post(
+        "/api/meal-plans/options",
+        json={"inventory_ids": ["chicken-1", "tofu-1"], "anchor_food_id": "spinach-1"},
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["anchor_food_id"] == "spinach-1"
+    assert body["anchor_name"] == "시금치"
+    assert body["inventory_ids"][0] == "spinach-1"
+    assert body["anchor_option_recipe_ids"]
+    anchor_count = len(body["anchor_option_recipe_ids"])
+    assert [option["recipe_id"] for option in body["options"][:anchor_count]] == body["anchor_option_recipe_ids"]
+    for option in body["options"][:anchor_count]:
+        assert any(
+            allocation["food_id"] == "spinach-1"
+            for ingredient in option["ingredients"]
+            for allocation in ingredient["allocations"]
+        )
+
+
+def test_meal_plan_options_ignore_unknown_anchor() -> None:
+    plain = client.post("/api/meal-plans/options", json={"inventory_ids": ["chicken-1"]}).json()
+    anchored = client.post("/api/meal-plans/options", json={"inventory_ids": ["chicken-1"], "anchor_food_id": "missing-lot"})
+    assert anchored.status_code == 200
+    body = anchored.json()
+    assert body["anchor_food_id"] is None
+    assert body["anchor_name"] is None
+    assert body["anchor_option_recipe_ids"] == []
+    assert [option["recipe_id"] for option in body["options"]] == [option["recipe_id"] for option in plain["options"]]
+
+
+def test_meal_plan_options_without_anchor_recipes_fall_back_to_normal_ranking() -> None:
+    response = client.post("/api/meal-plans/options", json={"inventory_ids": ["chicken-1"], "anchor_food_id": "milk-1"})
+    assert response.status_code == 200
+    body = response.json()
+    assert body["anchor_food_id"] == "milk-1"
+    assert body["anchor_option_recipe_ids"] == []
+    assert body["options"]

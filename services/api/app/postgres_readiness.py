@@ -37,6 +37,7 @@ MIGRATION_BASELINE_NAMES = (
     "026_export_audit.sql",
     "027_quantity_reference.sql",
     "028_quantity_precision.sql",
+    "029_storage_event_undo.sql",
 )
 
 
@@ -196,7 +197,7 @@ _REQUIRED_COLUMNS = {
         "inference_reasoning",
         "inference_input_sha256",
     },
-    "rescue_inventory_storage_events": {"workspace_id", "event_id", "food_id", "event_type", "from_storage_location_id", "to_storage_location_id"},
+    "rescue_inventory_storage_events": {"workspace_id", "event_id", "food_id", "event_type", "from_storage_location_id", "to_storage_location_id", "undone_at", "undo_snapshot"},
     "rescue_inventory_commit_transactions": {
         "workspace_id",
         "transaction_id",

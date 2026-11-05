@@ -1371,3 +1371,57 @@ def test_quantity_precision_migration_is_in_release_baseline_without_narrowing_v
         assert f'ALTER TABLE {table} ALTER COLUMN {column} TYPE numeric;' in sql
     assert 'numeric(' not in sql
     assert 'DROP CONSTRAINT' not in sql
+
+
+def test_storage_event_undo_migration_is_in_release_baseline() -> None:
+    migration = Path(__file__).resolve().parents[3] / "infra/postgres/029_storage_event_undo.sql"
+    sql = migration.read_text()
+    assert MIGRATION_BASELINE_NAMES[-1] == "029_storage_event_undo.sql"
+    assert "ADD COLUMN IF NOT EXISTS undone_at timestamptz NULL" in sql
+    assert "ADD COLUMN IF NOT EXISTS undo_snapshot jsonb NULL" in sql
+    assert {"undone_at", "undo_snapshot"} <= _REQUIRED_COLUMNS["rescue_inventory_storage_events"]
+
+
+def test_normalized_inventory_adapter_round_trips_storage_event_undo_columns() -> None:
+    food = _seed_foods()[1].model_copy(update={"id": "lot-undo"})
+    undone_at = datetime(2026, 9, 2, 13, 5, tzinfo=timezone.utc)
+    event = StorageEventResponse(
+        id="event-undo",
+        food_id="lot-undo",
+        event_type="consumed",
+        from_storage_type="refrigerated",
+        to_storage_type=None,
+        quantity=1,
+        occurred_at=datetime(2026, 9, 2, 13, 0, tzinfo=timezone.utc),
+        undone_at=undone_at,
+        undo_snapshot=food,
+    )
+    connection = FakeConnection()
+    NormalizedInventoryAdapter("account-one").write_state(
+        connection.cursor(),
+        foods={},
+        receipts={},
+        storage_events=[event],
+        commit_transactions={},
+    )
+    event_rows = next(rows for query, rows in connection.queries if "INSERT INTO rescue_inventory_storage_events" in query)
+    assert event_rows[0][14] == undone_at
+    snapshot_payload = getattr(event_rows[0][15], "obj", event_rows[0][15])
+    assert snapshot_payload["id"] == "lot-undo"
+
+    cursor = ReplayCursor(
+        FakeConnection(),
+        {
+            "SELECT event_id": [(
+                "event-undo", "lot-undo", "consumed", "refrigerated", None, None, None, 1,
+                datetime(2026, 9, 2, 13, 0, tzinfo=timezone.utc), "user_input", None, None, "not_configured",
+                undone_at, snapshot_payload,
+            )],
+        },
+    )
+    state = NormalizedInventoryAdapter("account-one").load_state(cursor)
+    loaded = state.storage_events[0]
+    assert loaded.undone_at == undone_at
+    assert loaded.undo_snapshot is not None
+    assert loaded.undo_snapshot.id == "lot-undo"
+    assert loaded.undo_snapshot.quantity == food.quantity

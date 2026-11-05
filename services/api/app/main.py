@@ -51,7 +51,7 @@ from .auth import (
     verify_guest_token,
 )
 from .barcode import ParsedBarcode, parse_barcode
-from .inference import InferenceTrace, PriorityInferenceRequest, PriorityInferenceResponse, infer_priority, infer_priority_for_api
+from .inference import InferenceTrace, PriorityInferenceRequest, PriorityInferenceResponse, infer_priority, infer_priority_for_api, is_freezable
 from .email_delivery import PasswordResetDeliverySettings, submit_password_reset_email
 from .grocy import GrocyClient, GrocyConfig, GrocyError
 from .grocy_worker import GROCY_OUTBOX_LEASE_KEY, GrocyWorker, GrocyWorkerHeartbeatRecord, GrocyWorkerSettings
@@ -143,7 +143,7 @@ from .product_resolver import (
     resolve_receipt_name,
 )
 from .meal_optimizer import optimize_multi_day_plans, warm_up_cp_sat
-from .planner import MAX_SERVINGS, MIN_SERVINGS, PlannedRecipe, RecipeSpec, load_recipe_specs, normalize_unit, plan_recipe, recipe_quantity_review_food_ids
+from .planner import MAX_SERVINGS, MIN_SERVINGS, PlannedRecipe, RecipeSpec, load_recipe_specs, normalize_unit, plan_recipe, recipe_quantity_review_food_ids, recipe_uses_food
 from .rate_limit import PersistentSlidingWindowRateLimiter, SlidingWindowRateLimiter, opaque_rate_limit_key
 from .recipe_catalog import (
     RecipeDraftIngredient,
@@ -368,6 +368,14 @@ class FoodResponse(BaseModel):
     category: str
     image_path: str
     note: str
+    # Derived from the reviewed inference rules (never persisted as input):
+    # dairy and eggs have no safe frozen window, so clients hide "freeze".
+    freezable: bool = True
+
+    @model_validator(mode="after")
+    def derive_freezable(self) -> "FoodResponse":
+        self.freezable = is_freezable(f"{self.canonical_name} {self.display_name}", self.category)
+        return self
 
 
 def _food_product_info_snapshot(food: FoodResponse) -> FoodProductInfoSnapshot:
@@ -1051,6 +1059,11 @@ class StorageEventResponse(BaseModel):
     grocy_outbox_id: str | None = None
     grocy_transaction_id: str | None = None
     grocy_status_history: list[GrocyOutboxStatusHistoryEntry] = Field(default_factory=list, max_length=20)
+    # Set when the user reverted this event. The event stays in history.
+    undone_at: datetime | None = None
+    # Lot state captured before a consume/discard mutation so an undo can
+    # restore a fully removed lot with the same ID. Persisted, never exposed.
+    undo_snapshot: FoodResponse | None = Field(default=None, exclude=True)
     # Additive read model snapshot for clients that must preserve a successful
     # storage mutation when a follow-up dashboard read is stale or unavailable.
     inventory: list[FoodResponse] = Field(default_factory=list)
@@ -1060,6 +1073,8 @@ def _storage_event_persistence_payload(event: StorageEventResponse) -> dict[str,
     """Serialize durable event metadata without response-only inventory data."""
     payload = event.model_dump(mode="json")
     payload.pop("inventory", None)
+    if event.undo_snapshot is not None:
+        payload["undo_snapshot"] = event.undo_snapshot.model_dump(mode="json")
     return payload
 
 
@@ -1086,6 +1101,9 @@ class MealPlanRequest(BaseModel):
     bundle_id: str | None = Field(default=None, min_length=1, max_length=96)
     bundle_day_index: int | None = Field(default=None, ge=1, le=3)
     snapshot_hash: str | None = Field(default=None, min_length=16, max_length=128)
+    # Only /api/meal-plans/options reads this: rank recipes that use the
+    # anchor lot first. Other routes ignore it.
+    anchor_food_id: str | None = Field(default=None, min_length=1, max_length=96)
 
 
 class MealIngredientAllocationResponse(BaseModel):
@@ -1181,6 +1199,9 @@ class MealPlanOptionsResponse(BaseModel):
     max_minutes: int
     servings: int = Field(default=1, ge=MIN_SERVINGS, le=MAX_SERVINGS)
     inventory_ids: list[str]
+    anchor_food_id: str | None = None
+    anchor_name: str | None = None
+    anchor_option_recipe_ids: list[str] = Field(default_factory=list)
 
 
 class MultiDayMealPlanDayResponse(BaseModel):
@@ -1345,6 +1366,8 @@ class ManualFoodOperationRecord(BaseModel):
     idempotency_key_digest: str = Field(min_length=64, max_length=64)
     request_payload_fingerprint: str = Field(min_length=64, max_length=64)
     occurred_at: datetime
+    # Set when the created lot was removed via POST /api/foods/{id}/undo-create.
+    undone_at: datetime | None = None
 
 
 class WorkspaceExportAuditEvent(BaseModel):
@@ -6348,6 +6371,18 @@ def _storage_event_sequence_replay_response(
         final_food_id=final_food_id,
         idempotency_replayed=True,
     )
+
+
+def _storage_event_undo_snapshot(event_type: StorageEventType, record: _FoodRecord | None) -> FoodResponse | None:
+    """Capture the lot before a consume/discard/move so an undo can restore it.
+
+    For moves the snapshot keeps the estimate that was in place before the move,
+    so undo restores the original "먼저 살펴볼 시점" instead of re-estimating it
+    from today's date.
+    """
+    if record is None or event_type not in {"consumed", "discarded", "moved", "frozen", "thawed"}:
+        return None
+    return record.response.model_copy(deep=True)
 
 
 def _storage_inventory_snapshot() -> list[FoodResponse]:
@@ -11368,6 +11403,7 @@ def create_storage_event_sequence(
                 )
 
                 occurred_at = datetime.now(timezone.utc)
+                undo_snapshot = _storage_event_undo_snapshot(event_request.event_type, record)
                 mutation = _inventory_authority(store).apply_storage_event(
                     food_id=target_food_id,
                     event_type=event_request.event_type,
@@ -11387,6 +11423,7 @@ def create_storage_event_sequence(
                     quantity=mutation.event_quantity,
                     occurred_at=occurred_at,
                     created_child_food_id=mutation.created_child_food_id,
+                    undo_snapshot=undo_snapshot,
                 )
                 store.storage_events.append(event)
                 event.grocy_sync_status = _queue_grocy_storage_sync(
@@ -11469,6 +11506,7 @@ def create_storage_event(http_request: Request, http_response: Response, food_id
 
         def mutate() -> StorageEventResponse:
             occurred_at = datetime.now(timezone.utc)
+            undo_snapshot = _storage_event_undo_snapshot(request.event_type, store.foods.get(food_id))
             mutation = _inventory_authority(store).apply_storage_event(
                 food_id=food_id,
                 event_type=request.event_type,
@@ -11488,6 +11526,7 @@ def create_storage_event(http_request: Request, http_response: Response, food_id
                 quantity=mutation.event_quantity,
                 occurred_at=occurred_at,
                 created_child_food_id=mutation.created_child_food_id,
+                undo_snapshot=undo_snapshot,
             )
             store.storage_events.append(event)
             event.grocy_sync_status = _queue_grocy_storage_sync(
@@ -11595,6 +11634,314 @@ def list_storage_events(food_id: str) -> list[StorageEventResponse]:
     return events
 
 
+UNDO_WINDOW = timedelta(minutes=10)
+
+_STORAGE_EVENT_UNDO_MESSAGES: dict[str, str] = {
+    "unsupported": "이 기록은 되돌릴 수 없어요.",
+    "meal_plan": "식단 완료로 기록된 변경은 되돌릴 수 없어요.",
+    "split_lot": "일부만 나눠 처리한 기록은 되돌릴 수 없어요.",
+    "external_sync": "외부 재고와 동기화된 기록이라 되돌릴 수 없어요.",
+    "older_than_window": "기록한 지 10분이 지나 되돌릴 수 없어요.",
+    "newer_events": "이후에 다른 보관 기록이 있어 되돌릴 수 없어요.",
+    "lot_changed": "식품 상태가 이미 바뀌어 되돌릴 수 없어요.",
+}
+
+_FOOD_CREATE_UNDO_MESSAGES: dict[str, str] = {
+    "not_manual": "직접 추가한 식품이 아니라 추가를 취소할 수 없어요.",
+    "lot_correction": "기존 식품을 고친 기록이라 추가를 취소할 수 없어요.",
+    "older_than_window": "추가한 지 10분이 지나 취소할 수 없어요.",
+    "storage_events": "보관 기록이 있는 식품은 추가를 취소할 수 없어요.",
+    "split_lot": "나눠진 식품이 있어 추가를 취소할 수 없어요.",
+    "meal_plan": "저장한 식단에 쓰이는 식품이라 추가를 취소할 수 없어요.",
+    "external_sync": "외부 재고와 동기화된 식품이라 추가를 취소할 수 없어요.",
+}
+
+
+class StorageEventUndoResponse(BaseModel):
+    event_id: str
+    event_type: StorageEventType
+    food_id: str
+    undone_at: datetime
+    idempotency_replayed: bool = False
+    inventory: list[FoodResponse] = Field(default_factory=list)
+
+
+class FoodCreateUndoResponse(BaseModel):
+    food_id: str
+    undone_at: datetime
+    idempotency_replayed: bool = False
+    inventory: list[FoodResponse] = Field(default_factory=list)
+
+
+def _as_utc(value: datetime) -> datetime:
+    return value if value.tzinfo is not None else value.replace(tzinfo=timezone.utc)
+
+
+def _storage_event_undo_unavailable(reason: str) -> HTTPException:
+    return HTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        detail={
+            "code": "storage_event_undo_unavailable",
+            "detail": _STORAGE_EVENT_UNDO_MESSAGES[reason],
+            "reason": reason,
+        },
+    )
+
+
+def _food_create_undo_unavailable(reason: str) -> HTTPException:
+    return HTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        detail={
+            "code": "food_create_undo_unavailable",
+            "detail": _FOOD_CREATE_UNDO_MESSAGES[reason],
+            "reason": reason,
+        },
+    )
+
+
+def _storage_event_undo_response(event: StorageEventResponse, *, replayed: bool) -> StorageEventUndoResponse:
+    assert event.undone_at is not None
+    return StorageEventUndoResponse(
+        event_id=event.id,
+        event_type=event.event_type,
+        food_id=event.food_id,
+        undone_at=event.undone_at,
+        idempotency_replayed=replayed,
+        inventory=_storage_inventory_snapshot(),
+    )
+
+
+def _storage_event_is_full_removal(event: StorageEventResponse) -> bool:
+    snapshot = event.undo_snapshot
+    if snapshot is None:
+        return event.food_id not in store.foods
+    if event.quantity is None:
+        return True
+    return Decimal(str(event.quantity)) >= Decimal(str(snapshot.quantity))
+
+
+def _storage_event_undo_blocker(event: StorageEventResponse, now: datetime) -> str | None:
+    """Return why an event cannot be compensated, or None when it can."""
+    if event.event_type == "opened":
+        return "unsupported"
+    if event.meal_plan_id is not None:
+        return "meal_plan"
+    if event.created_child_food_id is not None:
+        return "split_lot"
+    if event.grocy_sync_status != "not_configured" or event.grocy_outbox_id is not None:
+        return "external_sync"
+    if now - _as_utc(event.occurred_at) > UNDO_WINDOW:
+        return "older_than_window"
+    position = next(index for index, item in enumerate(store.storage_events) if item.id == event.id)
+    occurred_at = _as_utc(event.occurred_at)
+    for index, other in enumerate(store.storage_events):
+        if other.id == event.id or other.undone_at is not None or other.food_id != event.food_id:
+            continue
+        if index > position or _as_utc(other.occurred_at) > occurred_at:
+            return "newer_events"
+    record = store.foods.get(event.food_id)
+    if event.event_type in {"consumed", "discarded"}:
+        if _storage_event_is_full_removal(event):
+            if record is not None:
+                return "lot_changed"
+            if event.undo_snapshot is None:
+                return "unsupported"
+        elif record is None or event.quantity is None:
+            return "lot_changed"
+        return None
+    # moved / frozen / thawed without a child lot
+    if record is None or event.from_storage_type is None:
+        return "lot_changed"
+    if record.response.storage_type != event.to_storage_type or record.response.storage_location_id != event.to_storage_location_id:
+        return "lot_changed"
+    if event.from_storage_location_id is not None and event.from_storage_location_id not in store.storage_locations:
+        return "lot_changed"
+    return None
+
+
+def _apply_storage_event_undo(event: StorageEventResponse) -> None:
+    if event.event_type in {"consumed", "discarded"}:
+        if _storage_event_is_full_removal(event):
+            assert event.undo_snapshot is not None
+            store.foods[event.food_id] = _FoodRecord(event.undo_snapshot.model_copy(deep=True))
+            return
+        response = store.foods[event.food_id].response
+        response.quantity = float(Decimal(str(response.quantity)) + Decimal(str(event.quantity)))
+        _refresh_estimated_window(response)
+        return
+    assert event.from_storage_type is not None
+    snapshot = event.undo_snapshot
+    if snapshot is not None:
+        # Restore only what the move changed; edits made since (date checks,
+        # product info) stay as they are.
+        response = store.foods[event.food_id].response
+        response.storage_type = snapshot.storage_type
+        response.storage_location_id = snapshot.storage_location_id
+        response.estimated_use_first_window = (
+            snapshot.estimated_use_first_window.model_copy(deep=True)
+            if snapshot.estimated_use_first_window is not None
+            else None
+        )
+        return
+    _inventory_authority(store).apply_storage_event(
+        food_id=event.food_id,
+        event_type="moved",
+        to_storage_type=event.from_storage_type,
+        to_storage_location_id=event.from_storage_location_id,
+    )
+
+
+@app.post("/api/storage-events/{event_id}/undo", response_model=StorageEventUndoResponse)
+def undo_storage_event(http_response: Response, event_id: str) -> StorageEventUndoResponse:
+    """Compensate one recent storage event without appending a new event.
+
+    The original event stays in history with ``undone_at`` set, so a retry
+    after a lost response replays instead of applying the inverse twice.
+    """
+    with store.mutation_lock():
+        event = next((item for item in store.storage_events if item.id == event_id), None)
+        if event is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="보관 기록을 찾을 수 없습니다.")
+        if event.undone_at is not None:
+            http_response.headers["X-Idempotency-Replayed"] = "true"
+            return _storage_event_undo_response(event, replayed=True)
+        now = datetime.now(timezone.utc)
+        blocker = _storage_event_undo_blocker(event, now)
+        if blocker is not None:
+            raise _storage_event_undo_unavailable(blocker)
+
+        def mutate() -> StorageEventResponse:
+            live = next(item for item in store.storage_events if item.id == event_id)
+            _apply_storage_event_undo(live)
+            live.undone_at = now
+            store.reprioritize(persist=False)
+            return live
+
+        try:
+            return _storage_event_undo_response(workspace_mutation.run(mutate), replayed=False)
+        except InventoryInvariantError as exc:
+            raise _storage_event_undo_unavailable("lot_changed") from exc
+        except InventoryNotFoundError as exc:
+            raise _storage_event_undo_unavailable("lot_changed") from exc
+        except HTTPException:
+            raise
+        except ConcurrentWorkspaceWriteError:
+            raise
+        except Exception as exc:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail={
+                    "code": "storage_event_undo_persistence_unavailable",
+                    "detail": "되돌리기를 저장하지 못했습니다. 기존 상태를 유지했어요.",
+                    "retryable": True,
+                    "action": "retry_later",
+                },
+            ) from exc
+
+
+def _food_referenced_by_saved_meal_plan(food_id: str) -> bool:
+    for plan in store.meal_plans.values():
+        if food_id in plan.inventory_ids or food_id in plan.consumed_food_ids:
+            return True
+        for ingredient in plan.ingredients:
+            if ingredient.available_food_id == food_id or any(allocation.food_id == food_id for allocation in ingredient.allocations):
+                return True
+    for bundle in store.multi_day_meal_plans.values():
+        if bundle.saved_at is None:
+            continue
+        for day in bundle.days:
+            plan = day.plan
+            if food_id in plan.inventory_ids:
+                return True
+            for ingredient in plan.ingredients:
+                if ingredient.available_food_id == food_id or any(allocation.food_id == food_id for allocation in ingredient.allocations):
+                    return True
+    return False
+
+
+def _food_create_undo_blocker(food_id: str, operation: ManualFoodOperationRecord, operations: list[ManualFoodOperationRecord], now: datetime) -> str | None:
+    if any(item.lot_action == "correct" for item in operations):
+        return "lot_correction"
+    if now - _as_utc(operation.occurred_at) > UNDO_WINDOW:
+        return "older_than_window"
+    if any(
+        event.undone_at is None and (event.food_id == food_id or event.created_child_food_id == food_id)
+        for event in store.storage_events
+    ):
+        return "storage_events"
+    if any(record.response.parent_lot_id == food_id for record in store.foods.values()):
+        return "split_lot"
+    if _food_referenced_by_saved_meal_plan(food_id):
+        return "meal_plan"
+    if any(
+        record.aggregate_id == food_id or record.payload.get("food_id") == food_id
+        for record in store.grocy_outbox.values()
+    ):
+        return "external_sync"
+    return None
+
+
+@app.post("/api/foods/{food_id}/undo-create", response_model=FoodCreateUndoResponse)
+def undo_manual_food_create(http_response: Response, food_id: str) -> FoodCreateUndoResponse:
+    """Remove a lot that ``POST /api/foods`` just created, as if never added.
+
+    This is not a discard: no storage event is written, so rescue and waste
+    summaries never see the lot.
+    """
+    with store.mutation_lock():
+        operations = sorted(
+            (item for item in store.manual_food_operations.values() if item.food_id == food_id),
+            key=lambda item: item.occurred_at,
+        )
+        operation = next((item for item in operations if item.lot_action == "create"), None)
+        if operation is not None and operation.undone_at is not None and food_id not in store.foods:
+            http_response.headers["X-Idempotency-Replayed"] = "true"
+            return FoodCreateUndoResponse(
+                food_id=food_id,
+                undone_at=operation.undone_at,
+                idempotency_replayed=True,
+                inventory=_storage_inventory_snapshot(),
+            )
+        if food_id not in store.foods:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="식품을 찾을 수 없습니다.")
+        if operation is None:
+            raise _food_create_undo_unavailable("lot_correction" if operations else "not_manual")
+        now = datetime.now(timezone.utc)
+        blocker = _food_create_undo_blocker(food_id, operation, operations, now)
+        if blocker is not None:
+            raise _food_create_undo_unavailable(blocker)
+        operation_id = operation.id
+
+        def mutate() -> datetime:
+            del store.foods[food_id]
+            store.manual_food_operations[operation_id].undone_at = now
+            store.reprioritize(persist=False)
+            return now
+
+        try:
+            undone_at = workspace_mutation.run(mutate)
+        except HTTPException:
+            raise
+        except ConcurrentWorkspaceWriteError:
+            raise
+        except Exception as exc:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail={
+                    "code": "food_create_undo_persistence_unavailable",
+                    "detail": "추가 취소를 저장하지 못했습니다. 기존 목록을 유지했어요.",
+                    "retryable": True,
+                    "action": "retry_later",
+                },
+            ) from exc
+        return FoodCreateUndoResponse(
+            food_id=food_id,
+            undone_at=undone_at,
+            idempotency_replayed=False,
+            inventory=_storage_inventory_snapshot(),
+        )
+
+
 class RescueSummaryResponse(BaseModel):
     window_days: int
     since: datetime
@@ -11612,7 +11959,7 @@ def get_rescue_summary(days: int = Query(default=7, ge=1, le=31)) -> RescueSumma
     since = datetime.now(timezone.utc) - timedelta(days=days)
     rescued_food_ids: set[str] = set()
     for event in store.storage_events:
-        if event.event_type != "consumed":
+        if event.event_type != "consumed" or event.undone_at is not None:
             continue
         occurred_at = event.occurred_at
         if occurred_at.tzinfo is None:
@@ -11903,10 +12250,42 @@ def preview_meal_plan(request: MealPlanRequest) -> MealPlanResponse:
 
 @app.post("/api/meal-plans/options", response_model=MealPlanOptionsResponse)
 def preview_meal_plan_options(request: MealPlanRequest) -> MealPlanOptionsResponse:
-    """Calculate up to three distinct recipe choices without creating saved plans."""
+    """Calculate up to three distinct recipe choices without creating saved plans.
+
+    With a known ``anchor_food_id`` the anchor lot joins the planning
+    inventory and recipes whose allocation uses it fill the first slots;
+    remaining slots fall back to the normal ranking.
+    """
     excluded: set[str] = set()
     options: list[MealPlanResponse] = []
-    for _ in range(3):
+    anchor_record = store.foods.get(request.anchor_food_id) if request.anchor_food_id else None
+    anchor_option_recipe_ids: list[str] = []
+    if anchor_record is not None:
+        anchor = anchor_record.response
+        inventory_ids = [anchor.id, *(food_id for food_id in request.inventory_ids if food_id != anchor.id)]
+        if not request.inventory_ids:
+            # An empty selection normally means "top three by priority";
+            # keep those lots alongside the anchor.
+            inventory_ids += [record.response.id for record in store._sorted_foods()[:3] if record.response.id != anchor.id]
+        request = request.model_copy(update={"inventory_ids": inventory_ids[:20]})
+        recipe_specs = load_recipe_specs() + store.approved_recipe_specs()
+        non_anchor_ids = {spec.id for spec in recipe_specs if not recipe_uses_food(spec, anchor)}
+        anchor_skipped: set[str] = set()
+        while len(options) < 3:
+            plan = _with_meal_plan_snapshot_hash(
+                _build_meal_plan(request, exclude_recipe_ids=excluded | non_anchor_ids | anchor_skipped)
+            )
+            if plan.recipe_id == "no-match":
+                break
+            if not _meal_plan_allocates_food(plan, anchor.id):
+                # The name matched but the anchor lot was not allocated
+                # (e.g. not enough of it); leave it to the normal ranking.
+                anchor_skipped.add(plan.recipe_id)
+                continue
+            excluded.add(plan.recipe_id)
+            options.append(plan)
+            anchor_option_recipe_ids.append(plan.recipe_id)
+    while len(options) < 3:
         plan = _with_meal_plan_snapshot_hash(_build_meal_plan(request, exclude_recipe_ids=excluded))
         if plan.recipe_id == "no-match":
             break
@@ -11917,6 +12296,17 @@ def preview_meal_plan_options(request: MealPlanRequest) -> MealPlanOptionsRespon
         max_minutes=request.max_minutes,
         servings=request.servings,
         inventory_ids=list(request.inventory_ids),
+        anchor_food_id=anchor_record.response.id if anchor_record is not None else None,
+        anchor_name=anchor_record.response.display_name if anchor_record is not None else None,
+        anchor_option_recipe_ids=anchor_option_recipe_ids,
+    )
+
+
+def _meal_plan_allocates_food(plan: MealPlanResponse, food_id: str) -> bool:
+    return any(
+        allocation.food_id == food_id
+        for ingredient in plan.ingredients
+        for allocation in ingredient.allocations
     )
 
 

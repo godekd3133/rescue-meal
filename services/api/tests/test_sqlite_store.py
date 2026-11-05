@@ -25,6 +25,7 @@ from app.main import (
     ReceiptDraftResponse,
     ReceiptLineDraft,
     SqliteStore,
+    StorageEventResponse,
     WorkspaceExportAuditEvent,
     WorkspaceStoreRouter,
     _ReceiptRecord,
@@ -830,3 +831,42 @@ def test_sqlite_store_reads_worker_heartbeat_after_reconstruction(tmp_path: Path
     assert len(heartbeats) == 1
     assert heartbeats[0].worker_id == "worker-a"
     assert heartbeats[0].last_success_at == tick_at
+
+
+def test_sqlite_store_persists_storage_event_undo_state(tmp_path: Path) -> None:
+    database_path = tmp_path / "storage-event-undo.db"
+    first = SqliteStore(str(database_path))
+    snapshot = first.foods["tofu-1"].response.model_copy(deep=True)
+    undone_at = datetime(2026, 9, 7, 12, 5, tzinfo=timezone.utc)
+    first.storage_events.append(
+        StorageEventResponse(
+            id="event-undo-1",
+            food_id="tofu-1",
+            event_type="consumed",
+            from_storage_type="refrigerated",
+            to_storage_type=None,
+            quantity=1,
+            occurred_at=datetime(2026, 9, 7, 12, 0, tzinfo=timezone.utc),
+            undone_at=undone_at,
+            undo_snapshot=snapshot,
+        )
+    )
+    first.manual_food_operations["manual-food-op-undo"] = ManualFoodOperationRecord(
+        id="manual-food-op-undo",
+        food_id="food-undo",
+        lot_action="create",
+        idempotency_key_digest="c" * 64,
+        request_payload_fingerprint="d" * 64,
+        occurred_at=datetime(2026, 9, 7, 12, 0, tzinfo=timezone.utc),
+        undone_at=undone_at,
+    )
+    first.flush()
+
+    second = SqliteStore(str(database_path))
+    event = next(item for item in second.storage_events if item.id == "event-undo-1")
+    assert event.undone_at == undone_at
+    assert event.undo_snapshot is not None
+    assert event.undo_snapshot.id == "tofu-1"
+    assert event.undo_snapshot.quantity == snapshot.quantity
+    assert "undo_snapshot" not in event.model_dump(mode="json")
+    assert second.manual_food_operations["manual-food-op-undo"].undone_at == undone_at

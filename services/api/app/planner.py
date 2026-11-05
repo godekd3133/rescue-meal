@@ -309,6 +309,13 @@ def _available_quantity(food: FoodLike) -> tuple[float | None, str | None]:
         return None, str(unit) if unit is not None else None
 
 
+def recipe_uses_food(recipe: RecipeSpec, food: FoodLike) -> bool:
+    """Return True when any recipe ingredient would match this food by name."""
+
+    available_by_name = {_name_key(food.canonical_name): [food]}
+    return any(_find_ingredient_match(ingredient, available_by_name)[0] for ingredient in recipe.ingredients)
+
+
 def _find_ingredient_match(
     ingredient: RecipeIngredient,
     available_by_name: dict[str, list[FoodLike]],
