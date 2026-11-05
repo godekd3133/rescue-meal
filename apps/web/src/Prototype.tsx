@@ -65,7 +65,9 @@ import "@fontsource/jua/latin-400.css";
 import "./freshness.css";
 import FridgeShelves from "./FridgeShelves";
 import RescueDeck from "./RescueDeck";
+import RevealText, { CountUp, prefersReducedMotion } from "./RevealText";
 import "./kitchen.css";
+import "./motion.css";
 import { foodFreshness, freshnessChipLabel, freshnessSpokenLabel } from "./freshness";
 import { getHomeReviewTopicLabel, shouldShowHomeDateGuide } from "./homeReviewSummary";
 import { demoCalendarDate } from "./demoCalendarDate";
@@ -1053,6 +1055,8 @@ function PrototypeContent() {
   const [sheet, setSheet] = useState<SheetName>(null);
   const [mealPlanSheetMounted, setMealPlanSheetMounted] = useState(false);
   const [activeNav, setActiveNav] = useState<"home" | "food" | "meal">("home");
+  // Bumped each time the bottom bar returns to Home so the headline writes itself in again.
+  const [homeVisit, setHomeVisit] = useState(0);
   const [inventoryNavTailSpace, setInventoryNavTailSpace] = useState(0);
   const activeContentNavRef = useRef<"home" | "food">("home");
   const navigationIntentRef = useRef<"home" | "food" | null>(null);
@@ -4343,6 +4347,8 @@ function PrototypeContent() {
     keyboard.hide();
     restoreContentNavigation(destination);
     changeSheet(null);
+    if (destination === "home") setHomeVisit((visit) => visit + 1);
+    else playScreenEntrance(".inventory-section");
   };
 
   const loadMoreInventory = () => {
@@ -5655,7 +5661,7 @@ function PrototypeContent() {
             <section className="greeting-block" aria-labelledby="greeting-title">
               <div>
                 <p className="eyebrow">{todayEyebrow}</p>
-                {!inventoryDataUnknown && foods.length ? <h1 id="greeting-title" className="rescue-hero" aria-label={`오늘 구할 음식 ${rescueTodayCount}개`}><span className="rescue-hero-copy">오늘 구할 음식</span><span><span className="rescue-hero-count" data-zero={rescueTodayCount === 0}>{rescueTodayCount}</span><span className="rescue-hero-unit">개</span></span></h1> : <h1 id="greeting-title">첫 식품을<br /><em>기록해 보세요.</em></h1>}
+                {!inventoryDataUnknown && foods.length ? <h1 id="greeting-title" className="rescue-hero" aria-label={`오늘 구할 음식 ${rescueTodayCount}개`}><span className="rescue-hero-copy"><RevealText key={homeVisit} text="오늘 구할 음식" delay={160} /></span><span><span key={homeVisit} className="rescue-hero-count" data-zero={rescueTodayCount === 0}><CountUp value={rescueTodayCount} /></span><span className="rescue-hero-unit">개</span></span></h1> : <h1 id="greeting-title"><RevealText key={homeVisit} text="첫 식품을" delay={160} /><br /><em><RevealText key={homeVisit} text="기록해 보세요." delay={330} /></em></h1>}
 
               </div>
             </section>
@@ -6089,6 +6095,17 @@ function PrototypeContent() {
 
 function ProcessingState({ label, detail }: { label: string; detail: string }) {
   return <div className="capture-intro processing-state"><div className="capture-visual"><UploadIcon width={25} height={25} /></div><h3>{label}</h3><p>{detail}</p><span className="processing-pulse" aria-hidden="true" /></div>;
+}
+
+/** Screen-change entrance for sections reached by scrolling (no remount to hang CSS on). */
+function playScreenEntrance(selector: string) {
+  if (prefersReducedMotion()) return;
+  window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
+    document.querySelector<HTMLElement>(selector)?.animate(
+      [{ opacity: 0.15, transform: "translateY(22px)" }, { opacity: 1, transform: "none" }],
+      { duration: 460, easing: "cubic-bezier(0.16, 1, 0.3, 1)" },
+    );
+  }));
 }
 
 export default function Prototype() {

@@ -71,6 +71,12 @@ When any text-entry control loses focus, dismiss the simulated keyboard. If the 
 - Keep the keyboard below the home indicator/safe area layer in z-index, and above ordinary app UI while visible.
 - Keep the home indicator as the topmost safe-area layer in the z-index above everything else in the prototype.
 
+## Motion
+
+- All entrance and transition motion lives in `src/motion.css` and only runs under `prefers-reduced-motion: no-preference`. Home opens like a fridge door (panel curtain, `RevealText` letter-by-letter headline, `CountUp` number, cards dealt from the right); buttons and headings wipe in left to right; sheet content rises in order after the sheet spring; tab changes pop the nav pill and replay the Home headline.
+- Use `animation-fill-mode: backwards` (never `both`/`forwards`) so clip paths and transforms never linger after an entrance. Generic rules sit in `:where()` so a component's own animation wins.
+- Entrance motion is keyed off `html[data-motion="on"]`, which `RevealText.tsx` sets only when `navigator.webdriver` is false, so UI suites measure settled layout exactly as before; `tests/motion.spec.ts` opts back in and checks the choreography.
+
 ## Current product visual direction
 
 - Example foods belong to the explicit demo preview. New guest and account record spaces start empty; a configured API must not show demo food while waiting for personal records. Preserve existing saved records and owner-scoped offline snapshots. Background workspace refreshes must not invent a device or food-change attribution.
