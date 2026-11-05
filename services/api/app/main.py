@@ -11595,6 +11595,33 @@ def list_storage_events(food_id: str) -> list[StorageEventResponse]:
     return events
 
 
+class RescueSummaryResponse(BaseModel):
+    window_days: int
+    since: datetime
+    rescued_food_count: int
+
+
+@app.get("/api/rescue-summary", response_model=RescueSummaryResponse)
+def get_rescue_summary(days: int = Query(default=7, ge=1, le=31)) -> RescueSummaryResponse:
+    """Count distinct food lots the workspace ate within the window.
+
+    Every consumption path (direct storage events, storage-event sequences and
+    meal-plan completion) records a ``consumed`` storage event, so that ledger
+    is the single source. Partial consumption counts; discards never do.
+    """
+    since = datetime.now(timezone.utc) - timedelta(days=days)
+    rescued_food_ids: set[str] = set()
+    for event in store.storage_events:
+        if event.event_type != "consumed":
+            continue
+        occurred_at = event.occurred_at
+        if occurred_at.tzinfo is None:
+            occurred_at = occurred_at.replace(tzinfo=timezone.utc)
+        if occurred_at >= since:
+            rescued_food_ids.add(event.food_id)
+    return RescueSummaryResponse(window_days=days, since=since, rescued_food_count=len(rescued_food_ids))
+
+
 def _build_meal_plan(
     request: MealPlanRequest,
     *,
