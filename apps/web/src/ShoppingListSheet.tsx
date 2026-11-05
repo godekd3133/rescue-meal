@@ -6,7 +6,7 @@ import { KeyboardInput, useKeyboard } from "./mobile/Keyboard";
 import { getMobileScrollBehavior } from "./mobile/scroll";
 import { revealAndFocusWithinNearestContainer as revealAndFocus, scrollTargetWithinNearestContainer } from "./appScroll";
 import type { ApiShoppingListItem, ApiStorageLocation, ApiStorageType } from "./mealApi";
-import { shoppingAdjustmentNote, shoppingFoodAction, getShoppingListProgressCopy, matchingShoppingInventoryFoods, shoppingQuantityInputValue, validateShoppingReceive, type ShoppingInventoryFood } from "./shoppingListPresentation";
+import { shoppingAdjustmentNote, shoppingFoodAction, getShoppingListProgressCopy, matchingShoppingInventoryFoods, defaultReceiveStorage, shoppingQuantityInputValue, validateShoppingReceive, type ShoppingInventoryFood } from "./shoppingListPresentation";
 import "./mealShoppingSheets.css";
 import { formatQuantityAmount } from "./quantityArithmetic";
 
@@ -155,6 +155,8 @@ export default function ShoppingListSheet({
   const focusManualEntry = () => revealAndFocus(manualNameRef.current, { block: "center" });
   const revealShoppingField = (event: FocusEvent<HTMLInputElement>) => {
     const field = event.currentTarget;
+    // Prefilled quantity/unit: select it so typing replaces "1"/"개" instead of appending.
+    if (field.dataset.selectOnFocus === "true") field.select();
     window.requestAnimationFrame(() => {
       if (field.isConnected) scrollTargetWithinNearestContainer(field, "center", getMobileScrollBehavior());
     });
@@ -384,7 +386,7 @@ export default function ShoppingListSheet({
   const beginReceive = (item: ApiShoppingListItem) => {
     setReceivingItemId(item.id);
     setReceiveQuantity(shoppingQuantityInputValue(item.quantity));
-    setReceiveStorageType(null);
+    setReceiveStorageType(defaultReceiveStorage(item.canonical_name, inventoryFoods));
     setReceiveStorageLocationId(null);
     setReceiveError("");
   };
@@ -546,6 +548,7 @@ export default function ShoppingListSheet({
                           step="any"
                           inputMode="decimal"
                           value={receiveQuantity}
+                          data-select-on-focus="true"
                           disabled={mutating}
                           aria-label={`${item.canonical_name} 구매 수량`}
                           aria-describedby={`shopping-sheet-receive-unit-${item.id}`}
@@ -630,11 +633,11 @@ export default function ShoppingListSheet({
           </label>
           <label className="shopping-sheet-manual-field shopping-sheet-manual-quantity">
             <span>수량</span>
-            <KeyboardInput ref={manualQuantityRef} className="app-input" type="number" min="0" max="100000" step="any" inputMode="decimal" value={manualQuantity} aria-label="직접 추가 수량" aria-invalid={manualErrorField === "quantity"} aria-describedby={manualErrorField === "quantity" ? "shopping-manual-error" : undefined} onFocus={revealShoppingField} onChange={(event) => { markManualDraftChanged(); manualQuantityAutofillRef.current = null; setManualQuantity(event.target.value); if (manualErrorField === "quantity" || manualErrorField === null) setManualError(""); }} onBlur={() => keyboard.hide()} />
+            <KeyboardInput ref={manualQuantityRef} className="app-input" type="number" min="0" max="100000" step="any" inputMode="decimal" value={manualQuantity} data-select-on-focus="true" aria-label="직접 추가 수량" aria-invalid={manualErrorField === "quantity"} aria-describedby={manualErrorField === "quantity" ? "shopping-manual-error" : undefined} onFocus={revealShoppingField} onChange={(event) => { markManualDraftChanged(); manualQuantityAutofillRef.current = null; setManualQuantity(event.target.value); if (manualErrorField === "quantity" || manualErrorField === null) setManualError(""); }} onBlur={() => keyboard.hide()} />
           </label>
           <label className="shopping-sheet-manual-field shopping-sheet-manual-unit">
             <span>단위</span>
-            <KeyboardInput ref={manualUnitRef} className="app-input" value={manualUnit} maxLength={30} autoComplete="off" placeholder="개" aria-label="직접 추가 단위" aria-invalid={manualErrorField === "unit"} aria-describedby={manualErrorField === "unit" ? "shopping-manual-error" : undefined} onFocus={revealShoppingField} onChange={(event) => { markManualDraftChanged(); setManualUnit(event.target.value); fillExistingManualQuantity(manualName, event.target.value); if (manualErrorField === "unit" || manualErrorField === null) setManualError(""); }} onBlur={() => keyboard.hide()} />
+            <KeyboardInput ref={manualUnitRef} className="app-input" value={manualUnit} data-select-on-focus="true" maxLength={30} autoComplete="off" placeholder="개" aria-label="직접 추가 단위" aria-invalid={manualErrorField === "unit"} aria-describedby={manualErrorField === "unit" ? "shopping-manual-error" : undefined} onFocus={revealShoppingField} onChange={(event) => { markManualDraftChanged(); setManualUnit(event.target.value); fillExistingManualQuantity(manualName, event.target.value); if (manualErrorField === "unit" || manualErrorField === null) setManualError(""); }} onBlur={() => keyboard.hide()} />
           </label>
           <button
             className="shopping-sheet-manual-submit"

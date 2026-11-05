@@ -6,7 +6,26 @@ import { Fragment, useEffect, useRef, useState } from "react";
  * plain text so wrapping and the accessible name are unchanged. With reduced
  * motion the spans are inert and the text reads exactly as before.
  */
-export default function RevealText({ text, delay = 0, step = 28 }: { text: string; delay?: number; step?: number }) {
+const INTRO_DAY_KEY = "rescue-meal:letter-intro-day";
+
+/**
+ * The letter-by-letter intro plays on the first open of each day only; later opens
+ * show the headline at once. Decided once per page load so every RevealText agrees.
+ */
+const LETTER_INTRO_TODAY = (() => {
+  if (typeof window === "undefined") return false;
+  const today = new Date().toDateString();
+  try {
+    if (window.localStorage.getItem(INTRO_DAY_KEY) === today) return false;
+    window.localStorage.setItem(INTRO_DAY_KEY, today);
+  } catch {
+    // Storage unavailable: play it; the intro is short.
+  }
+  return true;
+})();
+
+export default function RevealText({ text, delay = 0, step = 18 }: { text: string; delay?: number; step?: number }) {
+  if (!LETTER_INTRO_TODAY) return <>{text}</>;
   let order = 0;
   return (
     <span className="reveal-text" style={{ "--reveal-delay": `${delay}ms`, "--reveal-step": `${step}ms` } as React.CSSProperties}>
@@ -34,7 +53,7 @@ export const prefersReducedMotion = () => !MOTION_ON || (typeof window !== "unde
  * change). Reduced motion shows the final number immediately. Keep the real value in
  * the surrounding accessible name; the ticking digits are decoration.
  */
-export function CountUp({ value, delay = 520, duration = 720 }: { value: number; delay?: number; duration?: number }) {
+export function CountUp({ value, delay = 260, duration = 460 }: { value: number; delay?: number; duration?: number }) {
   const [shown, setShown] = useState(() => (prefersReducedMotion() ? value : 0));
   const fromRef = useRef(shown);
   useEffect(() => {

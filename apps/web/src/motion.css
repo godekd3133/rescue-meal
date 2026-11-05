@@ -2,7 +2,8 @@
  * Motion layer: one choreography for the whole app.
  *
  * - Home opens like a fridge door: the green panel drops in, the headline arrives
- *   letter by letter, the count pops, then the photo cards are dealt from the right.
+ *   letter by letter (first open of the day only), the count pops, then the photo
+ *   cards are dealt from the right. Everything settles within ~700ms.
  * - Every button and heading wipes in left to right on mount, so labels read as if
  *   they are being written. Fill mode is `backwards` everywhere: nothing lingers after
  *   the animation, so clip paths never cut focus rings or shadows.
@@ -80,41 +81,41 @@
 @media (prefers-reduced-motion: no-preference) {
   /* ---------- Home: the fridge opens ---------- */
   html[data-motion="on"] .kitchen-hero {
-    animation: m-curtain 640ms var(--m-out) backwards;
+    animation: m-curtain 420ms var(--m-out) backwards;
   }
 
   html[data-motion="on"] .kitchen-hero .app-header,
   html[data-motion="on"] .kitchen-hero .eyebrow {
-    animation: m-rise 480ms var(--m-out) 180ms backwards;
+    animation: m-rise 360ms var(--m-out) 90ms backwards;
   }
 
   html[data-motion="on"] .reveal-char {
     display: inline-block;
-    animation: m-char 560ms var(--m-pop) backwards;
-    animation-delay: calc(var(--reveal-delay, 0ms) + var(--i, 0) * var(--reveal-step, 28ms));
+    animation: m-char 420ms var(--m-pop) backwards;
+    animation-delay: calc(var(--reveal-delay, 0ms) + var(--i, 0) * var(--reveal-step, 18ms));
   }
 
   html[data-motion="on"] .kitchen-hero .rescue-hero-count {
     display: inline-block;
-    animation: m-pop 620ms var(--m-pop) 520ms backwards;
+    animation: m-pop 440ms var(--m-pop) 240ms backwards;
   }
 
   html[data-motion="on"] .kitchen-hero .rescue-hero-unit {
-    animation: m-rise 400ms var(--m-out) 700ms backwards;
+    animation: m-rise 300ms var(--m-out) 360ms backwards;
   }
 
   html[data-motion="on"] .rescue-deck-track > .rescue-card {
-    animation: m-deal 620ms var(--m-out) backwards;
-    animation-delay: calc(360ms + var(--deal-i, 0) * 80ms);
+    animation: m-deal 440ms var(--m-out) backwards;
+    animation-delay: calc(140ms + min(var(--deal-i, 0), 4) * 45ms);
   }
 
   html[data-motion="on"] .rescue-deck-track > .rescue-card .rescue-card-chip {
-    animation: m-pop 420ms var(--m-pop) backwards;
-    animation-delay: calc(700ms + var(--deal-i, 0) * 80ms);
+    animation: m-pop 320ms var(--m-pop) backwards;
+    animation-delay: calc(360ms + min(var(--deal-i, 0), 4) * 45ms);
   }
 
   html[data-motion="on"] .rescue-deck-clear {
-    animation: m-rise 480ms var(--m-out) 600ms backwards;
+    animation: m-rise 360ms var(--m-out) 200ms backwards;
   }
 
   /* Second tap: the button swells once as it turns yolk. */
@@ -123,20 +124,20 @@
   }
 
   html[data-motion="on"] .fridge-door .fridge-shelf {
-    animation: m-rise 520ms var(--m-out) backwards;
+    animation: m-rise 380ms var(--m-out) backwards;
   }
-  html[data-motion="on"] .fridge-door .fridge-shelf:nth-child(2) { animation-delay: 70ms; }
-  html[data-motion="on"] .fridge-door .fridge-shelf:nth-child(3) { animation-delay: 140ms; }
-  html[data-motion="on"] .fridge-door .fridge-shelf:nth-child(4) { animation-delay: 210ms; }
+  html[data-motion="on"] .fridge-door .fridge-shelf:nth-child(2) { animation-delay: 40ms; }
+  html[data-motion="on"] .fridge-door .fridge-shelf:nth-child(3) { animation-delay: 80ms; }
+  html[data-motion="on"] .fridge-door .fridge-shelf:nth-child(4) { animation-delay: 120ms; }
 
   html[data-motion="on"][data-rescue-theme] .meal-home .fridge-door .fridge-sticker {
-    animation: m-pop 460ms var(--m-pop) backwards;
-    animation-delay: 180ms;
+    animation: m-pop 340ms var(--m-pop) backwards;
+    animation-delay: 100ms;
   }
-  html[data-motion="on"][data-rescue-theme] .meal-home .fridge-door li:nth-child(2) .fridge-sticker { animation-delay: 230ms; }
-  html[data-motion="on"][data-rescue-theme] .meal-home .fridge-door li:nth-child(3) .fridge-sticker { animation-delay: 280ms; }
-  html[data-motion="on"][data-rescue-theme] .meal-home .fridge-door li:nth-child(4) .fridge-sticker { animation-delay: 330ms; }
-  html[data-motion="on"][data-rescue-theme] .meal-home .fridge-door li:nth-child(n + 5) .fridge-sticker { animation-delay: 380ms; }
+  html[data-motion="on"][data-rescue-theme] .meal-home .fridge-door li:nth-child(2) .fridge-sticker { animation-delay: 130ms; }
+  html[data-motion="on"][data-rescue-theme] .meal-home .fridge-door li:nth-child(3) .fridge-sticker { animation-delay: 160ms; }
+  html[data-motion="on"][data-rescue-theme] .meal-home .fridge-door li:nth-child(4) .fridge-sticker { animation-delay: 190ms; }
+  html[data-motion="on"][data-rescue-theme] .meal-home .fridge-door li:nth-child(n + 5) .fridge-sticker { animation-delay: 220ms; }
 
   html:where([data-motion="on"]) :where(.inventory-row) {
     animation: m-rise 420ms var(--m-out) backwards;
@@ -148,31 +149,28 @@
 
   /* ---------- Every label writes itself in ---------- */
   html:where([data-motion="on"]) :where(.app-screen, .bottom-sheet) :where(button, h2, h3, h4) {
-    animation: m-wipe 460ms var(--m-out) 60ms backwards;
+    animation: m-wipe 340ms var(--m-out) 40ms backwards;
   }
 
   html:where([data-motion="on"]) :where(.bottom-sheet) .sheet-title {
-    animation: m-wipe 520ms var(--m-out) 90ms backwards;
+    animation: m-wipe 380ms var(--m-out) 60ms backwards;
   }
 
   /* ---------- Sheets: content rises after the spring ---------- */
   html:where([data-motion="on"]) :where(.bottom-sheet .sheet-content > * > *) {
-    animation: m-rise 480ms var(--m-out) backwards;
-    animation-delay: 140ms;
+    animation: m-rise 360ms var(--m-out) backwards;
+    animation-delay: 100ms;
   }
-  html:where([data-motion="on"]) :where(.bottom-sheet .sheet-content > * > :nth-child(2)) { animation-delay: 190ms; }
-  html:where([data-motion="on"]) :where(.bottom-sheet .sheet-content > * > :nth-child(3)) { animation-delay: 240ms; }
-  html:where([data-motion="on"]) :where(.bottom-sheet .sheet-content > * > :nth-child(4)) { animation-delay: 290ms; }
-  html:where([data-motion="on"]) :where(.bottom-sheet .sheet-content > * > :nth-child(5)) { animation-delay: 340ms; }
-  html:where([data-motion="on"]) :where(.bottom-sheet .sheet-content > * > :nth-child(n + 6)) { animation-delay: 390ms; }
+  html:where([data-motion="on"]) :where(.bottom-sheet .sheet-content > * > :nth-child(2)) { animation-delay: 140ms; }
+  html:where([data-motion="on"]) :where(.bottom-sheet .sheet-content > * > :nth-child(n + 3)) { animation-delay: 180ms; }
 
   /* ---------- Floating dock ---------- */
   html[data-motion="on"][data-rescue-theme] .app-bottom-nav {
-    animation: m-dock 640ms var(--m-out) 260ms backwards;
+    animation: m-dock 460ms var(--m-out) 100ms backwards;
   }
 
   html[data-motion="on"][data-rescue-theme] .app-bottom-nav .app-bottom-nav-add {
-    animation: m-fab 640ms var(--m-pop) 560ms backwards;
+    animation: m-fab 460ms var(--m-pop) 220ms backwards;
   }
 
   /* Changing tabs: the pill pops under the new tab and its icon gives a nudge. */
@@ -201,7 +199,7 @@
 @media (prefers-reduced-motion: no-preference) {
   /* Deck buttons write in once their card has landed. */
   html[data-motion="on"] .rescue-deck-track > .rescue-card .rescue-card-action {
-    animation: m-wipe 420ms var(--m-out) backwards;
-    animation-delay: calc(620ms + var(--deal-i, 0) * 80ms);
+    animation: m-wipe 300ms var(--m-out) backwards;
+    animation-delay: calc(340ms + min(var(--deal-i, 0), 4) * 45ms);
   }
 }

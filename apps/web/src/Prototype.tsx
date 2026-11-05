@@ -719,11 +719,11 @@ function getInitialTheme(): ThemeMode {
     const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
     if (stored === "dark" || stored === "light") return stored;
   } catch {
-    // Theme preference is optional. Keep the selected light design when
-    // storage is unavailable instead of blocking the home screen.
+    // Theme preference is optional; fall through to the system setting.
   }
 
-  return "light";
+  // No saved choice yet: follow the phone's appearance setting.
+  return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
 function mealPlanHint(priorityFoods: FoodItem[], foodCount: number, priorityNeedsReviewCount = 0) {
@@ -1055,8 +1055,6 @@ function PrototypeContent() {
   const [sheet, setSheet] = useState<SheetName>(null);
   const [mealPlanSheetMounted, setMealPlanSheetMounted] = useState(false);
   const [activeNav, setActiveNav] = useState<"home" | "food" | "meal">("home");
-  // Bumped each time the bottom bar returns to Home so the headline writes itself in again.
-  const [homeVisit, setHomeVisit] = useState(0);
   const [inventoryNavTailSpace, setInventoryNavTailSpace] = useState(0);
   const activeContentNavRef = useRef<"home" | "food">("home");
   const navigationIntentRef = useRef<"home" | "food" | null>(null);
@@ -4347,8 +4345,7 @@ function PrototypeContent() {
     keyboard.hide();
     restoreContentNavigation(destination);
     changeSheet(null);
-    if (destination === "home") setHomeVisit((visit) => visit + 1);
-    else playScreenEntrance(".inventory-section");
+    if (destination === "food") playScreenEntrance(".inventory-section");
   };
 
   const loadMoreInventory = () => {
@@ -5661,7 +5658,7 @@ function PrototypeContent() {
             <section className="greeting-block" aria-labelledby="greeting-title">
               <div>
                 <p className="eyebrow">{todayEyebrow}</p>
-                {!inventoryDataUnknown && foods.length ? <h1 id="greeting-title" className="rescue-hero" aria-label={`오늘 구할 음식 ${rescueTodayCount}개`}><span className="rescue-hero-copy"><RevealText key={homeVisit} text="오늘 구할 음식" delay={160} /></span><span><span key={homeVisit} className="rescue-hero-count" data-zero={rescueTodayCount === 0}><CountUp value={rescueTodayCount} /></span><span className="rescue-hero-unit">개</span></span></h1> : <h1 id="greeting-title"><RevealText key={homeVisit} text="첫 식품을" delay={160} /><br /><em><RevealText key={homeVisit} text="기록해 보세요." delay={330} /></em></h1>}
+                {!inventoryDataUnknown && foods.length ? <h1 id="greeting-title" className="rescue-hero" aria-label={`오늘 구할 음식 ${rescueTodayCount}개`}><span className="rescue-hero-copy"><RevealText text="오늘 구할 음식" delay={160} /></span><span><span className="rescue-hero-count" data-zero={rescueTodayCount === 0}><CountUp value={rescueTodayCount} /></span><span className="rescue-hero-unit">개</span></span></h1> : <h1 id="greeting-title"><RevealText text="첫 식품을" delay={160} /><br /><em><RevealText text="기록해 보세요." delay={330} /></em></h1>}
 
               </div>
             </section>

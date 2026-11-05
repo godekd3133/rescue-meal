@@ -33,12 +33,15 @@ const settle = (page: import("@playwright/test").Page) =>
 
 test("home writes its headline in letter by letter, counts up, and deals the rescue cards", async ({ page }) => {
   await page.goto("/");
+  const started = Date.now();
   const heading = page.getByRole("heading", { level: 1, name: "오늘 구할 음식 6개" });
   await expect(heading).toBeVisible();
   await expect(page.locator("#greeting-title .reveal-char")).toHaveCount(6);
   expect(await runningAnimationNames(page)).toEqual(expect.arrayContaining(["m-char"]));
 
   await settle(page);
+  // The whole entrance settles quickly (budget ~700ms of choreography plus load).
+  expect(Date.now() - started).toBeLessThan(2_500);
   await expect(page.locator(".rescue-hero-count")).toHaveText("6");
   await expect(heading).toHaveText("오늘 구할 음식6개");
   const clipped = await page.locator("button").evaluateAll((buttons) => buttons.filter((button) => getComputedStyle(button).clipPath !== "none").length);
@@ -56,8 +59,9 @@ test("tab changes and sheets animate without delaying the tap", async ({ page })
   expect(await runningAnimationNames(page)).toEqual(expect.arrayContaining(["m-pill"]));
   await settle(page);
 
+  // Returning to Home does not replay the letter intro.
   await page.locator(".app-bottom-nav-item").first().click();
-  expect(await runningAnimationNames(page)).toEqual(expect.arrayContaining(["m-char"]));
+  expect(await runningAnimationNames(page)).not.toContain("m-char");
   await settle(page);
   await expect(page.locator(".rescue-hero-count")).toHaveText("6");
 
@@ -67,6 +71,14 @@ test("tab changes and sheets animate without delaying the tap", async ({ page })
   expect(await runningAnimationNames(page)).toEqual(expect.arrayContaining(["m-rise"]));
   await settle(page);
   await expect(sheet.getByRole("button", { name: "닫기" })).toBeVisible();
+});
+
+test("the letter intro plays on the first open of the day only", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator("#greeting-title .reveal-char")).toHaveCount(6);
+  await page.reload();
+  await expect(page.getByRole("heading", { level: 1, name: "오늘 구할 음식 6개" })).toBeVisible();
+  await expect(page.locator("#greeting-title .reveal-char")).toHaveCount(0);
 });
 
 test("reduced motion keeps every surface still", async ({ page }) => {
