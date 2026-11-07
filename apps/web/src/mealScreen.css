@@ -587,22 +587,6 @@
   padding-top: 8px;
 }
 
-:root:root:root:root .bottom-sheet .meal-plan .recipe-title-row {
-  display: grid;
-  gap: 6px;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: none;
-}
-
-:root:root:root:root .bottom-sheet .meal-plan .meal-recipe .recipe-title-row h3 {
-  margin: 0;
-  font: var(--weight-regular) var(--text-28) / var(--leading-tight) var(--font-display);
-  letter-spacing: 0;
-}
-
 :root:root:root:root .meal-plan .meal-recipe-facts {
   display: flex;
   flex-wrap: wrap;
@@ -647,7 +631,6 @@
   padding: 0;
 }
 
-:root:root:root:root .meal-plan .meal-actions-secondary,
 :root:root:root:root .meal-plan .meal-saved-links {
   display: flex;
   flex-wrap: wrap;
@@ -656,11 +639,23 @@
   gap: 4px 12px;
 }
 
+/* 임시 저장 / 이미 만들었어요: two quiet actions of the same weight under 요리 시작. */
 :root:root:root:root .meal-plan .meal-actions-secondary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
   margin-top: 6px;
 }
 
-:root:root:root:root .meal-plan .recipe-preview-save-note {
+:root:root:root:root .meal-plan .meal-actions-secondary > .meal-quiet-button {
+  min-width: 0;
+  padding: 0 10px;
+  white-space: nowrap;
+}
+
+:root:root:root:root .meal-plan .recipe-action-note {
+  display: grid;
+  gap: 2px;
   margin: -6px 0 0;
   color: var(--ink-muted);
   font-size: var(--text-12);
@@ -1327,10 +1322,6 @@
   :root:root:root:root .meal-plan .meal-day .meal-dish-art {
     width: 56px;
     height: 56px;
-  }
-
-  :root:root:root:root .bottom-sheet .meal-plan .meal-recipe .recipe-title-row h3 {
-    font-size: var(--text-20);
   }
 
   :root:root:root:root .cook-mode .cook-step-text {

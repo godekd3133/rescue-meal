@@ -582,7 +582,7 @@ function createDemoPlan(foods: MealFood[], maxMinutes = 30, servings = 1, dateRe
   };
 }
 
-export default function MealPlanSheet({ foods, presentation = "sheet", active = false, returningFromRelatedFlow = false, parentRestoresFocus = false, plannerContextKey = "", onOpenChange, initialMaxMinutes = 30, initialServings = 1, dateReviewFoods = [], onSaved, onCompleted, onOpenFoodDetail, onOpenAdd, onOpenSyncReview, onOpenShoppingList, onAddDemoShoppingItems, onOptionsChange, onAuthenticationRequired, onOpenAccount, workspaceSync, workspaceTransport, anchorFood = null, onClearAnchor, referenceDate }: {
+export default function MealPlanSheet({ foods, presentation = "sheet", active = false, returningFromRelatedFlow = false, parentRestoresFocus = false, plannerContextKey = "", onOpenChange, initialMaxMinutes = 30, initialServings = 1, dateReviewFoods = [], onSaved, onCompleted, onOpenFoodDetail, onOpenAdd, onOpenSyncReview, onOpenShoppingList, onAddDemoShoppingItems, onShortagesChange, onOptionsChange, onAuthenticationRequired, onOpenAccount, workspaceSync, workspaceTransport, anchorFood = null, onClearAnchor, referenceDate }: {
   foods: MealFood[];
   /** Today for the urgency badges on menu cards (the same date Home uses). */
   referenceDate?: Date;
@@ -606,6 +606,8 @@ export default function MealPlanSheet({ foods, presentation = "sheet", active = 
   onOpenSyncReview?: (state: "action_required" | "queued" | "processing") => void;
   onOpenShoppingList?: () => void;
   onAddDemoShoppingItems?: (sourceType: "meal_plan" | "multi_day", sourceId: string, items: DemoShoppingListEntry[]) => Promise<ApiShoppingListItem[]>;
+  /** The chosen recipe's `사야 함` (empty once cooked or with no recipe); 장보기 offers them as one-tap suggestions. */
+  onShortagesChange?: (shortages: Array<{ name: string; quantity: number; unit: string }>) => void;
   onOptionsChange?: (options: { maxMinutes: number; servings: number }) => void;
   onAuthenticationRequired?: () => void;
   onOpenAccount?: () => void;
@@ -1253,6 +1255,13 @@ export default function MealPlanSheet({ foods, presentation = "sheet", active = 
   };
 
   const hasRecipe = Boolean(plan && plan.recipe_id !== "no-match");
+  const shortages = plan && hasRecipe && !completed ? missingShoppingEntries(plan.ingredients).map((entry) => ({ name: entry.canonical_name, quantity: entry.quantity, unit: entry.unit })) : [];
+  const shortageSignature = JSON.stringify(shortages);
+  const onShortagesChangeRef = useRef(onShortagesChange);
+  onShortagesChangeRef.current = onShortagesChange;
+  useEffect(() => {
+    onShortagesChangeRef.current?.(JSON.parse(shortageSignature) as typeof shortages);
+  }, [shortageSignature]);
 
   // The menu rail fills itself once the plan for the current conditions has arrived. It uses its own
   // request instead of the shared "meal-plan" channel so it never cancels a plan read or a save.
@@ -2065,10 +2074,10 @@ export default function MealPlanSheet({ foods, presentation = "sheet", active = 
       </div>
 
       <section className="meal-recipe" aria-labelledby="meal-recipe-title">
-        <div className="recipe-title-row">
-          <h3 id="meal-recipe-title">{plan.title}</h3>
-          <p className="meal-recipe-facts"><span className="recipe-time"><TimerIcon width={14} height={14} aria-hidden="true" />{plan.total_minutes ?? plan.minutes}분</span><span>{displayedServings}인분</span>{plan.thaw_required ? <span>해동 {plan.thaw_minutes ?? 0}분 포함</span> : null}</p>
-        </div>
+        {/* The selected menu card above already shows the title and time, and the serving chip the
+            servings: the detail names the recipe for screen readers only and starts with what is new. */}
+        <h3 id="meal-recipe-title" className="sr-only">{plan.title}</h3>
+        {plan.thaw_required ? <p className="meal-recipe-facts"><span className="recipe-time"><TimerIcon width={14} height={14} aria-hidden="true" />해동 {plan.thaw_minutes ?? 0}분 포함</span></p> : null}
         {hasMeaningfulMealReason(plan.reason) ? <p className="recipe-description">{mealPlanDisplayCopy(plan.reason)}</p> : null}
         {!completed && planIngredients.length ? <p className={`recipe-availability-summary${missingRecipeIngredientCount ? " recipe-availability-summary-incomplete" : ""}`} role="status" aria-label="식단 재료" aria-live="polite" aria-atomic="true"><strong>{missingRecipeIngredientCount ? availableRecipeIngredientCount ? `재료 ${availableRecipeIngredientCount}가지는 있고 ${missingRecipeIngredientCount}가지는 더 필요해요` : `재료 ${missingRecipeIngredientCount}가지를 준비해 주세요` : "필요한 재료를 모두 갖고 있어요"}</strong></p> : null}
 
@@ -2076,15 +2085,19 @@ export default function MealPlanSheet({ foods, presentation = "sheet", active = 
           <button ref={recipeViewActionRef} className="meal-primary-button meal-start-button" type="button" disabled={saving && !cookingOpen} onClick={(event) => openCooking(0, event.currentTarget)}>요리 시작</button>
           <div className="meal-actions-secondary">
             <button className="meal-quiet-button recipe-plan-save-button" type="button" aria-describedby={!mealApi.isConfigured ? "recipe-serving-note recipe-preview-save-note" : !saved ? "recipe-serving-note recipe-save-effect" : "recipe-serving-note"} disabled={saving || saved} onClick={() => void persistPlan()}>{saved ? <CheckIcon width={16} height={16} aria-hidden="true" /> : <BookmarkIcon width={16} height={16} aria-hidden="true" />}<span className="recipe-plan-save-copy">{saved ? mealApi.isConfigured ? "저장됨" : "임시 저장됨" : saving ? mealApi.isConfigured ? "저장 중" : "임시 저장 중" : mealApi.isConfigured ? "식단 저장" : "임시 저장"}</span></button>
-            <button className="meal-text-button" type="button" disabled={saving && !saved} onClick={(event) => openCooking("confirm", event.currentTarget)}>이미 만들었어요</button>
+            <button className="meal-quiet-button recipe-already-cooked-button" type="button" aria-describedby="recipe-already-cooked-note" disabled={saving && !saved} onClick={(event) => openCooking("confirm", event.currentTarget)}><CheckCircledIcon width={16} height={16} aria-hidden="true" />이미 만들었어요</button>
           </div>
           {saved ? <div className="meal-saved-links">
             <button className="meal-text-button recipe-audit-toggle" type="button" aria-expanded={auditOpen} disabled={auditLoading} onClick={() => void toggleAudit()}>{auditLoading ? "기록 불러오는 중" : auditOpen ? "식단 기록 접기" : "식단 기록 보기"}</button>
             {mealApi.isConfigured ? <button type="button" className="meal-text-button" disabled={stockChecking || saving || completing || completionRetry || authenticationExpired} aria-busy={stockChecking} onPointerDown={(event) => event.preventDefault()} onClick={() => { void recheckSavedStock(); }}>{stockChecking ? "현재 재료 확인 중" : "현재 재료로 다시 확인"}</button> : null}
           </div> : null}
         </div>}
-        {!mealApi.isConfigured && !completed ? <p id="recipe-preview-save-note" className="recipe-preview-save-note" role="note">화면을 나가면 임시 식단이 사라져요. 조리 완료 전에는 재료 수량이 바뀌지 않아요.</p> : null}
-        {mealApi.isConfigured && !saved && !completed ? <p id="recipe-save-effect" className="sr-only">재료 수량은 조리 완료를 기록할 때만 줄어요.</p> : null}
+        {/* One note under the two quiet actions, one sentence each: saving never changes stock,
+            이미 만들었어요 records what was used. */}
+        {!completed ? <p className="recipe-action-note" role="note">
+          {!mealApi.isConfigured ? <span id="recipe-preview-save-note" className="recipe-preview-save-note">임시 저장은 화면을 나가면 사라져요.</span> : !saved ? <span id="recipe-save-effect">식단 저장은 재료 수량을 바꾸지 않아요.</span> : null}
+          <span id="recipe-already-cooked-note">이미 만들었다면 쓴 재료만큼 보관 수량을 줄여요.</span>
+        </p> : null}
         {saved ? <div className="saved-recipe sr-only" data-readback-state="confirmed" role="status" aria-live="polite" aria-atomic="true">{mealApi.isConfigured ? "오늘의 식단에 저장했어요" : "임시 식단을 저장했어요"}. {plan.servings ?? servings}인분.</div> : null}
         {auditOpen ? <div className="recipe-audit" aria-label="식단 기록"><div className="meal-section-heading"><h4>식단 기록</h4><small>저장과 조리 기록</small></div>{auditError ? <div className="recipe-error meal-notice" data-tone="danger" role="alert"><InfoCircledIcon width={16} height={16} aria-hidden="true" /><span>{auditError}</span></div> : auditEvents.length ? <div className="recipe-audit-list">{auditEvents.map((event) => <div className="recipe-audit-row" key={event.id}><strong>{event.event_type === "saved" ? "식단 저장" : "조리 완료"}</strong><small>{new Date(event.occurred_at).toLocaleString("ko-KR", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}</small>{event.consumed_allocations.length ? <small>{event.consumed_allocations.map((allocation) => `${formatQuantity(allocation.quantity)}${allocation.unit ?? ""}`).join(" + ")} 사용</small> : null}</div>)}</div> : <p className="history-empty">아직 기록이 없어요.</p>}</div> : null}
 

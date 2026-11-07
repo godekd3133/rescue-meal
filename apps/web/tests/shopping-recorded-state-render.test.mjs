@@ -16,11 +16,9 @@ function render(inventoryFoods, quantity=2){
 }
 test('shopping rows preserve precise quantities instead of rounding a positive purchase to zero',()=>{
  for(const quantity of [1.1234,0.0001]) assert.match(render([],quantity),new RegExp(String(quantity).replace('.', '\\.')));
- const input=render([]).match(/<input[^>]*aria-label="살 것 수량"[^>]*>/)?.[0];
- assert.ok(input);
- assert.match(input,/min="0"/);
- assert.match(input,/step="any"/);
- assert.match(input,/max="100000"/);
+ // The add row is one name field and 추가; amounts are typed into the name or changed on the row.
+ assert.doesNotMatch(render([]),/aria-label="살 것 수량"/);
+ assert.match(render([]),/aria-label="살 것 이름"/);
 });
 test('a recorded purchase with no live lot renders a status, not a disabled viewing action',()=>{
  const html=render([]);

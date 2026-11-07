@@ -72,11 +72,12 @@
 
 /* ---------- Add row ---------- */
 
+/* One field and 추가: the amount and unit come from the text (`우유 2팩`) or are guessed, and are
+   changed on the row afterwards. */
 .shop-add {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 64px 56px auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 8px;
-  container: shop-add / inline-size;
 }
 
 :root[data-rescue-theme]:root:root .shop .shop-add .app-input {
@@ -91,11 +92,6 @@
   color: var(--ink);
   font-size: var(--text-16);
   box-shadow: none;
-}
-
-:root[data-rescue-theme]:root:root .shop .shop-add :is(.shop-add-qty, .shop-add-unit) {
-  padding: 0 8px;
-  text-align: center;
 }
 
 :root[data-rescue-theme]:root:root .shop .shop-add .app-input[aria-invalid="true"] {
@@ -138,15 +134,6 @@
   font-size: var(--text-14);
 }
 
-@container shop-add (max-width: 330px) {
-  .shop-add {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
-  }
-
-  .shop-add > .shop-add-name {
-    grid-column: 1 / -1;
-  }
-}
 
 /* ---------- Progress ---------- */
 
@@ -368,6 +355,72 @@
   border-radius: var(--radius-control);
   background: transparent;
   color: var(--ink-muted);
+}
+
+/* Row stepper: [ −  2개  + ] under the name of a row still to buy (the shared Stepper shape). */
+.shop-stepper {
+  display: inline-grid;
+  grid-template-columns: 44px minmax(52px, auto) 44px;
+  align-items: center;
+  justify-self: start;
+  margin: -10px 0 10px 90px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-control);
+  background: var(--surface-1);
+}
+
+:root[data-rescue-theme]:root:root .shop .shop-stepper > button {
+  display: grid;
+  place-items: center;
+  min-width: 44px;
+  min-height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--action-text);
+  cursor: pointer;
+}
+
+.shop-stepper-value {
+  padding: 0 4px;
+  color: var(--ink);
+  font-size: var(--text-14);
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.shop-list > li.shop-row {
+  display: grid;
+}
+
+/* Suggestions: the same card with one quiet 추가 per row. */
+.shop-suggest-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 60px;
+}
+
+.shop-suggest-row .shop-copy {
+  flex: 1 1 auto;
+}
+
+:root[data-rescue-theme]:root:root .shop .shop-suggest-add {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--action-text);
+  font: var(--weight-semibold) var(--text-14) / 1 var(--font-body);
+  cursor: pointer;
 }
 
 /* Already at home: a quiet disclosure under the row, indented to the name. */
@@ -678,6 +731,10 @@
   .shop-stock {
     margin-left: 72px;
   }
+
+  .shop-stepper {
+    margin-left: 84px;
+  }
 }
 
 .shop input[type="number"] {
@@ -688,4 +745,8 @@
 .shop input[type="number"]::-webkit-outer-spin-button {
   margin: 0;
   appearance: none;
+}
+
+.shop-stepper + .shop-stock {
+  margin-top: -8px;
 }
