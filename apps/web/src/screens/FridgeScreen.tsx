@@ -34,20 +34,20 @@ type SearchPhase = "idle" | "composing" | "waiting" | "refreshing" | "stale" | "
 
 const STATUS_OPTIONS: ReadonlyArray<{ value: FridgeStatusFilter; label: string }> = [
   { value: "all", label: "전체" },
-  { value: "needs-review", label: "확인 필요" },
   { value: "priority", label: "먼저 볼 것" },
+  { value: "needs-review", label: "확인 필요" },
 ];
 
+// Storage chips are single-select-or-none: tapping the selected place again clears it ("전체").
 const BUILT_IN_STORAGE: ReadonlyArray<{ value: FridgeStorageFilter; label: string }> = [
-  { value: "전체", label: "전체" },
   { value: "냉장", label: "냉장" },
   { value: "냉동", label: "냉동" },
   { value: "실온", label: "실온" },
 ];
 
 /**
- * 냉장고: the whole inventory as its own tab — search with a single clear button,
- * storage and status chips, and the list. Tapping a row opens the food detail sheet.
+ * 냉장고: the whole inventory as its own tab — search with a single clear button, one chip
+ * row (status 전체 / 먼저 볼 것 / 확인 필요, a divider, then the storage places), and the list. Tapping a row opens the food detail sheet.
  */
 export default function FridgeScreen(props: {
   headerActions: ReactNode;
@@ -115,6 +115,11 @@ export default function FridgeScreen(props: {
     ...BUILT_IN_STORAGE,
     ...props.customStorageLocations.map((location) => ({ value: `location:${location.id}` as FridgeStorageFilter, label: location.name })),
   ];
+  // The visible count line is gone; the list's heading still speaks it.
+  const listAccessibleName = searchPhase === "composing" ? "내 식품 목록" : searchWaiting ? "내 식품 목록 검색 중" : dataUnknown ? "내 식품 목록" : showTools ? `내 식품 목록 ${inventoryCount}` : "내 식품 목록";
+  // With one place selected every row is in it: the row meta stops repeating the place.
+  const storageFiltered = storageFilter !== "전체";
+  const locationFiltered = storageFilter.startsWith("location:");
 
   return (
     <main className={`screen-content meal-home fridge-screen${dataUnknown ? " meal-home-data-unknown" : ""}`} aria-labelledby="fridge-screen-title">
@@ -129,27 +134,28 @@ export default function FridgeScreen(props: {
                 <KeyboardInput className="inventory-search-input" type="search" value={props.query} placeholder="식품 검색" aria-label="식품·브랜드·카테고리 검색" onCompositionStart={() => props.onCompositionChange(true)} onCompositionEnd={(event) => props.onCompositionChange(false, event.currentTarget.value)} onChange={(event) => props.onQueryChange(event.target.value)} onFocus={props.onSearchFocus} onBlur={props.onSearchBlur} />
                 {hasQuery ? <button type="button" aria-label="식품 검색어 지우기" onPointerDown={(event) => event.preventDefault()} onClick={props.onClearSearch}><Cross2Icon width={14} height={14} /></button> : null}
               </label>
-              <div className="fridge-storage-chips" role="group" aria-label="보관 위치 필터">
+              <div className="fridge-filter-row">
                 <Carousel className="fridge-chip-rail" contentClassName="fridge-chip-track">
-                  {storageOptions.map((option) => (
-                    <button key={option.value} className={`fridge-chip${storageFilter === option.value ? " fridge-chip-active" : ""}`} type="button" aria-pressed={storageFilter === option.value} aria-controls="inventory-list" onClick={() => props.onStorageFilterChange(option.value)}>{option.label}</button>
-                  ))}
+                  <span className="fridge-chip-group inventory-status-filters" role="group" aria-label={`식품 상태 필터${props.scopeIsStale ? " · 이전 결과" : ""}`} data-scope-state={props.scopeIsStale ? "stale" : searchPending ? "loading" : "current"} aria-busy={searchPending}>
+                    {STATUS_OPTIONS.map((option) => (
+                      <button key={option.value} className={`fridge-chip${statusFilter === option.value ? " fridge-chip-active inventory-status-filter-active" : ""}`} type="button" data-status={option.value} aria-pressed={statusFilter === option.value} aria-controls="inventory-list" onClick={() => props.onStatusFilterChange(option.value)}>
+                        {option.label} <span className="fridge-chip-count">{countLabel(option.value === "all" ? props.scopeCount : option.value === "needs-review" ? props.scopedNeedsReviewCount : props.scopedPriorityCount)}</span>
+                      </button>
+                    ))}
+                  </span>
+                  <span className="fridge-chip-divider" aria-hidden="true" />
+                  <span className="fridge-chip-group fridge-storage-chips" role="group" aria-label="보관 위치 필터">
+                    {storageOptions.map((option) => (
+                      <button key={option.value} className={`fridge-chip${storageFilter === option.value ? " fridge-chip-active" : ""}`} type="button" aria-pressed={storageFilter === option.value} aria-controls="inventory-list" onClick={() => props.onStorageFilterChange(storageFilter === option.value ? "전체" : option.value)}>{option.label}</button>
+                    ))}
+                  </span>
                 </Carousel>
               </div>
-              <div className="inventory-status-filters fridge-status-segment" role="group" aria-label={`식품 상태 필터${props.scopeIsStale ? " · 이전 결과" : ""}`} data-scope-state={props.scopeIsStale ? "stale" : searchPending ? "loading" : "current"} aria-busy={searchPending}>
-                {STATUS_OPTIONS.map((option) => (
-                  <button key={option.value} className={statusFilter === option.value ? "inventory-status-filter-active" : undefined} type="button" data-status={option.value} aria-pressed={statusFilter === option.value} aria-controls="inventory-list" onClick={() => props.onStatusFilterChange(option.value)}>
-                    {option.label} <span>{countLabel(option.value === "all" ? props.scopeCount : option.value === "needs-review" ? props.scopedNeedsReviewCount : props.scopedPriorityCount)}</span>
-                  </button>
-                ))}
-              </div>
             </> : null}
-            <div className="inventory-heading">
-              <h2 id="inventory-title" aria-label={searchPhase === "composing" ? "내 식품 목록" : searchWaiting ? "내 식품 목록 검색 중" : dataUnknown ? "내 식품 목록" : showTools ? `내 식품 목록 ${inventoryCount}` : "내 식품 목록"}>내 식품 목록 {showTools ? <span>{countLabel(inventoryCount)}</span> : null}</h2>
-            </div>
-            {props.showScope ? <div className="inventory-filter-summary" role="status" aria-live="polite">
+            <h2 id="inventory-title" className="sr-only" aria-label={listAccessibleName}>내 식품 목록</h2>
+            {props.showScope ? <div className={`inventory-filter-summary${hasQuery ? "" : " sr-only"}`} role="status" aria-live="polite">
               <span><Metadata parts={[...props.scopeParts, dataUnknown ? null : `${inventoryCount}개`]} /></span>
-              {!hasEmptyResult ? <button type="button" onClick={props.onClearFilters}>전체 목록 보기</button> : null}
+              {hasQuery && !hasEmptyResult ? <button type="button" onClick={props.onClearFilters}>전체 목록 보기</button> : null}
             </div> : null}
           </div>
 
@@ -164,8 +170,8 @@ export default function FridgeScreen(props: {
                     <FoodPhoto src={food.image} foodName={food.name} alt="" className="inventory-image food-thumb" draggable={false} />
                     <span className="inventory-copy">
                       <strong>{food.name}</strong>
-                      <small><Metadata parts={[...foodIdentityParts(food.brand, food.purchaseSource), food.quantity, food.storageLocationName]} /></small>
-                      <small className="inventory-storage-meta">{food.storage}</small>
+                      <small><Metadata parts={[...foodIdentityParts(food.brand, food.purchaseSource), food.quantity, locationFiltered ? null : food.storageLocationName]} /></small>
+                      {storageFiltered ? null : <small className="inventory-storage-meta">{food.storage}</small>}
                     </span>
                     <span className={`inventory-status${reviewReason ? " inventory-status-warning" : ""}`} data-inventory-status={reviewReason ? "needs-review" : props.priorityFoodIds.has(food.id) ? "priority" : "stored"}>
                       <FreshnessChip food={food} referenceDate={referenceDate} />

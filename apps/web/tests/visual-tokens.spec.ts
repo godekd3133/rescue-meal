@@ -113,7 +113,7 @@ test("date badges come in exactly three shapes and only urgent buckets are colou
   for (const chip of readback) {
     expect(["printed", "estimated", "unknown"], chip.text).toContain(chip.kind);
     // D-n / D-day / +n일 everywhere, never a calendar date.
-    if (chip.kind !== "unknown") expect(chip.text).toMatch(/^(D-\d+|D-day|\+\d+일)$/);
+    if (chip.kind !== "unknown") expect(chip.text).toMatch(/^(D-\d+|D-day|\d+일 지남)$/);
     if (chip.kind === "estimated") {
       expect(chip.borderStyle, `${chip.text} estimate is dashed`).toBe("dashed");
       expect(chip.background, `${chip.text} estimate is not filled`).toBe(tokens.card);
@@ -179,7 +179,7 @@ test("type, shape and display-face tokens follow the six-step scale", async ({ p
   const sizes = await page.locator(".fridge-screen").evaluate((root) => {
     const found = new Set<string>();
     root.querySelectorAll<HTMLElement>("strong, small, span, button, h1, h2, h3, p, input").forEach((element) => {
-      if (!element.getClientRects().length || !element.textContent?.trim() && element.tagName !== "INPUT") return;
+      if (!element.getClientRects().length || element.closest(".sr-only") || !element.textContent?.trim() && element.tagName !== "INPUT") return;
       found.add(getComputedStyle(element).fontSize);
     });
     return [...found];

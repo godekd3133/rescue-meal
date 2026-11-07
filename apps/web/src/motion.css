@@ -30,11 +30,11 @@
     animation: m-toast 180ms var(--ease-out) backwards;
   }
 
-  html[data-motion="on"] :is(.app-bottom-nav-item, .app-bottom-nav-add, .rescue-card-action, .home-shelf-row, .priority-card, .inventory-row, .meal-plan-button, .fridge-chip, .fridge-status-segment button, .primary-sheet-button, .secondary-sheet-button, .quick-add-chip, .quick-add-method, .toast-undo, .toast-action) {
+  html[data-motion="on"] :is(.app-bottom-nav-item, .app-bottom-nav-add, .rescue-card-action, .home-shelf-row, .priority-card, .inventory-row, .meal-plan-button, .fridge-chip, .primary-sheet-button, .secondary-sheet-button, .quick-add-chip, .quick-add-method, .toast-undo, .toast-action) {
     transition: transform 120ms var(--ease-out), background-color 160ms ease, color 160ms ease;
   }
 
-  html[data-motion="on"] :is(.app-bottom-nav-item, .rescue-card-action, .meal-plan-button, .fridge-chip, .fridge-status-segment button, .primary-sheet-button, .secondary-sheet-button, .quick-add-chip, .quick-add-method, .toast-undo, .toast-action):active:not(:disabled) {
+  html[data-motion="on"] :is(.app-bottom-nav-item, .rescue-card-action, .meal-plan-button, .fridge-chip, .primary-sheet-button, .secondary-sheet-button, .quick-add-chip, .quick-add-method, .toast-undo, .toast-action):active:not(:disabled) {
     transform: scale(var(--press-scale));
   }
 
