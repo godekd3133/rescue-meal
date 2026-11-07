@@ -168,8 +168,9 @@ test("web home keeps the storage rows before the meal action on mobile and deskt
   await expect(page.locator(".inventory-row")).toHaveCount(0);
   await expect(page.locator(".freshness-overview")).toHaveCount(0);
   await expect(page.getByRole("heading", { level: 1, name: /^오늘 살펴볼 음식 \d+개$/ })).toBeVisible();
-  // The demo record has one passed printed date: the safety summary opens its review.
-  await expect(page.locator(".trust-card")).toHaveCount(1);
+  // The demo record has one passed printed date; its row already offers 날짜 확인, so no review banner repeats it.
+  await expect(page.locator(".rescue-card").filter({ hasText: "시금치" }).getByRole("button", { name: "시금치 날짜 확인" })).toBeVisible();
+  await expect(page.locator(".trust-card")).toHaveCount(0);
   await expect(page.locator(".rescue-card").filter({ hasText: "시금치" })).toHaveClass(/freshness-past/);
   const summary = page.locator(".home-shelves");
   await expect(summary).toBeVisible();

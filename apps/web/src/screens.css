@@ -29,8 +29,31 @@
   line-height: var(--leading-body);
 }
 
+/*
+ * Room under the last element of every tab so it scrolls fully above the floating bottom bar:
+ * the bar's offset from the safe area, its height, the + button's overhang above it, then 16px.
+ * The bar below (`.app-bottom-nav`) is positioned from the same tokens. The tab's MobileScroll
+ * (`.app-screen`, protected markup) gets the same value as scroll padding so focus and
+ * scrollIntoView reveals stop above the bar too.
+ */
+:root {
+  --app-nav-offset: 6px;
+  --app-nav-height: 64px;
+  --app-nav-fab-overhang: 26px;
+}
+
+/* Declared on the elements themselves: --device-safe-area-bottom is set on the phone frame,
+   below :root, so a :root-level calc would always fall back. */
+:root:root:root :is(.app-screen,.home-screen,.fridge-screen,.tab-screen) {
+  --app-nav-clearance: calc(var(--device-safe-area-bottom, 34px) + var(--app-nav-offset) + var(--app-nav-height) + var(--app-nav-fab-overhang) + 16px);
+}
+
 :root:root:root :is(.home-screen,.fridge-screen,.tab-screen) {
-  padding-bottom: calc(var(--device-safe-area-bottom, 34px) + 112px);
+  padding-bottom: var(--app-nav-clearance);
+}
+
+:root:root:root .app-screen {
+  scroll-padding-bottom: var(--app-nav-clearance);
 }
 
 :root[data-rescue-theme]:root:root :is(.tab-screen,.fridge-screen) {
@@ -126,7 +149,7 @@
   padding: 0 4px 0 12px;
 }
 
-:root:root:root .app-header .connection-pill.connection-connected {
+:root:root:root .app-header .connection-pill:is(.connection-connected,.connection-avatar-only) {
   width: 44px;
   padding: 0;
 }
@@ -515,6 +538,7 @@
   z-index: 8;
   top: 0;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 8px;
   margin: 0 calc(-1 * var(--kitchen-gutter, 16px)) 12px;
   padding: 6px var(--kitchen-gutter, 16px) 10px;
@@ -534,21 +558,22 @@
   height: 44px;
   margin: 0;
   padding: 0 0 0 14px;
-  border: 1px solid var(--line-strong);
+  /* The hairline is drawn inside, so the field and its clear button are a full 44px tall. */
+  border: 0;
   border-radius: var(--radius-control);
   background: var(--surface-2);
+  box-shadow: inset 0 0 0 1px var(--line-strong);
   color: var(--ink-muted);
 }
 
 :root:root:root .inventory-search:focus-within {
-  border-color: var(--action-text);
-  box-shadow: inset 0 0 0 1px var(--action-text);
+  box-shadow: inset 0 0 0 2px var(--action-text);
 }
 
 :root:root:root .inventory-search-input {
   flex: 1 1 auto;
   min-width: 0;
-  height: 100%;
+  height: 44px;
   padding: 0;
   border: 0;
   outline: none;
@@ -564,7 +589,7 @@
   flex: 0 0 auto;
   place-items: center;
   width: 44px;
-  height: 42px;
+  height: 44px;
   padding: 0;
   border: 0;
   border-radius: var(--radius-control);
@@ -572,16 +597,37 @@
   color: var(--ink-muted);
 }
 
-.fridge-storage-chips {
+/* One chip row: status (single choice), a hairline divider, then places (one or none).
+   It bleeds to the screen edges and scrolls sideways; the gutter keeps the first and
+   last chip clear of the edge and of any side safe area. */
+.fridge-filter-row {
+  min-width: 0;
   margin: 0 calc(-1 * var(--kitchen-gutter, 16px));
 }
+
+.inventory-status-filters[data-scope-state="stale"] { opacity: 0.64; }
 
 .fridge-chip-rail { width: 100%; }
 
 :root:root:root .fridge-chip-track {
   display: flex;
+  align-items: center;
   gap: 6px;
-  padding: 4px var(--kitchen-gutter, 16px);
+  padding: 4px max(var(--kitchen-gutter, 16px), env(safe-area-inset-right, 0px)) 4px max(var(--kitchen-gutter, 16px), env(safe-area-inset-left, 0px));
+}
+
+.fridge-chip-group {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 6px;
+}
+
+:root:root:root .fridge-chip-divider {
+  flex: 0 0 auto;
+  width: 1px;
+  height: 24px;
+  margin: 0 4px;
+  background: var(--line-strong);
 }
 
 /* Filter chips are the one pill-shaped control on the page. */
@@ -600,6 +646,12 @@
   cursor: pointer;
 }
 
+:root:root:root .fridge-chip-count {
+  margin-left: 2px;
+  font-weight: var(--weight-regular);
+  font-variant-numeric: tabular-nums;
+}
+
 :root:root:root .fridge-chip-active {
   border-color: var(--ink);
   background: var(--ink);
@@ -616,74 +668,6 @@
   content: "";
   pointer-events: none;
 }
-
-/* Status: one Segmented track. */
-:root:root:root .fridge-status-segment {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 2px;
-  margin: 0;
-  padding: 3px;
-  border: 0;
-  border-radius: var(--radius-control);
-  background: var(--surface-3);
-}
-
-:root:root:root .fridge-status-segment[data-scope-state="stale"] { opacity: 0.64; }
-
-:root:root:root .fridge-status-segment > button {
-  position: relative;
-  min-width: 0;
-  min-height: 44px;
-  margin: 0;
-  padding: 0 4px;
-  border: 0;
-  border-radius: 9px;
-  background: transparent;
-  box-shadow: none;
-  color: var(--ink-muted);
-  font: var(--weight-semibold) var(--text-14) / 1.2 var(--font-body);
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-:root:root:root .fridge-status-segment > button span {
-  margin-left: 2px;
-  font-weight: var(--weight-regular);
-  font-variant-numeric: tabular-nums;
-}
-
-:root:root:root .fridge-status-segment > button[aria-pressed="true"] {
-  background: var(--segment-on);
-  box-shadow: 0 1px 2px rgba(12, 30, 21, 0.14);
-  color: var(--ink);
-}
-
-:root:root:root .fridge-status-segment > button:focus-visible { outline: none; }
-
-:root:root:root .fridge-status-segment > button:focus-visible::after {
-  position: absolute;
-  inset: 0;
-  border: 2px solid var(--action-text);
-  border-radius: 9px;
-  content: "";
-  pointer-events: none;
-}
-
-:root:root:root .inventory-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin: 2px 0 0;
-}
-
-:root:root:root .inventory-heading h2 {
-  margin: 0;
-  color: var(--ink-muted);
-  font: var(--weight-semibold) var(--text-14) / var(--leading-snug) var(--font-body);
-}
-
-:root:root:root .inventory-heading h2 span { font-variant-numeric: tabular-nums; }
 
 :root:root:root .inventory-filter-summary {
   display: flex;
@@ -754,6 +738,11 @@
   justify-items: end;
   gap: 4px;
 }
+
+/* Narrow phones keep the date badge beside the name (an older ≤360px rule in prototype.css
+   dropped it to a second line, doubling every row's height). */
+:root:root:root .inventory-row > :is(.inventory-copy, .inventory-status) { grid-row: 1; }
+:root:root:root .inventory-row > .inventory-status { grid-column: 3; justify-self: end; }
 
 :root:root:root .inventory-review-detail {
   color: var(--notice-caution-accent);
@@ -969,12 +958,12 @@
   z-index: 20;
   right: 14px;
   left: 14px;
-  bottom: calc(var(--device-safe-area-bottom, 34px) + 6px);
+  bottom: calc(var(--device-safe-area-bottom, 34px) + var(--app-nav-offset));
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr)) 64px repeat(2, minmax(0, 1fr));
   gap: 2px;
   align-items: center;
-  min-height: 64px;
+  min-height: var(--app-nav-height);
   padding: 6px 8px;
   border: 0;
   border-radius: 999px;
@@ -1033,7 +1022,7 @@
   width: 58px;
   min-width: 58px;
   height: 58px;
-  margin-top: -26px;
+  margin-top: calc(-1 * var(--app-nav-fab-overhang));
   padding: 0;
   border: 4px solid var(--fab-ring);
   border-radius: 50%;

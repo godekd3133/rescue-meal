@@ -29,12 +29,22 @@ test("Rescue Meal home opens detail and saves a storage change", async ({ page }
   // No eyebrow label above the headline: the count sits inside one sentence.
   await expect(page.locator(".eyebrow")).toHaveCount(0);
   await expect(page.locator(".connection-pill")).toContainText("체험 중");
+  // Only Home's header shows the 체험 중 pill; the other tabs keep the 나 avatar (its name still says it).
+  await page.locator(".app-bottom-nav [data-nav-tab=\"fridge\"]").click();
+  await expect(page.locator(".connection-pill")).toHaveCount(1);
+  await expect(page.locator(".connection-pill")).not.toContainText("체험 중");
+  await expect(page.locator(".connection-pill")).toHaveAccessibleName(/예시 식품으로 체험 중/);
+  await page.locator(".app-bottom-nav [data-nav-tab=\"home\"]").click();
   // Home no longer repeats the inventory: today's count, the week's rescues, the deck and one line per storage.
   await expect(page.getByRole("heading", { level: 1, name: "오늘 살펴볼 음식 6개" })).toBeVisible();
   await expect(page.getByTestId("home-rescued-stat")).toHaveText(/이번 주 구한 음식\s*3개/);
   await expect(page.locator(".priority-card")).toHaveCount(0);
-  await expect(page.locator(".inventory-row")).toHaveCount(0);
-  await expect(page.locator(".trust-card")).toContainText("살펴볼 식품 1개");
+  await expect(page.locator('[data-tab-panel="home"] .inventory-row')).toHaveCount(0);
+  // Home lists the first three of the six as rows and opens the rest with one control.
+  await expect(page.locator(".rescue-card")).toHaveCount(3);
+  await expect(page.getByTestId("rescue-show-all")).toHaveText("6개 모두 보기");
+  // The only review food (시금치) already shows 날짜 확인 on its row, so no banner repeats it.
+  await expect(page.locator(".trust-card")).toHaveCount(0);
   const spinachCard = page.locator(".rescue-card").filter({ hasText: "시금치" });
   await expect(spinachCard).toHaveAttribute("aria-label", "시금치, 표시 날짜에서 1일 지남");
   await expect(spinachCard).toHaveClass(/freshness-past/);
@@ -47,7 +57,7 @@ test("Rescue Meal home opens detail and saves a storage change", async ({ page }
   await page.locator(".app-bottom-nav [data-nav-tab=\"fridge\"]").click();
   const spinachRow = page.locator(".inventory-row").filter({ hasText: "시금치" });
   const spinachChip = spinachRow.locator(".freshness-chip");
-  await expect(spinachChip).toHaveText("+1일");
+  await expect(spinachChip).toHaveText("1일 지남");
   await expect(spinachChip).toHaveAttribute("aria-label", "표시 날짜에서 1일 지남");
   await expect(spinachChip).toHaveAttribute("data-estimated", "false");
   const tofuChip = page.locator(".inventory-row").filter({ hasText: "국산콩 두부" }).locator(".freshness-chip");
@@ -129,16 +139,12 @@ test("the 나 sheet theme toggle switches between the selected light and dark su
 });
 
 test("home review summary and storage rows lead to the right food or list", async ({ page }) => {
-  // One food needs a date check, so the safety summary opens that food's date review directly.
+  // Today the only review food (시금치) is a visible row with its own 날짜 확인: no banner repeats it.
+  await page.clock.install({ time: FIXTURE_NOW });
+  await page.reload();
+  await expect(page.locator(".rescue-card").filter({ hasText: "시금치" }).getByRole("button", { name: "시금치 날짜 확인" })).toBeVisible();
   const summary = page.locator(".trust-card");
-  await expect(summary).toHaveAccessibleName(/시금치 날짜와 보관 정보 확인/);
-  await summary.click();
-  const detail = page.getByRole("dialog", { name: "시금치" });
-  await expect(detail).toBeVisible();
-  await detail.getByRole("button", { name: "닫기", exact: true }).click();
-  await expect(detail).toHaveCount(0);
-  await expect(page.locator(".app-bottom-nav-item-active")).toHaveText("홈");
-  await expect(summary).toBeFocused();
+  await expect(summary).toHaveCount(0);
 
   // Storage rows are the way into the full list: one line per place, empty places collapse.
   const shelves = page.getByRole("navigation", { name: "보관 장소" });
@@ -147,6 +153,53 @@ test("home review summary and storage rows lead to the right food or list", asyn
   await expect(page.locator(".app-bottom-nav-item-active")).toHaveText("냉장고");
   await expect(page.locator(".inventory-toolbar")).toBeVisible();
   await expect(page.locator(".inventory-list .inventory-row")).toHaveCount(1);
+  await page.locator(".app-bottom-nav [data-nav-tab=\"home\"]").click();
+
+  // A week later 달걀 also needs a date check but is not among the three rows: the banner
+  // counts only that food and opens its date review directly. (Sheet exit motion does not
+  // settle after a clock fast-forward, so the close and focus return are covered by the
+  // native suite's detail focus tests instead.)
+  await page.clock.fastForward(7 * 24 * 60 * 60 * 1000);
+  await expect(page.locator(".rescue-card")).toHaveCount(3);
+  await expect(page.locator(".rescue-card").filter({ hasText: "달걀" })).toHaveCount(0);
+  await expect(summary).toContainText("포장지 날짜를 살펴볼 식품 1개");
+  await expect(summary).toHaveAccessibleName(/동물복지 달걀 날짜와 보관 정보 확인/);
+  await summary.click();
+  const detail = page.getByRole("dialog", { name: "동물복지 달걀" });
+  await expect(detail).toBeVisible();
+  await expect(detail.getByRole("button", { name: "포장지에서 날짜 다시 확인" })).toBeFocused();
+});
+
+test("home lists three rescue foods and 모두 보기 opens all of them on the 냉장고 tab", async ({ page }) => {
+  await page.clock.install({ time: FIXTURE_NOW });
+  await page.reload();
+  const rows = page.locator(".rescue-card");
+  await expect(rows).toHaveCount(3);
+  // Rows are one grouped card: no bordered card around the photo.
+  await expect(rows.first().locator(".rescue-card-open")).toHaveCSS("border-top-width", "0px");
+  const showAll = page.getByRole("button", { name: "오늘 살펴볼 음식 6개 모두 보기" });
+  await expect(showAll).toHaveText("6개 모두 보기");
+  await showAll.click();
+
+  await expect(page.locator(".app-bottom-nav-item-active")).toHaveText("냉장고");
+  const priorityFilter = page.locator('.inventory-status-filters button[data-status="priority"]');
+  await expect(priorityFilter).toHaveAttribute("aria-pressed", "true");
+  await expect(priorityFilter).toBeFocused();
+  const listed = page.locator(".inventory-list .inventory-row");
+  await expect(listed).toHaveCount(6);
+  // Same foods, same order as Home.
+  await expect(listed.first()).toContainText("시금치");
+  await expect(listed.nth(1)).toContainText("국산콩 두부");
+
+  // Three or fewer rescue foods: no 모두 보기.
+  await page.locator(".app-bottom-nav [data-nav-tab=\"home\"]").click();
+  for (let eaten = 0; eaten < 3; eaten += 1) {
+    const ate = page.locator(".rescue-card-action-ate").first();
+    await ate.click();
+    await ate.click();
+  }
+  await expect(page.getByRole("heading", { level: 1, name: "오늘 살펴볼 음식 3개" })).toBeVisible();
+  await expect(page.getByTestId("rescue-show-all")).toHaveCount(0);
 });
 
 test("home rescue deck opens a passed food and storage rows open their list", async ({ page }) => {
@@ -158,7 +211,7 @@ test("home rescue deck opens a passed food and storage rows open their list", as
   await expect(page.locator(".freshness-overview")).toHaveCount(0);
   await expect(page.getByRole("heading", { level: 1, name: "오늘 살펴볼 음식 6개" })).toBeVisible();
   await expect(page.locator(".rescue-card.freshness-past")).toHaveCount(1);
-  await expect(pastCard.locator(".rescue-card-chip")).toHaveText("+1일");
+  await expect(pastCard.locator(".rescue-card-chip")).toHaveText("1일 지남");
   await expect(page.locator(".rescue-card").filter({ hasText: "국산콩 두부" })).toHaveClass(/freshness-today/);
   // A passed printed date only offers the date check, never a one-tap "먹었어요".
   await expect(pastCard.getByRole("button", { name: "시금치 날짜 확인" })).toBeVisible();
@@ -176,7 +229,8 @@ test("home rescue deck opens a passed food and storage rows open their list", as
   // A week later every food has passed: the hero counts them all and the storage row opens that list.
   await page.clock.fastForward(7 * 24 * 60 * 60 * 1000);
   await expect(page.getByRole("heading", { level: 1, name: "오늘 살펴볼 음식 7개" })).toBeVisible();
-  await expect(page.locator(".rescue-card.freshness-past")).toHaveCount(7);
+  await expect(page.locator(".rescue-card.freshness-past")).toHaveCount(3);
+  await expect(page.getByTestId("rescue-show-all")).toHaveText("7개 모두 보기");
   await expect(page.locator(".rescue-card").filter({ hasText: "시금치" })).toHaveAttribute("aria-label", "시금치, 표시 날짜에서 8일 지남");
   await page.getByRole("button", { name: /^냉장 식품 5개 보기/ }).click();
 
@@ -439,7 +493,7 @@ test("keeps visible primary controls named across the major mobile surfaces", as
   await expect(page.getByRole("region", { name: "오늘의 식단" })).toBeVisible();
   await assertVisibleControlsNamed("meal");
   await page.locator(".app-bottom-nav [data-nav-tab=\"home\"]").click();
-  await openAndAudit(".rescue-card-photo", "food detail", "시금치");
+  await openAndAudit(".rescue-card-open", "food detail", "시금치");
   await openAndAudit(".connection-pill", "account", /^나$/);
   await openAndAudit(".mobile-hero-notification", "notifications", "알림");
 });
@@ -1484,7 +1538,7 @@ test("label date remains a candidate until the user confirms it", async ({ page 
   await page.locator(".app-bottom-nav [data-nav-tab=\"fridge\"]").click();
   const savedPriorityCard = page.locator(".inventory-row").filter({ hasText: "시금치" }).first();
   await expect(savedPriorityCard.locator("[data-inventory-status]")).toHaveAttribute("data-inventory-status", "needs-review");
-  await expect(savedPriorityCard.locator(".freshness-chip")).toHaveText("+1일");
+  await expect(savedPriorityCard.locator(".freshness-chip")).toHaveText("1일 지남");
   await expect(savedPriorityCard.locator(".freshness-chip")).toHaveAttribute("aria-label", "표시 날짜에서 1일 지남");
   await expect(savedPriorityCard.locator(".freshness-chip")).toHaveAttribute("data-estimated", "false");
   await savedPriorityCard.click();
@@ -2221,7 +2275,8 @@ test("inventory filter narrows the list by storage location", async ({ page }) =
   await page.locator(".app-bottom-nav [data-nav-tab=\"fridge\"]").click();
   const inventory = page.getByRole("region", { name: /내 식품 목록/ });
   const storageChips = page.getByRole("group", { name: "보관 위치 필터" });
-  await expect(storageChips.getByRole("button")).toHaveCount(4);
+  // Places only: 전체 lives once, among the status chips.
+  await expect(storageChips.getByRole("button")).toHaveCount(3);
   await storageChips.getByRole("button", { name: "냉동", exact: true }).click();
   await expect(storageChips.getByRole("button", { name: "냉동", exact: true })).toHaveAttribute("aria-pressed", "true");
   await expect(storageChips.getByRole("button", { name: "냉동", exact: true })).toHaveCSS("min-height", "44px");
@@ -2230,6 +2285,58 @@ test("inventory filter narrows the list by storage location", async ({ page }) =
   await expect(inventory.locator(".inventory-filter-summary")).toContainText("냉동 보관 식품 1개");
   await expect(inventory.getByRole("button", { name: /닭가슴살 무항생제/ })).toBeVisible();
   await expect(inventory.getByRole("button", { name: /시금치 국내산/ })).toHaveCount(0);
+});
+
+test("the fridge list reads by the date on each badge, soonest first", async ({ page }) => {
+  await page.locator(".app-bottom-nav [data-nav-tab=\"fridge\"]").click();
+  const rows = page.locator(".inventory-list .inventory-row");
+  await expect(rows).toHaveCount(7);
+  // Passed first, then D-1, D-2 …; printed and estimated dates mix by day, ties by name.
+  await expect(rows.locator(".inventory-copy > strong")).toHaveText(["시금치", "국산콩 두부", "맛타리버섯", "닭가슴살", "대추방울토마토", "저지방 우유", "동물복지 달걀"]);
+  await expect(rows.locator(".freshness-chip")).toHaveText([/지남|^\+/, "D-1", "D-2", "D-3", "D-3", "D-3", "D-6"]);
+  // A place filter keeps the same order.
+  await page.getByRole("group", { name: "보관 위치 필터" }).getByRole("button", { name: "냉장", exact: true }).click();
+  await expect(rows.locator(".inventory-copy > strong")).toHaveText(["시금치", "국산콩 두부", "맛타리버섯", "저지방 우유", "동물복지 달걀"]);
+});
+
+test("the fridge has one chip row: status and place combine, and the place chip toggles off", async ({ page }) => {
+  await page.locator(".app-bottom-nav [data-nav-tab=\"fridge\"]").click();
+  const inventory = page.getByRole("region", { name: /내 식품 목록/ });
+  const status = page.getByRole("group", { name: "식품 상태 필터" });
+  const places = page.getByRole("group", { name: "보관 위치 필터" });
+  // Status chips first (전체 / 먼저 볼 것 / 확인 필요), then a divider, then places, in one rail.
+  await expect(page.locator(".fridge-chip-track .fridge-chip")).toHaveText([/^전체\s*7$/, /^먼저 볼 것\s*\d+$/, /^확인 필요\s*1$/, "냉장", "냉동", "실온"]);
+  await expect(page.locator(".fridge-chip-track .fridge-chip-divider")).toHaveCount(1);
+  // No visible count line; the list heading still speaks the count.
+  await expect(page.locator(".inventory-heading")).toHaveCount(0);
+  await expect(inventory.getByRole("heading", { name: "내 식품 목록 7" })).toBeAttached();
+  // The search field and its target are a clean 44px.
+  await expect(page.locator(".inventory-search-input")).toHaveCSS("height", "44px");
+
+  await places.getByRole("button", { name: "냉장", exact: true }).click();
+  await expect(status.getByRole("button", { name: /^전체/ })).toContainText("5");
+  // Filtered to one place, the rows stop repeating it.
+  await expect(inventory.locator(".inventory-storage-meta")).toHaveCount(0);
+  // Home's priority set is Home's to define; the chip's count must match the rows it shows.
+  const priorityChip = status.getByRole("button", { name: /먼저 볼 것/ });
+  const chilledPriority = Number((await priorityChip.locator(".fridge-chip-count").textContent())?.trim());
+  await priorityChip.click();
+  await expect(priorityChip).toHaveAttribute("aria-pressed", "true");
+  await expect(places.getByRole("button", { name: "냉장", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(inventory.locator(".inventory-row")).toHaveCount(chilledPriority);
+  await expect(inventory.getByRole("heading", { name: `내 식품 목록 ${chilledPriority}` })).toBeAttached();
+  await expect(inventory.locator(".inventory-row").filter({ hasText: "닭가슴살" })).toHaveCount(0);
+
+  // Tapping the selected place again clears it; the status choice stays.
+  await places.getByRole("button", { name: "냉장", exact: true }).click();
+  await expect(places.locator('button[aria-pressed="true"]')).toHaveCount(0);
+  await expect(priorityChip).toHaveAttribute("aria-pressed", "true");
+  const allPriority = Number((await priorityChip.locator(".fridge-chip-count").textContent())?.trim());
+  expect(allPriority).toBeGreaterThanOrEqual(chilledPriority);
+  await expect(inventory.locator(".inventory-row")).toHaveCount(allPriority);
+  await expect(inventory.locator(".inventory-storage-meta").first()).toBeVisible();
+  await status.getByRole("button", { name: /^전체/ }).click();
+  await expect(inventory.locator(".inventory-row")).toHaveCount(7);
 });
 
 test("inventory search finds food by name and recovers from no results", async ({ page }) => {
@@ -2320,9 +2427,24 @@ test("recipe screen leads with photo menu cards, cooks step by step and records 
   await expect(cards.first()).toHaveAttribute("aria-pressed", "true");
   await expect(cards.first()).toContainText("시금치 두부 닭가슴살 덮밥");
   // The card that uses the past-date spinach says so with the shared date badge.
-  await expect(cards.first().locator(".freshness-chip").first()).toHaveText("+1일");
+  await expect(cards.first().locator(".freshness-chip").first()).toHaveText("1일 지남");
   await expect(dialog.locator(".recipe-provenance")).toHaveText("레시피 출처 Rescue Meal에서 작성");
-  await expect(dialog.locator(".recipe-preview-save-note")).toHaveText("화면을 나가면 임시 식단이 사라져요. 조리 완료 전에는 재료 수량이 바뀌지 않아요.");
+  // The chosen card already shows the title and time: the detail keeps one heading for screen
+  // readers and starts with what is new (재료 status, 요리 시작).
+  const recipeHeading = dialog.locator(".meal-recipe").getByRole("heading", { name: "시금치 두부 닭가슴살 덮밥" });
+  await expect(recipeHeading).toHaveClass(/sr-only/);
+  await expect(dialog.locator(".meal-recipe .recipe-title-row, .meal-recipe .meal-recipe-facts")).toHaveCount(0);
+  const firstVisibleDetail = await dialog.locator(".meal-recipe").evaluate((section) => Array.from(section.children).find((child) => !child.classList.contains("sr-only"))?.className ?? "");
+  expect(firstVisibleDetail).toContain("recipe-availability-summary");
+  // 임시 저장 and 이미 만들었어요 are two quiet buttons of the same weight; one note says what each does.
+  const alreadyCooked = dialog.getByRole("button", { name: "이미 만들었어요" });
+  await expect(alreadyCooked).toHaveClass(/meal-quiet-button/);
+  await expect(alreadyCooked).toHaveAttribute("aria-describedby", "recipe-already-cooked-note");
+  const [saveBox, cookedBox] = await Promise.all([dialog.getByRole("button", { name: "임시 저장" }).boundingBox(), alreadyCooked.boundingBox()]);
+  expect(Math.abs(saveBox!.height - cookedBox!.height)).toBeLessThanOrEqual(1);
+  expect(Math.abs(saveBox!.width - cookedBox!.width)).toBeLessThanOrEqual(1);
+  await expect(dialog.locator(".recipe-preview-save-note")).toHaveText("임시 저장은 화면을 나가면 사라져요.");
+  await expect(dialog.locator("#recipe-already-cooked-note")).toHaveText("이미 만들었다면 쓴 재료만큼 보관 수량을 줄여요.");
   await expect(dialog).not.toContainText("DEMO FIXTURE");
   await expect(dialog).not.toContainText("project-authored");
   await expect(dialog).not.toContainText("demo-v1");
@@ -2331,7 +2453,7 @@ test("recipe screen leads with photo menu cards, cooks step by step and records 
   await dialog.getByRole("button", { name: "4인분", exact: true }).click();
   await expect(dialog.locator(".recipe-availability-summary strong")).toHaveText("재료 3가지를 준비해 주세요");
   await expect(dialog.locator(".recipe-ingredient-row").filter({ hasText: "시금치" })).toContainText("필요 4팩 보유 1팩 부족 3팩");
-  await expect(dialog.locator(".meal-recipe-facts")).toContainText("4인분");
+  await expect(dialog.getByRole("button", { name: "4인분", exact: true })).toHaveAttribute("aria-pressed", "true");
   // Shortages are grouped as 사야 함 with their own shopping action; nothing has to be saved first.
   await expect(dialog.locator(".meal-ingredient-group-buy h4")).toContainText("사야 함");
   await expect(dialog.getByRole("button", { name: "장보기에 담기", exact: true })).toBeVisible();
@@ -2528,9 +2650,9 @@ test("fixture meal shortages can be added, received, and sent to date review", a
   const shopping = page.getByRole("region", { name: "장보기 목록" });
   const spinachPlanItem = shopping.getByRole("button", { name: "시금치 3팩, 식단 1개", exact: true });
   await expect(spinachPlanItem).toBeVisible();
+  // One field: a name already on the list joins it in that item's unit, with amount 1.
   await shopping.getByRole("textbox", { name: "살 것 이름" }).fill("시금치");
-  await shopping.getByRole("spinbutton", { name: "살 것 수량" }).fill("1");
-  await shopping.getByRole("textbox", { name: "살 것 단위" }).fill("팩");
+  await expect(shopping.locator(".shop-add-note")).toHaveText("목록에 있는 시금치 수량에 1팩 더해요.");
   await shopping.getByRole("button", { name: "추가", exact: true }).click();
   const spinachItem = shopping.getByRole("button", { name: "시금치 4팩, 직접 추가, 식단 1개", exact: true });
   await expect(spinachItem).toBeVisible();
@@ -2538,7 +2660,8 @@ test("fixture meal shortages can be added, received, and sent to date review", a
 
   await shopping.getByRole("textbox", { name: "살 것 이름" }).fill("대파");
   await shopping.getByRole("button", { name: "추가", exact: true }).click();
-  await expect(shopping.getByRole("button", { name: "대파 1개, 직접 추가", exact: true })).toBeVisible();
+  // The unit is guessed from the name, as quick add does.
+  await expect(shopping.getByRole("button", { name: "대파 1단, 직접 추가", exact: true })).toBeVisible();
 
   // The toggle's accessible name adds the purchase state, so follow the same row by its item button.
   const spinachToggle = shopping.locator("button.shop-toggle").filter({ hasText: "시금치" });
@@ -2622,15 +2745,85 @@ test("guest home can reopen the temporary shopping list and explains its lifetim
   await expect(shopping.getByRole("button", { name: "직접 추가", exact: true })).toHaveCount(0);
   await expect(shopping.getByRole("button", { name: "새로 고침", exact: true })).toHaveCount(0);
   await expect(shopping.getByRole("textbox", { name: "살 것 이름" })).toBeVisible();
+  // The add row is the name and 추가 only.
+  await expect(shopping.getByRole("form", { name: "살 것 추가" }).locator("input")).toHaveCount(1);
+});
+
+test("an empty shopping list suggests used-up foods and the chosen menu's shortages", async ({ page }) => {
+  // Visiting 식단 and choosing a menu that needs something makes its shortage a suggestion.
+  await page.getByRole("button", { name: "오늘 뭐 먹지" }).click();
+  const meal = page.getByRole("region", { name: "오늘의 식단" });
+  const needsCard = meal.locator(".meal-card").filter({ hasText: "사야 함" }).first();
+  await needsCard.click();
+  await expect(needsCard).toHaveAttribute("aria-pressed", "true");
+  const shortageName = (await meal.locator(".meal-ingredient-group-buy .recipe-ingredient-copy strong").first().innerText()).trim();
+
+  await page.getByTestId("shopping-nav").click();
+  const shopping = page.getByRole("region", { name: "장보기 목록" });
+  await expect(shopping.locator(".shop-empty")).toHaveText(/살 것이 없어요\./);
+  const mealSection = shopping.getByRole("region", { name: "식단에 필요한 것" });
+  const finishedSection = shopping.getByRole("region", { name: "최근 다 쓴 것" });
+  await expect(mealSection.locator(".shop-suggest-row")).toHaveCount(1);
+  await expect(mealSection).toContainText(shortageName);
+  // A recipe's half 애호박 is suggested as something buyable (whole counted units), and a food with
+  // no photo gets the shared tinted placeholder, not a letter.
+  await expect(mealSection.locator(".shop-qty")).not.toHaveText(/\d\.\d/);
+  await expect(shopping.locator(".shop-suggest-row .shop-thumb-letter")).toHaveCount(0);
+  await expect(mealSection.locator(".shop-suggest-row .shop-thumb")).toHaveCount(1);
+  await expect(finishedSection.locator(".shop-suggest-row strong")).toHaveText(["대파", "양파", "감자"]);
+
+  // One tap adds it with its amount; it leaves the suggestions and focus moves to the next one.
+  await finishedSection.getByRole("button", { name: "대파 1단 장보기에 추가", exact: true }).click();
+  await expect(shopping.getByRole("button", { name: "대파 1단, 직접 추가", exact: true })).toBeVisible();
+  await expect(finishedSection.locator(".shop-suggest-row strong")).toHaveText(["양파", "감자"]);
+  await expect(finishedSection.getByRole("button", { name: "양파 2개 장보기에 추가", exact: true })).toBeFocused();
+  await mealSection.getByRole("button", { name: new RegExp(`^${shortageName} .+ 장보기에 추가$`) }).click();
+  await expect(mealSection).toHaveCount(0);
+  await expect(shopping.locator("button.shop-toggle").filter({ hasText: shortageName })).toHaveCount(1);
+  await expect(shopping.locator("button.shop-toggle").filter({ hasText: shortageName })).not.toHaveAccessibleName(/\d\.\d/);
+
+  // Using up a fridge food makes it a suggestion once it is gone from the fridge.
+  await page.locator(".app-bottom-nav [data-nav-tab=\"fridge\"]").click();
+  const tomato = page.locator(".swipe-row").filter({ has: page.locator(".inventory-row", { hasText: "대추방울토마토" }) }).first();
+  await tomato.locator(".swipe-row-more").click();
+  await page.getByRole("menuitem", { name: "다 먹음" }).click();
+  await expect(page.locator(".inventory-row").filter({ hasText: "대추방울토마토" })).toHaveCount(0);
+  await page.getByTestId("shopping-nav").click();
+  await expect(finishedSection.locator(".shop-suggest-row strong").first()).toHaveText("대추방울토마토");
+});
+
+test("shopping rows change their amount with a stepper", async ({ page }) => {
+  await page.getByTestId("shopping-nav").click();
+  const shopping = page.getByRole("region", { name: "장보기 목록" });
+  await shopping.getByRole("textbox", { name: "살 것 이름" }).fill("우유 2팩");
+  await shopping.getByRole("button", { name: "추가", exact: true }).click();
+  const row = shopping.locator(".shop-row").filter({ hasText: "우유" });
+  const stepper = row.getByRole("group", { name: "우유 수량" });
+  await expect(stepper).toContainText("2팩");
+  await stepper.getByRole("button", { name: "우유 1팩 늘리기" }).click();
+  await expect(stepper).toContainText("3팩");
+  await expect(stepper.getByRole("button", { name: "우유 1팩 늘리기" })).toBeFocused();
+  await stepper.getByRole("button", { name: "우유 1팩 줄이기" }).click();
+  await stepper.getByRole("button", { name: "우유 1팩 줄이기" }).click();
+  await expect(stepper).toContainText("1팩");
+  // The last unit is removed with ×, not the stepper.
+  await expect(stepper.getByRole("button", { name: "우유 1팩 줄이기" })).toBeDisabled();
+  // Typing the same name again adds to it instead of making a second row.
+  await shopping.getByRole("textbox", { name: "살 것 이름" }).fill("우유");
+  await shopping.getByRole("button", { name: "추가", exact: true }).click();
+  await expect(stepper).toContainText("2팩");
+  await expect(shopping.locator("button.shop-toggle").filter({ hasText: "우유" })).toHaveCount(1);
+  // A bought row shows its amount without a stepper.
+  await row.locator("button.shop-toggle").click();
+  await expect(row.getByRole("group", { name: "우유 수량" })).toHaveCount(0);
 });
 
 test("bought items move to 산 것 and go into the fridge together after one confirmation", async ({ page }) => {
   await page.getByTestId("shopping-nav").click();
   const shopping = page.getByRole("region", { name: "장보기 목록" });
-  for (const [name, quantity, unit] of [["우유", "1", "개"], ["냉동 만두", "1", "봉"], ["참기름", "1", "병"]]) {
-    await shopping.getByRole("textbox", { name: "살 것 이름" }).fill(name);
-    await shopping.getByRole("spinbutton", { name: "살 것 수량" }).fill(quantity);
-    await shopping.getByRole("textbox", { name: "살 것 단위" }).fill(unit);
+  // The amount and unit can ride along in the one field.
+  for (const [name, entry] of [["우유", "우유"], ["냉동 만두", "냉동 만두 1봉"], ["참기름", "참기름 1병"]]) {
+    await shopping.getByRole("textbox", { name: "살 것 이름" }).fill(entry);
     await shopping.getByRole("button", { name: "추가", exact: true }).click();
     await expect(shopping.locator("button.shop-toggle").filter({ hasText: name })).toHaveCount(1);
   }
@@ -2674,7 +2867,7 @@ test("past printed dates read as relative days and notification links open the f
   await page.locator(".app-bottom-nav [data-nav-tab=\"fridge\"]").click();
   const spinachPriorityCard = page.locator(".inventory-row").filter({ hasText: "시금치" });
   // The list chip shortens the passed day; its spoken label and the detail copy keep the relative wording.
-  await expect(spinachPriorityCard.locator(".freshness-chip")).toHaveText("+1일");
+  await expect(spinachPriorityCard.locator(".freshness-chip")).toHaveText("1일 지남");
   await expect(spinachPriorityCard.locator(".freshness-chip")).toHaveAttribute("aria-label", "표시 날짜에서 1일 지남");
 
   await page.goto("/?food=spinach-1");
@@ -2705,8 +2898,9 @@ test("each tab keeps its own scroll position", async ({ page }) => {
 
   await page.locator(".app-bottom-nav [data-nav-tab=\"fridge\"]").click();
   await expect(page.locator(".inventory-row").first()).toBeVisible();
-  await setScrollTop(90);
-  await expect.poll(scrollTop).toBe(90);
+  // The one-row filter toolbar leaves the seven demo foods only a short scroll.
+  await setScrollTop(30);
+  await expect.poll(scrollTop).toBe(30);
 
   await page.locator(".app-bottom-nav [data-nav-tab=\"home\"]").click();
   await expect.poll(scrollTop).toBe(0);
@@ -2714,7 +2908,7 @@ test("each tab keeps its own scroll position", async ({ page }) => {
   await expect.poll(scrollTop).toBe(80);
 
   await page.locator(".app-bottom-nav [data-nav-tab=\"fridge\"]").click();
-  await expect.poll(scrollTop).toBe(90);
+  await expect.poll(scrollTop).toBe(30);
   await page.locator(".app-bottom-nav [data-nav-tab=\"home\"]").click();
   await expect.poll(scrollTop).toBe(80);
 

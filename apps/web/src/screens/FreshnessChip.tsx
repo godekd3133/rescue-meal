@@ -2,7 +2,7 @@ import { foodFreshness, freshnessChipLabel, freshnessDateKind, freshnessSpokenLa
 
 /**
  * The one date badge: deck cards, Home rows, 냉장고 rows and food detail all render it.
- * Always D-n / D-day / +n일. Three shapes (freshness.css): printed date filled, estimate dashed
+ * Always D-n / D-day / n일 지남. Three shapes (freshness.css): printed date filled, estimate dashed
  * (spoken as 추정), no usable date neutral. `decorative` hides it when the parent already speaks the date.
  */
 export function FreshnessChip({ food, referenceDate, className, decorative = false }: { food: FreshnessFood; referenceDate: Date; className?: string; decorative?: boolean }) {

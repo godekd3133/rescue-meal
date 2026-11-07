@@ -5,12 +5,12 @@ import { foodFreshness, freshnessChipLabel, freshnessDateKind, freshnessSpokenLa
 const today = new Date(2026, 8, 3);
 const food = (dateDetail, dateKind = "printed_use_by", extra = {}) => ({ dateKind, dateDetail, ...extra });
 
-test("chip text is always D-n / D-day / +n일, capped far away", () => {
+test("chip text is always D-n / D-day / n일 지남, capped far away", () => {
   assert.equal(freshnessChipLabel(foodFreshness(food("2026.09.03"), today)), "D-day");
   assert.equal(freshnessChipLabel(foodFreshness(food("2026.09.13"), today)), "D-10");
-  assert.equal(freshnessChipLabel(foodFreshness(food("2026.09.01"), today)), "+2일");
+  assert.equal(freshnessChipLabel(foodFreshness(food("2026.09.01"), today)), "2일 지남");
   assert.equal(freshnessChipLabel(foodFreshness(food("2099.01.01"), today)), "D-99+");
-  assert.equal(freshnessChipLabel(foodFreshness(food("2020.01.01"), today)), "+99일+");
+  assert.equal(freshnessChipLabel(foodFreshness(food("2020.01.01"), today)), "99일+ 지남");
 });
 
 test("three badge kinds: printed, estimated (spoken as 추정), unknown", () => {

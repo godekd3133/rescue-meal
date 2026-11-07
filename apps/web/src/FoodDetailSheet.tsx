@@ -754,7 +754,7 @@ export default function FoodDetailSheet({
     <div className="food-page" data-condensed={condensed || undefined} data-read-only={readOnly ? "true" : undefined}>
       <div className="food-top">
         <div className="food-top-photo">
-          <FoodPhoto src={food.image} foodName={food.name} loading="eager" alt="" className="food-top-image" draggable={false} />
+          <FoodPhoto src={food.image} foodName={food.name} category={food.category} storage={food.storage} loading="eager" alt="" className="food-top-image" draggable={false} />
           {food.dateKind !== "unknown" ? <FreshnessChip food={food} referenceDate={now} className="food-top-chip" /> : null}
         </div>
         <div className="food-top-copy">

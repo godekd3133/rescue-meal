@@ -34,8 +34,7 @@ test("shopping shows existing stock and preselects where that food is already st
   const shopping = shoppingScreen(page);
   await shopping.getByRole("textbox", { name: "살 것 이름" }).fill("시금치");
   await expect(shopping.locator(".shop-add-stock")).toContainText("1팩 냉장");
-  await shopping.getByRole("spinbutton", { name: "살 것 수량" }).fill("1000.5");
-  await shopping.getByRole("textbox", { name: "살 것 단위" }).fill("g");
+  await shopping.getByRole("textbox", { name: "살 것 이름" }).fill("시금치 1000.5g");
   await shopping.locator(".shop-add-submit").click();
   await shopping.locator(".shop-toggle").click();
   await shopping.getByRole("button", { name: "시금치 냉장고에 넣기", exact: true }).click();
@@ -72,7 +71,8 @@ test("empty filtered search offers query editing and preserves it when filters a
   await expect(search).toHaveValue(query);
   expect(await search.evaluate((input: HTMLInputElement) => [input.selectionStart, input.selectionEnd])).toEqual([0, query.length]);
   await empty.getByRole("button", { name: "필터 해제", exact: true }).click();
-  await expect(storage.getByRole("button", { name: "전체", exact: true })).toHaveAttribute("aria-pressed", "true");
+  // Places are one-or-none: clearing the filter leaves no place chip selected.
+  await expect(storage.locator('button[aria-pressed="true"]')).toHaveCount(0);
   await expect(search).toHaveValue(query);
   await expect(page.locator(".inventory-row")).toHaveCount(1);
   await expect(page.locator(".inventory-row")).toContainText(query);

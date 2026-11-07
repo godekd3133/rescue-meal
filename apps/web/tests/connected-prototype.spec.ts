@@ -129,20 +129,19 @@ test("usefulness shopping refresh updates pantry quantities without losing the d
   // An empty list has no home card; the bottom navigation opens it.
   await page.getByTestId("shopping-nav").click();
   const shopping = page.getByRole("region", { name: "장보기 목록" });
-  await shopping.getByRole("textbox", { name: "살 것 이름" }).fill("시금치");
-  await shopping.getByRole("spinbutton", { name: "살 것 수량" }).fill("2.5");
+  // The add row is one field; an amount typed into it rides along.
+  await shopping.getByRole("textbox", { name: "살 것 이름" }).fill("시금치 2.5");
   await expect(shopping.locator(".shop-add-stock")).toContainText("1팩");
   inventoryQuantity = 0.25;
   const beforeRefresh = dashboardReads;
   await shopping.getByRole("button", { name: "집에 있는 양 새로고침" }).click();
   await expect.poll(() => dashboardReads).toBeGreaterThan(beforeRefresh);
   await expect(shopping.locator(".shop-add-stock")).toContainText("0.25팩");
-  await expect(shopping.getByRole("spinbutton", { name: "살 것 수량" })).toHaveValue("2.5");
+  await expect(shopping.getByRole("textbox", { name: "살 것 이름" })).toHaveValue("시금치 2.5");
   failDashboard = true;
   await shopping.getByRole("button", { name: "집에 있는 양 새로고침" }).click();
   await expect(shopping.locator(".shop-add-stock")).toHaveCount(0);
-  await expect(shopping.getByRole("textbox", { name: "살 것 이름" })).toHaveValue("시금치");
-  await expect(shopping.getByRole("spinbutton", { name: "살 것 수량" })).toHaveValue("2.5");
+  await expect(shopping.getByRole("textbox", { name: "살 것 이름" })).toHaveValue("시금치 2.5");
 });
 
 test("usefulness connected purchase records the chosen quantity and storage", async ({ page }) => {
@@ -151,9 +150,7 @@ test("usefulness connected purchase records the chosen quantity and storage", as
   // An empty list has no home card; the bottom navigation opens it.
   await page.getByTestId("shopping-nav").click();
   const shopping = page.getByRole("region", { name: "장보기 목록" });
-  await shopping.getByRole("textbox", { name: "살 것 이름" }).fill("입고 확인 쌀");
-  await shopping.getByRole("spinbutton", { name: "살 것 수량" }).fill("1000.5");
-  await shopping.getByRole("textbox", { name: "살 것 단위" }).fill("g");
+  await shopping.getByRole("textbox", { name: "살 것 이름" }).fill("입고 확인 쌀 1000.5g");
   await shopping.locator(".shop-add-submit").click();
   const row = shopping.locator(".shop-row").filter({ hasText: "입고 확인 쌀" });
   await row.locator(".shop-toggle").click();
@@ -209,9 +206,8 @@ test("release golden path persists meal cooking and shopping through the real AP
   // An empty list has no home card; the bottom navigation opens it.
   await page.getByTestId("shopping-nav").click();
   const shopping = page.getByRole("region", { name: "장보기 목록" });
+  // 대파 gets 1단 without typing an amount or unit.
   await shopping.getByRole("textbox", { name: "살 것 이름" }).fill("대파");
-  await shopping.getByRole("spinbutton", { name: "살 것 수량" }).fill("1");
-  await shopping.getByRole("textbox", { name: "살 것 단위" }).fill("단");
   await shopping.locator(".shop-add-submit").click();
   const line = shopping.locator(".shop-row").filter({ hasText: "대파" });
   await line.locator(".shop-toggle").click();
@@ -2172,7 +2168,8 @@ test("connected planner changes the recipe when the cooking time changes", async
   await openMealConditions(page);
   await dialog.getByRole("group", { name: "조리 가능 시간" }).getByRole("button", { name: "10분" }).click();
   await expect(dialog.getByRole("heading", { name: "맛타리버섯 달걀 볶음" })).toBeVisible();
-  await expect(dialog.locator(".recipe-time")).toHaveText(/10분/);
+  // The chosen card carries the time; the detail below no longer repeats it.
+  await expect(dialog.locator('.meal-card:is([aria-pressed="true"],[data-selected="true"]) .meal-card-facts')).toContainText("10분");
 
   await openMealConditions(page);
   await dialog.getByRole("group", { name: "조리 가능 시간" }).getByRole("button", { name: "20분" }).click();
@@ -2534,9 +2531,7 @@ test("connected home exposes the shopping queue and keeps item mutations in sync
   await expect(dialog.getByRole("button", { name: "식단에서 재료 고르기" })).toBeFocused();
 
   const manual = dialog.getByRole("form", { name: "살 것 추가" });
-  await manual.getByRole("textbox", { name: "살 것 이름" }).fill("생수");
-  await manual.getByRole("spinbutton", { name: "살 것 수량" }).fill("2");
-  await manual.getByRole("textbox", { name: "살 것 단위" }).fill("병");
+  await manual.getByRole("textbox", { name: "살 것 이름" }).fill("생수 2병");
   await manual.getByRole("button", { name: "추가", exact: true }).click();
   await expect.poll(() => manualRequestCount).toBe(1);
   await expect(dialog.getByRole("alert")).toContainText("기존 목록을 유지했어요");
@@ -4362,7 +4357,8 @@ test("connected date confirmation keeps a successful write visible when dashboar
   await expect.poll(() => attempts).toBe(2);
   await expect(page.locator(".toast-action")).toHaveText("목록 새로고침");
   const updatedInventory = page.getByRole("region", { name: /내 식품 목록/ });
-  await updatedInventory.getByRole("button", { name: /국산콩 두부 풀무원 1모/ }).click();
+  // Sorted by date, the confirmed D-20 row is now last and sits under the recovery toast.
+  await updatedInventory.getByRole("button", { name: /국산콩 두부 풀무원 1모/ }).press("Enter");
   const updatedDialog = page.getByRole("dialog", { name: "국산콩 두부" });
   await expect(updatedDialog.getByText("2026년 9월 30일 (수)")).toBeVisible();
   await expect(updatedDialog.getByText("포장 소비기한", { exact: true })).toBeVisible();
@@ -6168,12 +6164,13 @@ const makeHomeReviewFood = (
 const homeDateReviewFood = makeHomeReviewFood("home-date-review", "시금치", "2026-09-10", "refrigerated", "refrigerated", 1);
 const homeStorageReviewFood = makeHomeReviewFood("home-storage-review", "버섯", "2026-10-20", "refrigerated", "ambient", 2);
 // The hero counts foods to look at today (passed, today/tomorrow, within 3 days) against the
-// fixture's pinned 2026-09-10 clock; the home trust card counts every review-required food, and
-// each food's review topic shows on its 냉장고 inventory row.
+// fixture's pinned 2026-09-10 clock; the home trust card counts review-required foods that are not
+// already a visible Home row offering 날짜 확인 (시금치 is one), and each food's review topic shows
+// on its 냉장고 inventory row.
 const homeReviewScenarios = [
-  { id: "date-only", foods: [homeDateReviewFood], rescueCount: 1, reviewDetails: ["날짜 확인"] },
-  { id: "storage-only", foods: [homeStorageReviewFood], rescueCount: 0, reviewDetails: ["보관 확인"] },
-  { id: "mixed", foods: [homeDateReviewFood, homeStorageReviewFood], rescueCount: 1, reviewDetails: ["날짜 확인", "보관 확인"] },
+  { id: "date-only", foods: [homeDateReviewFood], rescueCount: 1, banner: null, reviewDetails: ["날짜 확인"] },
+  { id: "storage-only", foods: [homeStorageReviewFood], rescueCount: 0, banner: "보관 방법을 살펴볼 식품 1개", reviewDetails: ["보관 확인"] },
+  { id: "mixed", foods: [homeDateReviewFood, homeStorageReviewFood], rescueCount: 1, banner: "보관 방법을 살펴볼 식품 1개", reviewDetails: ["날짜 확인", "보관 확인"] },
 ];
 
 const homeReviewViewports = [
@@ -6217,9 +6214,14 @@ for (const scenario of homeReviewScenarios) {
       await page.goto("/");
       await expect(page.locator("html")).toHaveAttribute("data-rescue-theme", viewport.theme);
       await expect(page.locator(".connection-pill")).toHaveClass(/connection-connected/);
-      // Home's safety summary names every review-required food and leads to the filtered list.
-      await expect(page.locator(".trust-card")).toHaveCount(1);
-      await expect(page.locator(".trust-card")).toContainText(`살펴볼 식품 ${scenario.foods.length}개`);
+      // Home's safety summary names only review foods whose 날짜 확인 is not already on a visible row.
+      if (scenario.banner) {
+        await expect(page.locator(".trust-card")).toHaveCount(1);
+        await expect(page.locator(".trust-card")).toContainText(scenario.banner);
+      } else {
+        await expect(page.locator(".rescue-card").filter({ hasText: "시금치" }).getByRole("button", { name: "시금치 날짜 확인" })).toBeVisible();
+        await expect(page.locator(".trust-card")).toHaveCount(0);
+      }
       if (scenario.rescueCount) {
         await expect(page.getByRole("heading", { level: 1, name: `오늘 살펴볼 음식 ${scenario.rescueCount}개` })).toBeVisible();
         await expect(page.locator(".rescue-hero-count")).toHaveText(String(scenario.rescueCount));

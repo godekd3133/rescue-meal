@@ -14,7 +14,8 @@ export const HOME_STARTER_FOODS = ["우유", "계란", "두부", "대파"] as co
  * 홈: what to look at today, nothing more. The full list lives on the 냉장고 tab.
  *
  * - Green panel: one sentence with today's count in it, the week's rescued count as a plain
- *   line under it, then the food photos (RescueDeck) lead.
+ *   line under it, then the first three foods to rescue as one list (RescueDeck) with
+ *   `n개 모두 보기` for the rest.
  * - With nothing urgent the sentence says so and `이번 주 먼저 볼 것` lists the next foods.
  * - An empty workspace gets one add action and a few starter foods.
  * - One grouped list of storage places (empty shelves collapse), then one action.
@@ -113,7 +114,7 @@ export default function HomeScreen({
             <div className="home-group">
               {upcomingFoods.map((food) => (
                 <button key={food.id} className="priority-card" type="button" data-priority-food-id={food.id} data-priority-state={reviewReasonFor(food) ? "needs-review" : "use-next"} onClick={() => onOpenFood(food)}>
-                  <FoodPhoto src={food.image} foodName={food.name} loading="eager" alt="" className="food-thumb" draggable={false} />
+                  <FoodPhoto src={food.image} foodName={food.name} category={food.category} storage={food.storage} loading="eager" alt="" className="food-thumb" draggable={false} />
                   <span className="priority-copy">
                     <strong>{food.name}</strong>
                     <small>{food.quantity}</small>
@@ -140,7 +141,7 @@ export default function HomeScreen({
                   >
                     <span className="home-shelf-name">{shelf.storage}</span>
                     <span className="home-shelf-photos" aria-hidden="true">
-                      {shelf.previews.map((food) => <FoodPhoto key={food.id} src={food.image} foodName={food.name} alt="" className="home-shelf-photo" draggable={false} />)}
+                      {shelf.previews.map((food) => <FoodPhoto key={food.id} src={food.image} foodName={food.name} category={food.category} storage={food.storage} alt="" className="home-shelf-photo" draggable={false} />)}
                     </span>
                     <span className="home-shelf-counts" aria-hidden="true">
                       {shelf.soonCount ? <span className="home-shelf-soon">곧 {shelf.soonCount}</span> : null}

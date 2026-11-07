@@ -55,14 +55,14 @@ export function foodFreshness(food: FreshnessFood, referenceDate: Date): Freshne
   return { bucket, daysLeft, estimated };
 }
 
-/** Short chip text: "D-day", "D-3", "+2일"; far dates cap at "D-99+" / "+99일+" (the spoken label stays exact). */
+/** Short chip text: "D-day", "D-3", "2일 지남"; far dates cap at "D-99+" / "99일+ 지남" (the spoken label stays exact). */
 export function freshnessChipLabel(freshness: Freshness) {
   if (freshness.daysLeft === null) return "날짜 없음";
   if (freshness.daysLeft === 0) return "D-day";
   if (freshness.daysLeft > 99) return "D-99+";
   if (freshness.daysLeft > 0) return `D-${freshness.daysLeft}`;
-  if (freshness.daysLeft < -99) return "+99일+";
-  return `+${-freshness.daysLeft}일`;
+  if (freshness.daysLeft < -99) return "99일+ 지남";
+  return `${-freshness.daysLeft}일 지남`;
 }
 
 /** Which of the three badge shapes a date gets: filled printed date, dashed estimate, neutral unknown. */

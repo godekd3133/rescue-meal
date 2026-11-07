@@ -28,3 +28,13 @@ test('a failed fallback for an earlier name does not hide a different food photo
   const changed=foodPhotoPresentation(FOOD_IMAGES.groceries,'김치',{source:FOOD_IMAGES.groceries,fallbackFailed:true,fallback:FOOD_IMAGES.onion});
   assert.equal(changed.source,FOOD_IMAGES.kimchi);assert.equal(changed.kind,'image');
 });
+
+test('the loading placeholder tint follows category, then name, then frozen storage', async () => {
+  const { foodPhotoTone } = await import('../src/foodPhotoPresentation.ts');
+  assert.equal(foodPhotoTone({ category: '채소', foodName: '두부' }), 'greens');
+  assert.equal(foodPhotoTone({ foodName: '닭가슴살' }), 'protein');
+  assert.equal(foodPhotoTone({ category: '유제품', foodName: '저지방 우유' }), 'dairy');
+  assert.equal(foodPhotoTone({ category: '두부·콩', foodName: '국산콩 두부' }), 'grain');
+  assert.equal(foodPhotoTone({ foodName: '올리브유', storage: '냉동' }), 'frozen');
+  assert.equal(foodPhotoTone({ foodName: '올리브유', storage: '실온' }), 'neutral');
+});

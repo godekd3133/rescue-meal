@@ -58,8 +58,11 @@ test("rescue cards offer 냉동 only without a date question, and freezing leave
     const box = (await button.boundingBox())!;
     expect(box.height).toBeGreaterThanOrEqual(44);
   }
-  const cardBox = (await tofu.boundingBox())!;
-  expect(cardBox.width).toBeLessThanOrEqual(168.5);
+  // Home lists rescue foods as rows: the dominant 먹었어요 stays wider than the outlined 요리 / 냉동.
+  const ateBox = (await tofu.locator(".rescue-card-action-ate").boundingBox())!;
+  const freezeBox = (await freeze.boundingBox())!;
+  expect(ateBox.width).toBeGreaterThan(freezeBox.width);
+  await expect(freeze).toHaveCSS("border-top-style", "solid");
   await shot(page, "01-deck-freeze");
 
   await freeze.click();
@@ -120,7 +123,11 @@ test("swiping left reveals 버림 / 냉동; vertical drags still scroll without 
   await expect(page.locator(".toast")).toContainText("국산콩 두부 버림 기록을 남겼어요");
   await expect(page.locator(".inventory-row").filter({ hasText: "국산콩 두부" })).toHaveCount(0);
 
+  // With the one-row filter toolbar the six remaining demo foods fit one screen, so give the
+  // list room to scroll; the drag below must still scroll it rather than open a row.
+  await page.addStyleTag({ content: ".fridge-screen { padding-bottom: 800px !important; }" });
   const scrollTop = () => page.getByTestId("mobile-scroll").evaluate((element) => element.scrollTop);
+  await expect.poll(() => page.getByTestId("mobile-scroll").evaluate((element) => element.scrollHeight - element.clientHeight)).toBeGreaterThan(200);
   const before = await scrollTop();
   const firstRow = page.locator(".swipe-row").first();
   await swipe(page, firstRow, 2, -220);

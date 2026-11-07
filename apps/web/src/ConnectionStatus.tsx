@@ -11,7 +11,12 @@ const labels: Record<ConnectionState, string> = {
   auth_required: "다시 로그인해 주세요",
 };
 
-export default function ConnectionStatus({ state, hasCachedData = false, cachedAtLabel, cachedAtFreshness, onOpenAccount }: { state: ConnectionState; hasCachedData?: boolean; cachedAtLabel?: string; cachedAtFreshness?: CachedAtFreshness; onOpenAccount: () => void }) {
+/**
+ * The 나 button. `showFixtureLabel` keeps the visible "체험 중" pill to the Home header; the other
+ * tabs show only the avatar (the accessible name still says the preview is a demo). Connection
+ * problems (offline, login, checking) stay visible on every tab.
+ */
+export default function ConnectionStatus({ state, hasCachedData = false, cachedAtLabel, cachedAtFreshness, onOpenAccount, showFixtureLabel = true }: { state: ConnectionState; hasCachedData?: boolean; cachedAtLabel?: string; cachedAtFreshness?: CachedAtFreshness; onOpenAccount: () => void; showFixtureLabel?: boolean }) {
   const label = state === "offline" && hasCachedData
     ? `최근 기록 · ${cachedAtLabel ?? "최근 화면"}`
     : labels[state];
@@ -27,5 +32,6 @@ export default function ConnectionStatus({ state, hasCachedData = false, cachedA
     : state === "checking"
       ? `식품 목록에 연결하고 있어요. ${actionLabel}`
       : `${label}. ${actionLabel}`}`;
-  return <button className={`connection-pill connection-${state}${freshnessClass}`} type="button" onClick={onOpenAccount} aria-label={accessibleLabel} title={accessibleLabel}>{state === "connected" ? null : <><span className="connection-dot" /><span className="connection-label"><MetadataText text={label} /></span></>}<span className="me-avatar" aria-hidden="true">나</span></button>;
+  const avatarOnly = state === "connected" || (state === "fixture" && !showFixtureLabel);
+  return <button className={`connection-pill connection-${state}${freshnessClass}${avatarOnly ? " connection-avatar-only" : ""}`} type="button" onClick={onOpenAccount} aria-label={accessibleLabel} title={accessibleLabel}>{avatarOnly ? null : <><span className="connection-dot" /><span className="connection-label"><MetadataText text={label} /></span></>}<span className="me-avatar" aria-hidden="true">나</span></button>;
 }

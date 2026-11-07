@@ -218,7 +218,7 @@ test("updates Home's dates after local midnight while the app stays open", async
   // Home has no date label; the days-left badges move to the new day instead.
   const tofuChip = page.locator(".rescue-card").filter({ hasText: "국산콩 두부" }).locator(".rescue-card-chip");
   const beforeMidnight = (await tofuChip.textContent()) ?? "";
-  expect(beforeMidnight).toMatch(/^(D-\d+|D-day|\+\d+일)$/);
+  expect(beforeMidnight).toMatch(/^(D-\d+|D-day|\d+일 지남)$/);
   await page.clock.fastForward(60_000);
   await expect(tofuChip).not.toHaveText(beforeMidnight);
 });
@@ -238,14 +238,14 @@ test("keeps home food source details readable across narrow viewport themes", as
         Promise.all(document.getAnimations().filter((animation) => animation.effect?.getTiming().iterations !== Infinity).map((animation) => animation.finished)),
         new Promise((resolve) => setTimeout(resolve, 2_000)),
       ]));
-      // Home shows urgent foods once, on the rescue deck: each card carries a days-left chip that must
-      // stay inside its photo and readable, and its quantity line must meet contrast on the card.
+      // Home lists the first three urgent foods as rows: each row carries a days-left chip that must
+      // stay inside its row and readable, and its quantity line must meet contrast on the card.
       const cards = page.locator(".rescue-card");
-      await expect(cards).toHaveCount(6);
+      await expect(cards).toHaveCount(3);
       const chipReadback = await page.locator(".rescue-card .rescue-card-chip").evaluateAll((elements) =>
         elements.map((element) => {
           const chip = element as HTMLElement;
-          const photo = chip.closest<HTMLElement>(".rescue-card-photo")!;
+          const photo = chip.closest<HTMLElement>(".rescue-card")!;
           const bounds = chip.getBoundingClientRect();
           const photoBounds = photo.getBoundingClientRect();
           let background = "rgba(0, 0, 0, 0)";
@@ -263,12 +263,12 @@ test("keeps home food source details readable across narrow viewport themes", as
           };
         }),
       );
-      expect(chipReadback).toHaveLength(6);
+      expect(chipReadback).toHaveLength(3);
       for (const chip of chipReadback) {
         expect(chip.text).not.toBe("");
         expect(chip.fontSize).toBeGreaterThanOrEqual(11);
         expect(chip.clipped, `${chip.text} chip clips at ${viewport.width}px in ${theme} mode`).toBe(false);
-        expect(chip.withinPhoto, `${chip.text} chip escapes its photo`).toBe(true);
+        expect(chip.withinPhoto, `${chip.text} chip escapes its row`).toBe(true);
         expect(contrastRatio(chip.color, chip.background), `${chip.text} chip contrast in ${theme} mode`).toBeGreaterThanOrEqual(4.5);
       }
 
@@ -286,7 +286,7 @@ test("keeps home food source details readable across narrow viewport themes", as
         };
       }));
 
-      expect(readback).toHaveLength(6);
+      expect(readback).toHaveLength(3);
       for (const detail of readback) {
         expect(detail.text).not.toBe("");
         expect(detail.fontSize).toBeGreaterThanOrEqual(11);
@@ -305,16 +305,17 @@ test("places the narrow home review summary before meal actions in both themes a
     await page.evaluate((nextTheme) => window.localStorage.setItem("rescue-meal.theme", nextTheme), theme);
     await page.reload();
 
-    // The hero counts what to look at today; the safety summary names every review-required food,
-    // then one line per storage place and the single meal action follow.
+    // The hero counts what to look at today and lists three; the only review food (시금치) is one of
+    // them with its own 날짜 확인, so no review banner repeats it. One line per storage place and the
+    // single meal action follow.
     await expect(page.locator(".freshness-overview")).toHaveCount(0);
     await expect(page.getByRole("heading", { level: 1, name: "오늘 살펴볼 음식 6개" })).toBeVisible();
     await expect(page.locator(".rescue-hero-count")).toHaveText("6");
+    await expect(page.getByTestId("rescue-show-all")).toHaveText("6개 모두 보기");
     const reviewSummary = page.locator(".trust-card");
-    await expect(reviewSummary).toHaveCount(1);
-    await expect(reviewSummary).toHaveAccessibleName(/포장지 날짜를 살펴볼 식품 1개/);
+    await expect(reviewSummary).toHaveCount(0);
     await expect(page.locator(".rescue-card").filter({ hasText: "시금치" })).toHaveClass(/freshness-past/);
-    await expect(page.locator(".rescue-card").filter({ hasText: "시금치" }).locator(".rescue-card-chip")).toHaveText("+1일");
+    await expect(page.locator(".rescue-card").filter({ hasText: "시금치" }).locator(".rescue-card-chip")).toHaveText("1일 지남");
     const summary = page.getByRole("navigation", { name: "보관 장소" });
     await expect(summary).toBeVisible();
     await expect(summary.locator(".home-shelf-row")).toHaveCount(3);
@@ -356,7 +357,7 @@ test("places the narrow home review summary before meal actions in both themes a
     // The full inventory list moved to 냉장고; Home no longer repeats it.
     await expect(page.locator(".inventory-row")).toHaveCount(0);
     const [summaryBox, firstRow, mealAction] = await Promise.all([
-      reviewSummary.boundingBox(),
+      page.locator(".rescue-list").boundingBox(),
       summary.locator(".home-shelf-row").first().boundingBox(),
       page.locator(".meal-plan-button").boundingBox(),
     ]);
@@ -596,7 +597,7 @@ test("offers one recipe-step action while keeping safety details reachable", asy
     await page.locator(".meal-plan-button").click();
     const dialog = page.getByRole("region", { name: "오늘의 식단" });
     await expect(dialog).toBeVisible();
-    await expect(dialog.locator(".recipe-title-row").first()).toBeVisible();
+    await expect(dialog.locator(".meal-start-button")).toBeVisible();
 
     const safetySummary = dialog.getByRole("region", { name: /^조리 전에 살펴볼 내용 \d+개$/ });
     const shortcut = dialog.getByRole("button", { name: "요리 시작", exact: true });
@@ -638,7 +639,7 @@ test("explains empty recent history and exposes it as a disclosure in both theme
     await page.locator(".meal-plan-button").click();
     const dialog = page.getByRole("region", { name: "오늘의 식단" });
     await expect(dialog).toBeVisible();
-    await expect(dialog.locator(".recipe-title-row")).toBeVisible();
+    await expect(dialog.locator(".meal-start-button")).toBeVisible();
 
     const toggle = dialog.locator(".recipe-history-toggle");
     const history = dialog.getByRole("region", { name: "최근 식단" });
@@ -672,7 +673,7 @@ test("returns to the same meal-plan position after checking a food", async ({ pa
   await page.locator(".meal-plan-button").click();
   const dialog = page.getByRole("region", { name: "오늘의 식단" });
   await expect(dialog).toBeVisible();
-  await expect(dialog.locator(".recipe-title-row")).toBeVisible();
+  await expect(dialog.locator(".meal-start-button")).toBeVisible();
 
   await page.waitForTimeout(400);
   const returnAction = dialog.getByRole("button", { name: "시금치 보기" });
@@ -735,8 +736,8 @@ test("keeps the primary home CTA and review notice above navigation on short nat
     expect(firstFold.navigation!.bottom).toBeLessThanOrEqual(firstFold.screen!.bottom + 1);
     await expect(page.getByRole("navigation", { name: "주요 메뉴" }).getByRole("button", { name: "식단", exact: true })).toBeInViewport();
 
-    // The review summary, the storage rows and the full-width meal CTA are one scroll away and never left under the floating nav.
-    for (const selector of [".trust-card", ".home-shelves", ".meal-plan-button"]) {
+    // 모두 보기, the storage rows and the full-width meal CTA are one scroll away and never left under the floating nav.
+    for (const selector of [".rescue-list-all", ".home-shelves", ".meal-plan-button"]) {
       const clear = await scrollClearOfBottomNavigation(page, selector);
       expect(clear.targetBottom, `${selector} clears the navigation at ${viewport.height}px`).toBeLessThanOrEqual(clear.navigationTop + 1);
     }
@@ -755,6 +756,7 @@ test("keeps the storage rows before the single meal action on mobile", async ({ 
       const rect = (selector: string) => document.querySelector<HTMLElement>(selector)?.getBoundingClientRect().toJSON() ?? null;
       return {
         review: rect(".home-body > .trust-card"),
+        rescue: rect(".kitchen-hero .rescue-list"),
         shelves: rect(".home-shelves"),
         cta: rect(".home-action-row"),
         priority: rect(".priority-section"),
@@ -762,14 +764,16 @@ test("keeps the storage rows before the single meal action on mobile", async ({ 
       };
     });
 
-    expect(layout.review).toBeTruthy();
+    // The demo's only review food is a visible rescue row with its own 날짜 확인, so no banner.
+    expect(layout.review).toBeNull();
+    expect(layout.rescue).toBeTruthy();
     expect(layout.shelves).toBeTruthy();
     expect(layout.cta).toBeTruthy();
     // Something is urgent in the demo record, so the deck carries it and there is no separate priority list.
     expect(layout.priority).toBeNull();
-    // Home answers "what can I do now?" with one action, after the safety summary and the storage rows.
+    // Home answers "what can I do now?" with one action, after the rescue list and the storage rows.
     expect(layout.actions).toBe(1);
-    expect(layout.review!.bottom).toBeLessThanOrEqual(layout.shelves!.top + 1);
+    expect(layout.rescue!.bottom).toBeLessThanOrEqual(layout.shelves!.top + 1);
     expect(layout.shelves!.bottom).toBeLessThanOrEqual(layout.cta!.top + 1);
   }
 });
@@ -1061,7 +1065,7 @@ test("keeps detail review and storage cues across light and dark themes", async 
     // Home's deck only offers the date check for a passed printed date.
     const spinachCard = page.locator(".rescue-card").filter({ hasText: "시금치" });
     await expect(spinachCard).toHaveClass(/freshness-past/);
-    await expect(spinachCard.locator(".rescue-card-chip")).toHaveText("+1일");
+    await expect(spinachCard.locator(".rescue-card-chip")).toHaveText("1일 지남");
     await expect(spinachCard.getByRole("button", { name: "시금치 날짜 확인" })).toBeVisible();
     await expect(spinachCard.getByRole("button", { name: /시금치 먹었어요/ })).toHaveCount(0);
     await openTab(page, "냉장고");
@@ -1177,12 +1181,11 @@ test("filters the pantry by status and restores the full inventory", async ({ pa
   await expect.poll(() => inventory.locator(".inventory-row").count()).toBe(1);
   await expect.poll(() => inventory.locator('.inventory-row .inventory-status[data-inventory-status="needs-review"]').count()).toBe(1);
 
-  const reset = inventory.getByRole("button", { name: "전체 목록 보기" });
-  await expect(reset).toBeVisible();
-  await expect(reset).toHaveCSS("min-height", "44px");
-  await expect(reset).toBeInViewport();
-  await reset.click();
+  // The chip row is the reset: no extra result line or 전체 목록 보기 button for a chip filter.
+  await expect(inventory.getByRole("button", { name: "전체 목록 보기" })).toHaveCount(0);
   const allFilter = statusFilters.getByRole("button", { name: /전체/ });
+  await expect(allFilter).toBeInViewport();
+  await allFilter.click();
   await expect(allFilter).toHaveAttribute("aria-pressed", "true");
   await expect(allFilter).toBeFocused();
   await expect(inventory.getByRole("heading", { name: "내 식품 목록 7" })).toBeVisible();
@@ -1889,14 +1892,14 @@ test("keeps the mobile date-recheck keyboard path visibly focused without an ext
     }
     await expect(page.locator("html")).toHaveAttribute("data-rescue-theme", theme);
 
-    // 시금치 opens from its rescue card photo, the first food entry after the header's bell and 나.
+    // 시금치 opens from its rescue row (photo and name), the first food entry after the header's bell and 나.
     const firstPriority = page.getByRole("button", { name: "시금치 자세히 보기" });
     for (let index = 0; index < 64; index += 1) {
       await page.keyboard.press("Tab");
       if (await firstPriority.evaluate((element) => element === document.activeElement)) break;
     }
     await expect(firstPriority).toBeFocused();
-    await expectFocusRing(firstPriority, ".rescue-card");
+    await expectFocusRing(firstPriority, ".rescue-list");
     await firstPriority.press("Enter");
 
     const detail = page.getByRole("dialog", { name: "시금치" });
@@ -2031,11 +2034,12 @@ test("shows visible keyboard focus across Home entry points and bottom navigatio
       const homeTargets = [
         page.locator(".notification-button"),
         page.locator(".connection-pill"),
-        // The rescue deck opens the panel: each card's photo and actions are Home entry points.
-        page.locator(".rescue-card-photo").first(),
+        // The rescue list opens the panel: each row's photo+name and actions are Home entry points,
+        // then 모두 보기. (No review banner: the demo's review food is a visible row.)
+        page.locator(".rescue-card-open").first(),
         page.locator(".rescue-card-action").first(),
-        // Below the panel: the safety summary, one row per storage place, then the single meal action.
-        page.locator(".trust-card"),
+        page.locator(".rescue-list-all"),
+        // Below the panel: one row per storage place, then the single meal action.
         page.locator(".home-shelf-row").first(),
         page.locator(".home-shelf-row").last(),
         // Quick-add moved into the bottom navigation (checked with the nav below).
@@ -2079,8 +2083,8 @@ test("shows visible keyboard focus across Home entry points and bottom navigatio
           expect(ring.width).toBeGreaterThanOrEqual(2);
           expect(contrastRatio(ring.color, ring.surface)).toBeGreaterThanOrEqual(3);
           expect(ring.inside, "sticker focus ring is clipped by the shelf row").toBe(true);
-        } else if (await target.evaluate((element) => element.matches(".rescue-card-photo, .rescue-card-action"))) {
-          await expectHomeRing(target, ".rescue-card");
+        } else if (await target.evaluate((element) => element.matches(".rescue-card-open, .rescue-card-action, .rescue-list-all"))) {
+          await expectHomeRing(target, ".rescue-list");
         } else {
           const className = await target.evaluate((element) => element.className);
           const onPanel = [...panelTargets].some((selector) => className.includes(selector.slice(1)));
@@ -3060,6 +3064,12 @@ test("keeps primary actions in bounds after a larger text preference", async ({ 
 });
 
 test("keeps the compact safety guidance reachable after larger text scrolls", async ({ page }) => {
+  // The summary only counts review foods that are not a visible Home row: a week on, 달걀 needs a
+  // date check below the first three rows, so the summary appears.
+  await page.clock.install({ time: new Date(FIXED_NOW) });
+  await page.reload();
+  await page.clock.fastForward(7 * 24 * 60 * 60 * 1000);
+  await expect(page.locator(".trust-card")).toHaveCount(1);
   await page.addStyleTag({ content: "html { font-size: 125%; }" });
   // The safety summary sits below the taller fridge panel; scroll it clear of the floating nav.
   await scrollClearOfBottomNavigation(page, ".trust-card");
@@ -3153,9 +3163,9 @@ test("scales the major sheet reading hierarchy with a larger text preference", a
   await page.getByRole("button", { name: /오늘 뭐 먹지/ }).click();
   const mealDialog = page.getByRole("region", { name: "오늘의 식단" });
   await expect(mealDialog).toBeVisible();
-  const mealBefore = await mealDialog.locator(".recipe-title-row h3").evaluate((element) => Number.parseFloat(getComputedStyle(element).fontSize));
+  const mealBefore = await mealDialog.locator(".meal-card-title").first().evaluate((element) => Number.parseFloat(getComputedStyle(element).fontSize));
   await page.addStyleTag({ content: "html { font-size: 125%; }" });
-  const mealAfter = await mealDialog.locator(".recipe-title-row h3").evaluate((element) => Number.parseFloat(getComputedStyle(element).fontSize));
+  const mealAfter = await mealDialog.locator(".meal-card-title").first().evaluate((element) => Number.parseFloat(getComputedStyle(element).fontSize));
   expect(mealAfter).toBeGreaterThan(mealBefore);
   // 식단 is a tab screen, not a dialog: leaving it means choosing another tab.
   await openTab(page, "홈");
@@ -3540,4 +3550,62 @@ test("phone-shell width keeps the date recheck action below its copy in a wide s
   expect(layout!.actionTop).toBeGreaterThanOrEqual(layout!.copyBottom);
   expect(layout!.actionWidth).toBeGreaterThan(180);
   expect(layout!.actionHeight).toBeGreaterThanOrEqual(44);
+});
+
+// Every tab's last element scrolls fully above the floating bar and the + button's overhang.
+test("the last element of every tab scrolls clear of the bottom navigation", async ({ page }) => {
+  for (const viewport of [{ width: 320, height: 740 }, { width: 393, height: 852 }]) {
+    await page.setViewportSize(viewport);
+    await page.goto("/");
+    await expect(page.getByRole("main", { name: "Rescue Meal 홈" })).toBeVisible();
+    // 장보기 with items and suggestions, so it is long enough to scroll at both sizes.
+    await openTab(page, "장보기");
+    const shopping = page.getByRole("region", { name: "장보기 목록" });
+    for (const entry of ["우유 2팩", "참기름 1병", "냉동 만두 1봉", "콩나물"]) {
+      await shopping.getByRole("textbox", { name: "살 것 이름" }).fill(entry);
+      await shopping.getByRole("button", { name: "추가", exact: true }).click();
+      await expect(shopping.locator(".shop-row").filter({ hasText: entry.split(" ")[0] })).toHaveCount(1);
+    }
+    for (const tab of ["홈", "냉장고", "식단", "장보기"] as const) {
+      await openTab(page, tab);
+      await page.waitForTimeout(250);
+      const metrics = await page.evaluate(() => {
+        const scroller = document.querySelector<HTMLElement>("[data-testid=mobile-scroll]")!;
+        scroller.scrollTop = scroller.scrollHeight;
+        const panel = document.querySelector<HTMLElement>("[data-tab-panel]:not([hidden])")!;
+        const bottoms = Array.from(panel.querySelectorAll<HTMLElement>("*")).flatMap((element) => {
+          const rect = element.getBoundingClientRect();
+          const style = getComputedStyle(element);
+          // Content, not the screen wrappers that carry the clearance as padding: leaf elements only.
+          if (element.children.length || rect.width <= 1 || rect.height <= 1 || style.visibility === "hidden" || element.closest(".sr-only")) return [];
+          return [rect.bottom];
+        });
+        const navigation = document.querySelector<HTMLElement>(".app-bottom-nav")!.getBoundingClientRect();
+        const add = document.querySelector<HTMLElement>(".app-bottom-nav-add")!.getBoundingClientRect();
+        return { lastBottom: Math.max(...bottoms), barTop: Math.min(navigation.top, add.top), scrolled: scroller.scrollTop > 0, overflow: scroller.scrollHeight > scroller.clientHeight };
+      });
+      expect(metrics.lastBottom, `${tab} at ${viewport.width}px`).toBeLessThanOrEqual(metrics.barTop - 8);
+      if (metrics.overflow) expect(metrics.scrolled).toBe(true);
+    }
+  }
+});
+
+test("the shopping add row is one field and 추가, and suggestions fit at 320px", async ({ page }) => {
+  await openTab(page, "장보기");
+  const shopping = page.getByRole("region", { name: "장보기 목록" });
+  const form = shopping.getByRole("form", { name: "살 것 추가" });
+  await expect(form.locator("input")).toHaveCount(1);
+  const [field, add] = await Promise.all([form.getByRole("textbox", { name: "살 것 이름" }).boundingBox(), form.getByRole("button", { name: "추가", exact: true }).boundingBox()]);
+  expect(field!.width).toBeGreaterThanOrEqual(200);
+  expect(Math.abs(field!.y - add!.y)).toBeLessThanOrEqual(1);
+  expect(add!.height).toBeGreaterThanOrEqual(44);
+  const finished = shopping.getByRole("region", { name: "최근 다 쓴 것" });
+  await expect(finished.locator(".shop-suggest-add")).toHaveCount(3);
+  for (const button of await finished.locator(".shop-suggest-add").all()) {
+    const box = (await button.boundingBox())!;
+    expect(box.height).toBeGreaterThanOrEqual(44);
+    expect(box.x + box.width).toBeLessThanOrEqual(320);
+  }
+  const metrics = await readNarrowViewportMetrics(page);
+  expect(metrics.bodyScrollWidth).toBeLessThanOrEqual(metrics.viewportWidth);
 });

@@ -1,5 +1,6 @@
 import { confirmedDateReadbackMatches } from "./dateMutationReadback";
 import { selectHomePriorityFoods } from "./homePriorityFoods";
+import { sortFoodsByDate } from "./fridgeOrder";
 import { FoodPhoto } from "./FoodPhoto";
 import { inventorySearchPhase } from "./inventorySearchPhase";
 import { revealAndFocusWithinNearestContainer as revealAndFocus } from "./appScroll";
@@ -62,7 +63,7 @@ import { getDateBadge, getInventoryDateOriginLabel, displayedDateSource } from "
 import "@fontsource/jua/korean-400.css";
 import "@fontsource/jua/latin-400.css";
 import "./freshness.css";
-import RescueDeck from "./RescueDeck";
+import RescueDeck, { RESCUE_LIST_VISIBLE, rescueRowNeedsDateCheck, selectRescueDeckFoods } from "./RescueDeck";
 import { prefersReducedMotion } from "./motion";
 import "./kitchen.css";
 import "./motion.css";
@@ -73,6 +74,8 @@ import { TabSheetScreen } from "./screens/TabSheetScreen";
 import { ScreenHeader } from "./screens/ScreenHeader";
 import { FreshnessChip } from "./screens/FreshnessChip";
 import { appendRescueEntries, countRescuedFoods, createDemoRescueLog, RESCUE_WINDOW_DAYS, type RescueLogEntry } from "./rescueSummary";
+import { createDemoFinishedFoods, readFinishedFoods, recordFinishedFoods as appendFinishedFoods, writeFinishedFoods, type FinishedFoodEntry } from "./finishedFoods";
+import type { ShoppingShortage } from "./shoppingSuggestions";
 import { foodFreshness, freshnessChipLabel, freshnessSpokenLabel } from "./freshness";
 import { getHomeReviewTopicLabel, shouldShowHomeDateGuide } from "./homeReviewSummary";
 import { demoCalendarDate } from "./demoCalendarDate";
@@ -1064,6 +1067,32 @@ function PrototypeContent() {
   const [demoRescueLog, setDemoRescueLog] = useState<RescueLogEntry[]>(() => mealApi.isConfigured || mealApi.deploymentMode === "production" ? [] : createDemoRescueLog(new Date()));
   const [remoteRescuedCount, setRemoteRescuedCount] = useState<number | null>(null);
   const [rescueSummaryNonce, setRescueSummaryNonce] = useState(0);
+  // 장보기 suggestions: foods used up in this workspace (kept per workspace on this device; the
+  // demo preview starts from example entries and is never stored) and the 식단 tab's shortages.
+  const finishedFoodsScope = mealApi.isConfigured ? mealApi.workspaceKey ?? "account" : null;
+  const [finishedFoods, setFinishedFoods] = useState<{ scope: string | null; entries: FinishedFoodEntry[] }>(() => ({
+    scope: finishedFoodsScope,
+    entries: finishedFoodsScope ? readFinishedFoods(finishedFoodsScope) : mealApi.deploymentMode === "production" ? [] : createDemoFinishedFoods(new Date()),
+  }));
+  const currentFinishedFoods = finishedFoods.scope === finishedFoodsScope ? finishedFoods.entries : finishedFoodsScope ? readFinishedFoods(finishedFoodsScope) : [];
+  const [mealShortages, setMealShortages] = useState<ShoppingShortage[]>([]);
+  useEffect(() => {
+    if (finishedFoods.scope !== finishedFoodsScope) setFinishedFoods({ scope: finishedFoodsScope, entries: finishedFoodsScope ? readFinishedFoods(finishedFoodsScope) : [] });
+  }, [finishedFoods.scope, finishedFoodsScope]);
+  /** Remembers foods whose whole amount was just eaten, discarded or cooked. */
+  const recordFinishedFoods = (finished: FoodItem[]) => {
+    if (!finished.length) return;
+    const entries = finished.map((food) => {
+      const { amount, unit } = quantityParts(food.quantity);
+      return { name: food.name, quantity: amount > 0 ? amount : 1, unit: unit || "개" };
+    });
+    setFinishedFoods((current) => {
+      const base = current.scope === finishedFoodsScope ? current.entries : finishedFoodsScope ? readFinishedFoods(finishedFoodsScope) : [];
+      const next = appendFinishedFoods(base, entries, new Date());
+      if (finishedFoodsScope) writeFinishedFoods(finishedFoodsScope, next);
+      return { scope: finishedFoodsScope, entries: next };
+    });
+  };
   const recordRescuedFoods = (foodIds: string[]) => {
     if (!foodIds.length) return;
     if (mealApi.isConfigured) setRescueSummaryNonce((current) => current + 1);
@@ -2143,12 +2172,18 @@ function PrototypeContent() {
     () => selectHomePriorityFoods(foods),
     [foods],
   );
-  const priorityFoodIds = useMemo(() => new Set(priorityFoods.map((food) => food.id)), [priorityFoods]);
-  // "Rescue today": passed, today/tomorrow and within-3-days foods — what the fridge door's red/orange rings show.
-  const rescueTodayCount = useMemo(
-    () => foods.filter((food) => ["past", "today", "soon"].includes(foodFreshness(food, currentDate).bucket)).length,
+  // "Rescue today": passed, today/tomorrow and within-3-days foods, soonest first (frozen
+  // estimates excluded). Home counts them, lists the first three and opens the rest with
+  // `n개 모두 보기`, so the count, the list and the 냉장고 filter always agree.
+  const homeRescueFoods = useMemo(
+    () => selectRescueDeckFoods(foods, currentDate).map(({ food }) => food),
     [currentDate, foods],
   );
+  const rescueTodayCount = homeRescueFoods.length;
+  // Home's priority set, which the 냉장고 tab's 먼저 볼 것 filter shows in Home's order: the
+  // rescue foods, or with nothing urgent the next foods Home lists under 이번 주 먼저 볼 것.
+  const homePriorityList = homeRescueFoods.length ? homeRescueFoods : priorityFoods;
+  const priorityFoodIds = useMemo(() => new Set(homePriorityList.map((food) => food.id)), [homePriorityList]);
   const mealDateReviewFoods = useMemo(
     () => foods.slice(0, 3)
       .filter((food) => Boolean(dateReviewReason(food, currentDate)))
@@ -2164,21 +2199,33 @@ function PrototypeContent() {
     [currentDate, foods],
   );
   const inventoryNeedsReviewCount = inventoryNeedsReviewFoods.length;
-  const inventoryReviewTopicLabel = useMemo(() => {
+  // Home's review banner leaves out foods whose row on the green panel already offers
+  // 날짜 확인 (the rows are hidden offline), so it never repeats a visible action.
+  const homeVisibleDateCheckIds = useMemo(() => new Set(
+    connectionState === "offline" ? [] : homeRescueFoods.slice(0, RESCUE_LIST_VISIBLE)
+      .filter((food) => rescueRowNeedsDateCheck(food, currentDate, (candidate) => Boolean(dateReviewReason(candidate, currentDate))))
+      .map((food) => food.id),
+  ), [connectionState, currentDate, homeRescueFoods]);
+  const homeReviewFoods = useMemo(
+    () => inventoryNeedsReviewFoods.filter((food) => !homeVisibleDateCheckIds.has(food.id)),
+    [homeVisibleDateCheckIds, inventoryNeedsReviewFoods],
+  );
+  const homeReviewCount = homeReviewFoods.length;
+  const homeReviewTopicLabel = useMemo(() => {
     const topics = new Set<"date" | "storage">();
-    inventoryNeedsReviewFoods.forEach((food) => {
+    homeReviewFoods.forEach((food) => {
       const reason = attentionReviewReason(food, currentDate);
       if (!reason) return;
       if (reason === "보관 방법 확인") topics.add("storage");
       else topics.add("date");
     });
     return getHomeReviewTopicLabel(topics);
-  }, [currentDate, inventoryNeedsReviewFoods]);
+  }, [currentDate, homeReviewFoods]);
   const showHomeTrustCard = foods.length > 0 && shouldShowHomeDateGuide(inventoryNeedsReviewCount, priorityFoods.map((food) => food.dateKind));
-  const homeTrustTitle = inventoryNeedsReviewCount
-    ? `${inventoryReviewTopicLabel} 살펴볼 식품 ${inventoryNeedsReviewCount}개`
+  const homeTrustTitle = homeReviewCount
+    ? `${homeReviewTopicLabel} 살펴볼 식품 ${homeReviewCount}개`
     : "먼저 살펴볼 날짜는 소비기한이 아니에요";
-  const homeTrustDescription = inventoryNeedsReviewCount
+  const homeTrustDescription = homeReviewCount
     ? "포장지 날짜와 보관 방법을 살펴봐 주세요."
     : "포장지 날짜와 식품 상태를 보고 직접 판단해 주세요.";
   const normalizedInventoryQuery = inventoryQuery.trim().toLocaleLowerCase("ko-KR");
@@ -2204,13 +2251,19 @@ function PrototypeContent() {
     [inventoryScopeFoods, priorityFoodIds],
   );
   const filteredFoods = useMemo(() => {
+    // 먼저 볼 것 keeps Home's own priority set and order; every other view reads by the date
+    // on the badge (the API and demo fixture arrive in priority-score order, not date order).
+    if (inventoryStatusFilter === "priority") {
+      const homeOrder = new Map(homePriorityList.map((food, index) => [food.id, index]));
+      return inventoryScopeFoods
+        .filter((food) => homeOrder.has(food.id))
+        .sort((a, b) => homeOrder.get(a.id)! - homeOrder.get(b.id)!);
+    }
     const byStatus = inventoryStatusFilter === "needs-review"
       ? inventoryScopeFoods.filter((food) => Boolean(attentionReviewReason(food, currentDate)))
-      : inventoryStatusFilter === "priority"
-        ? selectHomePriorityFoods(inventoryScopeFoods.filter((food) => priorityFoodIds.has(food.id)))
-        : inventoryScopeFoods;
-    return byStatus;
-  }, [currentDate, inventoryScopeFoods, inventoryStatusFilter, priorityFoodIds]);
+      : inventoryScopeFoods;
+    return sortFoodsByDate(byStatus, currentDate);
+  }, [currentDate, homePriorityList, inventoryScopeFoods, inventoryStatusFilter]);
   const currentMealPlanHint = mealPlanHint(priorityFoods, foods.length);
   const hasInventoryQuery = inventoryQuery.trim().length > 0;
   const inventorySearchCanUseServer = mealApi.isConfigured && connectionState !== "offline" && connectionState !== "auth_required";
@@ -4233,6 +4286,19 @@ function PrototypeContent() {
     });
   };
 
+  // Home's `n개 모두 보기`: the 냉장고 tab on its 먼저 볼 것 filter (Home's priority set),
+  // with focus on that filter so keyboard and screen-reader users land on what changed.
+  const openPriorityInventory = () => {
+    setInventoryStatusFilter("priority");
+    openInventory();
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        if (tabRef.current !== "fridge" || sheetRef.current !== null) return;
+        document.querySelector<HTMLElement>('.inventory-status-filters button[data-status="priority"]')?.focus({ preventScroll: true });
+      });
+    });
+  };
+
   const openStorageInventory = (storage: StorageType) => {
     openInventory("", true);
     setStorageFilter(storage);
@@ -4358,6 +4424,13 @@ function PrototypeContent() {
     // A finished meal goes back to the content tab it started from, where the changed foods are.
     selectTab(mealOriginNav === "food" ? "fridge" : "home", { resetScroll: mealOriginNav === "home" });
     recordRescuedFoods(Array.from(new Set([...foodIds, ...consumedAllocations.map((allocation) => allocation.food_id)])));
+    // A food the meal used all of (no allocation means the whole lot) is a 장보기 suggestion now.
+    const usedQuantities = new Map(consumedAllocations.map((allocation) => [allocation.food_id, allocation.quantity]));
+    recordFinishedFoods(foods.filter((food) => {
+      if (!foodIds.includes(food.id) && !usedQuantities.has(food.id)) return false;
+      const used = usedQuantities.get(food.id);
+      return used == null || subtractQuantity(quantityParts(food.quantity).amount, used) <= 0;
+    }));
     const completionMessage = mealCompletionMessage(foodIds, skippedCount, consumedAllocations);
     if (!mealApi.isConfigured) {
       const consumedIds = new Set(foodIds);
@@ -4911,6 +4984,7 @@ function PrototypeContent() {
     if (!mealApi.isConfigured) {
       applyOptimistic();
       recordRescuedFoods([foodId]);
+      if (!isPartial) recordFinishedFoods([food]);
     }
     changeSheet(null);
     setToastAction(null);
@@ -4935,6 +5009,7 @@ function PrototypeContent() {
               setFoods(nextInventory);
             }
             recordRescuedFoods([foodId]);
+            if (!isPartial) recordFinishedFoods([food]);
             const successMessage = withGrocySyncNotice(withConsumeScope(hasDeferredExternalSync(result.statuses) || !synced), result.statuses);
             const finalConsumeMessage = withServerReadbackNotice(successMessage, synced);
             setToastAction(recordToastAction(finalConsumeMessage, result, consumeUndone, consumeSnapshots, () => forgetDemoRescue(foodId)));
@@ -4981,7 +5056,10 @@ function PrototypeContent() {
         setFoods((current) => current.filter((item) => item.id !== foodId));
       }
     };
-    if (!mealApi.isConfigured) applyOptimistic();
+    if (!mealApi.isConfigured) {
+      applyOptimistic();
+      if (!isPartial) recordFinishedFoods([food]);
+    }
     changeSheet(null);
     setToastAction(null);
     setToast(mealApi.isConfigured ? "버림 기록을 저장하고 있어요." : discardSuccessMessage, mealApi.isConfigured ? "pending" : "notice");
@@ -5001,6 +5079,7 @@ function PrototypeContent() {
             storageSavingFoodIdsRef.current.delete(foodId);
             setStorageSavingFoodIds(new Set(storageSavingFoodIdsRef.current));
             setStorageSaveRecovery((current) => current?.foodId === foodId ? null : current);
+            if (!isPartial) recordFinishedFoods([food]);
             if (result.inventory && !synced) {
               setFoods(result.inventory.map((item, index) => ({ ...mapApiFood(item, storageLocations), priority: index + 1 })));
             }
@@ -5775,18 +5854,18 @@ function PrototypeContent() {
   };
 
   const detailSheetSnap = Math.min(0.993, Math.max(0.78, (viewportHeight - 6) / Math.max(1, viewportHeight)));
-  const singleHomeReviewFood = inventoryNeedsReviewFoods.length === 1 ? inventoryNeedsReviewFoods[0] : null;
+  const singleHomeReviewFood = homeReviewFoods.length === 1 ? homeReviewFoods[0] : null;
   const homeTrustCard = (
     <button
       className="trust-card"
-      data-trust-state={inventoryNeedsReviewCount ? "needs-review" : "neutral"}
-      aria-label={`${homeTrustTitle}. ${homeTrustDescription} ${singleHomeReviewFood ? `${singleHomeReviewFood.name} 날짜와 보관 정보 확인` : inventoryNeedsReviewCount ? "확인할 식품 목록 보기" : "날짜 안내 보기"}`}
+      data-trust-state={homeReviewCount ? "needs-review" : "neutral"}
+      aria-label={`${homeTrustTitle}. ${homeTrustDescription} ${singleHomeReviewFood ? `${singleHomeReviewFood.name} 날짜와 보관 정보 확인` : homeReviewCount ? "확인할 식품 목록 보기" : "날짜 안내 보기"}`}
       type="button"
-      onClick={() => singleHomeReviewFood ? openDetail(singleHomeReviewFood, "home", "date-review") : inventoryNeedsReviewCount ? openNeedsReviewInventory() : openGuidanceSheet()}
+      onClick={() => singleHomeReviewFood ? openDetail(singleHomeReviewFood, "home", "date-review") : homeReviewCount ? openNeedsReviewInventory() : openGuidanceSheet()}
     >
       <span className="trust-icon"><InfoCircledIcon width={18} height={18} /></span>
       <span className="trust-card-copy"><strong>{homeTrustTitle}</strong></span>
-      <span className="trust-card-action" aria-hidden="true">{singleHomeReviewFood ? "확인하기" : inventoryNeedsReviewCount ? "목록 보기" : "안내 보기"}</span>
+      <span className="trust-card-action" aria-hidden="true">{singleHomeReviewFood ? "확인하기" : homeReviewCount ? "목록 보기" : "안내 보기"}</span>
     </button>
   );
 
@@ -5811,7 +5890,7 @@ function PrototypeContent() {
         <BellIcon width={18} height={18} />
         {unreadNotificationCount && !notificationDataUnavailable ? <span className={`notification-dot notification-dot-${unreadNotificationTone}`} style={{ background: unreadNotificationDotColor }} aria-hidden="true">{unreadNotificationBadge}</span> : null}
       </button>
-      <ConnectionStatus state={connectionState} hasCachedData={Boolean(dashboardStaleAt)} cachedAtLabel={dashboardStaleAt ? formatDashboardCacheAge(dashboardStaleAt, currentDate) : undefined} cachedAtFreshness={dashboardStaleAt ? dashboardCacheFreshness(dashboardStaleAt, currentDate) : undefined} onOpenAccount={() => changeSheet("account")} />
+      <ConnectionStatus state={connectionState} hasCachedData={Boolean(dashboardStaleAt)} cachedAtLabel={dashboardStaleAt ? formatDashboardCacheAge(dashboardStaleAt, currentDate) : undefined} cachedAtFreshness={dashboardStaleAt ? dashboardCacheFreshness(dashboardStaleAt, currentDate) : undefined} onOpenAccount={() => changeSheet("account")} showFixtureLabel={tab === "home"} />
     </div>
   );
   const homeCallouts = (
@@ -5911,12 +5990,13 @@ function PrototypeContent() {
                 onCook={(food) => openMealPlan({ anchor: food })}
                 onFreeze={(food) => freezeFood(food.id)}
                 canFreeze={(food) => food.storage !== "냉동" && foodCanBeFrozen(food)}
+                onShowAll={openPriorityInventory}
               />
             ) : null}
             upcomingFoods={priorityFoods}
             foods={foods}
             referenceDate={currentDate}
-            reviewSummary={!inventoryDataUnknown && inventoryNeedsReviewCount > 0 ? homeTrustCard : null}
+            reviewSummary={!inventoryDataUnknown && homeReviewCount > 0 ? homeTrustCard : null}
             primaryAction={homePrimaryAction}
             footer={homeFooter}
             onOpenFood={(food) => openDetail(food, "home")}
@@ -6041,6 +6121,7 @@ function PrototypeContent() {
                     if (readBack) void refreshShoppingList();
                   }}
                   onAddDemoShoppingItems={addDemoShoppingItems}
+                  onShortagesChange={setMealShortages}
                   onSaved={handleMealSaved}
                   onCompleted={handleMealCompleted}
                   anchorFood={mealAnchor}
@@ -6057,7 +6138,7 @@ function PrototypeContent() {
             <main className="screen-content tab-screen shopping-screen-page" aria-labelledby="shopping-screen-title">
               <ScreenHeader id="shopping-screen-title" title="장보기" actions={tab === "shopping" ? headerActions : null} />
               <TabSheetScreen title="장보기 목록" className="shopping-screen">
-                <Suspense fallback={<ProcessingState label="장보기 목록을 준비하고 있어요" detail="저장한 식단과 식품 목록을 살펴보고 있어요." />}><ShoppingListSheet inventoryFoods={connectionState === "connected" || !mealApi.isConfigured ? foods : []} items={shoppingList} loading={shoppingListStatus === "loading"} mutating={shoppingListMutating} error={shoppingListError} notice={shoppingListNotice} retryAction={shoppingListRetryAction} recentlyReceivedFoodName={recentlyReceivedFood?.name ?? recentlyReceivedFoodRef.current?.name} recentlyReceivedFoodQuantity={recentlyReceivedFood?.quantity ?? recentlyReceivedFoodRef.current?.quantity} receivedFoodToken={recentlyReceivedFood} onOpenReceivedFood={openRecentlyReceivedFood} onOpenInventoryFood={openShoppingInventoryFood} onOpenMeal={openMealPlan} active={tab === "shopping" && sheet === null} initialFocus={tab === "shopping" && sheet === null && shoppingInitialFocusRef.current} demoMode={!mealApi.isConfigured} storageLocations={storageLocations} onRefresh={() => void refreshShoppingList()} onToggle={(item) => void toggleShoppingItem(item)} onDelete={(item) => void removeShoppingItem(item)} onAddManual={addManualShoppingItem} onReceive={(item, input) => { setShoppingBulkReceivedCount(0); return receiveShoppingItem(item, input); }} onReceiveAll={receiveAllShoppingItems} bulkReceivedCount={shoppingBulkReceivedCount} onOpenFridge={() => openInventory()} /></Suspense>
+                <Suspense fallback={<ProcessingState label="장보기 목록을 준비하고 있어요" detail="저장한 식단과 식품 목록을 살펴보고 있어요." />}><ShoppingListSheet inventoryFoods={connectionState === "connected" || !mealApi.isConfigured ? foods : []} items={shoppingList} loading={shoppingListStatus === "loading"} mutating={shoppingListMutating} error={shoppingListError} notice={shoppingListNotice} retryAction={shoppingListRetryAction} recentlyReceivedFoodName={recentlyReceivedFood?.name ?? recentlyReceivedFoodRef.current?.name} recentlyReceivedFoodQuantity={recentlyReceivedFood?.quantity ?? recentlyReceivedFoodRef.current?.quantity} receivedFoodToken={recentlyReceivedFood} onOpenReceivedFood={openRecentlyReceivedFood} onOpenInventoryFood={openShoppingInventoryFood} onOpenMeal={openMealPlan} active={tab === "shopping" && sheet === null} initialFocus={tab === "shopping" && sheet === null && shoppingInitialFocusRef.current} demoMode={!mealApi.isConfigured} storageLocations={storageLocations} onRefresh={() => void refreshShoppingList()} onToggle={(item) => void toggleShoppingItem(item)} onDelete={(item) => void removeShoppingItem(item)} onAddManual={addManualShoppingItem} onReceive={(item, input) => { setShoppingBulkReceivedCount(0); return receiveShoppingItem(item, input); }} onReceiveAll={receiveAllShoppingItems} bulkReceivedCount={shoppingBulkReceivedCount} onOpenFridge={() => openInventory()} finishedFoods={connectionState === "connected" || !mealApi.isConfigured ? currentFinishedFoods : []} mealShortages={mealShortages} referenceDate={currentDate} /></Suspense>
               </TabSheetScreen>
             </main>
           </div>
@@ -6231,11 +6312,11 @@ function isHiddenFocus(element: Element | null) {
 }
 
 /**
- * Home's focusable food entries, in reading order: deck photo cards, then the shelf
- * rows, then the calm-state priority cards, then the meal button. Only visible ones.
+ * Home's focusable food entries, in reading order: rescue rows (photo and name), then the
+ * shelf rows, then the calm-state priority cards, then the meal button. Only visible ones.
  */
 function homeFocusCandidates() {
-  return Array.from(document.querySelectorAll<HTMLElement>('[data-tab-panel="home"] :is(.rescue-card-photo, .home-shelf-row, .priority-card, .meal-plan-button)'))
+  return Array.from(document.querySelectorAll<HTMLElement>('[data-tab-panel="home"] :is(.rescue-card-open, .home-shelf-row, .priority-card, .meal-plan-button)'))
     .filter((element) => !element.hasAttribute("disabled") && element.getClientRects().length > 0);
 }
 
