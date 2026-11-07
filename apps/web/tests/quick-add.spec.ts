@@ -35,6 +35,14 @@ test("the add sheet opens on quick add with photo methods one tap away", async (
   const chips = dialog.getByRole("group", { name: /넣는 식품/ }).locator(".quick-add-chip");
   await expect(chips.first()).toBeVisible();
   expect(await chips.count()).toBeGreaterThanOrEqual(8);
+  expect(await chips.count()).toBeLessThanOrEqual(10);
+  // A staple the person already keeps shows once, under their own name.
+  const chipNames = await chips.locator("span").allTextContents();
+  for (const [own, staple] of [["저지방 우유", "우유"], ["동물복지 달걀", "계란"], ["국산콩 두부", "두부"]]) {
+    expect(chipNames).toContain(own);
+    expect(chipNames).not.toContain(staple);
+  }
+  expect(new Set(chipNames).size).toBe(chipNames.length);
   // Inventory foods come before the starter set, and every chip is a 44px target.
   await expect(chips.first()).toHaveAttribute("data-source", /recent|frequent/);
   const heights = await chips.evaluateAll((elements) => elements.map((element) => element.getBoundingClientRect().height));
@@ -51,28 +59,35 @@ test("the add sheet opens on quick add with photo methods one tap away", async (
 
 test("chips stage a food and a second tap bumps its quantity", async ({ page }) => {
   const dialog = await openQuickAdd(page);
-  const tofu = dialog.getByRole("button", { name: "두부 담기", exact: true });
+  const tofu = dialog.getByRole("button", { name: "국산콩 두부 담기", exact: true });
   await tofu.click();
   const staged = dialog.getByTestId("quick-add-staged-food");
   await expect(staged).toHaveCount(1);
-  await expect(staged.first()).toContainText("두부");
+  await expect(staged.first()).toContainText("국산콩 두부");
   await expect(staged.first().locator(".quick-add-quantity")).toHaveText("1모");
-  await dialog.getByRole("button", { name: /^두부 하나 더/ }).click();
+  await dialog.getByRole("button", { name: /^국산콩 두부 하나 더/ }).click();
   await expect(staged.first().locator(".quick-add-quantity")).toHaveText("2모");
-  await expect(dialog.getByRole("button", { name: "두부 하나 더, 지금 2모" })).toHaveAttribute("aria-pressed", "true");
+  await expect(dialog.getByRole("button", { name: "국산콩 두부 하나 더, 지금 2모" })).toHaveAttribute("aria-pressed", "true");
   // Storage is editable on the pill and the estimate is never shown as a printed date.
-  const storage = staged.first().getByRole("button", { name: /두부 보관 위치 냉장/ });
+  const storage = staged.first().getByRole("button", { name: /국산콩 두부 보관 위치 냉장/ });
   await storage.click();
-  await expect(staged.first().getByRole("button", { name: /두부 보관 위치 냉동/ })).toBeVisible();
+  await expect(staged.first().getByRole("button", { name: /국산콩 두부 보관 위치 냉동/ })).toBeVisible();
   await expect(staged.first().locator(".quick-add-pill-date")).toContainText("날짜 미확인");
-  await staged.first().getByRole("button", { name: "두부 수량 줄이기" }).click();
-  await staged.first().getByRole("button", { name: "두부 수량 줄이기" }).click();
+  await staged.first().getByRole("button", { name: "국산콩 두부 수량 줄이기" }).click();
+  await staged.first().getByRole("button", { name: "국산콩 두부 수량 줄이기" }).click();
   await expect(staged).toHaveCount(0);
 });
 
 test("one line stages several foods, saves them all, and offers the date follow-up", async ({ page }) => {
   const dialog = await openQuickAdd(page);
   const line = dialog.getByRole("textbox", { name: "한 줄로 여러 개 넣기" });
+  const hint = dialog.locator("#quick-add-line-hint");
+  await expect(hint).toHaveText("띄어 쓰면 하나씩 담겨요.");
+  // The comma rule shows up once a space would split the line.
+  await line.fill("저지방 우유");
+  await expect(hint).toHaveText("띄어 쓴 말은 따로 담겨요. 한 식품이면 쉼표로 나눠요.");
+  await line.fill("저지방 우유, 두부");
+  await expect(hint).toHaveText("쉼표 사이를 식품 하나로 담아요.");
   await line.fill("우유 두부 대파 계란 10개");
   await line.press("Enter");
   const staged = dialog.getByTestId("quick-add-staged-food");

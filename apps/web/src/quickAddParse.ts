@@ -1,4 +1,5 @@
 import { comparableFoodName, guessStorageFromName } from "./foodStorageGuess.ts";
+import { userFoodForStaple } from "./quickAddStaples.ts";
 
 export type QuickAddStorage = "냉장" | "냉동" | "실온";
 
@@ -275,12 +276,14 @@ export function nextQuickAddStorage(storage: QuickAddStorage): QuickAddStorage {
 /**
  * Chips in tap order: foods used recently on this device, then foods the person keeps
  * (inventory names, most frequent first), then a starter set so an empty space still
- * offers one-tap choices.
+ * offers one-tap choices. A starter the person already keeps under their own name
+ * (`저지방 우유` for 우유, `동물복지 달걀` for 계란) is left out: their chip reuses
+ * their details, so one food never shows twice.
  */
 export function buildQuickAddChips({
   recent,
   inventoryNames,
-  limit = 12,
+  limit = 10,
 }: {
   recent: ReadonlyArray<QuickAddRecentEntry>;
   inventoryNames: ReadonlyArray<string>;
@@ -312,7 +315,10 @@ export function buildQuickAddChips({
   [...frequency.values()]
     .sort((left, right) => right.count - left.count || left.first - right.first)
     .forEach((entry) => push(entry.name, "frequent"));
-  QUICK_ADD_STARTER_FOODS.forEach((name) => push(name, "starter"));
+  const userNames = chips.map((chip) => chip.name);
+  QUICK_ADD_STARTER_FOODS
+    .filter((name) => !userFoodForStaple(name, userNames))
+    .forEach((name) => push(name, "starter"));
   return chips;
 }
 

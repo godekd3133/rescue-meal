@@ -36,6 +36,16 @@ function inferenceKey(food: Pick<QuickAddStagedFood, "name" | "storage">) {
   return `${comparableFoodName(food.name)}|${food.storage}`;
 }
 
+/**
+ * How the line will be split, shown under the input. The comma rule only appears once
+ * a space is typed, when a two-word name would otherwise be split into two foods.
+ */
+function lineRuleHint(line: string) {
+  if (/[,，、;]/.test(line)) return "쉼표 사이를 식품 하나로 담아요.";
+  if (/\S\s+\S/.test(line)) return "띄어 쓴 말은 따로 담겨요. 한 식품이면 쉼표로 나눠요.";
+  return "띄어 쓰면 하나씩 담겨요.";
+}
+
 function storageCode(storage: QuickAddStorage) {
   return storage === "냉동" ? "frozen" : storage === "실온" ? "ambient" : "refrigerated";
 }
@@ -245,7 +255,7 @@ export default function QuickAdd({
           />
           <button className="quick-add-line-submit" type="submit" disabled={!line.trim()} onPointerDown={(event) => event.preventDefault()}>담기</button>
         </div>
-        <small id="quick-add-line-hint" className="quick-add-line-hint" role="status" aria-live="polite">{lineHint || "띄어 쓰면 여러 식품이에요. 이름에 띄어쓰기가 있으면 쉼표로 나눠요."}</small>
+        <small id="quick-add-line-hint" className="quick-add-line-hint" role="status" aria-live="polite">{lineHint || lineRuleHint(line)}</small>
       </form>
 
       <div className="quick-add-chips" role="group" aria-labelledby="quick-add-chips-heading">

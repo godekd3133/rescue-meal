@@ -13,6 +13,7 @@ import {
   stageQuickAddFood,
   writeQuickAddRecent,
 } from "../src/quickAddParse.ts";
+import { foodMatchesStaple, userFoodForStaple } from "../src/quickAddStaples.ts";
 
 const pick = (foods) => foods.map(({ name, amount, unit }) => `${name}:${amount}${unit}`);
 
@@ -79,6 +80,37 @@ test("chips list recent, then frequent inventory foods, then starters without du
   });
   assert.deepEqual(chips.map((chip) => `${chip.source}:${chip.name}`), ["recent:콜라", "recent:두부", "frequent:닭가슴살", "frequent:시금치", "starter:우유", "starter:계란"]);
   assert.equal(buildQuickAddChips({ recent: [], inventoryNames: [] }).every((chip) => chip.source === "starter"), true);
+});
+
+test("a staple matches the person's fuller or synonym name, not a different food", () => {
+  assert.equal(foodMatchesStaple("저지방 우유", "우유"), true);
+  assert.equal(foodMatchesStaple("서울우유 1L", "우유"), true);
+  assert.equal(foodMatchesStaple("국산콩 두부", "두부"), true);
+  assert.equal(foodMatchesStaple("동물복지 달걀", "계란"), true);
+  assert.equal(foodMatchesStaple("유정란", "계란"), true);
+  assert.equal(foodMatchesStaple("맛타리버섯", "버섯"), true);
+  assert.equal(foodMatchesStaple("요구르트", "요거트"), true);
+  assert.equal(foodMatchesStaple("우유식빵", "우유"), false);
+  assert.equal(foodMatchesStaple("두부조림", "두부"), false);
+  assert.equal(foodMatchesStaple("두유", "우유"), false);
+  assert.equal(foodMatchesStaple("대추방울토마토", "양파"), false);
+  assert.equal(userFoodForStaple("계란", ["시금치", "동물복지 달걀"]), "동물복지 달걀");
+  assert.equal(userFoodForStaple("대파", ["시금치", "동물복지 달걀"]), undefined);
+});
+
+test("starters the person already keeps under their own name are merged into one chip", () => {
+  const chips = buildQuickAddChips({
+    recent: [],
+    inventoryNames: ["시금치", "국산콩 두부", "닭가슴살", "맛타리버섯", "동물복지 달걀", "저지방 우유", "대추방울토마토"],
+  });
+  assert.deepEqual(chips.map((chip) => chip.name), [
+    "시금치", "국산콩 두부", "닭가슴살", "맛타리버섯", "동물복지 달걀", "저지방 우유", "대추방울토마토", "대파", "양파", "감자",
+  ]);
+  for (const staple of ["우유", "계란", "두부", "버섯"]) assert.equal(chips.some((chip) => chip.name === staple), false);
+  assert.equal(chips.length <= 10, true);
+  // A recent food counts as the person's own name too.
+  const recentChips = buildQuickAddChips({ recent: [{ name: "달걀", unit: "개", storage: "냉장", count: 1, lastUsedAt: 1 }], inventoryNames: [] });
+  assert.deepEqual(recentChips.slice(0, 3).map((chip) => `${chip.source}:${chip.name}`), ["recent:달걀", "starter:우유", "starter:두부"]);
 });
 
 test("the recent list is scoped, capped and survives a blocked store", () => {
